@@ -1,2 +1,2 @@
 # -Graduate-work
-My Bachelor's graduate work
+My Magister's graduate work
