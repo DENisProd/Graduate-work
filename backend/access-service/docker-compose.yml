@@ -1,0 +1,30 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: access_control
+      POSTGRES_PASSWORD: access_control_secret
+      POSTGRES_DB: access_control_service
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_access_control_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U access_control -d access_control_service"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  access-control-service:
+    build: .
+    ports:
+      - "8085:8085"
+    environment:
+      ACCESS_CONTROL_DB_URL: "postgresql://access_control:access_control_secret@postgres:5432/access_control_service?schema=public"
+      ACCESS_CONTROL_SERVICE_PORT: "8085"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_access_control_data:

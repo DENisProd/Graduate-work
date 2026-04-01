@@ -1,0 +1,750 @@
+{
+    "tasks": [
+      {
+        "id": "TASK-001",
+        "category": "infrastructure",
+        "priority": "critical",
+        "description": "Инициализировать NestJS проект для сервиса управления доступом умного дома",
+        "acceptance_criteria": [
+          "Создан проект NestJS",
+          "Проект запускается командой npm run start:dev",
+          "Добавлена базовая структура src/modules",
+          "Приложение отвечает на GET /health"
+        ],
+        "test_steps": [
+          "Шаг 1: выполнить nest new smart-home-access-service",
+          "Шаг 2: запустить npm run start:dev",
+          "Шаг 3: выполнить GET /health",
+          "Ожидаемый результат: сервер отвечает статусом 200"
+        ],
+        "dependencies": [],
+        "status": "pending"
+      },
+      {
+        "id": "TASK-002",
+        "category": "infrastructure",
+        "priority": "critical",
+        "description": "Подключить Prisma ORM к NestJS проекту",
+        "acceptance_criteria": [
+          "Установлены prisma и @prisma/client",
+          "Инициализирован prisma schema",
+          "Создан prisma.service",
+          "Prisma подключается к PostgreSQL"
+        ],
+        "test_steps": [
+          "Шаг 1: установить prisma",
+          "Шаг 2: выполнить prisma init",
+          "Шаг 3: подключиться к базе",
+          "Ожидаемый результат: prisma db pull выполняется без ошибок"
+        ],
+        "dependencies": ["TASK-001"],
+        "status": "pending"
+      },
+      {
+        "id": "TASK-003",
+        "category": "infrastructure",
+        "priority": "high",
+        "description": "Настроить PostgreSQL базу данных для сервиса",
+        "acceptance_criteria": [
+          "PostgreSQL доступен",
+          "Создана база данных smart_home",
+          "NestJS подключается к базе",
+          "Prisma успешно выполняет миграции"
+        ],
+        "test_steps": [
+          "Шаг 1: создать базу smart_home",
+          "Шаг 2: настроить DATABASE_URL",
+          "Шаг 3: выполнить prisma migrate dev",
+          "Ожидаемый результат: таблицы создаются"
+        ],
+        "dependencies": ["TASK-002"],
+        "status": "pending"
+      },
+      {
+        "id": "TASK-004",
+        "category": "infrastructure",
+        "priority": "high",
+        "description": "Реализовать модуль конфигурации приложения через ConfigModule",
+        "acceptance_criteria": [
+          "Используется @nestjs/config",
+          "Создан файл .env",
+          "ConfigService доступен во всех модулях"
+        ],
+        "test_steps": [
+          "Шаг 1: добавить ConfigModule",
+          "Шаг 2: создать .env",
+          "Шаг 3: получить значение из ConfigService",
+          "Ожидаемый результат: значение успешно читается"
+        ],
+        "dependencies": ["TASK-001"],
+        "status": "pending"
+      },
+      {
+        "id": "TASK-005",
+        "category": "functional",
+        "priority": "critical",
+        "description": "Реализовать модуль пользователей (User Module)",
+        "acceptance_criteria": [
+          "Создан user.module",
+          "Создан user.service",
+          "Создан user.controller",
+          "Можно создать пользователя"
+        ],
+        "test_steps": [
+          "Шаг 1: отправить POST /users",
+          "Шаг 2: передать userId",
+          "Шаг 3: проверить запись в базе",
+          "Ожидаемый результат: пользователь создан"
+        ],
+        "dependencies": ["TASK-002"],
+        "status": "pending"
+      },
+      {
+        "id": "TASK-006",
+        "category": "functional",
+        "priority": "critical",
+        "description": "Реализовать создание дома",
+        "acceptance_criteria": [
+          "Endpoint POST /houses создан",
+          "Дом сохраняется в базе",
+          "ownerId записывается"
+        ],
+        "test_steps": [
+          "Шаг 1: выполнить POST /houses",
+          "Шаг 2: передать name и ownerId",
+          "Шаг 3: выполнить GET /houses",
+          "Ожидаемый результат: дом присутствует в списке"
+        ],
+        "dependencies": ["TASK-005"],
+        "status": "pending"
+      },
+      {
+        "id": "TASK-007",
+        "category": "functional",
+        "priority": "high",
+        "description": "Реализовать получение списка домов пользователя",
+        "acceptance_criteria": [
+          "Endpoint GET /houses/user/:id",
+          "Возвращаются дома владельца",
+          "Возвращаются дома где пользователь участник"
+        ],
+        "test_steps": [
+          "Шаг 1: создать дом",
+          "Шаг 2: добавить участника",
+          "Шаг 3: выполнить GET /houses/user/:id",
+          "Ожидаемый результат: возвращаются дома"
+        ],
+        "dependencies": ["TASK-006"],
+        "status": "pending"
+      },
+      {
+        "id": "TASK-008",
+        "category": "functional",
+        "priority": "high",
+        "description": "Реализовать добавление пользователя в дом",
+        "acceptance_criteria": [
+          "Endpoint POST /house-members",
+          "Запись создается в таблице house_members",
+          "Проверяется существование пользователя"
+        ],
+        "test_steps": [
+          "Шаг 1: создать пользователя",
+          "Шаг 2: добавить пользователя в дом",
+          "Шаг 3: проверить запись в базе",
+          "Ожидаемый результат: пользователь добавлен"
+        ],
+        "dependencies": ["TASK-006"],
+        "status": "pending"
+      },
+      {
+        "id": "TASK-009",
+        "category": "functional",
+        "priority": "high",
+        "description": "Реализовать создание ролей дома",
+        "acceptance_criteria": [
+          "Endpoint POST /house-roles",
+          "Роль сохраняется",
+          "Роль привязана к дому"
+        ],
+        "test_steps": [
+          "Шаг 1: создать роль",
+          "Шаг 2: выполнить GET ролей",
+          "Ожидаемый результат: роль существует"
+        ],
+        "dependencies": ["TASK-006"],
+        "status": "pending"
+      },
+      {
+        "id": "TASK-010",
+        "category": "functional",
+        "priority": "high",
+        "description": "Назначение роли участнику дома",
+        "acceptance_criteria": [
+          "Endpoint POST /house-members/:id/roles",
+          "Роль добавляется участнику",
+          "Роль проверяется в базе"
+        ],
+        "test_steps": [
+          "Шаг 1: создать роль",
+          "Шаг 2: назначить роль",
+          "Шаг 3: проверить таблицу ролей",
+          "Ожидаемый результат: роль назначена"
+        ],
+        "dependencies": ["TASK-009"],
+        "status": "pending"
+      },
+      {
+        "id": "TASK-011",
+        "category": "functional",
+        "priority": "high",
+        "description": "Реализовать приглашения в дом",
+        "acceptance_criteria": [
+          "Endpoint POST /house-invitations",
+          "Создается токен приглашения",
+          "Статус приглашения PENDING"
+        ],
+        "test_steps": [
+          "Шаг 1: создать приглашение",
+          "Шаг 2: проверить запись",
+          "Ожидаемый результат: приглашение создано"
+        ],
+        "dependencies": ["TASK-006"],
+        "status": "pending"
+      },
+      {
+        "id": "TASK-012",
+        "category": "functional",
+        "priority": "high",
+        "description": "Реализовать принятие приглашения",
+        "acceptance_criteria": [
+          "Endpoint POST /house-invitations/accept",
+          "Статус меняется на ACCEPTED",
+          "Создается HouseMember"
+        ],
+        "test_steps": [
+          "Шаг 1: создать приглашение",
+          "Шаг 2: принять приглашение",
+          "Шаг 3: проверить house_members",
+          "Ожидаемый результат: пользователь добавлен"
+        ],
+        "dependencies": ["TASK-011"],
+        "status": "pending"
+      },
+      {
+        "id": "TASK-013",
+        "category": "functional",
+        "priority": "high",
+        "description": "Реализовать управление правами доступа",
+        "acceptance_criteria": [
+          "Endpoint POST /access-rights",
+          "Право доступа сохраняется",
+          "Право связано с ролью или пользователем"
+        ],
+        "test_steps": [
+          "Шаг 1: создать право",
+          "Шаг 2: проверить запись",
+          "Ожидаемый результат: право создано"
+        ],
+        "dependencies": ["TASK-009"],
+        "status": "pending"
+      },
+      {
+        "id": "TASK-014",
+        "category": "security",
+        "priority": "critical",
+        "description": "Добавить JWT авторизацию",
+        "acceptance_criteria": [
+          "Используется Passport JWT",
+          "Endpoint login возвращает токен",
+          "Защищенные endpoints требуют токен"
+        ],
+        "test_steps": [
+          "Шаг 1: выполнить login",
+          "Шаг 2: получить токен",
+          "Шаг 3: вызвать защищенный endpoint",
+          "Ожидаемый результат: доступ разрешен"
+        ],
+        "dependencies": ["TASK-005"],
+        "status": "pending"
+      },
+      {
+        "id": "TASK-015",
+        "category": "security",
+        "priority": "high",
+        "description": "Реализовать проверку прав доступа пользователя",
+        "acceptance_criteria": [
+          "Создан AccessGuard",
+          "Проверяется доступ к устройствам",
+          "Запрещенные операции возвращают 403"
+        ],
+        "test_steps": [
+          "Шаг 1: создать право доступа",
+          "Шаг 2: выполнить операцию без права",
+          "Ожидаемый результат: ошибка 403"
+        ],
+        "dependencies": ["TASK-013", "TASK-014"],
+        "status": "pending"
+      },
+      {
+        "id": "TASK-016",
+        "category": "integration",
+        "priority": "medium",
+        "description": "Интеграция сервиса с сервисом устройств",
+        "acceptance_criteria": [
+          "Можно проверить deviceId",
+          "Сервис получает данные устройства",
+          "Ошибки обрабатываются"
+        ],
+        "test_steps": [
+          "Шаг 1: вызвать проверку устройства",
+          "Шаг 2: получить ответ",
+          "Ожидаемый результат: устройство найдено"
+        ],
+        "dependencies": ["TASK-013"],
+        "status": "pending"
+      },
+      {
+        "id": "TASK-017",
+        "category": "integration",
+        "priority": "medium",
+        "description": "Интеграция с сервисом сценариев",
+        "acceptance_criteria": [
+          "Можно проверить права на выполнение действия",
+          "Сервис сценариев вызывает access-service"
+        ],
+        "test_steps": [
+          "Шаг 1: отправить запрос проверки",
+          "Шаг 2: получить ответ",
+          "Ожидаемый результат: доступ подтвержден"
+        ],
+        "dependencies": ["TASK-015"],
+        "status": "pending"
+      },
+      {
+        "id": "TASK-018",
+        "category": "infrastructure",
+        "priority": "medium",
+        "description": "Добавить логирование через NestJS Logger",
+        "acceptance_criteria": [
+          "Все контроллеры логируют действия",
+          "Ошибки логируются",
+          "Логи читаемы"
+        ],
+        "test_steps": [
+          "Шаг 1: выполнить запрос",
+          "Шаг 2: проверить логи",
+          "Ожидаемый результат: лог создан"
+        ],
+        "dependencies": ["TASK-001"],
+        "status": "pending"
+      },
+      {
+        "id": "TASK-019",
+        "category": "security",
+        "priority": "high",
+        "description": "Добавить валидацию DTO",
+        "acceptance_criteria": [
+          "Используется class-validator",
+          "Некорректные данные отклоняются",
+          "Возвращается ошибка 400"
+        ],
+        "test_steps": [
+          "Шаг 1: отправить некорректный запрос",
+          "Шаг 2: проверить ответ",
+          "Ожидаемый результат: ошибка 400"
+        ],
+        "dependencies": ["TASK-005"],
+        "status": "pending"
+      },
+      {
+        "id": "TASK-020",
+        "category": "ui",
+        "priority": "low",
+        "description": "Создать Swagger документацию API",
+        "acceptance_criteria": [
+          "Swagger доступен по /api/docs",
+          "Все endpoints описаны",
+          "Можно отправлять запросы"
+        ],
+        "test_steps": [
+          "Шаг 1: открыть Swagger",
+          "Шаг 2: выполнить endpoint",
+          "Ожидаемый результат: endpoint работает"
+        ],
+        "dependencies": ["TASK-006"],
+        "status": "pending"
+      },
+          {
+            "id": "TASK-021",
+            "category": "infrastructure",
+            "priority": "high",
+            "description": "Настроить структуру модулей NestJS (users, houses, roles, access-rights, invitations, rooms)",
+            "acceptance_criteria": [
+              "Созданы директории modules/users, modules/houses, modules/roles, modules/access-rights, modules/invitations, modules/rooms",
+              "Каждый модуль содержит controller, service и module файл",
+              "Все модули подключены в AppModule"
+            ],
+            "test_steps": [
+              "Шаг 1: создать модули через nest generate module",
+              "Шаг 2: подключить их в AppModule",
+              "Шаг 3: запустить сервер",
+              "Ожидаемый результат: приложение запускается без ошибок"
+            ],
+            "dependencies": ["TASK-001"],
+            "status": "pending"
+          },
+          {
+            "id": "TASK-022",
+            "category": "infrastructure",
+            "priority": "high",
+            "description": "Настроить Prisma migrations для всей схемы доступа",
+            "acceptance_criteria": [
+              "Файл schema.prisma содержит все модели",
+              "Создана первая миграция",
+              "Миграция успешно применена"
+            ],
+            "test_steps": [
+              "Шаг 1: добавить модели в schema.prisma",
+              "Шаг 2: выполнить prisma migrate dev",
+              "Шаг 3: проверить таблицы в базе",
+              "Ожидаемый результат: все таблицы созданы"
+            ],
+            "dependencies": ["TASK-003"],
+            "status": "pending"
+          },
+          {
+            "id": "TASK-023",
+            "category": "functional",
+            "priority": "high",
+            "description": "Реализовать CRUD для комнат дома",
+            "acceptance_criteria": [
+              "Endpoint POST /rooms",
+              "Endpoint GET /rooms",
+              "Endpoint PATCH /rooms/:id",
+              "Endpoint DELETE /rooms/:id"
+            ],
+            "test_steps": [
+              "Шаг 1: создать комнату",
+              "Шаг 2: получить список комнат",
+              "Шаг 3: обновить комнату",
+              "Шаг 4: удалить комнату",
+              "Ожидаемый результат: CRUD работает"
+            ],
+            "dependencies": ["TASK-006"],
+            "status": "pending"
+          },
+          {
+            "id": "TASK-024",
+            "category": "functional",
+            "priority": "high",
+            "description": "Реализовать получение участников дома",
+            "acceptance_criteria": [
+              "Endpoint GET /houses/:id/members",
+              "Возвращается список участников",
+              "В ответе присутствуют роли участников"
+            ],
+            "test_steps": [
+              "Шаг 1: создать пользователя",
+              "Шаг 2: добавить пользователя в дом",
+              "Шаг 3: выполнить GET /houses/:id/members",
+              "Ожидаемый результат: пользователь отображается"
+            ],
+            "dependencies": ["TASK-008"],
+            "status": "pending"
+          },
+          {
+            "id": "TASK-025",
+            "category": "functional",
+            "priority": "medium",
+            "description": "Реализовать удаление участника из дома",
+            "acceptance_criteria": [
+              "Endpoint DELETE /house-members/:id",
+              "Запись удаляется",
+              "Связанные роли и доступы очищаются"
+            ],
+            "test_steps": [
+              "Шаг 1: добавить пользователя в дом",
+              "Шаг 2: удалить пользователя",
+              "Шаг 3: проверить таблицу house_members",
+              "Ожидаемый результат: пользователь удален"
+            ],
+            "dependencies": ["TASK-008"],
+            "status": "pending"
+          },
+          {
+            "id": "TASK-026",
+            "category": "functional",
+            "priority": "medium",
+            "description": "Реализовать получение ролей дома",
+            "acceptance_criteria": [
+              "Endpoint GET /houses/:id/roles",
+              "Возвращаются все роли дома",
+              "Сортировка по priority"
+            ],
+            "test_steps": [
+              "Шаг 1: создать несколько ролей",
+              "Шаг 2: выполнить GET /houses/:id/roles",
+              "Ожидаемый результат: роли возвращаются"
+            ],
+            "dependencies": ["TASK-009"],
+            "status": "pending"
+          },
+          {
+            "id": "TASK-027",
+            "category": "functional",
+            "priority": "medium",
+            "description": "Реализовать удаление роли дома",
+            "acceptance_criteria": [
+              "Endpoint DELETE /house-roles/:id",
+              "Роль удаляется",
+              "Системные роли удалить нельзя"
+            ],
+            "test_steps": [
+              "Шаг 1: создать роль",
+              "Шаг 2: удалить роль",
+              "Шаг 3: попытаться удалить системную роль",
+              "Ожидаемый результат: системная роль не удаляется"
+            ],
+            "dependencies": ["TASK-009"],
+            "status": "pending"
+          },
+          {
+            "id": "TASK-028",
+            "category": "functional",
+            "priority": "medium",
+            "description": "Реализовать управление разрешениями роли",
+            "acceptance_criteria": [
+              "Endpoint POST /roles/:id/permissions",
+              "Endpoint DELETE /roles/:id/permissions",
+              "Разрешения сохраняются"
+            ],
+            "test_steps": [
+              "Шаг 1: добавить разрешение роли",
+              "Шаг 2: проверить таблицу permissions",
+              "Шаг 3: удалить разрешение",
+              "Ожидаемый результат: разрешения обновляются"
+            ],
+            "dependencies": ["TASK-009"],
+            "status": "pending"
+          },
+          {
+            "id": "TASK-029",
+            "category": "functional",
+            "priority": "high",
+            "description": "Реализовать получение прав доступа пользователя",
+            "acceptance_criteria": [
+              "Endpoint GET /access-rights/user/:id",
+              "Возвращаются все права пользователя",
+              "Учитываются права ролей"
+            ],
+            "test_steps": [
+              "Шаг 1: создать право роли",
+              "Шаг 2: назначить роль пользователю",
+              "Шаг 3: выполнить запрос",
+              "Ожидаемый результат: права возвращаются"
+            ],
+            "dependencies": ["TASK-013"],
+            "status": "pending"
+          },
+          {
+            "id": "TASK-030",
+            "category": "functional",
+            "priority": "high",
+            "description": "Реализовать проверку доступа к функции устройства",
+            "acceptance_criteria": [
+              "Endpoint POST /access-check",
+              "Проверяется deviceFunctionId",
+              "Возвращается allow или deny"
+            ],
+            "test_steps": [
+              "Шаг 1: создать право доступа",
+              "Шаг 2: вызвать endpoint проверки",
+              "Шаг 3: проверить ответ",
+              "Ожидаемый результат: корректный статус доступа"
+            ],
+            "dependencies": ["TASK-015"],
+            "status": "pending"
+          },
+          {
+            "id": "TASK-031",
+            "category": "integration",
+            "priority": "medium",
+            "description": "Добавить HTTP клиент для взаимодействия с device-service",
+            "acceptance_criteria": [
+              "Используется HttpModule",
+              "Реализован deviceServiceClient",
+              "Можно получить устройство по id"
+            ],
+            "test_steps": [
+              "Шаг 1: вызвать метод getDevice",
+              "Шаг 2: проверить ответ",
+              "Ожидаемый результат: устройство получено"
+            ],
+            "dependencies": ["TASK-016"],
+            "status": "pending"
+          },
+          {
+            "id": "TASK-032",
+            "category": "integration",
+            "priority": "medium",
+            "description": "Добавить HTTP клиент для взаимодействия с scenario-service",
+            "acceptance_criteria": [
+              "Создан scenarioServiceClient",
+              "Можно проверить разрешение на выполнение сценария"
+            ],
+            "test_steps": [
+              "Шаг 1: отправить запрос проверки",
+              "Шаг 2: проверить ответ",
+              "Ожидаемый результат: сервис отвечает"
+            ],
+            "dependencies": ["TASK-017"],
+            "status": "pending"
+          },
+          {
+            "id": "TASK-033",
+            "category": "security",
+            "priority": "high",
+            "description": "Добавить защиту от дублирования участников дома",
+            "acceptance_criteria": [
+              "Проверяется уникальность userId + houseId",
+              "Повторное добавление запрещено",
+              "Возвращается ошибка 409"
+            ],
+            "test_steps": [
+              "Шаг 1: добавить пользователя в дом",
+              "Шаг 2: повторить запрос",
+              "Ожидаемый результат: ошибка 409"
+            ],
+            "dependencies": ["TASK-008"],
+            "status": "pending"
+          },
+          {
+            "id": "TASK-034",
+            "category": "security",
+            "priority": "medium",
+            "description": "Добавить ограничение по сроку действия прав доступа",
+            "acceptance_criteria": [
+              "Права имеют поле expiresAt",
+              "Просроченные права игнорируются"
+            ],
+            "test_steps": [
+              "Шаг 1: создать право с expiresAt",
+              "Шаг 2: дождаться истечения",
+              "Шаг 3: выполнить проверку доступа",
+              "Ожидаемый результат: доступ запрещен"
+            ],
+            "dependencies": ["TASK-013"],
+            "status": "pending"
+          },
+          {
+            "id": "TASK-035",
+            "category": "infrastructure",
+            "priority": "medium",
+            "description": "Настроить Docker контейнер для сервиса",
+            "acceptance_criteria": [
+              "Создан Dockerfile",
+              "Сервис запускается через docker",
+              "Контейнер подключается к базе"
+            ],
+            "test_steps": [
+              "Шаг 1: собрать docker image",
+              "Шаг 2: запустить контейнер",
+              "Шаг 3: выполнить GET /health",
+              "Ожидаемый результат: сервис работает"
+            ],
+            "dependencies": ["TASK-001"],
+            "status": "pending"
+          },
+          {
+            "id": "TASK-036",
+            "category": "infrastructure",
+            "priority": "medium",
+            "description": "Добавить docker-compose для сервиса и PostgreSQL",
+            "acceptance_criteria": [
+              "docker-compose запускает postgres и сервис",
+              "Переменные окружения передаются",
+              "Сервис подключается к базе"
+            ],
+            "test_steps": [
+              "Шаг 1: выполнить docker compose up",
+              "Шаг 2: проверить логи",
+              "Ожидаемый результат: сервис запущен"
+            ],
+            "dependencies": ["TASK-035"],
+            "status": "pending"
+          },
+          {
+            "id": "TASK-037",
+            "category": "infrastructure",
+            "priority": "low",
+            "description": "Добавить health-check endpoint",
+            "acceptance_criteria": [
+              "Endpoint GET /health",
+              "Проверяется соединение с базой",
+              "Возвращается статус сервиса"
+            ],
+            "test_steps": [
+              "Шаг 1: выполнить GET /health",
+              "Шаг 2: отключить базу",
+              "Ожидаемый результат: health показывает ошибку"
+            ],
+            "dependencies": ["TASK-001"],
+            "status": "pending"
+          },
+          {
+            "id": "TASK-038",
+            "category": "security",
+            "priority": "medium",
+            "description": "Добавить rate limiting для API",
+            "acceptance_criteria": [
+              "Используется ThrottlerModule",
+              "Ограничение количества запросов",
+              "При превышении возвращается 429"
+            ],
+            "test_steps": [
+              "Шаг 1: отправить много запросов",
+              "Шаг 2: проверить ответ",
+              "Ожидаемый результат: ошибка 429"
+            ],
+            "dependencies": ["TASK-001"],
+            "status": "pending"
+          },
+          {
+            "id": "TASK-039",
+            "category": "security",
+            "priority": "medium",
+            "description": "Добавить audit logging для операций доступа",
+            "acceptance_criteria": [
+              "Логируются изменения прав доступа",
+              "Логируется кто выдал доступ",
+              "Логи сохраняются"
+            ],
+            "test_steps": [
+              "Шаг 1: создать право",
+              "Шаг 2: проверить лог",
+              "Ожидаемый результат: запись присутствует"
+            ],
+            "dependencies": ["TASK-018"],
+            "status": "pending"
+          },
+          {
+            "id": "TASK-040",
+            "category": "ui",
+            "priority": "low",
+            "description": "Добавить endpoint для получения структуры доступа пользователя",
+            "acceptance_criteria": [
+              "Endpoint GET /access-structure",
+              "Возвращает дома, комнаты, устройства и функции",
+              "Фильтруется по правам пользователя"
+            ],
+            "test_steps": [
+              "Шаг 1: создать права доступа",
+              "Шаг 2: выполнить запрос",
+              "Ожидаемый результат: возвращается структура"
+            ],
+            "dependencies": ["TASK-029"],
+            "status": "pending"
+          }
+        ]
+      }
+    

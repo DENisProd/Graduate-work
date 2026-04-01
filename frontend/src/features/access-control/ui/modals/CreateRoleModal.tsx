@@ -1,0 +1,162 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { AppButton } from '@/components/ui/app-button';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { useTranslation } from '@/hooks';
+import type { HouseRoleCreateRequest } from '@/types/api';
+
+interface CreateRoleModalProps {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  houseId: string | null;
+  onSubmit: (data: HouseRoleCreateRequest) => Promise<void>;
+}
+
+export function CreateRoleModal({
+  isOpen,
+  onOpenChange,
+  houseId,
+  onSubmit,
+}: CreateRoleModalProps) {
+  const { t } = useTranslation();
+  const [name, setName] = useState('');
+  const [priorityStr, setPriorityStr] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [priorityError, setPriorityError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setName('');
+      setPriorityStr('');
+      setNameError(null);
+      setPriorityError(null);
+    }
+  }, [isOpen]);
+
+  const validate = (): boolean => {
+    let valid = true;
+    if (!name.trim()) {
+      setNameError(t('admin.accessControl.roleNameRequired'));
+      valid = false;
+    } else {
+      setNameError(null);
+    }
+    if (priorityStr !== '') {
+      const n = Number(priorityStr);
+      if (Number.isNaN(n) || !Number.isInteger(n)) {
+        setPriorityError(t('admin.accessControl.rolePriorityInvalid'));
+        valid = false;
+      } else {
+        setPriorityError(null);
+      }
+    } else {
+      setPriorityError(null);
+    }
+    return valid;
+  };
+
+  const handleSubmit = async () => {
+    if (!validate() || !houseId) return;
+    setLoading(true);
+    try {
+      const priority =
+        priorityStr === '' ? undefined : Number(priorityStr);
+      await onSubmit({ name: name.trim(), priority });
+      onOpenChange(false);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClose = (open: boolean) => {
+    if (!open) {
+      setName('');
+      setPriorityStr('');
+      setNameError(null);
+      setPriorityError(null);
+    }
+    onOpenChange(open);
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t('admin.accessControl.createRole')}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <label
+              htmlFor="create-role-name"
+              className="text-sm font-medium text-foreground"
+            >
+              {t('admin.accessControl.rolesTableRole')}
+            </label>
+            <Input
+              id="create-role-name"
+              placeholder={t('admin.accessControl.rolesTableRole')}
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (nameError) setNameError(null);
+              }}
+              aria-invalid={!!nameError}
+            />
+            {nameError && (
+              <p className="text-xs text-destructive" role="alert">
+                {nameError}
+              </p>
+            )}
+          </div>
+          <div className="space-y-1">
+            <label
+              htmlFor="create-role-priority"
+              className="text-sm font-medium text-foreground"
+            >
+              {t('admin.accessControl.rolesTablePriority')}
+            </label>
+            <Input
+              id="create-role-priority"
+              type="text"
+              inputMode="numeric"
+              placeholder="0"
+              value={priorityStr}
+              onChange={(e) => {
+                setPriorityStr(e.target.value);
+                if (priorityError) setPriorityError(null);
+              }}
+              aria-invalid={!!priorityError}
+            />
+            {priorityError && (
+              <p className="text-xs text-destructive" role="alert">
+                {priorityError}
+              </p>
+            )}
+          </div>
+        </div>
+        <DialogFooter>
+          <AppButton variant="secondary" onClick={() => handleClose(false)}>
+            {t('common.cancel')}
+          </AppButton>
+          <AppButton
+            onClick={handleSubmit}
+            disabled={loading || !name.trim()}
+          >
+            {t('admin.create')}
+          </AppButton>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
