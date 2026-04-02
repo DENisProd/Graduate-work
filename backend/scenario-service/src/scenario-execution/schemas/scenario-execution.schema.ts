@@ -3,10 +3,12 @@ import {
   triggerSourceTypeSchema,
   scenarioExecutionStatusSchema,
 } from '../../common/schemas/enums';
+import { ScenarioExecutionStatus } from '../../common/schemas/enums';
+import { paginationQuerySchema } from '../../common/schemas/pagination';
 
 export const createScenarioExecutionSchema = z.object({
   scenarioId: z.string().min(1),
-  status: scenarioExecutionStatusSchema.default('RUNNING'),
+  status: scenarioExecutionStatusSchema.default(ScenarioExecutionStatus.RUNNING),
   triggeredBy: triggerSourceTypeSchema,
   triggerData: z.record(z.unknown()),
   errorMessage: z.string().max(2000).optional(),
@@ -24,13 +26,13 @@ export type UpdateScenarioExecutionInput = z.infer<
   typeof updateScenarioExecutionSchema
 >;
 
-export const listScenarioExecutionsQuerySchema = z.object({
+const listScenarioExecutionsQuerySchemaBase = z.object({
   scenarioId: z.string().min(1).optional(),
   status: scenarioExecutionStatusSchema.optional(),
   triggeredBy: triggerSourceTypeSchema.optional(),
-  page: z.coerce.number().int().min(0).default(0),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
 });
+export const listScenarioExecutionsQuerySchema =
+  listScenarioExecutionsQuerySchemaBase.merge(paginationQuerySchema);
 export type ListScenarioExecutionsQuery = z.infer<
   typeof listScenarioExecutionsQuerySchema
 >;

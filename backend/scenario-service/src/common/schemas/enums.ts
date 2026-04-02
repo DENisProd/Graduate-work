@@ -1,30 +1,34 @@
 import { z } from 'zod';
 
-export const scenarioStatusSchema = z.enum(['OFFLINE', 'ONLINE', 'ERROR']);
-export type ScenarioStatus = z.infer<typeof scenarioStatusSchema>;
+export enum ScenarioStatus {
+  OFFLINE = 'OFFLINE',
+  ONLINE = 'ONLINE',
+  ERROR = 'ERROR',
+}
+export const scenarioStatusSchema = z.nativeEnum(ScenarioStatus);
 
-export const triggerSourceTypeSchema = z.enum([
-  'SCHEDULE',
-  'MANUAL',
-  'AUTOMATIC',
-  'SYSTEM',
-  'API',
-]);
-export type TriggerSourceType = z.infer<typeof triggerSourceTypeSchema>;
+export enum TriggerSourceType {
+  SCHEDULE = 'SCHEDULE',
+  MANUAL = 'MANUAL',
+  AUTOMATIC = 'AUTOMATIC',
+  SYSTEM = 'SYSTEM',
+  API = 'API',
+}
+export const triggerSourceTypeSchema = z.nativeEnum(TriggerSourceType);
 
-export const scenarioExecutionStatusSchema = z.enum([
-  'RUNNING',
-  'SUCCESS',
-  'FAILURE',
-]);
-export type ScenarioExecutionStatus = z.infer<
-  typeof scenarioExecutionStatusSchema
->;
+export enum ScenarioExecutionStatus {
+  RUNNING = 'RUNNING',
+  SUCCESS = 'SUCCESS',
+  FAILURE = 'FAILURE',
+}
+export const scenarioExecutionStatusSchema = z.nativeEnum(
+  ScenarioExecutionStatus,
+);
 
-export const deviceDataTypeSchema = z.enum([
-  'FLOAT',
-  'NUMBER',
-  'STRING',
-  'BOOLEAN',
-]);
-export type DeviceDataType = z.infer<typeof deviceDataTypeSchema>;
+export enum DeviceDataType {
+  FLOAT = 'FLOAT',
+  NUMBER = 'NUMBER',
+  STRING = 'STRING',
+  BOOLEAN = 'BOOLEAN',
+}
+export const deviceDataTypeSchema = z.nativeEnum(DeviceDataType);

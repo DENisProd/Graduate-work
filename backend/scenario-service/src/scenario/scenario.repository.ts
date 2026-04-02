@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel, Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { InjectModel } from '@nestjs/mongoose';
 import type { HydratedDocument, Model } from 'mongoose';
 import { isValidObjectId, Types } from 'mongoose';
 import type {
@@ -7,35 +7,11 @@ import type {
   UpdateScenarioInput,
 } from './schemas/scenario.schema';
 import { skipTake } from '../common/schemas/pagination';
-
-export const SCENARIO_MODEL = 'Scenario';
-
-@Schema({ collection: 'Scenario' })
-export class ScenarioModel {
-  @Prop({ required: true })
-  name: string;
-
-  @Prop({ type: String, default: null })
-  description?: string | null;
-
-  @Prop({ required: true, type: String })
-  houseId: string;
-
-  @Prop({ required: true })
-  createdAt: Date;
-
-  @Prop({ required: true })
-  updatedAt: Date;
-
-  @Prop({ required: true, enum: ['OFFLINE', 'ONLINE', 'ERROR'] })
-  status: 'OFFLINE' | 'ONLINE' | 'ERROR';
-
-  @Prop({ required: true })
-  creatorId: string;
-}
-
-export type ScenarioDocument = HydratedDocument<ScenarioModel>;
-export const ScenarioSchema = SchemaFactory.createForClass(ScenarioModel);
+import {
+  SCENARIO_MODEL,
+  type ScenarioDocument,
+  ScenarioModel,
+} from '../mongo/schemas/scenario.mongo';
 
 type ScenarioDoc = ScenarioModel & { _id: Types.ObjectId };
 type Scenario = ScenarioModel & { id: string };

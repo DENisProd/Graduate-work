@@ -25,6 +25,10 @@ import {
 } from './dto/scenario-execution-response.dto';
 import { listScenarioExecutionsQuerySchema } from './schemas/scenario-execution.schema';
 import { idParamSchema } from '../common/schemas/id-params';
+import {
+  ScenarioExecutionStatus,
+  TriggerSourceType,
+} from '../common/schemas/enums';
 
 @ApiTags('Scenario Executions')
 @Controller('scenario-executions')
@@ -41,12 +45,12 @@ export class ScenarioExecutionController {
         scenarioId: { type: 'string' },
         status: {
           type: 'string',
-          enum: ['RUNNING', 'SUCCESS', 'FAILURE'],
-          default: 'RUNNING',
+          enum: Object.values(ScenarioExecutionStatus),
+          default: ScenarioExecutionStatus.RUNNING,
         },
         triggeredBy: {
           type: 'string',
-          enum: ['SCHEDULE', 'MANUAL', 'AUTOMATIC', 'SYSTEM', 'API'],
+          enum: Object.values(TriggerSourceType),
         },
         triggerData: { type: 'object' },
         errorMessage: { type: 'string', maxLength: 2000 },
@@ -71,13 +75,13 @@ export class ScenarioExecutionController {
   @ApiQuery({
     name: 'status',
     required: false,
-    enum: ['RUNNING', 'SUCCESS', 'FAILURE'],
+    enum: ScenarioExecutionStatus,
     description: 'Статус выполнения',
   })
   @ApiQuery({
     name: 'triggeredBy',
     required: false,
-    enum: ['SCHEDULE', 'MANUAL', 'AUTOMATIC', 'SYSTEM', 'API'],
+    enum: TriggerSourceType,
     description: 'Источник запуска',
   })
   @ApiQuery({
@@ -125,7 +129,7 @@ export class ScenarioExecutionController {
     schema: {
       type: 'object',
       properties: {
-        status: { type: 'string', enum: ['RUNNING', 'SUCCESS', 'FAILURE'] },
+        status: { type: 'string', enum: Object.values(ScenarioExecutionStatus) },
         errorMessage: { type: 'string', maxLength: 2000, nullable: true },
         endedAt: { type: 'string', format: 'date-time', nullable: true },
       },

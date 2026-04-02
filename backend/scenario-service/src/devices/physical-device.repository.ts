@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel, Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { InjectModel } from '@nestjs/mongoose';
 import type { HydratedDocument, Model } from 'mongoose';
 import { isValidObjectId, Types } from 'mongoose';
 import type {
@@ -7,51 +7,11 @@ import type {
   UpdatePhysicalDeviceInput,
 } from './schemas/physical-device.schema';
 import { skipTake } from '../common/schemas/pagination';
-
-export const PHYSICAL_DEVICE_MODEL = 'PhysicalDevice';
-
-@Schema({ collection: 'PhysicalDevice' })
-export class PhysicalDeviceModel {
-  @Prop({ required: true })
-  name: string;
-
-  @Prop({ type: String, default: null })
-  description?: string | null;
-
-  @Prop({ required: true, type: Number })
-  deviceTypeId: number;
-
-  @Prop({ required: true, type: String })
-  houseId: string;
-
-  @Prop({ type: String, default: null })
-  deviceId?: string | null;
-
-  @Prop({ type: String, default: null })
-  roomId?: string | null;
-
-  @Prop({ type: String, default: null })
-  firmwareVersion?: string | null;
-
-  @Prop({ type: String, default: null })
-  ipAddress?: string | null;
-
-  @Prop({ type: String, default: null })
-  macAddress?: string | null;
-
-  @Prop({ type: String, default: null })
-  serialNumber?: string | null;
-
-  @Prop({ required: true })
-  createdAt: Date;
-
-  @Prop({ required: true })
-  updatedAt: Date;
-}
-
-export type PhysicalDeviceDocument = HydratedDocument<PhysicalDeviceModel>;
-export const PhysicalDeviceSchema =
-  SchemaFactory.createForClass(PhysicalDeviceModel);
+import {
+  PHYSICAL_DEVICE_MODEL,
+  type PhysicalDeviceDocument,
+  PhysicalDeviceModel,
+} from '../mongo/schemas/physical-device.mongo';
 
 type PhysicalDeviceDoc = PhysicalDeviceModel & {
   _id: Types.ObjectId;

@@ -430,6 +430,157 @@
         "confirmTitle": "Подтверждение регистрации",
         "submit": "Добавить устройство",
         "success": "Устройство добавлено"
+      },
+      "scenarioEditor": {
+        "titleCreate": "Создание сценария",
+        "titleEdit": "Редактирование сценария",
+        "back": "Назад",
+        "validate": "Проверить",
+        "tabForm": "Обычный",
+        "tabGraph": "Графический",
+        "errorsTitle": "Ошибки",
+        "errorsDescription": "Исправь ошибки перед сохранением.",
+        "errorsMore": "и ещё {{count}}…",
+        "templateGoodMorning": "Доброе утро!",
+        "reset": "Сбросить настройки",
+        "useTemplate": "Выбрать шаблон",
+        "advancedMode": "Продвинутый режим (JSON)",
+        "carefulTitle": "Осторожно",
+        "carefulDescription": "Этот режим для редких случаев. Если не уверены — используйте конструктор.",
+        "stepsTitle": "Шаги сценария",
+        "stepsDescription": "1) Когда запускать  2) При каких условиях  3) Что сделать",
+        "definitionJson": "Настройки (JSON)",
+        "loading": "Загрузка…",
+        "unsavedChanges": "Есть несохранённые изменения",
+        "allSaved": "Изменения сохранены",
+        "deleting": "Удаление…",
+        "delete": "Удалить",
+        "saving": "Сохранение…",
+        "saveAndEnable": "Сохранить и включить",
+        "generate": "Сгенерировать",
+        "validation": {
+          "nameRequired": "Название обязательно",
+          "nameMax": "Максимум 255 символов",
+          "descriptionMax": "Максимум 2000 символов",
+          "missingSpace": "Системная ошибка: не задано пространство",
+          "errorStatusReadonly": "Статус ERROR выставляется системой",
+          "invalidJson": "JSON не парсится"
+        },
+        "confirm": {
+          "leaveUnsaved": "Есть несохранённые изменения. Уйти со страницы?",
+          "deleteScenario": "Удалить сценарий?"
+        },
+        "basics": {
+          "title": "Основное",
+          "toggleAria": "Переключить сценарий",
+          "description": "Название, описание, статус, пространство.",
+          "nameDescriptionButton": "Название и описание",
+          "nameLabel": "Название",
+          "namePlaceholder": "Например: «Утро в будни»",
+          "descriptionLabel": "Описание",
+          "descriptionPlaceholder": "Коротко: что делает сценарий и зачем"
+        },
+        "builder": {
+          "triggersTitle": "Триггеры",
+          "triggersEmpty": "Пока нет триггеров. Добавьте хотя бы один.",
+          "addTrigger": "Добавить триггер",
+          "conditionsTitle": "Условия",
+          "conditionsEmpty": "Условий нет (сценарий сработает всегда).",
+          "addCondition": "Добавить условие",
+          "actionsTitle": "Действия",
+          "actionsEmpty": "Пока нет действий. Добавьте хотя бы одно.",
+          "addAction": "Добавить действие",
+          "optionsTitle": "Опции",
+          "openOptions": "Открыть опции",
+          "optionsDialogTitle": "Опции сценария",
+          "optionsDialogDescription": "Редко нужно. Можно оставить по умолчанию.",
+          "timezonePlaceholder": "Например: Europe/Moscow",
+          "done": "Готово"
+        },
+        "fields": {
+          "cron": "cron",
+          "timezone": "timezone",
+          "debounceMs": "debounceMs",
+          "maxConcurrency": "maxConcurrency",
+          "deviceId": "deviceId",
+          "event": "event",
+          "token": "token",
+          "ms": "ms",
+          "command": "command",
+          "channel": "channel",
+          "title": "title",
+          "message": "message",
+          "method": "method",
+          "url": "url",
+          "timeoutMs": "timeoutMs",
+          "path": "path",
+          "op": "op",
+          "valueJson": "value (JSON)",
+          "from": "from",
+          "to": "to"
+        },
+        "common": {
+          "copy": "Копировать",
+          "remove": "Удалить"
+        },
+        "trigger": {
+          "enabled": "включено",
+          "copyAria": "Копировать триггер",
+          "removeAria": "Удалить триггер",
+          "manualStart": "Запуск вручную.",
+          "type": {
+            "schedule": "По расписанию",
+            "manual": "Вручную",
+            "deviceEvent": "Событие устройства",
+            "webhook": "Вебхук"
+          },
+          "hint": {
+            "schedule": "Запускается в заданное время (cron).",
+            "manual": "Запускается вручную кнопкой.",
+            "deviceEvent": "Запускается, когда устройство отправляет событие.",
+            "webhook": "Запускается по HTTP-запросу с секретным токеном."
+          }
+        },
+        "action": {
+          "moveUpAria": "Поднять действие вверх",
+          "moveDownAria": "Опустить действие вниз",
+          "removeAria": "Удалить действие",
+          "up": "Вверх",
+          "down": "Вниз",
+          "type": {
+            "deviceCommand": "Команда устройству",
+            "delay": "Пауза",
+            "notify": "Уведомление",
+            "httpRequest": "HTTP-запрос"
+          },
+          "hint": {
+            "deviceCommand": "Например: включить свет, открыть замок.",
+            "delay": "Подождать перед следующим действием.",
+            "notify": "Отправить сообщение пользователю.",
+            "httpRequest": "Вызвать внешний сервис по URL."
+          }
+        },
+        "condition": {
+          "resetAlways": "Сбросить (ALWAYS)",
+          "removeAria": "Удалить условие",
+          "conditionIndex": "Условие #{{index}}",
+          "type": {
+            "always": "Всегда",
+            "deviceState": "Состояние устройства",
+            "timeWindow": "Окно времени",
+            "and": "И (все условия)",
+            "or": "ИЛИ (любое условие)",
+            "not": "НЕ"
+          },
+          "hint": {
+            "always": "Сценарий сработает без дополнительных условий.",
+            "deviceState": "Проверяем значение параметра у устройства.",
+            "timeWindow": "Срабатывать только в заданный промежуток.",
+            "and": "Сработает, если выполнены ВСЕ вложенные условия.",
+            "or": "Сработает, если выполнено ХОТЯ БЫ ОДНО условие.",
+            "not": "Инвертирует вложенное условие."
+          }
+        }
       }
     },
     "page": "Страница",

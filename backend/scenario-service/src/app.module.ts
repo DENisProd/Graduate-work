@@ -8,6 +8,7 @@ import { DevicesModule } from './devices/devices.module';
 import { ScenarioModule } from './scenario/scenario.module';
 import { ScenarioExecutionModule } from './scenario-execution/scenario-execution.module';
 import { DeviceDataModule } from './device-data/device-data.module';
+import { ZigbeeModule } from './zigbee/zigbee.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { DeviceDataModule } from './device-data/device-data.module';
     ScenarioModule,
     ScenarioExecutionModule,
     DeviceDataModule,
+    ZigbeeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

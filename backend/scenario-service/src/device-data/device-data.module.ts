@@ -3,12 +3,14 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { DeviceDataController } from './device-data.controller';
 import { DeviceDataService } from './device-data.service';
 import {
-  DEVICE_DATA_MODEL,
   DeviceDataRepository,
-  DeviceDataSchema,
 } from './device-data.repository';
 import { DevicesModule } from '../devices/devices.module';
 import { DeviceDataGeneratorService } from './device-data.generator';
+import {
+  DEVICE_DATA_MODEL,
+  DeviceDataSchema,
+} from '../mongo/schemas/device-data.mongo';
 
 @Module({
   imports: [

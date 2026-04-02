@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
-import type { DeviceDataType } from '../common/schemas/enums';
+import { DeviceDataType } from '../common/schemas/enums';
 import { PhysicalDeviceService } from '../devices/physical-device.service';
 import { DeviceDataService } from './device-data.service';
 
@@ -34,11 +34,11 @@ export class DeviceDataGeneratorService {
 
   private async getAllDevices() {
     const limit = 100;
-    let page = 0;
+    // `findMany` pagination is 1-based (`page` >= 1)
+    let page = 1;
     const all: Array<{ id: string; deviceTypeId: number }> = [];
 
     // paginate through all devices to avoid loading too many at once
-    // relies on PhysicalDeviceService pagination (0-based `page`)
     // stops when we've loaded at least "total" devices or page is empty
     for (;;) {
       const { items, total } = await this.physicalDeviceService.findMany({
@@ -49,10 +49,17 @@ export class DeviceDataGeneratorService {
       if (!items.length) break;
 
       all.push(
-        ...items.map((item) => ({
-          id: item.id,
-          deviceTypeId: item.deviceTypeId,
-        })),
+        ...items
+          .filter(
+            (
+              item,
+            ): item is (typeof items)[number] & { deviceTypeId: number } =>
+              typeof item.deviceTypeId === 'number',
+          )
+          .map((item) => ({
+            id: item.id,
+            deviceTypeId: item.deviceTypeId,
+          })),
       );
 
       if (all.length >= total) break;
@@ -67,68 +74,65 @@ export class DeviceDataGeneratorService {
     deviceId: string,
     timestamp: Date,
   ) {
-    const types: DeviceDataType[] = ['FLOAT', 'NUMBER', 'STRING', 'BOOLEAN'];
-    const type = types[Math.floor(Math.random() * types.length)];
+    const types = Object.values(DeviceDataType);
+    const type = types[Math.floor(Math.random() * types.length)]!;
 
     let unit: string | undefined;
-    let data: Record<string, unknown>;
+    let value: unknown;
+    let capability: string;
+    let attribute: string | undefined;
 
     switch (type) {
-      case 'FLOAT': {
+      case DeviceDataType.FLOAT: {
         unit = '°C';
-        data = {
-          value: this.randomFloat(18, 26),
-        };
+        capability = 'temperature_sensor';
+        attribute = 'value';
+        value = { value: this.randomFloat(18, 26), unit };
         break;
       }
-      case 'NUMBER': {
+      case DeviceDataType.NUMBER: {
         unit = 'W';
-        data = {
-          value: this.randomInt(0, 2000),
-        };
+        capability = 'power';
+        attribute = 'value';
+        value = { value: this.randomInt(0, 2000), unit };
         break;
       }
-      case 'STRING': {
+      case DeviceDataType.STRING: {
         unit = undefined;
         const states = ['idle', 'running', 'error'];
-        data = {
-          value: states[Math.floor(Math.random() * states.length)],
-        };
+        capability = 'status';
+        attribute = 'state';
+        value = states[Math.floor(Math.random() * states.length)];
         break;
       }
-      case 'BOOLEAN':
+      case DeviceDataType.BOOLEAN:
       default: {
         unit = undefined;
-        data = {
-          value: Math.random() > 0.5,
-        };
+        capability = 'switch';
+        attribute = 'state';
+        value = { on: Math.random() > 0.5 };
         break;
       }
     }
 
     const base: {
-      deviceId?: string;
-      deviceTypeId?: number;
-      deviceFunction: string;
+      deviceId: string;
+      capability: string;
+      attribute?: string;
       type: DeviceDataType;
+      value: unknown;
       unit?: string;
       timestamp: Date;
-      data: Record<string, unknown>;
+      quality?: number;
     } = {
-      deviceFunction: 'random',
+      deviceId,
+      capability,
+      ...(attribute ? { attribute } : {}),
       type,
+      value,
       unit,
       timestamp,
-      data,
     };
-
-    if (deviceId) {
-      base.deviceId = deviceId;
-    }
-
-    if (typeof deviceTypeId === 'number') {
-      base.deviceTypeId = deviceTypeId;
-    }
 
     return base;
   }

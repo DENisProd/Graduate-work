@@ -1,4 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { ScenarioStatus } from '../../common/schemas/enums';
+import type { ScenarioDefinition } from '../schemas/scenario-definition.schema';
+import { scenarioDefinitionExampleHome } from '../schemas/scenario-definition.schema';
 
 export class ScenarioResponseDto {
   @ApiProperty()
@@ -13,14 +16,22 @@ export class ScenarioResponseDto {
   @ApiProperty()
   houseId: string;
 
+  @ApiProperty({
+    type: Object,
+    description:
+      'Универсальное определение сценария (scope/triggers/conditions/actions/options)',
+    example: scenarioDefinitionExampleHome,
+  })
+  definition: ScenarioDefinition;
+
   @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()
   updatedAt: Date;
 
-  @ApiProperty({ enum: ['OFFLINE', 'ONLINE', 'ERROR'] })
-  status: 'OFFLINE' | 'ONLINE' | 'ERROR';
+  @ApiProperty({ enum: ScenarioStatus })
+  status: ScenarioStatus;
 
   @ApiProperty()
   creatorId: string;

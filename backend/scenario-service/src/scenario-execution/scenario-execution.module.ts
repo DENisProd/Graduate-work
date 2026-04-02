@@ -3,10 +3,12 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ScenarioExecutionController } from './scenario-execution.controller';
 import { ScenarioExecutionService } from './scenario-execution.service';
 import {
-  SCENARIO_EXECUTION_MODEL,
   ScenarioExecutionRepository,
-  ScenarioExecutionSchema,
 } from './scenario-execution.repository';
+import {
+  SCENARIO_EXECUTION_MODEL,
+  ScenarioExecutionSchema,
+} from '../mongo/schemas/scenario-execution.mongo';
 
 @Module({
   imports: [

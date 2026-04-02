@@ -13,6 +13,7 @@ import {
 } from './dto/device-data-response.dto';
 import { listDeviceDataQuerySchema } from './schemas/device-data.schema';
 import { idParamSchema } from '../common/schemas/id-params';
+import { DeviceDataType } from '../common/schemas/enums';
 
 @ApiTags('Device Data')
 @Controller('device-data')
@@ -27,20 +28,19 @@ export class DeviceDataController {
     description: 'ObjectId физического устройства',
   })
   @ApiQuery({
-    name: 'deviceTypeId',
+    name: 'capability',
     required: false,
-    type: Number,
-    description: 'ID типа устройства',
+    description: 'Капабилити (например: temperature_sensor, switch, battery)',
   })
   @ApiQuery({
-    name: 'deviceFunction',
+    name: 'attribute',
     required: false,
-    description: 'Функция устройства',
+    description: 'Атрибут капабилити (например: state, value)',
   })
   @ApiQuery({
     name: 'type',
     required: false,
-    enum: ['FLOAT', 'NUMBER', 'STRING', 'BOOLEAN'],
+    enum: DeviceDataType,
     description: 'Тип данных',
   })
   @ApiQuery({

@@ -25,6 +25,11 @@ import {
 } from './dto/scenario-response.dto';
 import { listScenariosQuerySchema } from './schemas/scenario.schema';
 import { idParamSchema } from '../common/schemas/id-params';
+import { ScenarioStatus } from '../common/schemas/enums';
+import {
+  scenarioDefinitionExampleHome,
+  scenarioDefinitionExampleOffice,
+} from './schemas/scenario-definition.schema';
 
 @ApiTags('Scenarios')
 @Controller('scenarios')
@@ -36,17 +41,48 @@ export class ScenarioController {
   @ApiBody({
     schema: {
       type: 'object',
-      required: ['name', 'status', 'creatorId', 'houseId'],
+      required: ['name', 'status', 'creatorId', 'houseId', 'definition'],
       properties: {
         name: { type: 'string', maxLength: 255 },
         description: { type: 'string', maxLength: 2000 },
         status: {
           type: 'string',
-          enum: ['OFFLINE', 'ONLINE', 'ERROR'],
-          default: 'OFFLINE',
+          enum: Object.values(ScenarioStatus),
+          default: ScenarioStatus.OFFLINE,
         },
         creatorId: { type: 'string', maxLength: 255 },
         houseId: { type: 'string', maxLength: 255 },
+        definition: {
+          type: 'object',
+          description:
+            'Универсальное определение сценария: scope/triggers/conditions/actions/options (версия 1). Примеры: HOME / OFFICE.',
+          additionalProperties: true,
+          example: scenarioDefinitionExampleHome,
+        },
+      },
+    },
+    examples: {
+      HOME: {
+        summary: 'Дом: утро по расписанию',
+        value: {
+          name: 'Утро',
+          description: 'Включить свет и климат утром',
+          status: ScenarioStatus.ONLINE,
+          creatorId: 'user_1',
+          houseId: 'house_123',
+          definition: scenarioDefinitionExampleHome,
+        },
+      },
+      OFFICE: {
+        summary: 'Офис: свет по датчику движения',
+        value: {
+          name: 'Переговорка: движение → свет',
+          description: 'Включить свет при движении в рабочее время',
+          status: ScenarioStatus.ONLINE,
+          creatorId: 'user_2',
+          houseId: 'office_77',
+          definition: scenarioDefinitionExampleOffice,
+        },
       },
     },
   })
@@ -71,7 +107,7 @@ export class ScenarioController {
   @ApiQuery({
     name: 'status',
     required: false,
-    enum: ['OFFLINE', 'ONLINE', 'ERROR'],
+    enum: ScenarioStatus,
     description: 'Статус сценария',
   })
   @ApiQuery({ name: 'creatorId', required: false, description: 'ID создателя' })
@@ -79,7 +115,7 @@ export class ScenarioController {
     name: 'page',
     required: false,
     type: Number,
-    description: 'Номер страницы',
+    description: 'Номер страницы (начиная с 1)',
   })
   @ApiQuery({
     name: 'limit',
@@ -120,7 +156,24 @@ export class ScenarioController {
       properties: {
         name: { type: 'string', maxLength: 255 },
         description: { type: 'string', maxLength: 2000, nullable: true },
-        status: { type: 'string', enum: ['OFFLINE', 'ONLINE', 'ERROR'] },
+        status: { type: 'string', enum: Object.values(ScenarioStatus) },
+        definition: {
+          type: 'object',
+          description:
+            'Универсальное определение сценария: scope/triggers/conditions/actions/options (версия 1). Примеры: HOME / OFFICE.',
+          additionalProperties: true,
+          example: scenarioDefinitionExampleOffice,
+        },
+      },
+    },
+    examples: {
+      RENAME_ONLY: {
+        summary: 'Переименовать сценарий',
+        value: { name: 'Новый заголовок сценария' },
+      },
+      UPDATE_DEFINITION: {
+        summary: 'Обновить definition (пример OFFICE)',
+        value: { definition: scenarioDefinitionExampleOffice },
       },
     },
   })

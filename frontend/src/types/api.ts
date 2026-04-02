@@ -550,11 +550,15 @@ export interface ScenarioResponse {
   id: string;
   name: string;
   description?: string | null;
-  houseId: number;
+  houseId: number | string;
   createdAt: string;
   updatedAt: string;
   status: 'OFFLINE' | 'ONLINE' | 'ERROR';
   creatorId: string;
   isActive?: boolean;
   lastRun?: string;
+  /**
+   * Universal scenario definition (v1). Optional for backward compatibility with older backend payloads.
+   */
+  definition?: unknown;
 }

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel, Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { InjectModel } from '@nestjs/mongoose';
 import type { HydratedDocument, Model } from 'mongoose';
 import { isValidObjectId, Types } from 'mongoose';
 import type {
@@ -7,35 +7,11 @@ import type {
   ListDeviceDataQuery,
 } from './schemas/device-data.schema';
 import { skipTake } from '../common/schemas/pagination';
-
-export const DEVICE_DATA_MODEL = 'DeviceData';
-
-@Schema({ collection: 'DeviceData' })
-export class DeviceDataModel {
-  @Prop({ required: false, type: Types.ObjectId })
-  deviceId?: Types.ObjectId;
-
-  @Prop({ required: false, type: Number })
-  deviceTypeId?: number;
-
-  @Prop({ required: true })
-  deviceFunction: string;
-
-  @Prop({ required: true, enum: ['FLOAT', 'NUMBER', 'STRING', 'BOOLEAN'] })
-  type: 'FLOAT' | 'NUMBER' | 'STRING' | 'BOOLEAN';
-
-  @Prop({ type: String, default: null })
-  unit?: string | null;
-
-  @Prop({ required: true })
-  timestamp: Date;
-
-  @Prop({ required: true, type: Object })
-  data: Record<string, unknown>;
-}
-
-export type DeviceDataDocument = HydratedDocument<DeviceDataModel>;
-export const DeviceDataSchema = SchemaFactory.createForClass(DeviceDataModel);
+import {
+  DEVICE_DATA_MODEL,
+  type DeviceDataDocument,
+  DeviceDataModel,
+} from '../mongo/schemas/device-data.mongo';
 
 type DeviceDataDoc = DeviceDataModel & { _id: Types.ObjectId };
 type DeviceData = DeviceDataModel & { id: string };
@@ -66,17 +42,16 @@ export class DeviceDataRepository {
   async findMany(
     params: ListDeviceDataQuery,
   ): Promise<{ items: DeviceData[]; total: number }> {
-    const filter: Partial<
-      Pick<DeviceDataModel, 'deviceTypeId' | 'deviceFunction' | 'type'>
-    > & {
+    const filter: Partial<Pick<DeviceDataModel, 'capability' | 'type'>> & {
       timestamp?: { $gte?: Date; $lte?: Date };
       deviceId?: Types.ObjectId;
+      attribute?: string;
     } = {};
     if (params.deviceId && isValidObjectId(params.deviceId)) {
       filter.deviceId = new Types.ObjectId(params.deviceId);
     }
-    if (params.deviceTypeId) filter.deviceTypeId = params.deviceTypeId;
-    if (params.deviceFunction) filter.deviceFunction = params.deviceFunction;
+    if (params.capability) filter.capability = params.capability;
+    if (params.attribute) filter.attribute = params.attribute;
     if (params.type) filter.type = params.type;
     if (params.from ?? params.to) {
       filter.timestamp = {};

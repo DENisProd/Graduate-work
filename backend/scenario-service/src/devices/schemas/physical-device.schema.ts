@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { paginationQuerySchema } from '../../common/schemas/pagination';
 
 export const createPhysicalDeviceSchema = z.object({
   name: z.string().min(1).max(255),
@@ -21,12 +22,12 @@ export type UpdatePhysicalDeviceInput = z.infer<
   typeof updatePhysicalDeviceSchema
 >;
 
-export const listPhysicalDevicesQuerySchema = z.object({
+const listPhysicalDevicesQuerySchemaBase = z.object({
   houseId: z.string().min(1).max(255).optional(),
   roomId: z.string().optional(),
-  page: z.coerce.number().int().min(0).default(0),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
 });
+export const listPhysicalDevicesQuerySchema =
+  listPhysicalDevicesQuerySchemaBase.merge(paginationQuerySchema);
 export type ListPhysicalDevicesQuery = z.infer<
   typeof listPhysicalDevicesQuerySchema
 >;

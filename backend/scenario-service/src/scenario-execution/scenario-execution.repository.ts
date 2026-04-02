@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel, Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { InjectModel } from '@nestjs/mongoose';
 import type { HydratedDocument, Model } from 'mongoose';
 import { isValidObjectId, Types } from 'mongoose';
 import type {
@@ -7,41 +7,11 @@ import type {
   UpdateScenarioExecutionInput,
 } from './schemas/scenario-execution.schema';
 import { skipTake } from '../common/schemas/pagination';
-
-export const SCENARIO_EXECUTION_MODEL = 'ScenarioExecution';
-
-@Schema({ collection: 'ScenarioExecution' })
-export class ScenarioExecutionModel {
-  @Prop({ required: true })
-  scenarioId: string;
-
-  @Prop({ required: true, enum: ['RUNNING', 'SUCCESS', 'FAILURE'] })
-  status: 'RUNNING' | 'SUCCESS' | 'FAILURE';
-
-  @Prop({
-    required: true,
-    enum: ['SCHEDULE', 'MANUAL', 'AUTOMATIC', 'SYSTEM', 'API'],
-  })
-  triggeredBy: 'SCHEDULE' | 'MANUAL' | 'AUTOMATIC' | 'SYSTEM' | 'API';
-
-  @Prop({ required: true, type: Object })
-  triggerData: Record<string, unknown>;
-
-  @Prop({ type: String, default: null })
-  errorMessage?: string | null;
-
-  @Prop({ required: true })
-  startedAt: Date;
-
-  @Prop({ type: Date, default: null })
-  endedAt?: Date | null;
-}
-
-export type ScenarioExecutionDocument =
-  HydratedDocument<ScenarioExecutionModel>;
-export const ScenarioExecutionSchema = SchemaFactory.createForClass(
+import {
+  SCENARIO_EXECUTION_MODEL,
+  type ScenarioExecutionDocument,
   ScenarioExecutionModel,
-);
+} from '../mongo/schemas/scenario-execution.mongo';
 
 type ScenarioExecutionDoc = ScenarioExecutionModel & {
   _id: Types.ObjectId;

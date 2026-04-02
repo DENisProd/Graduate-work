@@ -4,28 +4,58 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useTranslation } from '@/hooks';
 import { useToast } from '@/components/shared';
 import { ApiError, scenariosApi } from '@/lib/api-client';
 import { formatDateTime } from '@/lib/utils';
 import type { ScenarioResponse } from '@/types/api';
+import {
+  type ScenarioActionV1,
+  type ScenarioConditionV1,
+  type ScenarioDefinitionV1,
+  type ScenarioStatus,
+  type ScenarioTriggerV1,
+} from '@/features/access-control/model/scenario-definition-v1';
 
 interface ScenariosTabProps {
   houseId: string | null;
   activeTab: string;
 }
 
+type UiScenario = ScenarioResponse & {
+  definition?: ScenarioDefinitionV1;
+};
+
+const asDefinitionV1 = (v: unknown): ScenarioDefinitionV1 | undefined => {
+  if (!v || typeof v !== 'object') return undefined;
+  const obj = v as Record<string, unknown>;
+  if (obj.version !== 1) return undefined;
+  return v as ScenarioDefinitionV1;
+};
+
 export function ScenariosTab({ houseId, activeTab }: ScenariosTabProps) {
   const { t, locale } = useTranslation();
   const { showToast } = useToast();
   const router = useRouter();
 
-  const [scenarios, setScenarios] = useState<ScenarioResponse[]>([]);
+  const [scenarios, setScenarios] = useState<UiScenario[]>([]);
   const [scenariosTotal, setScenariosTotal] = useState(0);
   const [scenariosPage, setScenariosPage] = useState(1);
   const scenariosLimit = 6;
   const [scenariosLoading, setScenariosLoading] = useState(false);
   const [scenariosError, setScenariosError] = useState<'none' | 'forbidden' | 'error'>('none');
+  const [statusFilter, setStatusFilter] = useState<ScenarioStatus | 'ALL'>('ALL');
+  const [creatorIdFilter, setCreatorIdFilter] = useState<string>('');
 
   const normalizeList = useCallback(<T,>(result: unknown) => {
     if (Array.isArray(result)) {
@@ -86,13 +116,20 @@ export function ScenariosTab({ houseId, activeTab }: ScenariosTabProps) {
       try {
         const result = await scenariosApi.getAll({
           houseId,
+          status: statusFilter === 'ALL' ? undefined : statusFilter,
+          creatorId: creatorIdFilter.trim() ? creatorIdFilter.trim() : undefined,
           page: scenariosPage,
           limit: scenariosLimit,
           signal,
         });
         const normalized = normalizeList<ScenarioResponse>(result);
         if (signal?.aborted) return;
-        setScenarios(normalized.items);
+        setScenarios(
+          normalized.items.map((s) => ({
+            ...s,
+            definition: asDefinitionV1((s as any).definition),
+          }))
+        );
         setScenariosTotal(normalized.total);
       } catch (error) {
         if (signal?.aborted) return;
@@ -101,7 +138,7 @@ export function ScenariosTab({ houseId, activeTab }: ScenariosTabProps) {
         if (!signal?.aborted) setScenariosLoading(false);
       }
     },
-    [handleError, houseId, normalizeList, scenariosLimit, scenariosPage]
+    [creatorIdFilter, handleError, houseId, normalizeList, scenariosLimit, scenariosPage, statusFilter]
   );
 
   useEffect(() => {
@@ -109,20 +146,82 @@ export function ScenariosTab({ houseId, activeTab }: ScenariosTabProps) {
     const controller = new AbortController();
     void loadScenarios(controller.signal);
     return () => controller.abort();
-  }, [activeTab, loadScenarios]);
+  }, [activeTab, loadScenarios, scenariosPage]);
+
+  useEffect(() => {
+    if (activeTab !== 'scenarios') return;
+    setScenariosPage(1);
+  }, [activeTab, houseId, statusFilter, creatorIdFilter]);
 
   const totalPages = (total: number, limit: number) => Math.max(1, Math.ceil(total / limit));
   const scenariosPages = totalPages(scenariosTotal, scenariosLimit);
 
+  const openCreate = useCallback(() => {
+    if (!houseId) return;
+    router.push(`/admin/access-control/houses/${encodeURIComponent(houseId)}/scenarios/new`);
+  }, [houseId, router]);
+
+  const openEdit = useCallback(
+    (scenario: UiScenario) => {
+      if (!houseId) return;
+      router.push(
+        `/admin/access-control/houses/${encodeURIComponent(houseId)}/scenarios/${encodeURIComponent(scenario.id)}`
+      );
+    },
+    [houseId, router]
+  );
+
+  const setOnline = useCallback(async (scenario: UiScenario, online: boolean) => {
+    const nextStatus: ScenarioStatus = online ? 'ONLINE' : 'OFFLINE';
+    try {
+      await scenariosApi.update(scenario.id, { status: nextStatus });
+      await loadScenarios();
+    } catch (error) {
+      handleError(error, () => {});
+    }
+  }, [handleError, loadScenarios]);
+
+  const statusBadge = (status: ScenarioStatus) => {
+    const variant = status === 'ONLINE' ? 'default' : status === 'ERROR' ? 'destructive' : 'outline';
+    return <Badge variant={variant as any}>{status}</Badge>;
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Button variant="secondary" size="sm" onClick={() => loadScenarios()}>
-          {t('admin.retry')}
-        </Button>
-        <span className="text-xs text-muted-foreground">
-          {t('admin.page')} {scenariosPage} / {scenariosPages}
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="secondary" size="sm" onClick={() => loadScenarios()}>
+            {t('admin.retry')}
+          </Button>
+          <Button size="sm" onClick={openCreate} disabled={!houseId}>
+            {locale === 'ru' ? 'Создать сценарий' : 'Create scenario'}
+          </Button>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">{locale === 'ru' ? 'Статус' : 'Status'}</span>
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+              <SelectTrigger className="w-[140px]" size="sm">
+                <SelectValue placeholder={locale === 'ru' ? 'Все' : 'All'} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">{locale === 'ru' ? 'Все' : 'All'}</SelectItem>
+                <SelectItem value="ONLINE">ONLINE</SelectItem>
+                <SelectItem value="OFFLINE">OFFLINE</SelectItem>
+                <SelectItem value="ERROR">ERROR</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Input
+            className="h-8 w-[220px]"
+            placeholder={locale === 'ru' ? 'creatorId (опц.)' : 'creatorId (optional)'}
+            value={creatorIdFilter}
+            onChange={(e) => setCreatorIdFilter(e.target.value)}
+          />
+          <span className="text-xs text-muted-foreground">
+            {t('admin.page')} {scenariosPage} / {scenariosPages}
+          </span>
+        </div>
       </div>
       {scenariosLoading ? (
         <div className="flex items-center justify-center py-10">
@@ -148,17 +247,36 @@ export function ScenariosTab({ houseId, activeTab }: ScenariosTabProps) {
           {scenarios.map((scenario) => (
             <Card key={scenario.id} className="border border-border bg-card shadow-sm">
               <CardHeader>
-                <CardTitle className="text-base">{scenario.name}</CardTitle>
+                <div className="flex items-start justify-between gap-2">
+                  <CardTitle className="text-base">{scenario.name}</CardTitle>
+                  <div className="flex items-center gap-1">
+                    <Switch
+                      checked={scenario.status === 'ONLINE'}
+                      onCheckedChange={(checked) => setOnline(scenario, checked)}
+                      disabled={scenario.status === 'ERROR'}
+                      aria-label={
+                        locale === 'ru'
+                          ? 'Включить или выключить сценарий'
+                          : 'Enable or disable scenario'
+                      }
+                    />
+                  </div>
+                </div>
                 <CardDescription className="text-xs text-muted-foreground">
                   {scenario.description || '—'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-1 text-sm text-muted-foreground">
                 <div>
-                  {t('admin.isActive')}: {scenario.isActive ? t('common.yes') : t('common.no')}
+                  {locale === 'ru' ? 'Обновлено' : 'Updated'}: {formatDateTime(scenario.updatedAt, locale)}
                 </div>
                 <div>
-                  {t('admin.lastRun')}: {formatDateTime(scenario.lastRun, locale)}
+                  {locale === 'ru' ? 'Пространство' : 'Space'}: {String(scenario.definition?.scope?.spaceId ?? scenario.houseId)}
+                </div>
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <Button size="sm" variant="secondary" onClick={() => openEdit(scenario)}>
+                    {locale === 'ru' ? 'Открыть' : 'Open'}
+                  </Button>
                 </div>
               </CardContent>
             </Card>

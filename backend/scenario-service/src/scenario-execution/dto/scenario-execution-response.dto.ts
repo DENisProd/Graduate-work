@@ -1,4 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
+import {
+  ScenarioExecutionStatus,
+  TriggerSourceType,
+} from '../../common/schemas/enums';
 
 export class ScenarioExecutionResponseDto {
   @ApiProperty()
@@ -7,11 +11,11 @@ export class ScenarioExecutionResponseDto {
   @ApiProperty()
   scenarioId: string;
 
-  @ApiProperty({ enum: ['RUNNING', 'SUCCESS', 'FAILURE'] })
-  status: 'RUNNING' | 'SUCCESS' | 'FAILURE';
+  @ApiProperty({ enum: ScenarioExecutionStatus })
+  status: ScenarioExecutionStatus;
 
-  @ApiProperty({ enum: ['SCHEDULE', 'MANUAL', 'AUTOMATIC', 'SYSTEM', 'API'] })
-  triggeredBy: 'SCHEDULE' | 'MANUAL' | 'AUTOMATIC' | 'SYSTEM' | 'API';
+  @ApiProperty({ enum: TriggerSourceType })
+  triggeredBy: TriggerSourceType;
 
   @ApiProperty({ type: Object })
   triggerData: Record<string, unknown>;

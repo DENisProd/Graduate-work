@@ -3,10 +3,9 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ScenarioController } from './scenario.controller';
 import { ScenarioService } from './scenario.service';
 import {
-  SCENARIO_MODEL,
   ScenarioRepository,
-  ScenarioSchema,
 } from './scenario.repository';
+import { SCENARIO_MODEL, ScenarioSchema } from '../mongo/schemas/scenario.mongo';
 
 @Module({
   imports: [

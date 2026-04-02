@@ -737,6 +737,20 @@ export const scenariosApi = {
       signal: params?.signal,
     });
   },
+  getById: (id: string, options?: { signal?: AbortSignal }): Promise<ScenarioResponse> =>
+    physicalDevicesApiCall(`/scenarios/${encodeURIComponent(id)}`, { signal: options?.signal }),
+  create: (dto: unknown): Promise<ScenarioResponse> =>
+    physicalDevicesApiCall('/scenarios', {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    }),
+  update: (id: string, dto: unknown): Promise<ScenarioResponse> =>
+    physicalDevicesApiCall(`/scenarios/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(dto),
+    }),
+  delete: (id: string): Promise<void> =>
+    physicalDevicesApiCall(`/scenarios/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 };
 
 // House Rooms API — /api/v1/rooms (GET ?houseId=, POST, GET /:id, PATCH /:id, DELETE /:id)

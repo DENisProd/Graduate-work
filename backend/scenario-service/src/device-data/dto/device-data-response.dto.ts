@@ -1,29 +1,34 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { DeviceDataType } from '../../common/schemas/enums';
 
 export class DeviceDataResponseDto {
   @ApiProperty()
   id: string;
 
+  @ApiProperty()
+  deviceId: string;
+
+  @ApiProperty()
+  capability: string;
+
   @ApiProperty({ required: false, nullable: true })
-  deviceId?: string | null;
+  attribute?: string | null;
 
-  @ApiProperty()
-  deviceTypeId: number;
+  @ApiProperty({ enum: DeviceDataType })
+  type: DeviceDataType;
 
-  @ApiProperty()
-  deviceFunction: string;
-
-  @ApiProperty({ enum: ['FLOAT', 'NUMBER', 'STRING', 'BOOLEAN'] })
-  type: 'FLOAT' | 'NUMBER' | 'STRING' | 'BOOLEAN';
+  @ApiProperty({ type: Object })
+  value: unknown;
 
   @ApiProperty({ required: false, nullable: true })
   unit?: string | null;
 
+  @ApiProperty({ required: false, nullable: true })
+  quality?: number | null;
+
   @ApiProperty()
   timestamp: Date;
 
-  @ApiProperty({ type: Object })
-  data: Record<string, unknown>;
 }
 
 export class DeviceDataListResponseDto {

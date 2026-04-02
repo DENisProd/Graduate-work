@@ -427,6 +427,157 @@
         "confirmTitle": "Confirm registration",
         "submit": "Add device",
         "success": "Device added"
+      },
+      "scenarioEditor": {
+        "titleCreate": "Create scenario",
+        "titleEdit": "Edit scenario",
+        "back": "Back",
+        "validate": "Validate",
+        "tabForm": "Form",
+        "tabGraph": "Graph",
+        "errorsTitle": "Errors",
+        "errorsDescription": "Fix errors before saving.",
+        "errorsMore": "and {{count}} more…",
+        "templateGoodMorning": "Good morning!",
+        "reset": "Reset",
+        "useTemplate": "Use template",
+        "advancedMode": "Advanced mode (JSON)",
+        "carefulTitle": "Careful",
+        "carefulDescription": "Use only if you know what you are doing. Prefer the builder.",
+        "stepsTitle": "Scenario steps",
+        "stepsDescription": "1) When to run  2) Conditions  3) Actions",
+        "definitionJson": "Definition (JSON)",
+        "loading": "Loading…",
+        "unsavedChanges": "Unsaved changes",
+        "allSaved": "All changes saved",
+        "deleting": "Deleting…",
+        "delete": "Delete",
+        "saving": "Saving…",
+        "saveAndEnable": "Save & enable",
+        "generate": "Generate",
+        "validation": {
+          "nameRequired": "Name is required",
+          "nameMax": "Max 255 characters",
+          "descriptionMax": "Max 2000 characters",
+          "missingSpace": "System error: space is missing",
+          "errorStatusReadonly": "ERROR status is set by the system",
+          "invalidJson": "Invalid JSON"
+        },
+        "confirm": {
+          "leaveUnsaved": "You have unsaved changes. Leave the page?",
+          "deleteScenario": "Delete scenario?"
+        },
+        "basics": {
+          "title": "Basics",
+          "toggleAria": "Toggle scenario",
+          "description": "Name, description, status, space.",
+          "nameDescriptionButton": "Name & description",
+          "nameLabel": "Name",
+          "namePlaceholder": "Example: “Weekday morning”",
+          "descriptionLabel": "Description",
+          "descriptionPlaceholder": "Short: what this scenario does"
+        },
+        "builder": {
+          "triggersTitle": "Triggers",
+          "triggersEmpty": "No triggers yet. Add at least one.",
+          "addTrigger": "Add trigger",
+          "conditionsTitle": "Conditions",
+          "conditionsEmpty": "No conditions (scenario runs always).",
+          "addCondition": "Add condition",
+          "actionsTitle": "Actions",
+          "actionsEmpty": "No actions yet. Add at least one.",
+          "addAction": "Add action",
+          "optionsTitle": "Options",
+          "openOptions": "Open options",
+          "optionsDialogTitle": "Scenario options",
+          "optionsDialogDescription": "Usually optional. Defaults are fine.",
+          "timezonePlaceholder": "Example: Europe/Moscow",
+          "done": "Done"
+        },
+        "fields": {
+          "cron": "cron",
+          "timezone": "timezone",
+          "debounceMs": "debounceMs",
+          "maxConcurrency": "maxConcurrency",
+          "deviceId": "deviceId",
+          "event": "event",
+          "token": "token",
+          "ms": "ms",
+          "command": "command",
+          "channel": "channel",
+          "title": "title",
+          "message": "message",
+          "method": "method",
+          "url": "url",
+          "timeoutMs": "timeoutMs",
+          "path": "path",
+          "op": "op",
+          "valueJson": "value (JSON)",
+          "from": "from",
+          "to": "to"
+        },
+        "common": {
+          "copy": "Copy",
+          "remove": "Remove"
+        },
+        "trigger": {
+          "enabled": "enabled",
+          "copyAria": "Copy trigger",
+          "removeAria": "Remove trigger",
+          "manualStart": "Manual start.",
+          "type": {
+            "schedule": "Schedule",
+            "manual": "Manual",
+            "deviceEvent": "Device event",
+            "webhook": "Webhook"
+          },
+          "hint": {
+            "schedule": "Runs by time (cron).",
+            "manual": "Started manually by a button.",
+            "deviceEvent": "Runs when a device emits an event.",
+            "webhook": "Runs by an HTTP request with a secret token."
+          }
+        },
+        "action": {
+          "moveUpAria": "Move action up",
+          "moveDownAria": "Move action down",
+          "removeAria": "Remove action",
+          "up": "Up",
+          "down": "Down",
+          "type": {
+            "deviceCommand": "Device command",
+            "delay": "Delay",
+            "notify": "Notification",
+            "httpRequest": "HTTP request"
+          },
+          "hint": {
+            "deviceCommand": "Example: turn on light, open lock.",
+            "delay": "Wait before the next action.",
+            "notify": "Send a message to a user.",
+            "httpRequest": "Call an external service by URL."
+          }
+        },
+        "condition": {
+          "resetAlways": "Reset (ALWAYS)",
+          "removeAria": "Remove condition",
+          "conditionIndex": "Condition #{{index}}",
+          "type": {
+            "always": "Always",
+            "deviceState": "Device state",
+            "timeWindow": "Time window",
+            "and": "AND (all)",
+            "or": "OR (any)",
+            "not": "NOT"
+          },
+          "hint": {
+            "always": "No additional conditions.",
+            "deviceState": "Check a device parameter value.",
+            "timeWindow": "Run only within a time range.",
+            "and": "Runs if ALL nested conditions are true.",
+            "or": "Runs if ANY nested condition is true.",
+            "not": "Inverts the nested condition."
+          }
+        }
       }
     },
     "page": "Page",
