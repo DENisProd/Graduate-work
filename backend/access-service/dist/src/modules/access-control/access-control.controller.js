@@ -161,7 +161,7 @@ __decorate([
 __decorate([
     (0, common_1.Post)('cleanup/expired'),
     (0, swagger_1.ApiOperation)({ summary: 'Очистить истекшие права' }),
-    (0, swagger_1.ApiOkResponse)({ description: 'Очистка выполнена (ответ без тела)' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Очистка выполнена (HTTP 200, тело пустое)' }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)

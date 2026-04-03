@@ -8,7 +8,15 @@ import {
   Param,
   Post,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiOperation,
+  ApiTags,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiNoContentResponse,
+  ApiParam,
+  ApiBody,
+} from '@nestjs/swagger';
 import { PoliciesService } from './policies.service';
 import { CreatePolicyDto } from './dto/create-policy.dto';
 import { PolicyResponseDto } from './dto/policy-response.dto';
@@ -45,7 +53,12 @@ export class PoliciesController {
 
   @Post('policies')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Создать политику доступа (ABAC)' })
+  @ApiOperation({
+    summary: 'Создать политику доступа (ABAC)',
+    description: 'Требуется заголовок X-User-Id (кто выполняет операцию).',
+  })
+  @ApiBody({ type: CreatePolicyDto })
+  @ApiCreatedResponse({ type: PolicyResponseDto, description: 'Политика создана' })
   async create(@Body() dto: CreatePolicyDto, @UserId() actorId: string): Promise<PolicyResponseDto> {
     const policy = await this.policiesService.create(dto, actorId);
     return toResponse(policy);
@@ -53,6 +66,8 @@ export class PoliciesController {
 
   @Get('houses/:houseId/policies')
   @ApiOperation({ summary: 'Получить политики дома' })
+  @ApiParam({ name: 'houseId', format: 'uuid' })
+  @ApiOkResponse({ type: PolicyResponseDto, isArray: true })
   async findByHouseId(@Param('houseId') houseId: string): Promise<PolicyResponseDto[]> {
     const policies = await this.policiesService.findByHouseId(houseId);
     return policies.map(toResponse);
@@ -61,6 +76,8 @@ export class PoliciesController {
   @Delete('policies/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Удалить политику' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiNoContentResponse({ description: 'Политика удалена' })
   async delete(@Param('id') id: string): Promise<void> {
     await this.policiesService.delete(id);
   }

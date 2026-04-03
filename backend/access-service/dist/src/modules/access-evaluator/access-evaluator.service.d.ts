@@ -4,7 +4,7 @@ import { ResourcesService } from '../resources/resources.service';
 import { UsersService } from '../users/users.service';
 import { AccessCheckDto } from './dto/access-check.dto';
 import { AccessCheckByDeviceDto } from './dto/access-check-by-device.dto';
-import { HouseMembersService } from 'src/modules/house-members/house-members.service';
+import { HouseMembersService } from '../../../src/modules/house-members/house-members.service';
 type Decision = {
     allowed: boolean;
     source: 'EFFECTIVE' | 'ACCESS_RIGHT' | 'POLICY' | 'NONE';

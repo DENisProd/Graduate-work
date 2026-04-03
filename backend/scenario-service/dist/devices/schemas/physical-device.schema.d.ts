@@ -46,8 +46,8 @@ export declare const updatePhysicalDeviceSchema: z.ZodObject<{
     macAddress: z.ZodOptional<z.ZodOptional<z.ZodString>>;
     serialNumber: z.ZodOptional<z.ZodOptional<z.ZodString>>;
 }, "strip", z.ZodTypeAny, {
-    name?: string | undefined;
     description?: string | undefined;
+    name?: string | undefined;
     deviceTypeId?: number | undefined;
     houseId?: string | undefined;
     deviceId?: string | undefined;
@@ -57,8 +57,8 @@ export declare const updatePhysicalDeviceSchema: z.ZodObject<{
     macAddress?: string | undefined;
     serialNumber?: string | undefined;
 }, {
-    name?: string | undefined;
     description?: string | undefined;
+    name?: string | undefined;
     deviceTypeId?: number | undefined;
     houseId?: string | undefined;
     deviceId?: string | undefined;
@@ -81,9 +81,9 @@ export declare const listPhysicalDevicesQuerySchema: z.ZodObject<{
     houseId?: string | undefined;
     roomId?: string | undefined;
 }, {
-    houseId?: string | undefined;
-    roomId?: string | undefined;
     page?: unknown;
     limit?: unknown;
+    houseId?: string | undefined;
+    roomId?: string | undefined;
 }>;
 export type ListPhysicalDevicesQuery = z.infer<typeof listPhysicalDevicesQuerySchema>;

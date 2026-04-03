@@ -17,6 +17,7 @@ const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
 const policies_service_1 = require("./policies.service");
 const create_policy_dto_1 = require("./dto/create-policy.dto");
+const policy_response_dto_1 = require("./dto/policy-response.dto");
 const user_id_decorator_1 = require("../common/decorators/user-id.decorator");
 const toResponse = (p) => ({
     id: p.id,
@@ -50,7 +51,12 @@ exports.PoliciesController = PoliciesController;
 __decorate([
     (0, common_1.Post)('policies'),
     (0, common_1.HttpCode)(common_1.HttpStatus.CREATED),
-    (0, swagger_1.ApiOperation)({ summary: 'Создать политику доступа (ABAC)' }),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Создать политику доступа (ABAC)',
+        description: 'Требуется заголовок X-User-Id (кто выполняет операцию).',
+    }),
+    (0, swagger_1.ApiBody)({ type: create_policy_dto_1.CreatePolicyDto }),
+    (0, swagger_1.ApiCreatedResponse)({ type: policy_response_dto_1.PolicyResponseDto, description: 'Политика создана' }),
     __param(0, (0, common_1.Body)()),
     __param(1, (0, user_id_decorator_1.UserId)()),
     __metadata("design:type", Function),
@@ -60,6 +66,8 @@ __decorate([
 __decorate([
     (0, common_1.Get)('houses/:houseId/policies'),
     (0, swagger_1.ApiOperation)({ summary: 'Получить политики дома' }),
+    (0, swagger_1.ApiParam)({ name: 'houseId', format: 'uuid' }),
+    (0, swagger_1.ApiOkResponse)({ type: policy_response_dto_1.PolicyResponseDto, isArray: true }),
     __param(0, (0, common_1.Param)('houseId')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
@@ -69,6 +77,8 @@ __decorate([
     (0, common_1.Delete)('policies/:id'),
     (0, common_1.HttpCode)(common_1.HttpStatus.NO_CONTENT),
     (0, swagger_1.ApiOperation)({ summary: 'Удалить политику' }),
+    (0, swagger_1.ApiParam)({ name: 'id', format: 'uuid' }),
+    (0, swagger_1.ApiNoContentResponse)({ description: 'Политика удалена' }),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),

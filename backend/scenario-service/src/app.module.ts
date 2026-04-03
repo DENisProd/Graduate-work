@@ -1,3 +1,4 @@
+import { join } from 'path';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -13,7 +14,7 @@ import { ZigbeeModule } from './zigbee/zigbee.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      envFilePath: ['.env', '../../.env'],
+      envFilePath: join(__dirname, '../../.env'),
       isGlobal: true,
     }),
     ScheduleModule.forRoot(),

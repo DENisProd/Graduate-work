@@ -7,8 +7,8 @@ export declare const createScenarioExecutionSchema: z.ZodObject<{
     triggerData: z.ZodRecord<z.ZodString, z.ZodUnknown>;
     errorMessage: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
-    scenarioId: string;
     status: ScenarioExecutionStatus;
+    scenarioId: string;
     triggeredBy: import("../../common/schemas/enums").TriggerSourceType;
     triggerData: Record<string, unknown>;
     errorMessage?: string | undefined;
@@ -44,14 +44,14 @@ export declare const listScenarioExecutionsQuerySchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     page: number;
     limit: number;
-    scenarioId?: string | undefined;
     status?: ScenarioExecutionStatus | undefined;
+    scenarioId?: string | undefined;
     triggeredBy?: import("../../common/schemas/enums").TriggerSourceType | undefined;
 }, {
-    scenarioId?: string | undefined;
     status?: ScenarioExecutionStatus | undefined;
-    triggeredBy?: import("../../common/schemas/enums").TriggerSourceType | undefined;
     page?: unknown;
     limit?: unknown;
+    scenarioId?: string | undefined;
+    triggeredBy?: import("../../common/schemas/enums").TriggerSourceType | undefined;
 }>;
 export type ListScenarioExecutionsQuery = z.infer<typeof listScenarioExecutionsQuerySchema>;

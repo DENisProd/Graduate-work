@@ -139,7 +139,7 @@ export class AccessControlController {
 
   @Post('cleanup/expired')
   @ApiOperation({ summary: 'Очистить истекшие права' })
-  @ApiOkResponse({ description: 'Очистка выполнена (ответ без тела)' })
+  @ApiOkResponse({ description: 'Очистка выполнена (HTTP 200, тело пустое)' })
   async cleanupExpired() {
     await this.accessControlService.cleanupExpiredRights();
   }

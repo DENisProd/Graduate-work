@@ -5,7 +5,14 @@ import {
   Param,
   Post,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiOperation,
+  ApiTags,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiParam,
+  ApiBody,
+} from '@nestjs/swagger';
 import { ResourcesService } from './resources.service';
 import { CreateResourceDto } from './dto/create-resource.dto';
 import { ResourceResponseDto } from './dto/resource-response.dto';
@@ -37,7 +44,12 @@ export class ResourcesController {
   constructor(private readonly resourcesService: ResourcesService) {}
 
   @Post('resources')
-  @ApiOperation({ summary: 'Создать ресурс (ROOM, DEVICE, DEVICE_FUNCTION, ...)' })
+  @ApiOperation({
+    summary: 'Создать ресурс',
+    description: 'Типы: ROOM, DEVICE, DEVICE_FUNCTION и др. (см. enum ResourceType в схеме).',
+  })
+  @ApiBody({ type: CreateResourceDto })
+  @ApiCreatedResponse({ type: ResourceResponseDto })
   async create(@Body() dto: CreateResourceDto): Promise<ResourceResponseDto> {
     const resource = await this.resourcesService.create(dto);
     return toResponse(resource);
@@ -45,6 +57,8 @@ export class ResourcesController {
 
   @Get('resources/:id')
   @ApiOperation({ summary: 'Получить ресурс по ID' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: ResourceResponseDto })
   async findById(@Param('id') id: string): Promise<ResourceResponseDto> {
     const resource = await this.resourcesService.findById(id);
     return toResponse(resource);
@@ -52,6 +66,8 @@ export class ResourcesController {
 
   @Get('houses/:houseId/resources/tree')
   @ApiOperation({ summary: 'Получить дерево ресурсов дома' })
+  @ApiParam({ name: 'houseId', format: 'uuid' })
+  @ApiOkResponse({ type: ResourceTreeNodeDto, isArray: true })
   async getTree(
     @Param('houseId') houseId: string,
   ): Promise<ResourceTreeNodeDto[]> {

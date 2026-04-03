@@ -9,7 +9,17 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiOperation,
+  ApiTags,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiNoContentResponse,
+  ApiAcceptedResponse,
+  ApiParam,
+  ApiQuery,
+  ApiBody,
+} from '@nestjs/swagger';
 import { AccessRightType, ResourceType } from '@prisma/client';
 import { PermissionsService } from './permissions.service';
 import { CreateAccessRightDto } from './dto/create-access-right.dto';
@@ -49,7 +59,12 @@ export class PermissionsController {
 
   @Post('access-rights')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Назначить право доступа ресурсу (RBAC)' })
+  @ApiOperation({
+    summary: 'Назначить право доступа ресурсу (RBAC)',
+    description: 'Требуется X-User-Id — кто выдал право.',
+  })
+  @ApiBody({ type: CreateAccessRightDto })
+  @ApiCreatedResponse({ type: AccessRightResponseDto })
   async create(
     @Body() dto: CreateAccessRightDto,
     @UserId() grantedByUserId: string,
@@ -60,6 +75,8 @@ export class PermissionsController {
 
   @Get('resources/:id/permissions')
   @ApiOperation({ summary: 'Получить права доступа ресурса' })
+  @ApiParam({ name: 'id', format: 'uuid', description: 'ID ресурса' })
+  @ApiOkResponse({ type: AccessRightResponseDto, isArray: true })
   async getByResource(
     @Param('id') resourceId: string,
   ): Promise<AccessRightResponseDto[]> {
@@ -68,7 +85,12 @@ export class PermissionsController {
   }
 
   @Get('access-rights/user/:id')
-  @ApiOperation({ summary: 'Получить все права доступа пользователя (включая через роли)' })
+  @ApiOperation({
+    summary: 'Права доступа пользователя',
+    description: 'Включая права, выданные через роли участника.',
+  })
+  @ApiParam({ name: 'id', format: 'uuid', description: 'Внутренний ID пользователя в сервисе' })
+  @ApiOkResponse({ type: AccessRightResponseDto, isArray: true })
   async getByUser(@Param('id') id: string): Promise<AccessRightResponseDto[]> {
     const rights = await this.permissionsService.findByUserId(id);
     return rights.map(toResponse);
@@ -77,6 +99,8 @@ export class PermissionsController {
   @Delete('access-rights/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Удалить право доступа' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiNoContentResponse({ description: 'Право удалено' })
   async delete(@Param('id') id: string): Promise<void> {
     await this.permissionsService.delete(id);
   }
@@ -84,12 +108,18 @@ export class PermissionsController {
   @Post('permissions/rebuild')
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'Пересчитать кэш эффективных прав' })
+  @ApiAcceptedResponse({ description: 'Пересчёт запущен или завершён (тело пустое)' })
   async rebuildCache(): Promise<void> {
     await this.permissionsService.rebuildCache();
   }
 
   @Get('access-structure')
-  @ApiOperation({ summary: 'Структура доступа пользователя (дома, комнаты, устройства, функции)' })
+  @ApiOperation({
+    summary: 'Структура доступа пользователя',
+    description: 'Дома, комнаты, устройства и функции с учётом эффективных прав.',
+  })
+  @ApiQuery({ name: 'userId', required: true, description: 'Внутренний ID пользователя в сервисе' })
+  @ApiOkResponse({ type: AccessStructureResponseDto })
   async getAccessStructure(@Query('userId') userId: string): Promise<AccessStructureResponseDto> {
     return this.permissionsService.getAccessStructure(userId);
   }

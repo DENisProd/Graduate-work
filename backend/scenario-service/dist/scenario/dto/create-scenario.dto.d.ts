@@ -1,7 +1,6 @@
 declare const CreateScenarioDto_base: import("nestjs-zod").ZodDto<{
-    name: string;
     status: import("../../common/schemas").ScenarioStatus;
-    creatorId: string;
+    name: string;
     houseId: string;
     definition: {
         version: 1;
@@ -19,8 +18,8 @@ declare const CreateScenarioDto_base: import("nestjs-zod").ZodDto<{
             enabled: boolean;
         } | {
             type: "DEVICE_EVENT";
-            enabled: boolean;
             deviceId: string;
+            enabled: boolean;
             event: string;
             payload?: Record<string, unknown> | undefined;
         } | {
@@ -28,29 +27,6 @@ declare const CreateScenarioDto_base: import("nestjs-zod").ZodDto<{
             enabled: boolean;
             token: string;
         })[];
-        conditions: {
-            type: "ALWAYS";
-        } | {
-            path: string;
-            type: "DEVICE_STATE";
-            deviceId: string;
-            op: "EQ" | "NE" | "GT" | "GTE" | "LT" | "LTE" | "IN" | "NOT_IN" | "CONTAINS";
-            value?: unknown;
-        } | {
-            type: "TIME_WINDOW";
-            from: string;
-            to: string;
-            timezone?: string | undefined;
-        } | {
-            type: "AND";
-            items: any[];
-        } | {
-            type: "OR";
-            items: any[];
-        } | {
-            type: "NOT";
-            item?: any;
-        };
         actions: ({
             type: "DEVICE_COMMAND";
             deviceId: string;
@@ -78,7 +54,9 @@ declare const CreateScenarioDto_base: import("nestjs-zod").ZodDto<{
             debounceMs?: number | undefined;
             maxConcurrency?: number | undefined;
         } | undefined;
+        conditions?: any;
     };
+    creatorId: string;
     description?: string | undefined;
 }, import("zod").ZodObjectDef<{
     name: import("zod").ZodString;
@@ -130,16 +108,16 @@ declare const CreateScenarioDto_base: import("nestjs-zod").ZodDto<{
             enabled: import("zod").ZodDefault<import("zod").ZodBoolean>;
         }, "strip", import("zod").ZodTypeAny, {
             type: "DEVICE_EVENT";
-            enabled: boolean;
             deviceId: string;
+            enabled: boolean;
             event: string;
             payload?: Record<string, unknown> | undefined;
         }, {
             type: "DEVICE_EVENT";
             deviceId: string;
             event: string;
-            enabled?: boolean | undefined;
             payload?: Record<string, unknown> | undefined;
+            enabled?: boolean | undefined;
         }>, import("zod").ZodObject<{
             type: import("zod").ZodLiteral<"WEBHOOK">;
             token: import("zod").ZodString;
@@ -153,73 +131,7 @@ declare const CreateScenarioDto_base: import("nestjs-zod").ZodDto<{
             token: string;
             enabled?: boolean | undefined;
         }>]>, "many">;
-        conditions: import("zod").ZodDefault<import("zod").ZodOptional<import("zod").ZodDiscriminatedUnion<"type", [import("zod").ZodObject<{
-            type: import("zod").ZodLiteral<"ALWAYS">;
-        }, "strip", import("zod").ZodTypeAny, {
-            type: "ALWAYS";
-        }, {
-            type: "ALWAYS";
-        }>, import("zod").ZodObject<{
-            type: import("zod").ZodLiteral<"DEVICE_STATE">;
-            deviceId: import("zod").ZodString;
-            path: import("zod").ZodString;
-            op: import("zod").ZodEnum<["EQ", "NE", "GT", "GTE", "LT", "LTE", "IN", "NOT_IN", "CONTAINS"]>;
-            value: import("zod").ZodType<unknown, import("zod").ZodTypeDef, unknown>;
-        }, "strip", import("zod").ZodTypeAny, {
-            path: string;
-            type: "DEVICE_STATE";
-            deviceId: string;
-            op: "EQ" | "NE" | "GT" | "GTE" | "LT" | "LTE" | "IN" | "NOT_IN" | "CONTAINS";
-            value?: unknown;
-        }, {
-            path: string;
-            type: "DEVICE_STATE";
-            deviceId: string;
-            op: "EQ" | "NE" | "GT" | "GTE" | "LT" | "LTE" | "IN" | "NOT_IN" | "CONTAINS";
-            value?: unknown;
-        }>, import("zod").ZodObject<{
-            type: import("zod").ZodLiteral<"TIME_WINDOW">;
-            from: import("zod").ZodString;
-            to: import("zod").ZodString;
-            timezone: import("zod").ZodOptional<import("zod").ZodString>;
-        }, "strip", import("zod").ZodTypeAny, {
-            type: "TIME_WINDOW";
-            from: string;
-            to: string;
-            timezone?: string | undefined;
-        }, {
-            type: "TIME_WINDOW";
-            from: string;
-            to: string;
-            timezone?: string | undefined;
-        }>, import("zod").ZodObject<{
-            type: import("zod").ZodLiteral<"AND">;
-            items: import("zod").ZodArray<import("zod").ZodLazy<any>, "many">;
-        }, "strip", import("zod").ZodTypeAny, {
-            type: "AND";
-            items: any[];
-        }, {
-            type: "AND";
-            items: any[];
-        }>, import("zod").ZodObject<{
-            type: import("zod").ZodLiteral<"OR">;
-            items: import("zod").ZodArray<import("zod").ZodLazy<any>, "many">;
-        }, "strip", import("zod").ZodTypeAny, {
-            type: "OR";
-            items: any[];
-        }, {
-            type: "OR";
-            items: any[];
-        }>, import("zod").ZodObject<{
-            type: import("zod").ZodLiteral<"NOT">;
-            item: import("zod").ZodLazy<any>;
-        }, "strip", import("zod").ZodTypeAny, {
-            type: "NOT";
-            item?: any;
-        }, {
-            type: "NOT";
-            item?: any;
-        }>]>>>;
+        conditions: any;
         actions: import("zod").ZodArray<import("zod").ZodDiscriminatedUnion<"type", [import("zod").ZodObject<{
             type: import("zod").ZodLiteral<"DEVICE_COMMAND">;
             deviceId: import("zod").ZodString;
@@ -259,8 +171,8 @@ declare const CreateScenarioDto_base: import("nestjs-zod").ZodDto<{
         }, {
             message: string;
             type: "NOTIFY";
-            channel?: "PUSH" | "EMAIL" | "TELEGRAM" | "WEB" | undefined;
             title?: string | undefined;
+            channel?: "PUSH" | "EMAIL" | "TELEGRAM" | "WEB" | undefined;
             data?: Record<string, unknown> | undefined;
         }>, import("zod").ZodObject<{
             type: import("zod").ZodLiteral<"HTTP_REQUEST">;
@@ -279,8 +191,8 @@ declare const CreateScenarioDto_base: import("nestjs-zod").ZodDto<{
         }, {
             type: "HTTP_REQUEST";
             url: string;
-            method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | undefined;
             headers?: Record<string, string> | undefined;
+            method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | undefined;
             body?: unknown;
             timeoutMs?: number | undefined;
         }>]>, "many">;
@@ -313,8 +225,8 @@ declare const CreateScenarioDto_base: import("nestjs-zod").ZodDto<{
             enabled: boolean;
         } | {
             type: "DEVICE_EVENT";
-            enabled: boolean;
             deviceId: string;
+            enabled: boolean;
             event: string;
             payload?: Record<string, unknown> | undefined;
         } | {
@@ -322,29 +234,6 @@ declare const CreateScenarioDto_base: import("nestjs-zod").ZodDto<{
             enabled: boolean;
             token: string;
         })[];
-        conditions: {
-            type: "ALWAYS";
-        } | {
-            path: string;
-            type: "DEVICE_STATE";
-            deviceId: string;
-            op: "EQ" | "NE" | "GT" | "GTE" | "LT" | "LTE" | "IN" | "NOT_IN" | "CONTAINS";
-            value?: unknown;
-        } | {
-            type: "TIME_WINDOW";
-            from: string;
-            to: string;
-            timezone?: string | undefined;
-        } | {
-            type: "AND";
-            items: any[];
-        } | {
-            type: "OR";
-            items: any[];
-        } | {
-            type: "NOT";
-            item?: any;
-        };
         actions: ({
             type: "DEVICE_COMMAND";
             deviceId: string;
@@ -372,6 +261,7 @@ declare const CreateScenarioDto_base: import("nestjs-zod").ZodDto<{
             debounceMs?: number | undefined;
             maxConcurrency?: number | undefined;
         } | undefined;
+        conditions?: any;
     }, {
         version: 1;
         scope: {
@@ -390,8 +280,8 @@ declare const CreateScenarioDto_base: import("nestjs-zod").ZodDto<{
             type: "DEVICE_EVENT";
             deviceId: string;
             event: string;
-            enabled?: boolean | undefined;
             payload?: Record<string, unknown> | undefined;
+            enabled?: boolean | undefined;
         } | {
             type: "WEBHOOK";
             token: string;
@@ -408,14 +298,14 @@ declare const CreateScenarioDto_base: import("nestjs-zod").ZodDto<{
         } | {
             message: string;
             type: "NOTIFY";
-            channel?: "PUSH" | "EMAIL" | "TELEGRAM" | "WEB" | undefined;
             title?: string | undefined;
+            channel?: "PUSH" | "EMAIL" | "TELEGRAM" | "WEB" | undefined;
             data?: Record<string, unknown> | undefined;
         } | {
             type: "HTTP_REQUEST";
             url: string;
-            method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | undefined;
             headers?: Record<string, string> | undefined;
+            method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | undefined;
             body?: unknown;
             timeoutMs?: number | undefined;
         })[];
@@ -424,33 +314,10 @@ declare const CreateScenarioDto_base: import("nestjs-zod").ZodDto<{
             debounceMs?: number | undefined;
             maxConcurrency?: number | undefined;
         } | undefined;
-        conditions?: {
-            type: "ALWAYS";
-        } | {
-            path: string;
-            type: "DEVICE_STATE";
-            deviceId: string;
-            op: "EQ" | "NE" | "GT" | "GTE" | "LT" | "LTE" | "IN" | "NOT_IN" | "CONTAINS";
-            value?: unknown;
-        } | {
-            type: "TIME_WINDOW";
-            from: string;
-            to: string;
-            timezone?: string | undefined;
-        } | {
-            type: "AND";
-            items: any[];
-        } | {
-            type: "OR";
-            items: any[];
-        } | {
-            type: "NOT";
-            item?: any;
-        } | undefined;
+        conditions?: any;
     }>;
 }, "strip", import("zod").ZodTypeAny>, {
     name: string;
-    creatorId: string;
     houseId: string;
     definition: {
         version: 1;
@@ -470,8 +337,8 @@ declare const CreateScenarioDto_base: import("nestjs-zod").ZodDto<{
             type: "DEVICE_EVENT";
             deviceId: string;
             event: string;
-            enabled?: boolean | undefined;
             payload?: Record<string, unknown> | undefined;
+            enabled?: boolean | undefined;
         } | {
             type: "WEBHOOK";
             token: string;
@@ -488,14 +355,14 @@ declare const CreateScenarioDto_base: import("nestjs-zod").ZodDto<{
         } | {
             message: string;
             type: "NOTIFY";
-            channel?: "PUSH" | "EMAIL" | "TELEGRAM" | "WEB" | undefined;
             title?: string | undefined;
+            channel?: "PUSH" | "EMAIL" | "TELEGRAM" | "WEB" | undefined;
             data?: Record<string, unknown> | undefined;
         } | {
             type: "HTTP_REQUEST";
             url: string;
-            method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | undefined;
             headers?: Record<string, string> | undefined;
+            method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | undefined;
             body?: unknown;
             timeoutMs?: number | undefined;
         })[];
@@ -504,30 +371,9 @@ declare const CreateScenarioDto_base: import("nestjs-zod").ZodDto<{
             debounceMs?: number | undefined;
             maxConcurrency?: number | undefined;
         } | undefined;
-        conditions?: {
-            type: "ALWAYS";
-        } | {
-            path: string;
-            type: "DEVICE_STATE";
-            deviceId: string;
-            op: "EQ" | "NE" | "GT" | "GTE" | "LT" | "LTE" | "IN" | "NOT_IN" | "CONTAINS";
-            value?: unknown;
-        } | {
-            type: "TIME_WINDOW";
-            from: string;
-            to: string;
-            timezone?: string | undefined;
-        } | {
-            type: "AND";
-            items: any[];
-        } | {
-            type: "OR";
-            items: any[];
-        } | {
-            type: "NOT";
-            item?: any;
-        } | undefined;
+        conditions?: any;
     };
+    creatorId: string;
     description?: string | undefined;
     status?: import("../../common/schemas").ScenarioStatus | undefined;
 }>;

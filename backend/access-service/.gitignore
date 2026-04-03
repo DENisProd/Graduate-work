@@ -3,5 +3,5 @@ dist
 coverage
 .env
 .env.*
-/generated/prisma
+/src/generated
 *.log

@@ -16,6 +16,7 @@ exports.AuditController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
 const audit_service_1 = require("./audit.service");
+const audit_list_response_dto_1 = require("./dto/audit-list-response.dto");
 function toResponse(log) {
     return {
         id: log.id,
@@ -46,7 +47,20 @@ let AuditController = class AuditController {
 exports.AuditController = AuditController;
 __decorate([
     (0, common_1.Get)(),
-    (0, swagger_1.ApiOperation)({ summary: 'Получить журнал аудита' }),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Журнал аудита',
+        description: 'Фильтрация по субъекту, ресурсу и типу действия; пагинация `page`/`size` (size ≤ 100).',
+    }),
+    (0, swagger_1.ApiQuery)({ name: 'actorId', required: false, description: 'ID субъекта действия' }),
+    (0, swagger_1.ApiQuery)({
+        name: 'resourceId',
+        required: false,
+        schema: { type: 'string', format: 'uuid' },
+    }),
+    (0, swagger_1.ApiQuery)({ name: 'action', required: false, description: 'Код действия' }),
+    (0, swagger_1.ApiQuery)({ name: 'page', required: false, example: '0' }),
+    (0, swagger_1.ApiQuery)({ name: 'size', required: false, example: '20', description: 'Размер страницы, макс. 100' }),
+    (0, swagger_1.ApiOkResponse)({ type: audit_list_response_dto_1.AuditListResponseDto }),
     __param(0, (0, common_1.Query)('actorId')),
     __param(1, (0, common_1.Query)('resourceId')),
     __param(2, (0, common_1.Query)('action')),

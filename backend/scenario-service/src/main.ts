@@ -1,3 +1,5 @@
+import { join } from 'path';
+import { config as loadEnv } from 'dotenv';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ZodValidationPipe } from 'nestjs-zod';
@@ -5,6 +7,7 @@ import { AppModule } from './app.module';
 import { SafeLogger } from './common/logging/safe-logger';
 
 async function bootstrap() {
+  loadEnv({ path: join(__dirname, '../../.env') });
   const app = await NestFactory.create(AppModule, { logger: new SafeLogger() });
 
   app.enableCors({
@@ -24,7 +27,7 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document);
-  const port = process.env.PORT ?? 3001;
+  const port = process.env.SCENARIO_SERVICE_PORT ?? process.env.PORT ?? 3001;
   console.log('App started at ', port);
   await app.listen(port);
 }

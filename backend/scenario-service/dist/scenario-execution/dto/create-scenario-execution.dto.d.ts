@@ -1,6 +1,6 @@
 declare const CreateScenarioExecutionDto_base: import("nestjs-zod").ZodDto<{
-    scenarioId: string;
     status: import("../../common/schemas").ScenarioExecutionStatus;
+    scenarioId: string;
     triggeredBy: import("../../common/schemas").TriggerSourceType;
     triggerData: Record<string, unknown>;
     errorMessage?: string | undefined;

@@ -1,7 +1,8 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags, ApiOkResponse, ApiQuery } from '@nestjs/swagger';
 import { AuditService } from './audit.service';
 import { AuditLogResponseDto } from './dto/audit-log-response.dto';
+import { AuditListResponseDto } from './dto/audit-list-response.dto';
 
 function toResponse(log: {
   id: string;
@@ -27,7 +28,20 @@ export class AuditController {
   constructor(private readonly auditService: AuditService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Получить журнал аудита' })
+  @ApiOperation({
+    summary: 'Журнал аудита',
+    description: 'Фильтрация по субъекту, ресурсу и типу действия; пагинация `page`/`size` (size ≤ 100).',
+  })
+  @ApiQuery({ name: 'actorId', required: false, description: 'ID субъекта действия' })
+  @ApiQuery({
+    name: 'resourceId',
+    required: false,
+    schema: { type: 'string', format: 'uuid' },
+  })
+  @ApiQuery({ name: 'action', required: false, description: 'Код действия' })
+  @ApiQuery({ name: 'page', required: false, example: '0' })
+  @ApiQuery({ name: 'size', required: false, example: '20', description: 'Размер страницы, макс. 100' })
+  @ApiOkResponse({ type: AuditListResponseDto })
   async findAll(
     @Query('actorId') actorId?: string,
     @Query('resourceId') resourceId?: string,

@@ -1,0 +1,40 @@
+package ru.denis.smarthome.device.dto.response;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonInclude;
+
+import java.time.LocalDateTime;
+import java.util.Map;
+
+/**
+ * DTO для возврата категории устройства.
+ */
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public record DeviceCategoryResponse(
+        Long id,
+        String code,
+        String name,
+        String description,
+        DeviceTypeResponse deviceType,
+        Boolean active,
+
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
+        LocalDateTime createdAt,
+
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
+        LocalDateTime updatedAt,
+
+        Map<String, TranslationResponse> translations
+) {
+        /**
+         * Конструктор для локализованного ответа (без всех переводов).
+         */
+        public DeviceCategoryResponse(Long id, String code, String name, String description,
+                                       DeviceTypeResponse deviceType, Boolean active,
+                                       LocalDateTime createdAt, LocalDateTime updatedAt) {
+                this(id, code, name, description, deviceType, active, createdAt, updatedAt, null);
+        }
+}
+
+
+

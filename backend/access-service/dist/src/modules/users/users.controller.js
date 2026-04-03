@@ -17,6 +17,7 @@ const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
 const users_service_1 = require("./users.service");
 const create_user_dto_1 = require("./dto/create-user.dto");
+const user_response_dto_1 = require("./dto/user-response.dto");
 function toResponse(u) {
     return {
         id: u.id,
@@ -46,7 +47,11 @@ exports.UsersController = UsersController;
 __decorate([
     (0, common_1.Post)(),
     (0, common_1.HttpCode)(common_1.HttpStatus.CREATED),
-    (0, swagger_1.ApiOperation)({ summary: 'Создать пользователя' }),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Создать или найти пользователя',
+        description: 'Идемпотентно по `userId`: при существующем внешнем ID возвращается существующая запись.',
+    }),
+    (0, swagger_1.ApiCreatedResponse)({ type: user_response_dto_1.UserResponseDto, description: 'Пользователь создан или найден' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [create_user_dto_1.CreateUserDto]),
@@ -54,7 +59,9 @@ __decorate([
 ], UsersController.prototype, "create", null);
 __decorate([
     (0, common_1.Get)(':id'),
-    (0, swagger_1.ApiOperation)({ summary: 'Получить пользователя по ID' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Получить пользователя по внутреннему ID' }),
+    (0, swagger_1.ApiParam)({ name: 'id', format: 'uuid', description: 'ID записи в сервисе' }),
+    (0, swagger_1.ApiOkResponse)({ type: user_response_dto_1.UserResponseDto }),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
@@ -62,7 +69,9 @@ __decorate([
 ], UsersController.prototype, "findById", null);
 __decorate([
     (0, common_1.Get)('external/:externalUserId'),
-    (0, swagger_1.ApiOperation)({ summary: 'Получить пользователя по внешнему ID' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Получить пользователя по внешнему ID (userId)' }),
+    (0, swagger_1.ApiParam)({ name: 'externalUserId', description: 'Внешний идентификатор пользователя' }),
+    (0, swagger_1.ApiOkResponse)({ type: user_response_dto_1.UserResponseDto }),
     __param(0, (0, common_1.Param)('externalUserId')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),

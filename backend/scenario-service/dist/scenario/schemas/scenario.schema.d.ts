@@ -50,16 +50,16 @@ export declare const createScenarioSchema: z.ZodObject<{
             enabled: z.ZodDefault<z.ZodBoolean>;
         }, "strip", z.ZodTypeAny, {
             type: "DEVICE_EVENT";
-            enabled: boolean;
             deviceId: string;
+            enabled: boolean;
             event: string;
             payload?: Record<string, unknown> | undefined;
         }, {
             type: "DEVICE_EVENT";
             deviceId: string;
             event: string;
-            enabled?: boolean | undefined;
             payload?: Record<string, unknown> | undefined;
+            enabled?: boolean | undefined;
         }>, z.ZodObject<{
             type: z.ZodLiteral<"WEBHOOK">;
             token: z.ZodString;
@@ -73,73 +73,7 @@ export declare const createScenarioSchema: z.ZodObject<{
             token: string;
             enabled?: boolean | undefined;
         }>]>, "many">;
-        conditions: z.ZodDefault<z.ZodOptional<z.ZodDiscriminatedUnion<"type", [z.ZodObject<{
-            type: z.ZodLiteral<"ALWAYS">;
-        }, "strip", z.ZodTypeAny, {
-            type: "ALWAYS";
-        }, {
-            type: "ALWAYS";
-        }>, z.ZodObject<{
-            type: z.ZodLiteral<"DEVICE_STATE">;
-            deviceId: z.ZodString;
-            path: z.ZodString;
-            op: z.ZodEnum<["EQ", "NE", "GT", "GTE", "LT", "LTE", "IN", "NOT_IN", "CONTAINS"]>;
-            value: z.ZodType<unknown, z.ZodTypeDef, unknown>;
-        }, "strip", z.ZodTypeAny, {
-            path: string;
-            type: "DEVICE_STATE";
-            deviceId: string;
-            op: "EQ" | "NE" | "GT" | "GTE" | "LT" | "LTE" | "IN" | "NOT_IN" | "CONTAINS";
-            value?: unknown;
-        }, {
-            path: string;
-            type: "DEVICE_STATE";
-            deviceId: string;
-            op: "EQ" | "NE" | "GT" | "GTE" | "LT" | "LTE" | "IN" | "NOT_IN" | "CONTAINS";
-            value?: unknown;
-        }>, z.ZodObject<{
-            type: z.ZodLiteral<"TIME_WINDOW">;
-            from: z.ZodString;
-            to: z.ZodString;
-            timezone: z.ZodOptional<z.ZodString>;
-        }, "strip", z.ZodTypeAny, {
-            type: "TIME_WINDOW";
-            from: string;
-            to: string;
-            timezone?: string | undefined;
-        }, {
-            type: "TIME_WINDOW";
-            from: string;
-            to: string;
-            timezone?: string | undefined;
-        }>, z.ZodObject<{
-            type: z.ZodLiteral<"AND">;
-            items: z.ZodArray<z.ZodLazy<any>, "many">;
-        }, "strip", z.ZodTypeAny, {
-            type: "AND";
-            items: any[];
-        }, {
-            type: "AND";
-            items: any[];
-        }>, z.ZodObject<{
-            type: z.ZodLiteral<"OR">;
-            items: z.ZodArray<z.ZodLazy<any>, "many">;
-        }, "strip", z.ZodTypeAny, {
-            type: "OR";
-            items: any[];
-        }, {
-            type: "OR";
-            items: any[];
-        }>, z.ZodObject<{
-            type: z.ZodLiteral<"NOT">;
-            item: z.ZodLazy<any>;
-        }, "strip", z.ZodTypeAny, {
-            type: "NOT";
-            item?: any;
-        }, {
-            type: "NOT";
-            item?: any;
-        }>]>>>;
+        conditions: any;
         actions: z.ZodArray<z.ZodDiscriminatedUnion<"type", [z.ZodObject<{
             type: z.ZodLiteral<"DEVICE_COMMAND">;
             deviceId: z.ZodString;
@@ -179,8 +113,8 @@ export declare const createScenarioSchema: z.ZodObject<{
         }, {
             message: string;
             type: "NOTIFY";
-            channel?: "PUSH" | "EMAIL" | "TELEGRAM" | "WEB" | undefined;
             title?: string | undefined;
+            channel?: "PUSH" | "EMAIL" | "TELEGRAM" | "WEB" | undefined;
             data?: Record<string, unknown> | undefined;
         }>, z.ZodObject<{
             type: z.ZodLiteral<"HTTP_REQUEST">;
@@ -199,8 +133,8 @@ export declare const createScenarioSchema: z.ZodObject<{
         }, {
             type: "HTTP_REQUEST";
             url: string;
-            method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | undefined;
             headers?: Record<string, string> | undefined;
+            method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | undefined;
             body?: unknown;
             timeoutMs?: number | undefined;
         }>]>, "many">;
@@ -233,8 +167,8 @@ export declare const createScenarioSchema: z.ZodObject<{
             enabled: boolean;
         } | {
             type: "DEVICE_EVENT";
-            enabled: boolean;
             deviceId: string;
+            enabled: boolean;
             event: string;
             payload?: Record<string, unknown> | undefined;
         } | {
@@ -242,29 +176,6 @@ export declare const createScenarioSchema: z.ZodObject<{
             enabled: boolean;
             token: string;
         })[];
-        conditions: {
-            type: "ALWAYS";
-        } | {
-            path: string;
-            type: "DEVICE_STATE";
-            deviceId: string;
-            op: "EQ" | "NE" | "GT" | "GTE" | "LT" | "LTE" | "IN" | "NOT_IN" | "CONTAINS";
-            value?: unknown;
-        } | {
-            type: "TIME_WINDOW";
-            from: string;
-            to: string;
-            timezone?: string | undefined;
-        } | {
-            type: "AND";
-            items: any[];
-        } | {
-            type: "OR";
-            items: any[];
-        } | {
-            type: "NOT";
-            item?: any;
-        };
         actions: ({
             type: "DEVICE_COMMAND";
             deviceId: string;
@@ -292,6 +203,7 @@ export declare const createScenarioSchema: z.ZodObject<{
             debounceMs?: number | undefined;
             maxConcurrency?: number | undefined;
         } | undefined;
+        conditions?: any;
     }, {
         version: 1;
         scope: {
@@ -310,8 +222,8 @@ export declare const createScenarioSchema: z.ZodObject<{
             type: "DEVICE_EVENT";
             deviceId: string;
             event: string;
-            enabled?: boolean | undefined;
             payload?: Record<string, unknown> | undefined;
+            enabled?: boolean | undefined;
         } | {
             type: "WEBHOOK";
             token: string;
@@ -328,14 +240,14 @@ export declare const createScenarioSchema: z.ZodObject<{
         } | {
             message: string;
             type: "NOTIFY";
-            channel?: "PUSH" | "EMAIL" | "TELEGRAM" | "WEB" | undefined;
             title?: string | undefined;
+            channel?: "PUSH" | "EMAIL" | "TELEGRAM" | "WEB" | undefined;
             data?: Record<string, unknown> | undefined;
         } | {
             type: "HTTP_REQUEST";
             url: string;
-            method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | undefined;
             headers?: Record<string, string> | undefined;
+            method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | undefined;
             body?: unknown;
             timeoutMs?: number | undefined;
         })[];
@@ -344,34 +256,11 @@ export declare const createScenarioSchema: z.ZodObject<{
             debounceMs?: number | undefined;
             maxConcurrency?: number | undefined;
         } | undefined;
-        conditions?: {
-            type: "ALWAYS";
-        } | {
-            path: string;
-            type: "DEVICE_STATE";
-            deviceId: string;
-            op: "EQ" | "NE" | "GT" | "GTE" | "LT" | "LTE" | "IN" | "NOT_IN" | "CONTAINS";
-            value?: unknown;
-        } | {
-            type: "TIME_WINDOW";
-            from: string;
-            to: string;
-            timezone?: string | undefined;
-        } | {
-            type: "AND";
-            items: any[];
-        } | {
-            type: "OR";
-            items: any[];
-        } | {
-            type: "NOT";
-            item?: any;
-        } | undefined;
+        conditions?: any;
     }>;
 }, "strip", z.ZodTypeAny, {
-    name: string;
     status: ScenarioStatus;
-    creatorId: string;
+    name: string;
     houseId: string;
     definition: {
         version: 1;
@@ -389,8 +278,8 @@ export declare const createScenarioSchema: z.ZodObject<{
             enabled: boolean;
         } | {
             type: "DEVICE_EVENT";
-            enabled: boolean;
             deviceId: string;
+            enabled: boolean;
             event: string;
             payload?: Record<string, unknown> | undefined;
         } | {
@@ -398,29 +287,6 @@ export declare const createScenarioSchema: z.ZodObject<{
             enabled: boolean;
             token: string;
         })[];
-        conditions: {
-            type: "ALWAYS";
-        } | {
-            path: string;
-            type: "DEVICE_STATE";
-            deviceId: string;
-            op: "EQ" | "NE" | "GT" | "GTE" | "LT" | "LTE" | "IN" | "NOT_IN" | "CONTAINS";
-            value?: unknown;
-        } | {
-            type: "TIME_WINDOW";
-            from: string;
-            to: string;
-            timezone?: string | undefined;
-        } | {
-            type: "AND";
-            items: any[];
-        } | {
-            type: "OR";
-            items: any[];
-        } | {
-            type: "NOT";
-            item?: any;
-        };
         actions: ({
             type: "DEVICE_COMMAND";
             deviceId: string;
@@ -448,11 +314,12 @@ export declare const createScenarioSchema: z.ZodObject<{
             debounceMs?: number | undefined;
             maxConcurrency?: number | undefined;
         } | undefined;
+        conditions?: any;
     };
+    creatorId: string;
     description?: string | undefined;
 }, {
     name: string;
-    creatorId: string;
     houseId: string;
     definition: {
         version: 1;
@@ -472,8 +339,8 @@ export declare const createScenarioSchema: z.ZodObject<{
             type: "DEVICE_EVENT";
             deviceId: string;
             event: string;
-            enabled?: boolean | undefined;
             payload?: Record<string, unknown> | undefined;
+            enabled?: boolean | undefined;
         } | {
             type: "WEBHOOK";
             token: string;
@@ -490,14 +357,14 @@ export declare const createScenarioSchema: z.ZodObject<{
         } | {
             message: string;
             type: "NOTIFY";
-            channel?: "PUSH" | "EMAIL" | "TELEGRAM" | "WEB" | undefined;
             title?: string | undefined;
+            channel?: "PUSH" | "EMAIL" | "TELEGRAM" | "WEB" | undefined;
             data?: Record<string, unknown> | undefined;
         } | {
             type: "HTTP_REQUEST";
             url: string;
-            method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | undefined;
             headers?: Record<string, string> | undefined;
+            method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | undefined;
             body?: unknown;
             timeoutMs?: number | undefined;
         })[];
@@ -506,30 +373,9 @@ export declare const createScenarioSchema: z.ZodObject<{
             debounceMs?: number | undefined;
             maxConcurrency?: number | undefined;
         } | undefined;
-        conditions?: {
-            type: "ALWAYS";
-        } | {
-            path: string;
-            type: "DEVICE_STATE";
-            deviceId: string;
-            op: "EQ" | "NE" | "GT" | "GTE" | "LT" | "LTE" | "IN" | "NOT_IN" | "CONTAINS";
-            value?: unknown;
-        } | {
-            type: "TIME_WINDOW";
-            from: string;
-            to: string;
-            timezone?: string | undefined;
-        } | {
-            type: "AND";
-            items: any[];
-        } | {
-            type: "OR";
-            items: any[];
-        } | {
-            type: "NOT";
-            item?: any;
-        } | undefined;
+        conditions?: any;
     };
+    creatorId: string;
     description?: string | undefined;
     status?: ScenarioStatus | undefined;
 }>;
@@ -582,16 +428,16 @@ export declare const updateScenarioSchema: z.ZodObject<{
             enabled: z.ZodDefault<z.ZodBoolean>;
         }, "strip", z.ZodTypeAny, {
             type: "DEVICE_EVENT";
-            enabled: boolean;
             deviceId: string;
+            enabled: boolean;
             event: string;
             payload?: Record<string, unknown> | undefined;
         }, {
             type: "DEVICE_EVENT";
             deviceId: string;
             event: string;
-            enabled?: boolean | undefined;
             payload?: Record<string, unknown> | undefined;
+            enabled?: boolean | undefined;
         }>, z.ZodObject<{
             type: z.ZodLiteral<"WEBHOOK">;
             token: z.ZodString;
@@ -605,73 +451,7 @@ export declare const updateScenarioSchema: z.ZodObject<{
             token: string;
             enabled?: boolean | undefined;
         }>]>, "many">;
-        conditions: z.ZodDefault<z.ZodOptional<z.ZodDiscriminatedUnion<"type", [z.ZodObject<{
-            type: z.ZodLiteral<"ALWAYS">;
-        }, "strip", z.ZodTypeAny, {
-            type: "ALWAYS";
-        }, {
-            type: "ALWAYS";
-        }>, z.ZodObject<{
-            type: z.ZodLiteral<"DEVICE_STATE">;
-            deviceId: z.ZodString;
-            path: z.ZodString;
-            op: z.ZodEnum<["EQ", "NE", "GT", "GTE", "LT", "LTE", "IN", "NOT_IN", "CONTAINS"]>;
-            value: z.ZodType<unknown, z.ZodTypeDef, unknown>;
-        }, "strip", z.ZodTypeAny, {
-            path: string;
-            type: "DEVICE_STATE";
-            deviceId: string;
-            op: "EQ" | "NE" | "GT" | "GTE" | "LT" | "LTE" | "IN" | "NOT_IN" | "CONTAINS";
-            value?: unknown;
-        }, {
-            path: string;
-            type: "DEVICE_STATE";
-            deviceId: string;
-            op: "EQ" | "NE" | "GT" | "GTE" | "LT" | "LTE" | "IN" | "NOT_IN" | "CONTAINS";
-            value?: unknown;
-        }>, z.ZodObject<{
-            type: z.ZodLiteral<"TIME_WINDOW">;
-            from: z.ZodString;
-            to: z.ZodString;
-            timezone: z.ZodOptional<z.ZodString>;
-        }, "strip", z.ZodTypeAny, {
-            type: "TIME_WINDOW";
-            from: string;
-            to: string;
-            timezone?: string | undefined;
-        }, {
-            type: "TIME_WINDOW";
-            from: string;
-            to: string;
-            timezone?: string | undefined;
-        }>, z.ZodObject<{
-            type: z.ZodLiteral<"AND">;
-            items: z.ZodArray<z.ZodLazy<any>, "many">;
-        }, "strip", z.ZodTypeAny, {
-            type: "AND";
-            items: any[];
-        }, {
-            type: "AND";
-            items: any[];
-        }>, z.ZodObject<{
-            type: z.ZodLiteral<"OR">;
-            items: z.ZodArray<z.ZodLazy<any>, "many">;
-        }, "strip", z.ZodTypeAny, {
-            type: "OR";
-            items: any[];
-        }, {
-            type: "OR";
-            items: any[];
-        }>, z.ZodObject<{
-            type: z.ZodLiteral<"NOT">;
-            item: z.ZodLazy<any>;
-        }, "strip", z.ZodTypeAny, {
-            type: "NOT";
-            item?: any;
-        }, {
-            type: "NOT";
-            item?: any;
-        }>]>>>;
+        conditions: any;
         actions: z.ZodArray<z.ZodDiscriminatedUnion<"type", [z.ZodObject<{
             type: z.ZodLiteral<"DEVICE_COMMAND">;
             deviceId: z.ZodString;
@@ -711,8 +491,8 @@ export declare const updateScenarioSchema: z.ZodObject<{
         }, {
             message: string;
             type: "NOTIFY";
-            channel?: "PUSH" | "EMAIL" | "TELEGRAM" | "WEB" | undefined;
             title?: string | undefined;
+            channel?: "PUSH" | "EMAIL" | "TELEGRAM" | "WEB" | undefined;
             data?: Record<string, unknown> | undefined;
         }>, z.ZodObject<{
             type: z.ZodLiteral<"HTTP_REQUEST">;
@@ -731,8 +511,8 @@ export declare const updateScenarioSchema: z.ZodObject<{
         }, {
             type: "HTTP_REQUEST";
             url: string;
-            method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | undefined;
             headers?: Record<string, string> | undefined;
+            method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | undefined;
             body?: unknown;
             timeoutMs?: number | undefined;
         }>]>, "many">;
@@ -765,8 +545,8 @@ export declare const updateScenarioSchema: z.ZodObject<{
             enabled: boolean;
         } | {
             type: "DEVICE_EVENT";
-            enabled: boolean;
             deviceId: string;
+            enabled: boolean;
             event: string;
             payload?: Record<string, unknown> | undefined;
         } | {
@@ -774,29 +554,6 @@ export declare const updateScenarioSchema: z.ZodObject<{
             enabled: boolean;
             token: string;
         })[];
-        conditions: {
-            type: "ALWAYS";
-        } | {
-            path: string;
-            type: "DEVICE_STATE";
-            deviceId: string;
-            op: "EQ" | "NE" | "GT" | "GTE" | "LT" | "LTE" | "IN" | "NOT_IN" | "CONTAINS";
-            value?: unknown;
-        } | {
-            type: "TIME_WINDOW";
-            from: string;
-            to: string;
-            timezone?: string | undefined;
-        } | {
-            type: "AND";
-            items: any[];
-        } | {
-            type: "OR";
-            items: any[];
-        } | {
-            type: "NOT";
-            item?: any;
-        };
         actions: ({
             type: "DEVICE_COMMAND";
             deviceId: string;
@@ -824,6 +581,7 @@ export declare const updateScenarioSchema: z.ZodObject<{
             debounceMs?: number | undefined;
             maxConcurrency?: number | undefined;
         } | undefined;
+        conditions?: any;
     }, {
         version: 1;
         scope: {
@@ -842,8 +600,8 @@ export declare const updateScenarioSchema: z.ZodObject<{
             type: "DEVICE_EVENT";
             deviceId: string;
             event: string;
-            enabled?: boolean | undefined;
             payload?: Record<string, unknown> | undefined;
+            enabled?: boolean | undefined;
         } | {
             type: "WEBHOOK";
             token: string;
@@ -860,14 +618,14 @@ export declare const updateScenarioSchema: z.ZodObject<{
         } | {
             message: string;
             type: "NOTIFY";
-            channel?: "PUSH" | "EMAIL" | "TELEGRAM" | "WEB" | undefined;
             title?: string | undefined;
+            channel?: "PUSH" | "EMAIL" | "TELEGRAM" | "WEB" | undefined;
             data?: Record<string, unknown> | undefined;
         } | {
             type: "HTTP_REQUEST";
             url: string;
-            method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | undefined;
             headers?: Record<string, string> | undefined;
+            method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | undefined;
             body?: unknown;
             timeoutMs?: number | undefined;
         })[];
@@ -876,34 +634,12 @@ export declare const updateScenarioSchema: z.ZodObject<{
             debounceMs?: number | undefined;
             maxConcurrency?: number | undefined;
         } | undefined;
-        conditions?: {
-            type: "ALWAYS";
-        } | {
-            path: string;
-            type: "DEVICE_STATE";
-            deviceId: string;
-            op: "EQ" | "NE" | "GT" | "GTE" | "LT" | "LTE" | "IN" | "NOT_IN" | "CONTAINS";
-            value?: unknown;
-        } | {
-            type: "TIME_WINDOW";
-            from: string;
-            to: string;
-            timezone?: string | undefined;
-        } | {
-            type: "AND";
-            items: any[];
-        } | {
-            type: "OR";
-            items: any[];
-        } | {
-            type: "NOT";
-            item?: any;
-        } | undefined;
+        conditions?: any;
     }>>;
 }, "strip", z.ZodTypeAny, {
-    name?: string | undefined;
     description?: string | null | undefined;
     status?: ScenarioStatus | undefined;
+    name?: string | undefined;
     definition?: {
         version: 1;
         scope: {
@@ -920,8 +656,8 @@ export declare const updateScenarioSchema: z.ZodObject<{
             enabled: boolean;
         } | {
             type: "DEVICE_EVENT";
-            enabled: boolean;
             deviceId: string;
+            enabled: boolean;
             event: string;
             payload?: Record<string, unknown> | undefined;
         } | {
@@ -929,29 +665,6 @@ export declare const updateScenarioSchema: z.ZodObject<{
             enabled: boolean;
             token: string;
         })[];
-        conditions: {
-            type: "ALWAYS";
-        } | {
-            path: string;
-            type: "DEVICE_STATE";
-            deviceId: string;
-            op: "EQ" | "NE" | "GT" | "GTE" | "LT" | "LTE" | "IN" | "NOT_IN" | "CONTAINS";
-            value?: unknown;
-        } | {
-            type: "TIME_WINDOW";
-            from: string;
-            to: string;
-            timezone?: string | undefined;
-        } | {
-            type: "AND";
-            items: any[];
-        } | {
-            type: "OR";
-            items: any[];
-        } | {
-            type: "NOT";
-            item?: any;
-        };
         actions: ({
             type: "DEVICE_COMMAND";
             deviceId: string;
@@ -979,11 +692,12 @@ export declare const updateScenarioSchema: z.ZodObject<{
             debounceMs?: number | undefined;
             maxConcurrency?: number | undefined;
         } | undefined;
+        conditions?: any;
     } | undefined;
 }, {
-    name?: string | undefined;
     description?: string | null | undefined;
     status?: ScenarioStatus | undefined;
+    name?: string | undefined;
     definition?: {
         version: 1;
         scope: {
@@ -1002,8 +716,8 @@ export declare const updateScenarioSchema: z.ZodObject<{
             type: "DEVICE_EVENT";
             deviceId: string;
             event: string;
-            enabled?: boolean | undefined;
             payload?: Record<string, unknown> | undefined;
+            enabled?: boolean | undefined;
         } | {
             type: "WEBHOOK";
             token: string;
@@ -1020,14 +734,14 @@ export declare const updateScenarioSchema: z.ZodObject<{
         } | {
             message: string;
             type: "NOTIFY";
-            channel?: "PUSH" | "EMAIL" | "TELEGRAM" | "WEB" | undefined;
             title?: string | undefined;
+            channel?: "PUSH" | "EMAIL" | "TELEGRAM" | "WEB" | undefined;
             data?: Record<string, unknown> | undefined;
         } | {
             type: "HTTP_REQUEST";
             url: string;
-            method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | undefined;
             headers?: Record<string, string> | undefined;
+            method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | undefined;
             body?: unknown;
             timeoutMs?: number | undefined;
         })[];
@@ -1036,29 +750,7 @@ export declare const updateScenarioSchema: z.ZodObject<{
             debounceMs?: number | undefined;
             maxConcurrency?: number | undefined;
         } | undefined;
-        conditions?: {
-            type: "ALWAYS";
-        } | {
-            path: string;
-            type: "DEVICE_STATE";
-            deviceId: string;
-            op: "EQ" | "NE" | "GT" | "GTE" | "LT" | "LTE" | "IN" | "NOT_IN" | "CONTAINS";
-            value?: unknown;
-        } | {
-            type: "TIME_WINDOW";
-            from: string;
-            to: string;
-            timezone?: string | undefined;
-        } | {
-            type: "AND";
-            items: any[];
-        } | {
-            type: "OR";
-            items: any[];
-        } | {
-            type: "NOT";
-            item?: any;
-        } | undefined;
+        conditions?: any;
     } | undefined;
 }>;
 export type UpdateScenarioInput = z.infer<typeof updateScenarioSchema>;
@@ -1073,13 +765,13 @@ export declare const listScenariosQuerySchema: z.ZodObject<{
     page: number;
     limit: number;
     status?: ScenarioStatus | undefined;
-    creatorId?: string | undefined;
     houseId?: string | undefined;
+    creatorId?: string | undefined;
 }, {
     status?: ScenarioStatus | undefined;
-    creatorId?: string | undefined;
-    houseId?: string | undefined;
     page?: unknown;
     limit?: unknown;
+    houseId?: string | undefined;
+    creatorId?: string | undefined;
 }>;
 export type ListScenariosQuery = z.infer<typeof listScenariosQuerySchema>;

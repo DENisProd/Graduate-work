@@ -1,0 +1,4 @@
+packages:
+  - 'access-service'
+  - 'scenario-service'
+  - 'device-service/devices-nest'

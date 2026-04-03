@@ -1,11 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const path_1 = require("path");
+const dotenv_1 = require("dotenv");
 const core_1 = require("@nestjs/core");
 const swagger_1 = require("@nestjs/swagger");
 const nestjs_zod_1 = require("nestjs-zod");
 const app_module_1 = require("./app.module");
 const safe_logger_1 = require("./common/logging/safe-logger");
 async function bootstrap() {
+    (0, dotenv_1.config)({ path: (0, path_1.join)(__dirname, '../../.env') });
     const app = await core_1.NestFactory.create(app_module_1.AppModule, { logger: new safe_logger_1.SafeLogger() });
     app.enableCors({
         origin: ['http://localhost:3000'],
@@ -19,7 +22,7 @@ async function bootstrap() {
         .build();
     const document = swagger_1.SwaggerModule.createDocument(app, config);
     swagger_1.SwaggerModule.setup('docs', app, document);
-    const port = process.env.PORT ?? 3001;
+    const port = process.env.SCENARIO_SERVICE_PORT ?? process.env.PORT ?? 3001;
     console.log('App started at ', port);
     await app.listen(port);
 }

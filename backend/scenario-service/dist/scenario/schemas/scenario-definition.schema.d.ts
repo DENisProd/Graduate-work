@@ -40,14 +40,14 @@ export declare const scenarioTriggerSchema: z.ZodDiscriminatedUnion<"type", [z.Z
     payload: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodType<unknown, z.ZodTypeDef, unknown>>>;
     enabled: z.ZodDefault<z.ZodBoolean>;
 }, "strip", z.ZodTypeAny, {
-    deviceId: string;
     type: "DEVICE_EVENT";
+    deviceId: string;
     enabled: boolean;
     event: string;
     payload?: Record<string, unknown> | undefined;
 }, {
-    deviceId: string;
     type: "DEVICE_EVENT";
+    deviceId: string;
     event: string;
     payload?: Record<string, unknown> | undefined;
     enabled?: boolean | undefined;
@@ -73,13 +73,13 @@ export declare const scenarioActionSchema: z.ZodDiscriminatedUnion<"type", [z.Zo
     command: z.ZodString;
     args: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodType<unknown, z.ZodTypeDef, unknown>>>;
 }, "strip", z.ZodTypeAny, {
-    deviceId: string;
     type: "DEVICE_COMMAND";
+    deviceId: string;
     command: string;
     args?: Record<string, unknown> | undefined;
 }, {
-    deviceId: string;
     type: "DEVICE_COMMAND";
+    deviceId: string;
     command: string;
     args?: Record<string, unknown> | undefined;
 }>, z.ZodObject<{
@@ -175,14 +175,14 @@ export declare const scenarioDefinitionSchema: z.ZodObject<{
         payload: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodType<unknown, z.ZodTypeDef, unknown>>>;
         enabled: z.ZodDefault<z.ZodBoolean>;
     }, "strip", z.ZodTypeAny, {
-        deviceId: string;
         type: "DEVICE_EVENT";
+        deviceId: string;
         enabled: boolean;
         event: string;
         payload?: Record<string, unknown> | undefined;
     }, {
-        deviceId: string;
         type: "DEVICE_EVENT";
+        deviceId: string;
         event: string;
         payload?: Record<string, unknown> | undefined;
         enabled?: boolean | undefined;
@@ -206,13 +206,13 @@ export declare const scenarioDefinitionSchema: z.ZodObject<{
         command: z.ZodString;
         args: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodType<unknown, z.ZodTypeDef, unknown>>>;
     }, "strip", z.ZodTypeAny, {
-        deviceId: string;
         type: "DEVICE_COMMAND";
+        deviceId: string;
         command: string;
         args?: Record<string, unknown> | undefined;
     }, {
-        deviceId: string;
         type: "DEVICE_COMMAND";
+        deviceId: string;
         command: string;
         args?: Record<string, unknown> | undefined;
     }>, z.ZodObject<{
@@ -292,8 +292,8 @@ export declare const scenarioDefinitionSchema: z.ZodObject<{
         type: "MANUAL";
         enabled: boolean;
     } | {
-        deviceId: string;
         type: "DEVICE_EVENT";
+        deviceId: string;
         enabled: boolean;
         event: string;
         payload?: Record<string, unknown> | undefined;
@@ -303,8 +303,8 @@ export declare const scenarioDefinitionSchema: z.ZodObject<{
         token: string;
     })[];
     actions: ({
-        deviceId: string;
         type: "DEVICE_COMMAND";
+        deviceId: string;
         command: string;
         args?: Record<string, unknown> | undefined;
     } | {
@@ -345,8 +345,8 @@ export declare const scenarioDefinitionSchema: z.ZodObject<{
         type: "MANUAL";
         enabled?: boolean | undefined;
     } | {
-        deviceId: string;
         type: "DEVICE_EVENT";
+        deviceId: string;
         event: string;
         payload?: Record<string, unknown> | undefined;
         enabled?: boolean | undefined;
@@ -356,8 +356,8 @@ export declare const scenarioDefinitionSchema: z.ZodObject<{
         enabled?: boolean | undefined;
     })[];
     actions: ({
-        deviceId: string;
         type: "DEVICE_COMMAND";
+        deviceId: string;
         command: string;
         args?: Record<string, unknown> | undefined;
     } | {

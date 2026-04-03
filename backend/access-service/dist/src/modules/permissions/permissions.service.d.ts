@@ -5,8 +5,8 @@ import { UsersService } from '../users/users.service';
 import { CreateAccessRightDto } from './dto/create-access-right.dto';
 import { AuditService } from '../audit/audit.service';
 import { AccessStructureResponseDto } from './dto/access-structure-response.dto';
-import { HouseRolesService } from 'src/modules/house-roles/house-roles.service';
-import { HouseMembersService } from 'src/modules/house-members/house-members.service';
+import { HouseRolesService } from '../../../src/modules/house-roles/house-roles.service';
+import { HouseMembersService } from '../../../src/modules/house-members/house-members.service';
 type AccessRightWithResource = AccessRight & {
     resource: {
         type: ResourceType;
