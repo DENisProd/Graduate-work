@@ -68,8 +68,9 @@ export function CatalogPanel() {
 
   const devicesByType = useMemo(() => {
     return physicalDevices.reduce<Record<number, PhysicalDeviceResponse[]>>((acc, device) => {
-      acc[device.deviceTypeId] ||= [];
-      acc[device.deviceTypeId].push(device);
+      const typeId = device.deviceTypeId ?? 0;
+      acc[typeId] ||= [];
+      acc[typeId].push(device);
       return acc;
     }, {});
   }, [physicalDevices]);

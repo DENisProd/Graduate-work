@@ -43,6 +43,8 @@ import type {
   ListResponse,
   PhysicalDeviceResponse,
   DeviceDataResponse,
+  ZigbeeDeviceListItem,
+  ZigbeeStateWire,
   ScenarioResponse,
 } from '@/types/api';
 import { env } from '@/config/env.config';
@@ -667,6 +669,87 @@ export const houseDevicesApi = {
     }),
 };
 
+/** Zigbee / интеграция с мостом (Scenario Service, порт по умолчанию 3001) */
+export const zigbeeDevicesApi = {
+  list: (
+    params?: ListParams & {
+      q?: string;
+      type?: 'Coordinator' | 'Router' | 'EndDevice';
+      houseId?: string;
+    }
+  ): Promise<ListResponse<ZigbeeDeviceListItem>> => {
+    const queryParams = new URLSearchParams();
+    if (params?.houseId) queryParams.append('houseId', params.houseId);
+    if (params?.q) queryParams.append('q', params.q);
+    if (params?.type) queryParams.append('type', params.type);
+    if (params?.page !== undefined) queryParams.append('page', String(params.page));
+    if (params?.limit !== undefined) queryParams.append('limit', String(params.limit));
+    const query = queryParams.toString();
+    return physicalDevicesApiCall(`/zigbee/devices${query ? `?${query}` : ''}`, {
+      signal: params?.signal,
+    });
+  },
+  requestSyncFromBridge: (options?: { signal?: AbortSignal }): Promise<{
+    ok: boolean;
+    message?: string;
+  }> =>
+    physicalDevicesApiCall('/zigbee/devices:sync-from-bridge', {
+      method: 'POST',
+      signal: options?.signal,
+    }),
+  /** GET /zigbee/states — история состояний по IEEE */
+  listStates: (
+    params: ListParams & {
+      deviceIeeeAddr: string;
+      from?: string | Date;
+      to?: string | Date;
+    }
+  ): Promise<ListResponse<ZigbeeStateWire>> => {
+    const queryParams = new URLSearchParams();
+    queryParams.append('deviceIeeeAddr', params.deviceIeeeAddr);
+    if (params.from !== undefined) {
+      queryParams.append('from', params.from instanceof Date ? params.from.toISOString() : params.from);
+    }
+    if (params.to !== undefined) {
+      queryParams.append('to', params.to instanceof Date ? params.to.toISOString() : params.to);
+    }
+    if (params.page !== undefined) queryParams.append('page', params.page.toString());
+    if (params.limit !== undefined) queryParams.append('limit', params.limit.toString());
+    return physicalDevicesApiCall(`/zigbee/states?${queryParams.toString()}`, {
+      signal: params.signal,
+    });
+  },
+  /** GET /zigbee/device-logs — логи приёма состояний */
+  listDeviceLogs: (
+    params?: ListParams & {
+      deviceIeeeAddr?: string;
+      physicalDeviceId?: string;
+      from?: string | Date;
+      to?: string | Date;
+      kind?: 'state_ingest' | 'bridge_event';
+      source?: 'mqtt' | 'api';
+    }
+  ): Promise<ListResponse<Record<string, unknown>>> => {
+    const queryParams = new URLSearchParams();
+    if (params?.deviceIeeeAddr) queryParams.append('deviceIeeeAddr', params.deviceIeeeAddr);
+    if (params?.physicalDeviceId) queryParams.append('physicalDeviceId', params.physicalDeviceId);
+    if (params?.from !== undefined) {
+      queryParams.append('from', params.from instanceof Date ? params.from.toISOString() : params.from);
+    }
+    if (params?.to !== undefined) {
+      queryParams.append('to', params.to instanceof Date ? params.to.toISOString() : params.to);
+    }
+    if (params?.kind) queryParams.append('kind', params.kind);
+    if (params?.source) queryParams.append('source', params.source);
+    if (params?.page !== undefined) queryParams.append('page', params.page.toString());
+    if (params?.limit !== undefined) queryParams.append('limit', params.limit.toString());
+    const query = queryParams.toString();
+    return physicalDevicesApiCall(`/zigbee/device-logs${query ? `?${query}` : ''}`, {
+      signal: params?.signal,
+    });
+  },
+};
+
 export const physicalDevicesApi = {
   getAll: (
     params?: ListParams & { houseId?: number | string; roomId?: string }
@@ -694,6 +777,8 @@ export const deviceDataApi = {
       houseId?: number | string;
       deviceTypeId?: number;
       deviceFunction?: string;
+      capability?: string;
+      attribute?: string;
       type?: 'FLOAT' | 'NUMBER' | 'STRING' | 'BOOLEAN';
       from?: string | Date;
       to?: string | Date;
@@ -705,6 +790,8 @@ export const deviceDataApi = {
     if (params?.houseId !== undefined) queryParams.append('houseId', String(params.houseId));
     if (params?.deviceTypeId !== undefined) queryParams.append('deviceTypeId', params.deviceTypeId.toString());
     if (params?.deviceFunction) queryParams.append('deviceFunction', params.deviceFunction);
+    if (params?.capability) queryParams.append('capability', params.capability);
+    if (params?.attribute) queryParams.append('attribute', params.attribute);
     if (params?.type) queryParams.append('type', params.type);
     if (params?.from) queryParams.append('from', (params.from instanceof Date ? params.from.toISOString() : params.from));
     if (params?.to) queryParams.append('to', (params.to instanceof Date ? params.to.toISOString() : params.to));

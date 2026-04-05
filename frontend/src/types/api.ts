@@ -518,12 +518,56 @@ export interface ListResponse<T> {
   total: number;
 }
 
+/** Socket.IO zigbee:state и snapshots из zigbee:subscribe (Scenario Service) */
+export interface ZigbeeStateMetrics {
+  state: string | null;
+  brightness: number | null;
+  linkquality: number | null;
+  colorMode: string | null;
+  occupancy: boolean | null;
+  temperature: number | null;
+  humidity: number | null;
+  battery: number | null;
+}
+
+export interface ZigbeeStateWire {
+  deviceIeeeAddr: string;
+  physicalDeviceId: string | null;
+  friendlyName: string | null;
+  timestamp: string;
+  metrics: ZigbeeStateMetrics;
+  payload: Record<string, unknown>;
+  stateId: string;
+}
+
+/** GET /zigbee/devices — элемент списка (см. Scenario Service, коллекция PhysicalDevice / Zigbee) */
+export interface ZigbeeDeviceListItem {
+  id: string;
+  /** Сопоставление с IEEE в ответе репозитория */
+  ieeeAddr?: string;
+  protocolAddress?: string;
+  physicalDeviceId?: string;
+  networkAddress?: number | null;
+  type?: 'Coordinator' | 'Router' | 'EndDevice' | string | null;
+  manufacturerName?: string | null;
+  modelId?: string | null;
+  model?: string | null;
+  friendlyName?: string | null;
+  name?: string | null;
+  lastSeen?: string | null;
+  definition?: Record<string, unknown> | null;
+  capabilities?: string[];
+  houseId?: string | null;
+  roomId?: string | null;
+}
+
+/** GET /physical-devices/:id — документ из Mongo (Zigbee + регистрация в доме) */
 export interface PhysicalDeviceResponse {
   id: string;
-  name: string;
+  name?: string | null;
   description?: string | null;
-  deviceTypeId: number;
-  houseId: number;
+  deviceTypeId?: number | null;
+  houseId?: string | number | null;
   deviceId?: string | null;
   roomId?: string | null;
   firmwareVersion?: string | null;
@@ -533,6 +577,15 @@ export interface PhysicalDeviceResponse {
   createdAt: string;
   updatedAt: string;
   status?: 'ONLINE' | 'OFFLINE' | 'ERROR';
+  protocolAddress?: string | null;
+  networkAddress?: number | null;
+  type?: 'Coordinator' | 'Router' | 'EndDevice' | string | null;
+  manufacturerName?: string | null;
+  model?: string | null;
+  friendlyName?: string | null;
+  lastSeen?: string | null;
+  definition?: Record<string, unknown> | null;
+  capabilities?: string[];
 }
 
 export interface DeviceDataResponse {

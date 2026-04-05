@@ -1,0 +1,156 @@
+// Generated to mirror current Mongoose schemas in `src/mongo/schemas/*.mongo.ts`
+// Datasource assumes MongoDB (scenario-service uses Mongo via Mongoose).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+}
+
+enum DeviceDataType {
+  FLOAT
+  NUMBER
+  STRING
+  BOOLEAN
+}
+
+enum ScenarioStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ScenarioExecutionStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+enum TriggerSourceType {
+  MANUAL
+  SCHEDULE
+  EVENT
+}
+
+enum ZigbeeDeviceType {
+  Coordinator
+  Router
+  EndDevice
+}
+
+model PhysicalDevice {
+  id               String           @id @default(auto()) @map("_id") @db.ObjectId
+
+  name             String?
+  description      String?
+
+  deviceTypeId     Int?
+  houseId          String?
+  deviceId         String?
+  roomId           String?
+
+  // Zigbee identity (flattened)
+  ieeeAddr         String?
+  networkAddress   Int?
+  type             ZigbeeDeviceType?
+  manufacturerName String?
+  modelId          String?
+  friendlyName     String?
+  lastSeen         DateTime?
+  definition       Json?
+  capabilities     String[]         @default([])
+
+  firmwareVersion  String?
+  ipAddress        String?
+  macAddress       String?
+  serialNumber     String?
+
+  createdAt        DateTime
+  updatedAt        DateTime
+
+  @@unique([ieeeAddr])
+  @@map("PhysicalDevice")
+}
+
+model DeviceData {
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+
+  deviceId      String?       @db.ObjectId
+  deviceTypeId  Int?
+  deviceFunction String
+  type          DeviceDataType
+  unit          String?
+  timestamp     DateTime
+  data          Json
+
+  @@map("DeviceData")
+}
+
+model Scenario {
+  id          String         @id @default(auto()) @map("_id") @db.ObjectId
+
+  name        String
+  description String?
+  houseId     String
+  createdAt   DateTime
+  updatedAt   DateTime
+  status      ScenarioStatus
+  creatorId   String
+
+  @@map("Scenario")
+}
+
+model ScenarioExecution {
+  id          String                  @id @default(auto()) @map("_id") @db.ObjectId
+
+  scenarioId  String
+  status      ScenarioExecutionStatus
+  triggeredBy TriggerSourceType
+  triggerData Json
+  errorMessage String?
+  startedAt   DateTime
+  endedAt     DateTime?
+
+  @@map("ScenarioExecution")
+}
+
+model ZigbeeDeviceState {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+
+  deviceIeeeAddr String
+  timestamp    DateTime
+  payload      Json
+
+  state        String?
+  brightness   Int?
+  linkquality  Int?
+  colorMode    String?
+  occupancy    Boolean?
+  temperature  Float?
+  humidity     Float?
+  battery      Float?
+
+  @@index([deviceIeeeAddr, timestamp])
+  @@map("ZigbeeDeviceState")
+}
+
+model ZigbeeDeviceLink {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+
+  sourceIeeeAddr String
+  targetIeeeAddr String
+  linkquality   Int?
+  lqi           Int?
+  depth         Int?
+  relationship  Int?
+  snapshotId    String?
+  collectedAt   DateTime
+  createdAt     DateTime
+
+  @@index([sourceIeeeAddr, targetIeeeAddr, collectedAt])
+  @@index([snapshotId, collectedAt])
+  @@map("ZigbeeDeviceLink")
+}
+

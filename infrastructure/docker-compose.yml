@@ -1,0 +1,68 @@
+version: '3.9'
+
+services:
+  # Postgres
+  postgres:
+    image: postgres:18
+    container_name: smart-home-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - pg_data:/var/lib/postgresql
+      - ./postgres/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    env_file:
+      - ../backend/.env
+
+  # MongoDB
+  mongodb:
+    image: mongo:latest
+    container_name: smart-home-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: device_service
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: device_service
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    env_file:
+      - ../backend/.env
+
+  redis:
+    image: redis:latest
+    container_name: smart-home-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: smart-home-keycloak
+    ports:
+      - "8080:8080"
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    command: ["start-dev", "--import-realm"]
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json
+
+volumes:
+  pg_data:
+  nginx_logs:
+  mongodb_data:
+  redis_data:

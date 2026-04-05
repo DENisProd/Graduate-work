@@ -1,0 +1,53 @@
+{
+  "id": "smart-home",
+  "realm": "smart-home",
+  "notBefore": 0,
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": true,
+  "clients": [
+    {
+      "clientId": "smart-home-app",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "your_strong_secret_here",
+      "redirectUris": [
+        "http://localhost:8081/*",
+        "http://localhost:3000/*"
+      ],
+      "webOrigins": ["+"]
+    }
+  ],
+  "users": [
+    {
+      "username": "ivan",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Ivan",
+      "lastName": "User",
+      "email": "ivan@example.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "petr",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Petr",
+      "lastName": "User",
+      "email": "petr@example.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

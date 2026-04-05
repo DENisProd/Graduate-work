@@ -107,6 +107,8 @@ body {
   animation: aurora 18s ease infinite;
 }
 
+/* Вспышка карточки устройства: Web Animations API в DevicesTab (TelemetryFlashOverlay), не CSS */
+
 /* Theme variables for Tailwind */
 @theme inline {
   --font-sans: var(--font-geist-sans, system-ui);

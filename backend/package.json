@@ -6,14 +6,14 @@
   },
   "scripts": {
     "postinstall": "pnpm run prisma:generate",
-    "prisma:generate": "pnpm --filter access-control-service exec prisma generate && pnpm --filter devices-nest exec prisma generate",
+    "prisma:generate": "pnpm --filter access-control-service exec prisma generate && pnpm --filter device-service exec prisma generate",
     "build": "pnpm -r run build",
     "build:access": "pnpm --filter access-control-service run build",
     "build:scenario": "pnpm --filter scenario-service run build",
-    "build:devices": "pnpm --filter devices-nest run build",
+    "build:devices": "pnpm --filter device-service run build",
     "dev:access": "pnpm --filter access-control-service run start:dev",
     "dev:scenario": "pnpm --filter scenario-service run start:dev",
-    "dev:devices": "pnpm --filter devices-nest run start:dev",
+    "dev:devices": "pnpm --filter device-service run start:dev",
     "lint:scenario": "pnpm --filter scenario-service run lint"
   }
 }
