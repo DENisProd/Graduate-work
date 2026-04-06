@@ -11,9 +11,9 @@
     "build:access": "pnpm --filter access-control-service run build",
     "build:scenario": "pnpm --filter scenario-service run build",
     "build:devices": "pnpm --filter device-service run build",
-    "dev:access": "pnpm --filter access-control-service run start:dev",
-    "dev:scenario": "pnpm --filter scenario-service run start:dev",
-    "dev:devices": "pnpm --filter device-service run start:dev",
+    "access:dev": "pnpm --filter access-control-service run start:dev",
+    "scenario:dev": "pnpm --filter scenario-service run start:dev",
+    "devices:dev": "pnpm --filter device-service run start:dev",
     "lint:scenario": "pnpm --filter scenario-service run lint"
   }
 }

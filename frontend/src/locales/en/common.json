@@ -27,7 +27,8 @@
     "noResults": "No results",
     "search": "Search by name...",
     "signIn": "Sign in",
-    "optional": "optional"
+    "optional": "optional",
+    "confirm": "Confirm"
   },
   "navigation": {
     "home": "Home",
@@ -108,7 +109,9 @@
     },
     "sidebar": {
       "open": "Open menu"
-    }
+    },
+    "devices": "Devices",
+    "activeScenarios": "Active scenarios"
   },
   "landing": {
     "hero": {
@@ -317,7 +320,8 @@
       "doors": "Doors",
       "windows": "Windows",
       "draw": "Draw",
-      "connect": "From Point"
+      "connect": "From Point",
+      "exportSuccess": "Plan exported"
     },
     "accessControl": {
       "title": "Access Control",
@@ -352,15 +356,15 @@
       "expired": "Expired",
       "invitations": "Invitations",
       "addMember": "Add member",
-  "memberRoles": "Member roles",
-  "inviteMember": "Invite member",
-  "invitationModeRole": "Assign role",
-  "invitationModePermissions": "Set permissions",
-  "invitationPermissions": "Invitation permissions",
-  "permInviteMembers": "Invite members",
-  "permEditRoles": "Edit roles",
-  "permManageDevices": "Manage devices",
-  "permManageAutomations": "Manage automations",
+      "memberRoles": "Member roles",
+      "inviteMember": "Invite member",
+      "invitationModeRole": "Assign role",
+      "invitationModePermissions": "Set permissions",
+      "invitationPermissions": "Invitation permissions",
+      "permInviteMembers": "Invite members",
+      "permEditRoles": "Edit roles",
+      "permManageDevices": "Manage devices",
+      "permManageAutomations": "Manage automations",
       "revokeInvitation": "Revoke",
       "copyLink": "Copy link",
       "noInvitations": "No invitations",
@@ -680,7 +684,13 @@
       "updateError": "Error updating item",
       "deleteError": "Error deleting item",
       "deleteConfirm": "Are you sure you want to delete this item?",
-      "deleteWarning": "This action cannot be undone."
+      "deleteWarning": "This action cannot be undone.",
+      "requiredName": "Please provide a name in at least one language",
+      "requiredCategory": "Please select a device category",
+      "requiredDeviceType": "Please select a device type",
+      "requiredDevice": "Please select a device",
+      "deviceLoadError": "Failed to load device",
+      "invalidDeviceId": "Invalid device identifier"
     },
     "helpers": {
       "codeDeviceType": "Unique device type code. Only uppercase letters, numbers and underscores. Example: LIGHTING, CLIMATE_CONTROL",

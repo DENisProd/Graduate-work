@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { Trash2 } from 'lucide-react';
 import { devicesApi, deviceCategoriesApi } from '@/lib/api-client';
 import type {
   DeviceResponse,
@@ -14,6 +15,7 @@ import { DataTable, type Column } from '@/components/shared/DataTable';
 import { DeviceFormModal, DeviceDeleteModal } from './devices';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/animate-ui/components/animate/tooltip';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -41,11 +43,9 @@ export function DevicesAdmin() {
     },
   });
 
-  // Filters and search
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
-  // Pagination
   const [page, setPage] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(0);
@@ -59,7 +59,11 @@ export function DevicesAdmin() {
     loadCategories();
   }, []);
 
-  /** Get display name for current locale from translations (supports ru, en and ru_RU, en_US keys). */
+  // Сброс страницы при изменении фильтров
+  useEffect(() => {
+    setPage(0);
+  }, [searchQuery, categoryFilter]);
+
   const getNameForLocale = useCallback(
     (
       translations: Record<string, { name?: string }> | undefined,
@@ -119,7 +123,6 @@ export function DevicesAdmin() {
     }
   };
 
-  // Filtered devices
   const filteredDevices = useMemo(() => {
     return devices.filter((device) => {
       const deviceName =
@@ -173,17 +176,16 @@ export function DevicesAdmin() {
   };
 
   const handleSubmit = async () => {
-    // Валидация
     if (!formData.code.trim()) {
       showToast(t('admin.messages.createError'), 'error');
       return;
     }
     if (!formData.deviceCategoryId) {
-      showToast('Необходимо выбрать категорию устройства', 'error');
+      showToast(t('admin.messages.requiredCategory'), 'error');
       return;
     }
     if (!formData.translations.en.name.trim() && !formData.translations.ru.name.trim()) {
-      showToast('Необходимо указать название хотя бы на одном языке', 'error');
+      showToast(t('admin.messages.requiredName'), 'error');
       return;
     }
 
@@ -194,35 +196,11 @@ export function DevicesAdmin() {
       await loadData();
     } catch (error) {
       console.error('Failed to save device:', error);
-      showToast(
-        t('admin.messages.createError'),
-        'error'
-      );
-    }
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return t('admin.never');
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleString('ru-RU', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return dateString;
+      showToast(t('admin.messages.createError'), 'error');
     }
   };
 
   const columns: Column<DeviceResponse>[] = [
-    {
-      key: 'code',
-      label: t('admin.code'),
-      sortable: true,
-    },
     {
       key: 'name',
       label: t('admin.name'),
@@ -232,8 +210,13 @@ export function DevicesAdmin() {
           getNameForLocale(
             device.translations as Record<string, { name?: string }> | undefined,
             device.name
-          ) || '-';
-        return <span className="text-sm">{name}</span>;
+          ) || device.code;
+        return (
+          <div>
+            <p className="font-medium text-sm">{name}</p>
+            <p className="text-xs text-muted-foreground font-mono">{device.code}</p>
+          </div>
+        );
       },
     },
     {
@@ -247,19 +230,39 @@ export function DevicesAdmin() {
         const catName = cat
           ? getNameForLocale(tr, cat.name) || cat.code
           : null;
-        const name = catName ?? device.deviceCategoryName ?? '-';
-        return <span className="text-sm">{name}</span>;
+        const name = catName ?? device.deviceCategoryName ?? '—';
+        return (
+          <Badge variant="outline" className="text-xs font-normal">
+            {name}
+          </Badge>
+        );
       },
-    }
+    },
+    {
+      key: 'active',
+      label: t('admin.statusLabel'),
+      render: (device) => (
+        <Badge
+          variant="outline"
+          className={
+            device.active
+              ? 'border-emerald-200 bg-emerald-500/10 text-emerald-600 dark:border-emerald-400/40 dark:bg-emerald-400/15 dark:text-emerald-300'
+              : 'border-border bg-muted text-muted-foreground'
+          }
+        >
+          {device.active ? t('admin.active') : t('admin.inactive')}
+        </Badge>
+      ),
+    },
   ];
 
   return (
     <TooltipProvider>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="flex items-center justify-between">
           <h2 className="text-2xl font-semibold">{t('admin.devices.title')}</h2>
           <Button onClick={handleCreate} type="button">
-            {t('admin.create')} {t('admin.device')}
+            {t('admin.createDevice')}
           </Button>
         </div>
 
@@ -269,56 +272,33 @@ export function DevicesAdmin() {
           searchPlaceholder={t('admin.searchDevices')}
           searchValue={searchQuery}
           onSearchChange={setSearchQuery}
+          onRowClick={(device) => router.push(`/admin/devices/${device.id}`)}
           filters={
-            <>
-              <Select
-                value={categoryFilter}
-                onValueChange={(value) => setCategoryFilter(value)}
-              >
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder={t('admin.allCategories')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t('admin.allCategories')}</SelectItem>
-                  {categories.map((cat) => {
-                    const catName =
-                      getNameForLocale(
-                        cat.translations as Record<string, { name?: string }> | undefined,
-                        cat.name
-                      ) || cat.code;
-                    return (
-                      <SelectItem key={cat.id} value={cat.id.toString()}>
-                        {catName}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </>
+            <Select
+              value={categoryFilter}
+              onValueChange={(value) => setCategoryFilter(value)}
+            >
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder={t('admin.allCategories')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('admin.allCategories')}</SelectItem>
+                {categories.map((cat) => {
+                  const catName =
+                    getNameForLocale(
+                      cat.translations as Record<string, { name?: string }> | undefined,
+                      cat.name
+                    ) || cat.code;
+                  return (
+                    <SelectItem key={cat.id} value={cat.id.toString()}>
+                      {catName}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
           }
           actions={(device) => (
-            <>
-              <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="icon-sm"
-                  variant="secondary"
-                  className="cursor-pointer"
-                  onClick={() => router.push(`/admin/devices/${device.id}`)}
-                  aria-label={t('admin.edit')}
-                >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                      />
-                    </svg>
-                  </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t('admin.edit')}</TooltipContent>
-            </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -328,20 +308,12 @@ export function DevicesAdmin() {
                   onClick={() => handleDelete(device)}
                   aria-label={t('admin.delete')}
                 >
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                    />
-                  </svg>
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t('admin.delete')}</TooltipContent>
             </Tooltip>
-          </>
-        )}
+          )}
           pagination={
             totalPages > 1
               ? {
@@ -357,32 +329,32 @@ export function DevicesAdmin() {
           loading={loading}
         />
 
-      <DeviceFormModal
-        isOpen={isModalOpen}
-        onOpenChange={setIsModalOpen}
-        formData={formData}
-        setFormData={setFormData}
-        categories={categories}
-        editingDevice={null}
-        onSubmit={handleSubmit}
-      />
+        <DeviceFormModal
+          isOpen={isModalOpen}
+          onOpenChange={setIsModalOpen}
+          formData={formData}
+          setFormData={setFormData}
+          categories={categories}
+          editingDevice={null}
+          onSubmit={handleSubmit}
+        />
 
-      <DeviceDeleteModal
-        isOpen={isDeleteModalOpen}
-        onOpenChange={setIsDeleteModalOpen}
-        device={deletingDevice}
-        onConfirm={confirmDelete}
-        onCancel={() => {
-          setIsDeleteModalOpen(false);
-          setDeletingDevice(null);
-        }}
-        title={t('admin.deleteConfirm')}
-        confirmLabel={t('admin.delete')}
-        cancelLabel={t('common.cancel')}
-        message={t('admin.messages.deleteConfirm')}
-        warningMessage={t('admin.messages.deleteWarning')}
-      />
-    </div>
-  </TooltipProvider>
+        <DeviceDeleteModal
+          isOpen={isDeleteModalOpen}
+          onOpenChange={setIsDeleteModalOpen}
+          device={deletingDevice}
+          onConfirm={confirmDelete}
+          onCancel={() => {
+            setIsDeleteModalOpen(false);
+            setDeletingDevice(null);
+          }}
+          title={t('admin.deleteConfirm')}
+          confirmLabel={t('admin.delete')}
+          cancelLabel={t('common.cancel')}
+          message={t('admin.messages.deleteConfirm')}
+          warningMessage={t('admin.messages.deleteWarning')}
+        />
+      </div>
+    </TooltipProvider>
   );
 }

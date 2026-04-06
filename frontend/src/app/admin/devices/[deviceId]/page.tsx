@@ -2,12 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ThemeInitializer, useToast } from '@/components/shared';
+import { useToast } from '@/components/shared';
 import { devicesApi, deviceCategoriesApi } from '@/lib/api-client';
 import type { DeviceCategoryResponse, DeviceRequest, DeviceResponse } from '@/types/api';
 import { useTranslation } from '@/hooks';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { DeviceFormModal } from '@/components/features/admin/devices';
 import { DeviceFunctionsAdmin } from '@/components/features/admin/device-functions-admin';
 import { DeviceFunctionActionsAdmin } from '@/components/features/admin/device-function-actions-admin';
@@ -105,7 +104,7 @@ export default function DeviceDetailsPage() {
     } catch (err) {
       console.error('Failed to load device:', err);
       setDevice(null);
-      setError('Не удалось загрузить устройство');
+      setError(t('admin.messages.deviceLoadError'));
     } finally {
       setLoading(false);
     }
@@ -114,7 +113,7 @@ export default function DeviceDetailsPage() {
   useEffect(() => {
     if (!deviceId) {
       setLoading(false);
-      setError('Некорректный идентификатор устройства');
+      setError(t('admin.messages.invalidDeviceId'));
       return;
     }
     loadCategories();
@@ -134,11 +133,11 @@ export default function DeviceDetailsPage() {
       return;
     }
     if (!formData.deviceCategoryId) {
-      showToast('Необходимо выбрать категорию устройства', 'error');
+      showToast(t('admin.messages.requiredCategory'), 'error');
       return;
     }
     if (!formData.translations.en.name.trim() && !formData.translations.ru.name.trim()) {
-      showToast('Необходимо указать название хотя бы на одном языке', 'error');
+      showToast(t('admin.messages.requiredName'), 'error');
       return;
     }
     try {
@@ -167,75 +166,70 @@ export default function DeviceDetailsPage() {
 
   return (
     <>
-      <ThemeInitializer />
-      <main className="flex-1">
-        <div className="container mx-auto px-4 py-8 md:px-6 md:py-12">
-          <div className="space-y-8">
-            <div className="flex items-center justify-between gap-4">
-              <Button variant="ghost" onClick={() => router.push('/admin/devices')} type="button">
-                ← {t('admin.backToDevices')}
-              </Button>
+      <div className="space-y-8">
+        <div className="flex items-center justify-between gap-4">
+          <Button variant="ghost" onClick={() => router.push('/admin/devices')} type="button">
+            ← {t('admin.backToDevices')}
+          </Button>
+        </div>
+
+        {loading && (
+          <div className="text-center py-8 text-muted-foreground">{t('common.loading')}</div>
+        )}
+
+        {!loading && error && (
+          <div className="space-y-6">
+            <div className="rounded-lg border border-danger bg-danger/10 p-4 text-danger">
+              <p className="font-semibold">{t('common.error')}</p>
+              <p className="text-sm">{error}</p>
             </div>
-
-            {loading && (
-              <div className="text-center py-8 text-muted-foreground">{t('common.loading')}</div>
-            )}
-
-            {!loading && error && (
-              <div className="space-y-6">
-                <div className="rounded-lg border border-danger bg-danger/10 p-4 text-danger">
-                  <p className="font-semibold">{t('common.error')}</p>
-                  <p className="text-sm">{error}</p>
-                </div>
-                {deviceId && (
-                  <Button onClick={loadDevice} variant="secondary" type="button">
-                    {t('admin.retry')}
-                  </Button>
-                )}
-              </div>
-            )}
-
-            {!loading && !error && device && (
-              <div className="rounded-lg border border-border bg-background p-6 shadow-sm">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h2 className="text-2xl font-semibold">{deviceName}</h2>
-                    <p className="text-sm text-muted-foreground">{device.code}</p>
-                  </div>
-                  <Button onClick={handleOpenEdit} type="button">
-                    {t('admin.edit')}
-                  </Button>
-                </div>
-                {device.description && (
-                  <p className="mt-3 text-sm text-muted-foreground">{device.description}</p>
-                )}
-                <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-                  <div>
-                    <span className="font-medium">{t('admin.deviceCategory')}:</span> {categoryName || '—'}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {!loading && !error && device && (
-              <Tabs defaultValue="functions" className="w-full">
-                <TabsList>
-                  <TabsTrigger value="functions">{t('admin.deviceFunctions.title')}</TabsTrigger>
-                  <TabsTrigger value="actions">{t('admin.deviceFunctionActions.title')}</TabsTrigger>
-                </TabsList>
-                <TabsContents>
-                  <TabsContent value="functions">
-                    <DeviceFunctionsAdmin deviceId={device.id} showBackButton={false} />
-                  </TabsContent>
-                  <TabsContent value="actions">
-                    <DeviceFunctionActionsAdmin deviceId={device.id} showBackButton={false} />
-                  </TabsContent>
-                </TabsContents>
-              </Tabs>
+            {deviceId && (
+              <Button onClick={loadDevice} variant="secondary" type="button">
+                {t('admin.retry')}
+              </Button>
             )}
           </div>
-        </div>
-      </main>
+        )}
+
+        {!loading && !error && device && (
+          <div className="rounded-lg border border-border bg-background p-6 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-semibold">{deviceName}</h2>
+                <p className="text-sm text-muted-foreground">{device.code}</p>
+              </div>
+              <Button onClick={handleOpenEdit} type="button">
+                {t('admin.edit')}
+              </Button>
+            </div>
+            {device.description && (
+              <p className="mt-3 text-sm text-muted-foreground">{device.description}</p>
+            )}
+            <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+              <div>
+                <span className="font-medium">{t('admin.deviceCategory')}:</span> {categoryName || '—'}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!loading && !error && device && (
+          <Tabs defaultValue="functions" className="w-full">
+            <TabsList>
+              <TabsTrigger value="functions">{t('admin.deviceFunctions.title')}</TabsTrigger>
+              <TabsTrigger value="actions">{t('admin.deviceFunctionActions.title')}</TabsTrigger>
+            </TabsList>
+            <TabsContents>
+              <TabsContent value="functions">
+                <DeviceFunctionsAdmin deviceId={device.id} showBackButton={false} />
+              </TabsContent>
+              <TabsContent value="actions">
+                <DeviceFunctionActionsAdmin deviceId={device.id} showBackButton={false} />
+              </TabsContent>
+            </TabsContents>
+          </Tabs>
+        )}
+      </div>
 
       <DeviceFormModal
         isOpen={isModalOpen}

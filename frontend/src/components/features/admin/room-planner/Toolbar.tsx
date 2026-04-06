@@ -1,14 +1,18 @@
 'use client';
 
+import { useState } from 'react';
 import { Button, ButtonGroup } from '@heroui/react';
-import { DoorOpen, Hand, Home, MousePointer2, Plug, Square } from 'lucide-react';
+import { DoorOpen, Grid3X3, Hand, Home, Minus, MousePointer2, Plug, Plus, Redo2, Ruler, Square, Undo2 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/animate-ui/components/radix/tabs';
 import { useRoomPlannerStore } from '@/store/room-planner-store';
 import { useTranslation } from '@/hooks';
+import { useToast } from '@/components/shared';
 import type { ProjectMode } from '@/domain/room-planner';
 
 export function Toolbar() {
   const { t } = useTranslation();
+  const { showToast } = useToast();
+  const [confirmReset, setConfirmReset] = useState(false);
   const mode = useRoomPlannerStore((state) => state.mode);
   const wallEditMode = useRoomPlannerStore((state) => state.wallEditMode);
   const zoom = useRoomPlannerStore((state) => state.zoom);
@@ -52,6 +56,16 @@ export function Toolbar() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    showToast(t('admin.roomPlanner.exportSuccess'), 'success');
+  };
+
+  const handleReset = () => {
+    if (!confirmReset) {
+      setConfirmReset(true);
+      return;
+    }
+    reset();
+    setConfirmReset(false);
   };
 
   const tabsValue = mode === 'doors' || mode === 'windows' ? 'openings' : mode;
@@ -128,7 +142,7 @@ export function Toolbar() {
           className="text-foreground hover:text-primary"
           aria-label={t('admin.roomPlanner.undo')}
         >
-          ↶
+          <Undo2 className="size-4" />
         </Button>
         <Button
           onPress={redo}
@@ -138,7 +152,7 @@ export function Toolbar() {
           className="text-foreground hover:text-primary"
           aria-label={t('admin.roomPlanner.redo')}
         >
-          ↷
+          <Redo2 className="size-4" />
         </Button>
       </ButtonGroup>
 
@@ -152,7 +166,7 @@ export function Toolbar() {
           className="text-foreground hover:text-primary"
           aria-label={`${t('admin.roomPlanner.zoom')} -`}
         >
-          −
+          <Minus className="size-4" />
         </Button>
         <span className="px-2 text-sm text-foreground">{zoom}%</span>
         <Button
@@ -162,7 +176,7 @@ export function Toolbar() {
           className="text-foreground hover:text-primary"
           aria-label={`${t('admin.roomPlanner.zoom')} +`}
         >
-          +
+          <Plus className="size-4" />
         </Button>
       </ButtonGroup>
 
@@ -174,7 +188,8 @@ export function Toolbar() {
         className={showGrid ? '' : 'text-foreground hover:text-primary'}
         onPress={() => setShowGrid(!showGrid)}
       >
-        ⊞ {t('admin.roomPlanner.grid')}
+        <Grid3X3 className="size-4" />
+        {t('admin.roomPlanner.grid')}
       </Button>
       <Button
         size="sm"
@@ -182,7 +197,8 @@ export function Toolbar() {
         className={showMeasurements ? '' : 'text-foreground hover:text-primary'}
         onPress={() => setShowMeasurements(!showMeasurements)}
       >
-        📏 {t('admin.roomPlanner.measurements')}
+        <Ruler className="size-4" />
+        {t('admin.roomPlanner.measurements')}
       </Button>
 
       <div className="mx-2 h-6 w-px bg-border" />
@@ -195,12 +211,30 @@ export function Toolbar() {
         >
           {t('admin.roomPlanner.export')}
         </Button>
-        <Button
-          onPress={reset}
-          variant="danger"
-        >
-          {t('admin.roomPlanner.reset')}
-        </Button>
+        {confirmReset ? (
+          <>
+            <Button
+              onPress={handleReset}
+              variant="danger"
+            >
+              {t('common.confirm')}
+            </Button>
+            <Button
+              onPress={() => setConfirmReset(false)}
+              variant="ghost"
+              className="text-foreground hover:text-primary"
+            >
+              {t('common.cancel')}
+            </Button>
+          </>
+        ) : (
+          <Button
+            onPress={handleReset}
+            variant="danger"
+          >
+            {t('admin.roomPlanner.reset')}
+          </Button>
+        )}
       </ButtonGroup>
       
       {mode === 'walls' && pendingWallStart && (

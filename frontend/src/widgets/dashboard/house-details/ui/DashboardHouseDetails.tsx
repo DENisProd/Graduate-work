@@ -7,7 +7,6 @@ import { HouseDetailsModals } from '@/features/access-control';
 import { HouseDetailsWidget } from '@/widgets/house-details';
 import { useAccessControlStore } from '@/store/access-control-store';
 import { useCurrentUserId } from '@/hooks';
-import { ThemeInitializer } from '@/components/shared';
 
 export function DashboardHouseDetails() {
   const params = useParams();
@@ -52,12 +51,9 @@ export function DashboardHouseDetails() {
 
   if (sessionStatus === 'loading' || currentUserId == null) {
     return (
-      <>
-        <ThemeInitializer />
-        <div className="flex min-h-[40vh] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent" />
-        </div>
-      </>
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent" />
+      </div>
     );
   }
 
@@ -69,15 +65,12 @@ export function DashboardHouseDetails() {
 
   return (
     <>
-      <ThemeInitializer />
-      <div className="container mx-auto px-4 py-8 md:px-6 md:py-12">
-        <HouseDetailsWidget
-          houseIdParam={houseIdParam}
-          onRoomPlanner={onRoomPlanner}
-          isAdmin={false}
-        />
-        <HouseDetailsModals />
-      </div>
+      <HouseDetailsWidget
+        houseIdParam={houseIdParam}
+        onRoomPlanner={onRoomPlanner}
+        isAdmin={false}
+      />
+      <HouseDetailsModals />
     </>
   );
 }

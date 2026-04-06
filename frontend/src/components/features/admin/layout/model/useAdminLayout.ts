@@ -16,7 +16,6 @@ export function useAdminLayout() {
   const { t, locale } = useTranslation();
   const pathname = usePathname();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const [selectedDeviceName, setSelectedDeviceName] = useState<string | null>(
     null,
@@ -56,62 +55,53 @@ export function useAdminLayout() {
     pathname.match(/^\/admin\/access-control\/houses\/(\d+)/)?.[1] ?? null;
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (deviceIdFromPath) {
-        setSelectedDeviceId(deviceIdFromPath);
-        devicesApi
-          .getById(Number(deviceIdFromPath))
-          .then((device) => {
-            const tr = device.translations as
-              | Record<string, { name?: string }>
-              | undefined;
-            const name =
-              tr?.[locale]?.name ??
-              device.name ??
-              tr?.ru?.name ??
-              tr?.en?.name ??
-              device.code;
-            setSelectedDeviceName(name || device.code);
-          })
-          .catch(() => setSelectedDeviceName(null));
-      } else {
-        setSelectedDeviceId(null);
-        setSelectedDeviceName(null);
-      }
-    }, 0);
-    return () => clearTimeout(timeoutId);
+    if (deviceIdFromPath) {
+      setSelectedDeviceId(deviceIdFromPath);
+      devicesApi
+        .getById(Number(deviceIdFromPath))
+        .then((device) => {
+          const tr = device.translations as
+            | Record<string, { name?: string }>
+            | undefined;
+          const name =
+            tr?.[locale]?.name ??
+            device.name ??
+            tr?.ru?.name ??
+            tr?.en?.name ??
+            device.code;
+          setSelectedDeviceName(name || device.code);
+        })
+        .catch(() => setSelectedDeviceName(null));
+    } else {
+      setSelectedDeviceId(null);
+      setSelectedDeviceName(null);
+    }
   }, [deviceIdFromPath, locale]);
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (houseIdFromPath) {
-        setSelectedHouseId(houseIdFromPath);
-        housesApi
-          .getById(Number(houseIdFromPath))
-          .then((house) => setSelectedHouseName(house.name ?? null))
-          .catch(() => setSelectedHouseName(null));
-      } else {
-        setSelectedHouseId(null);
-        setSelectedHouseName(null);
-      }
-    }, 0);
-    return () => clearTimeout(timeoutId);
+    if (houseIdFromPath) {
+      setSelectedHouseId(houseIdFromPath);
+      housesApi
+        .getById(Number(houseIdFromPath))
+        .then((house) => setSelectedHouseName(house.name ?? null))
+        .catch(() => setSelectedHouseName(null));
+    } else {
+      setSelectedHouseId(null);
+      setSelectedHouseName(null);
+    }
   }, [houseIdFromPath]);
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      const group: GroupKey | null = isInGroup('devices')
-        ? 'devices'
-        : isInGroup('reference')
-          ? 'reference'
-          : isInGroup('security')
-            ? 'security'
-            : null;
-      if (group) {
-        setExpandedGroups((prev) => ({ ...prev, [group]: true }));
-      }
-    }, 0);
-    return () => clearTimeout(timeoutId);
+    const group: GroupKey | null = isInGroup('devices')
+      ? 'devices'
+      : isInGroup('reference')
+        ? 'reference'
+        : isInGroup('security')
+          ? 'security'
+          : null;
+    if (group) {
+      setExpandedGroups((prev) => ({ ...prev, [group]: true }));
+    }
   }, [pathname]);
 
   const navItems: NavItem[] = [
@@ -150,24 +140,16 @@ export function useAdminLayout() {
 
   // Automatically collapse sidebar on full-width pages if not already collapsed
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (isFullWidthPage && !sidebarCollapsed) {
-        setSidebarCollapsed(true);
-      }
-    }, 0);
-    return () => clearTimeout(timeoutId);
+    if (isFullWidthPage && !sidebarCollapsed) {
+      setSidebarCollapsed(true);
+    }
   }, [isFullWidthPage]);
-
-  const sidebarWidth = sidebarCollapsed ? 'w-16' : 'w-64';
-  const sidebarWidthPx = sidebarCollapsed ? 64 : 256;
 
   return {
     t,
     pathname,
     sidebarCollapsed,
     setSidebarCollapsed,
-    sidebarOpen,
-    setSidebarOpen,
     expandedGroups,
     toggleGroup,
     navItems,
@@ -176,8 +158,6 @@ export function useAdminLayout() {
     selectedDeviceName,
     selectedHouseId,
     selectedHouseName,
-    sidebarWidth,
-    sidebarWidthPx,
     isFullWidthPage,
   };
 }

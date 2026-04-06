@@ -28,7 +28,6 @@ interface DashboardSidebarProps {
   isActive: (href: string) => boolean;
   expandedGroups: Record<string, boolean>;
   toggleGroup: (group: string) => void;
-  pathname: string;
   t: (key: Parameters<typeof import('@/lib/i18n').getTranslation>[1]) => string;
 }
 
@@ -57,10 +56,6 @@ export function DashboardSidebar({
       time: '1h ago',
     },
   ];
-
-  const handleToggleGroup = (groupId: string) => {
-    toggleGroup(groupId);
-  };
 
   return (
     <Sidebar variant="inset" collapsible="icon">
@@ -113,7 +108,7 @@ export function DashboardSidebar({
           routes={routes}
           isActive={isActive}
           openGroups={expandedGroups}
-          onToggleGroup={handleToggleGroup}
+          onToggleGroup={toggleGroup}
         />
       </SidebarContent>
       <SidebarSeparator />

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Card } from '@heroui/react';
+import { AppWindow, DoorOpen } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -29,6 +30,7 @@ export function CatalogPanel() {
   const [devicesLoading, setDevicesLoading] = useState(false);
   const [openCategories, setOpenCategories] = useState<string[]>([]);
   const [slideDirection, setSlideDirection] = useState(0);
+  const categoriesInitialized = useRef(false);
 
   useEffect(() => {
     deviceTypesApi
@@ -87,10 +89,9 @@ export function CatalogPanel() {
   }, [deviceTypesById, devicesByType]);
 
   useEffect(() => {
-    if (categories.length > 0) {
+    if (!categoriesInitialized.current && categories.length > 0) {
       setOpenCategories(categories.map((category) => String(category.id)));
-    } else {
-      setOpenCategories([]);
+      categoriesInitialized.current = true;
     }
   }, [categories]);
 
@@ -187,7 +188,7 @@ export function CatalogPanel() {
                           : 'hover:bg-accent/10'
                       }`}
                     >
-                      <span className="text-xl">🚪</span>
+                      <DoorOpen className="size-5 text-muted-foreground" />
                       <div className="flex flex-col flex-1">
                         <span className="text-sm font-medium">{t('admin.roomPlanner.standardDoor')}</span>
                         <span className="text-xs text-muted-foreground">
@@ -206,7 +207,7 @@ export function CatalogPanel() {
                           : 'hover:bg-accent/10'
                       }`}
                     >
-                      <span className="text-xl">🪟</span>
+                      <AppWindow className="size-5 text-muted-foreground" />
                       <div className="flex flex-col flex-1">
                         <span className="text-sm font-medium">{t('admin.roomPlanner.standardWindow')}</span>
                         <span className="text-xs text-muted-foreground">
@@ -229,7 +230,10 @@ export function CatalogPanel() {
                 className="space-y-2"
               >
                     {devicesLoading && (
-                      <div className="text-xs text-muted-foreground">{t('admin.roomPlanner.loadingDevices')}</div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <div className="h-3 w-3 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+                        {t('admin.roomPlanner.loadingDevices')}
+                      </div>
                     )}
                     {!devicesLoading && categories.length === 0 && (
                       <div className="text-xs text-muted-foreground">{t('admin.roomPlanner.noHouseDevices')}</div>

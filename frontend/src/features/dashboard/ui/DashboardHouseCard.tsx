@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Home } from 'lucide-react';
 import type { HouseResponse } from '@/types/api';
+import { useTranslation } from '@/hooks';
 
 interface DashboardHouseCardProps {
   house: HouseResponse;
@@ -11,6 +12,7 @@ interface DashboardHouseCardProps {
 }
 
 export function DashboardHouseCard({ house, basePath = '/dashboard/houses' }: DashboardHouseCardProps) {
+  const { t } = useTranslation();
   const href = `${basePath}/${house.id}`;
   return (
     <Link href={href}>
@@ -30,11 +32,11 @@ export function DashboardHouseCard({ house, basePath = '/dashboard/houses' }: Da
         </div>
         <div className="mt-auto space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Devices</span>
+            <span className="text-muted-foreground">{t('dashboard.devices')}</span>
             <span className="font-medium">—</span>
           </div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Active scenarios</span>
+            <span className="text-muted-foreground">{t('dashboard.activeScenarios')}</span>
             <span className="font-medium">—</span>
           </div>
         </div>

@@ -319,12 +319,14 @@ export function PropertyPanel() {
             </div>
           )}
           <div className="pt-2">
-            <button
-              onClick={() => removeDevice(selectedDevice.id)}
-              className="w-full px-3 py-2 text-sm text-danger hover:bg-danger/10 rounded transition-colors"
+            <Button
+              size="sm"
+              variant="danger"
+              className="w-full"
+              onPress={() => removeDevice(selectedDevice.id)}
             >
               {t('admin.roomPlanner.deleteDevice')}
-            </button>
+            </Button>
           </div>
         </Card.Content>
       </Card>
@@ -405,12 +407,14 @@ export function PropertyPanel() {
             </p>
           </div>
           <div className="pt-2">
-            <button
-              onClick={() => removeDoor(selectedDoor.id)}
-              className="w-full px-3 py-2 text-sm text-danger hover:bg-danger/10 rounded transition-colors"
+            <Button
+              size="sm"
+              variant="danger"
+              className="w-full"
+              onPress={() => removeDoor(selectedDoor.id)}
             >
               {t('admin.roomPlanner.deleteDoor')}
-            </button>
+            </Button>
           </div>
         </Card.Content>
       </Card>
@@ -491,12 +495,14 @@ export function PropertyPanel() {
             </p>
           </div>
           <div className="pt-2">
-            <button
-              onClick={() => removeWindow(selectedWindow.id)}
-              className="w-full px-3 py-2 text-sm text-danger hover:bg-danger/10 rounded transition-colors"
+            <Button
+              size="sm"
+              variant="danger"
+              className="w-full"
+              onPress={() => removeWindow(selectedWindow.id)}
             >
               {t('admin.roomPlanner.deleteWindow')}
-            </button>
+            </Button>
           </div>
         </Card.Content>
       </Card>
@@ -551,16 +557,18 @@ export function PropertyPanel() {
             </p>
           </div>
           <div className="pt-2">
-            <button
-              onClick={() => {
+            <Button
+              size="sm"
+              variant="danger"
+              className="w-full"
+              onPress={() => {
                 if (wallIndex !== -1) {
                   removeWall(wallIndex);
                 }
               }}
-              className="w-full px-3 py-2 text-sm text-danger hover:bg-danger/10 rounded transition-colors"
             >
               {t('admin.roomPlanner.deleteWall')}
-            </button>
+            </Button>
           </div>
         </Card.Content>
       </Card>

@@ -42,7 +42,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           isActive={isActive}
           expandedGroups={expandedGroups}
           toggleGroup={toggleGroup}
-          pathname={pathname}
           t={t}
         />
 

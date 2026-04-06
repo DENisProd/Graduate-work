@@ -178,7 +178,7 @@ export function DeviceTypesAdmin() {
       return;
     }
     if (!formData.translations.en.name.trim() && !formData.translations.ru.name.trim()) {
-      showToast('Необходимо указать название хотя бы на одном языке', 'error');
+      showToast(t('admin.messages.requiredName'), 'error');
       return;
     }
 

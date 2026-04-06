@@ -22,6 +22,7 @@ interface DataTableProps<T> {
   onSearchChange?: (value: string) => void;
   filters?: ReactNode;
   actions?: (item: T) => ReactNode;
+  onRowClick?: (item: T) => void;
   pagination?: {
     page: number;
     totalPages: number;
@@ -41,6 +42,7 @@ export function DataTable<T extends { id: number | string }>({
   onSearchChange,
   filters,
   actions,
+  onRowClick,
   pagination,
   loading = false,
 }: DataTableProps<T>) {
@@ -136,6 +138,8 @@ export function DataTable<T extends { id: number | string }>({
               data.map((item) => (
                 <TableRow
                   key={item.id}
+                  onClick={onRowClick ? () => onRowClick(item) : undefined}
+                  className={onRowClick ? 'cursor-pointer hover:bg-muted/50' : undefined}
                 >
                   {columns.map((column) => (
                     <TableCell key={column.key} className="px-4">
@@ -143,7 +147,10 @@ export function DataTable<T extends { id: number | string }>({
                     </TableCell>
                   ))}
                   {actions && (
-                    <TableCell className="px-4 text-right">
+                    <TableCell
+                      className="px-4 text-right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <div className="flex justify-end gap-2">{actions(item)}</div>
                     </TableCell>
                   )}

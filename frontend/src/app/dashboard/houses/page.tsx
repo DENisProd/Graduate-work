@@ -73,6 +73,8 @@ export default function DashboardHousesPage() {
     setHouseFormOpen(true);
   };
 
+  const showLoading = loading && houses.length === 0;
+
   if (!ready || sessionStatus === 'loading' || currentUserId === null) {
     return (
       <>
@@ -83,8 +85,6 @@ export default function DashboardHousesPage() {
       </>
     );
   }
-
-  const showLoading = loading && houses.length === 0;
 
   return (
     <>

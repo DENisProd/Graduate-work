@@ -27,7 +27,8 @@
     "noResults": "Ничего не найдено",
     "search": "Поиск по названию...",
     "signIn": "Войти",
-    "optional": "необязательно"
+    "optional": "необязательно",
+    "confirm": "Подтвердить"
   },
   "navigation": {
     "home": "Главная",
@@ -108,7 +109,9 @@
     },
     "sidebar": {
       "open": "Открыть меню"
-    }
+    },
+    "devices": "Устройства",
+    "activeScenarios": "Активные сценарии"
   },
   "landing": {
     "hero": {
@@ -317,7 +320,8 @@
       "doors": "Двери",
       "windows": "Окна",
       "draw": "Рисовать",
-      "connect": "От точки"
+      "connect": "От точки",
+      "exportSuccess": "План экспортирован"
     },
     "accessControl": {
       "title": "Управление доступом",
@@ -352,15 +356,15 @@
       "expired": "Истёк",
       "invitations": "Приглашения",
       "addMember": "Добавить участника",
-  "memberRoles": "Роли участника",
-  "inviteMember": "Пригласить участника",
-  "invitationModeRole": "Назначить роль",
-  "invitationModePermissions": "Задать права",
-  "invitationPermissions": "Права приглашения",
-  "permInviteMembers": "Приглашать участников",
-  "permEditRoles": "Редактировать роли",
-  "permManageDevices": "Управлять устройствами",
-  "permManageAutomations": "Управлять автоматизациями",
+      "memberRoles": "Роли участника",
+      "inviteMember": "Пригласить участника",
+      "invitationModeRole": "Назначить роль",
+      "invitationModePermissions": "Задать права",
+      "invitationPermissions": "Права приглашения",
+      "permInviteMembers": "Приглашать участников",
+      "permEditRoles": "Редактировать роли",
+      "permManageDevices": "Управлять устройствами",
+      "permManageAutomations": "Управлять автоматизациями",
       "revokeInvitation": "Отозвать",
       "copyLink": "Скопировать ссылку",
       "noInvitations": "Нет приглашений",
@@ -396,7 +400,6 @@
       "deviceFunctionId": "ID функции устройства",
       "deviceFunction": "Функция устройства",
       "houseRoomId": "ID комнаты дома",
-      "houseRoom": "Комната дома",
       "load": "Загрузить",
       "send": "Отправить",
       "result": "Результат",
@@ -683,7 +686,13 @@
       "updateError": "Ошибка при обновлении",
       "deleteError": "Ошибка при удалении",
       "deleteConfirm": "Вы уверены, что хотите удалить этот элемент?",
-      "deleteWarning": "Это действие нельзя отменить."
+      "deleteWarning": "Это действие нельзя отменить.",
+      "requiredName": "Необходимо указать название хотя бы на одном языке",
+      "requiredCategory": "Необходимо выбрать категорию устройства",
+      "requiredDeviceType": "Необходимо выбрать тип устройства",
+      "requiredDevice": "Необходимо выбрать устройство",
+      "deviceLoadError": "Не удалось загрузить устройство",
+      "invalidDeviceId": "Некорректный идентификатор устройства"
     },
     "helpers": {
       "codeDeviceType": "Уникальный код типа устройства. Только заглавные буквы, цифры и подчеркивания. Например: LIGHTING, CLIMATE_CONTROL",

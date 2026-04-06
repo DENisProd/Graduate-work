@@ -217,11 +217,11 @@ export function DeviceCategoriesAdmin() {
       return;
     }
     if (!formData.deviceTypeId) {
-      showToast('Необходимо выбрать тип устройства', 'error');
+      showToast(t('admin.messages.requiredDeviceType'), 'error');
       return;
     }
     if (!formData.translations.en.name.trim() && !formData.translations.ru.name.trim()) {
-      showToast('Необходимо указать название хотя бы на одном языке', 'error');
+      showToast(t('admin.messages.requiredName'), 'error');
       return;
     }
 

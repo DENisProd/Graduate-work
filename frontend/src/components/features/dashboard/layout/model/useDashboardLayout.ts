@@ -21,28 +21,22 @@ export function useDashboardLayout() {
     pathname.match(/^\/dashboard\/houses\/(\d+)/)?.[1] ?? null;
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (houseIdFromPath) {
-        setSelectedHouseId(houseIdFromPath);
-        housesApi
-          .getById(Number(houseIdFromPath))
-          .then((house) => setSelectedHouseName(house.name ?? null))
-          .catch(() => setSelectedHouseName(null));
-      } else {
-        setSelectedHouseId(null);
-        setSelectedHouseName(null);
-      }
-    }, 0);
-    return () => clearTimeout(timeoutId);
+    if (houseIdFromPath) {
+      setSelectedHouseId(houseIdFromPath);
+      housesApi
+        .getById(Number(houseIdFromPath))
+        .then((house) => setSelectedHouseName(house.name ?? null))
+        .catch(() => setSelectedHouseName(null));
+    } else {
+      setSelectedHouseId(null);
+      setSelectedHouseName(null);
+    }
   }, [houseIdFromPath]);
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (pathname.startsWith('/dashboard/houses')) {
-        setExpandedGroups((prev) => ({ ...prev, houses: true }));
-      }
-    }, 0);
-    return () => clearTimeout(timeoutId);
+    if (pathname.startsWith('/dashboard/houses')) {
+      setExpandedGroups((prev) => ({ ...prev, houses: true }));
+    }
   }, [pathname]);
 
   const toggleGroup = (group: string) => {
@@ -57,12 +51,9 @@ export function useDashboardLayout() {
   const isFullWidthPage = pathname.includes('/room-planner');
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (isFullWidthPage && !sidebarCollapsed) {
-        setSidebarCollapsed(true);
-      }
-    }, 0);
-    return () => clearTimeout(timeoutId);
+    if (isFullWidthPage && !sidebarCollapsed) {
+      setSidebarCollapsed(true);
+    }
   }, [isFullWidthPage]);
 
   return {
