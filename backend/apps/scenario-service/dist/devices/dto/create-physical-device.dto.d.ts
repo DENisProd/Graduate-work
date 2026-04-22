@@ -1,8 +1,8 @@
 declare const CreatePhysicalDeviceDto_base: import("nestjs-zod").ZodDto<{
     name: string;
-    deviceTypeId: number;
     houseId: string;
     description?: string | undefined;
+    deviceTypeId?: number | undefined;
     deviceId?: string | undefined;
     roomId?: string | undefined;
     firmwareVersion?: string | undefined;
@@ -12,7 +12,7 @@ declare const CreatePhysicalDeviceDto_base: import("nestjs-zod").ZodDto<{
 }, import("zod").ZodObjectDef<{
     name: import("zod").ZodString;
     description: import("zod").ZodOptional<import("zod").ZodString>;
-    deviceTypeId: import("zod").ZodNumber;
+    deviceTypeId: import("zod").ZodOptional<import("zod").ZodNumber>;
     houseId: import("zod").ZodString;
     deviceId: import("zod").ZodOptional<import("zod").ZodString>;
     roomId: import("zod").ZodOptional<import("zod").ZodString>;
@@ -22,9 +22,9 @@ declare const CreatePhysicalDeviceDto_base: import("nestjs-zod").ZodDto<{
     serialNumber: import("zod").ZodOptional<import("zod").ZodString>;
 }, "strip", import("zod").ZodTypeAny>, {
     name: string;
-    deviceTypeId: number;
     houseId: string;
     description?: string | undefined;
+    deviceTypeId?: number | undefined;
     deviceId?: string | undefined;
     roomId?: string | undefined;
     firmwareVersion?: string | undefined;

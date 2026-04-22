@@ -253,3 +253,41 @@ export declare const zigbeeSocketSubscribeSchema: z.ZodEffects<z.ZodObject<{
     physicalDeviceIds?: string[] | undefined;
 }>;
 export type ZigbeeSocketSubscribePayload = z.infer<typeof zigbeeSocketSubscribeSchema>;
+export declare const zigbeeCommandSchema: z.ZodObject<{
+    payload: z.ZodEffects<z.ZodRecord<z.ZodString, z.ZodUnknown>, Record<string, unknown>, Record<string, unknown>>;
+}, "strip", z.ZodTypeAny, {
+    payload: Record<string, unknown>;
+}, {
+    payload: Record<string, unknown>;
+}>;
+export type ZigbeeCommandInput = z.infer<typeof zigbeeCommandSchema>;
+export declare const zigbeeSocketCommandSchema: z.ZodEffects<z.ZodEffects<z.ZodObject<{
+    deviceIeeeAddr: z.ZodOptional<z.ZodString>;
+    physicalDeviceId: z.ZodOptional<z.ZodString>;
+    payload: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+}, "strip", z.ZodTypeAny, {
+    payload: Record<string, unknown>;
+    deviceIeeeAddr?: string | undefined;
+    physicalDeviceId?: string | undefined;
+}, {
+    payload: Record<string, unknown>;
+    deviceIeeeAddr?: string | undefined;
+    physicalDeviceId?: string | undefined;
+}>, {
+    payload: Record<string, unknown>;
+    deviceIeeeAddr?: string | undefined;
+    physicalDeviceId?: string | undefined;
+}, {
+    payload: Record<string, unknown>;
+    deviceIeeeAddr?: string | undefined;
+    physicalDeviceId?: string | undefined;
+}>, {
+    payload: Record<string, unknown>;
+    deviceIeeeAddr?: string | undefined;
+    physicalDeviceId?: string | undefined;
+}, {
+    payload: Record<string, unknown>;
+    deviceIeeeAddr?: string | undefined;
+    physicalDeviceId?: string | undefined;
+}>;
+export type ZigbeeSocketCommandPayload = z.infer<typeof zigbeeSocketCommandSchema>;

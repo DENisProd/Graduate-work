@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { ZigbeeService } from './zigbee.service';
 
 function parseJson(payload: Buffer): unknown {
@@ -28,7 +28,10 @@ function parseJsonObject(buf: Buffer): Record<string, unknown> | null {
 export class ZigbeeIngestService {
   private readonly logger = new Logger(ZigbeeIngestService.name);
 
-  constructor(private readonly zigbee: ZigbeeService) {}
+  constructor(
+    @Inject(forwardRef(() => ZigbeeService))
+    private readonly zigbee: ZigbeeService,
+  ) {}
 
   async processMqttMessage(
     topicBase: string,
@@ -112,9 +115,12 @@ export class ZigbeeIngestService {
   private onBridgeState(payload: Buffer): void {
     const obj = parseJsonObject(payload);
     if (!obj) return;
-    const permitJoin = obj.permit_join;
+    const permitJoin = Boolean(obj.permit_join);
+    const timeout =
+      typeof obj.permit_join_timeout === 'number' ? obj.permit_join_timeout : null;
+    this.zigbee.emitPairingStatus({ permitJoin, timeout });
     this.logger.debug(
-      `bridge/state: permit_join=${String(permitJoin)}, coordinator=${String(obj.coordinator ?? '')}`,
+      `bridge/state: permit_join=${String(permitJoin)}, timeout=${String(timeout)}`,
     );
   }
 

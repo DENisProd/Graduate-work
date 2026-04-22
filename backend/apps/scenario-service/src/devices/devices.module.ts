@@ -7,12 +7,14 @@ import {
   PHYSICAL_DEVICE_MODEL,
   PhysicalDeviceSchema,
 } from '../mongo/schemas/physical-device.mongo';
+import { DeviceCatalogModule } from '../device-catalog/device-catalog.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: PHYSICAL_DEVICE_MODEL, schema: PhysicalDeviceSchema },
     ]),
+    DeviceCatalogModule,
   ],
   controllers: [PhysicalDeviceController],
   providers: [PhysicalDeviceService, PhysicalDeviceRepository],

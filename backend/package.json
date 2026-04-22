@@ -1,19 +1,22 @@
 {
   "name": "graduate-work-backend",
   "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
   "devDependencies": {
     "tsc-alias": "^1.8.16"
   },
   "scripts": {
-    "postinstall": "pnpm run prisma:generate",
-    "prisma:generate": "pnpm --filter access-control-service exec prisma generate && pnpm --filter device-service exec prisma generate",
-    "build": "pnpm -r run build",
-    "build:access": "pnpm --filter access-control-service run build",
-    "build:scenario": "pnpm --filter scenario-service run build",
-    "build:devices": "pnpm --filter device-service run build",
-    "access:dev": "pnpm --filter access-control-service run start:dev",
-    "scenario:dev": "pnpm --filter scenario-service run start:dev",
-    "devices:dev": "pnpm --filter device-service run start:dev",
-    "lint:scenario": "pnpm --filter scenario-service run lint"
+    "postinstall": "bun run prisma:generate",
+    "prisma:generate": "cd apps/access-service && bun run prisma:generate && cd ../device-service && bun run prisma:generate",
+    "build": "cd apps/access-service && bun run build && cd ../device-service && bun run build && cd ../scenario-service && bun run build",
+    "build:access": "cd apps/access-service && bun run build",
+    "build:scenario": "cd apps/scenario-service && bun run build",
+    "build:devices": "cd apps/device-service && bun run build",
+    "access:dev": "cd apps/access-service && bun run start:dev",
+    "scenario:dev": "cd apps/scenario-service && bun run start:dev",
+    "devices:dev": "cd apps/device-service && bun run start:dev",
+    "lint:scenario": "cd apps/scenario-service && bun run lint"
   }
 }

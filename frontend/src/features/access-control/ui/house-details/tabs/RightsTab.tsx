@@ -2,7 +2,7 @@
 
 import { AppButton } from '@/components/ui/app-button';
 import { useTranslation } from '@/hooks';
-import { getAccessTypeLabel } from '../../lib/utils';
+import { getAccessTypeLabel } from '../../../lib/utils';
 import { useAccessControlStore, selectEffectiveOwnerId } from '@/store/access-control-store';
 import { LabeledInput } from './LabeledInput';
 

@@ -28,6 +28,7 @@ export declare class ZigbeeDeviceLogRepository {
         source: ZigbeeDeviceLogSource;
         payloadKeys: string[];
     }): Promise<void>;
+    deleteManyByIeeeAddr(ieeeAddr: string): Promise<number>;
     findMany(query: ListZigbeeDeviceLogsQuery): Promise<{
         items: ZigbeeDeviceLogEntry[];
         total: number;

@@ -42,8 +42,8 @@ import type {
   HouseResourceTreeNode,
   RoleMemberResponse,
 } from '@/types/api';
-import { CreateRoleModal } from '../modals/CreateRoleModal';
-import { EditRoleModal } from '../modals/EditRoleModal';
+import { CreateRoleModal } from '../../modals/CreateRoleModal';
+import { EditRoleModal } from '../../modals/EditRoleModal';
 
 interface RolesTabProps {
   houseId: string | null;

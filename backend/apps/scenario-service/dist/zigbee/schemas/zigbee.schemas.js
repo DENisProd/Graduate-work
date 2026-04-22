@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.zigbeeSocketSubscribeSchema = exports.listZigbeeDeviceLogsQuerySchema = exports.zigbeeDeviceLogSourceSchema = exports.zigbeeDeviceLogKindSchema = exports.listZigbeeLinksQuerySchema = exports.listZigbeeStatesQuerySchema = exports.listZigbeeDevicesQuerySchema = exports.createZigbeeLinksBatchSchema = exports.createZigbeeStateSchema = exports.upsertZigbeeDeviceSchema = exports.protocolSchema = exports.Protocol = exports.zigbeeDeviceTypeSchema = exports.ZigbeeDeviceType = void 0;
+exports.zigbeeSocketCommandSchema = exports.zigbeeCommandSchema = exports.zigbeeSocketSubscribeSchema = exports.listZigbeeDeviceLogsQuerySchema = exports.zigbeeDeviceLogSourceSchema = exports.zigbeeDeviceLogKindSchema = exports.listZigbeeLinksQuerySchema = exports.listZigbeeStatesQuerySchema = exports.listZigbeeDevicesQuerySchema = exports.createZigbeeLinksBatchSchema = exports.createZigbeeStateSchema = exports.upsertZigbeeDeviceSchema = exports.protocolSchema = exports.Protocol = exports.zigbeeDeviceTypeSchema = exports.ZigbeeDeviceType = void 0;
 const zod_1 = require("zod");
 const pagination_1 = require("../../common/schemas/pagination");
 var ZigbeeDeviceType;
@@ -108,4 +108,21 @@ exports.zigbeeSocketSubscribeSchema = zod_1.z
 })
     .refine((v) => (v.deviceIeeeAddrs?.length ?? 0) > 0 ||
     (v.physicalDeviceIds?.length ?? 0) > 0, { message: 'Укажите deviceIeeeAddrs и/или physicalDeviceIds' });
+exports.zigbeeCommandSchema = zod_1.z.object({
+    payload: zod_1.z.record(zod_1.z.unknown()).refine((v) => Object.keys(v).length > 0, {
+        message: 'payload не может быть пустым',
+    }),
+});
+exports.zigbeeSocketCommandSchema = zod_1.z
+    .object({
+    deviceIeeeAddr: zod_1.z.string().min(3).max(64).optional(),
+    physicalDeviceId: zod_1.z.string().min(24).max(24).optional(),
+    payload: zod_1.z.record(zod_1.z.unknown()),
+})
+    .refine((v) => v.deviceIeeeAddr || v.physicalDeviceId, {
+    message: 'Укажите deviceIeeeAddr или physicalDeviceId',
+})
+    .refine((v) => Object.keys(v.payload).length > 0, {
+    message: 'payload не может быть пустым',
+});
 //# sourceMappingURL=zigbee.schemas.js.map

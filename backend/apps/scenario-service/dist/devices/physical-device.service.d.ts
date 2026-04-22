@@ -1,8 +1,10 @@
 import { PhysicalDeviceRepository } from './physical-device.repository';
 import type { CreatePhysicalDeviceInput, UpdatePhysicalDeviceInput, ListPhysicalDevicesQuery } from './schemas/physical-device.schema';
+import { DeviceCatalogService } from '../device-catalog/device-catalog.service';
 export declare class PhysicalDeviceService {
     private readonly repository;
-    constructor(repository: PhysicalDeviceRepository);
+    private readonly catalogService;
+    constructor(repository: PhysicalDeviceRepository, catalogService: DeviceCatalogService);
     create(data: CreatePhysicalDeviceInput): Promise<import("../mongo/schemas/physical-device.mongo").PhysicalDeviceModel & {
         id: string;
     }>;

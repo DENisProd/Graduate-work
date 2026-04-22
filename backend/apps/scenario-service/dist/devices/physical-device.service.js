@@ -12,10 +12,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PhysicalDeviceService = void 0;
 const common_1 = require("@nestjs/common");
 const physical_device_repository_1 = require("./physical-device.repository");
+const device_catalog_service_1 = require("../device-catalog/device-catalog.service");
 let PhysicalDeviceService = class PhysicalDeviceService {
     repository;
-    constructor(repository) {
+    catalogService;
+    constructor(repository, catalogService) {
         this.repository = repository;
+        this.catalogService = catalogService;
     }
     async create(data) {
         return this.repository.create(data);
@@ -31,7 +34,20 @@ let PhysicalDeviceService = class PhysicalDeviceService {
         return device;
     }
     async update(id, data) {
-        await this.findById(id);
+        const existing = await this.findById(id);
+        const assigningToHouse = data.houseId && data.houseId !== existing.houseId;
+        const needsCatalogSync = assigningToHouse && !existing.deviceTypeId && !data.deviceTypeId;
+        if (needsCatalogSync) {
+            const sync = await this.catalogService.syncWithCatalog({
+                model: existing.model,
+                manufacturerName: existing.manufacturerName,
+                capabilities: existing.capabilities,
+            });
+            if (sync.deviceTypeId)
+                data = { ...data, deviceTypeId: sync.deviceTypeId };
+            if (sync.abstractDeviceId)
+                data = { ...data, deviceId: String(sync.abstractDeviceId) };
+        }
         return this.repository.update(id, data);
     }
     async remove(id) {
@@ -42,6 +58,7 @@ let PhysicalDeviceService = class PhysicalDeviceService {
 exports.PhysicalDeviceService = PhysicalDeviceService;
 exports.PhysicalDeviceService = PhysicalDeviceService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [physical_device_repository_1.PhysicalDeviceRepository])
+    __metadata("design:paramtypes", [physical_device_repository_1.PhysicalDeviceRepository,
+        device_catalog_service_1.DeviceCatalogService])
 ], PhysicalDeviceService);
 //# sourceMappingURL=physical-device.service.js.map

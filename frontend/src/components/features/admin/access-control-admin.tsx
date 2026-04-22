@@ -25,7 +25,7 @@ import {
   HouseRoomResponse,
 } from '@/types/api';
 import { useTranslation } from '@/hooks';
-import { LabeledInput } from '@/features/access-control/ui/house-details/LabeledInput';
+import { LabeledInput } from '@/features/access-control/ui/house-details/tabs/LabeledInput';
 
 function toArray<T>(data: unknown): T[] {
   if (!data) return [];

@@ -176,6 +176,14 @@ export class ZigbeeDeviceRepository {
     return out;
   }
 
+  async deleteByIeeeAddr(ieeeAddr: string): Promise<ZigbeeDevice | null> {
+    const canonical = canonicalZigbeeIeeeAddr(ieeeAddr);
+    const dev = await this.findByIeeeAddr(canonical);
+    if (!dev) return null;
+    await this.model.findByIdAndDelete(new Types.ObjectId(dev.id)).exec();
+    return dev;
+  }
+
   async findMany(
     query: ListZigbeeDevicesQuery,
   ): Promise<{ items: ZigbeeDevice[]; total: number }> {

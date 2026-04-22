@@ -53,11 +53,15 @@ __decorate([
     (0, swagger_1.ApiBody)({
         schema: {
             type: 'object',
-            required: ['name', 'deviceTypeId', 'houseId'],
+            required: ['name', 'houseId'],
             properties: {
                 name: { type: 'string', maxLength: 255 },
                 description: { type: 'string', maxLength: 1000 },
-                deviceTypeId: { type: 'number', minimum: 1 },
+                deviceTypeId: {
+                    type: 'number',
+                    minimum: 1,
+                    description: 'ID типа устройства из device-service. Если не указан и устройство имеет модель (model), будет определён автоматически.',
+                },
                 houseId: { type: 'string', maxLength: 255 },
                 roomId: { type: 'string', maxLength: 255 },
                 firmwareVersion: { type: 'string', maxLength: 100 },

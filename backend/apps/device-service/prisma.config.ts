@@ -2,7 +2,7 @@ import { join } from "path";
 import prisma from "@prisma/config";
 import dotenv from "dotenv";
 
-const config = dotenv.config({ path: join(__dirname, "../.env") });
+const config = dotenv.config({ path: join(__dirname, "../../.env") });
 export default prisma.defineConfig({
   datasource: {
     url:

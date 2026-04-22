@@ -6,7 +6,7 @@ const pagination_1 = require("../../common/schemas/pagination");
 exports.createPhysicalDeviceSchema = zod_1.z.object({
     name: zod_1.z.string().min(1).max(255),
     description: zod_1.z.string().max(1000).optional(),
-    deviceTypeId: zod_1.z.coerce.number().int().min(1),
+    deviceTypeId: zod_1.z.coerce.number().int().min(1).optional(),
     houseId: zod_1.z.string().min(1).max(255),
     deviceId: zod_1.z.string().max(255).optional(),
     roomId: zod_1.z.string().max(255).optional(),

@@ -6,9 +6,14 @@ import type {
   ListPhysicalDevicesQuery,
 } from './schemas/physical-device.schema';
 
+import { DeviceCatalogService } from '../device-catalog/device-catalog.service';
+
 @Injectable()
 export class PhysicalDeviceService {
-  constructor(private readonly repository: PhysicalDeviceRepository) {}
+  constructor(
+    private readonly repository: PhysicalDeviceRepository,
+    private readonly catalogService: DeviceCatalogService,
+  ) {}
 
   async create(data: CreatePhysicalDeviceInput) {
     return this.repository.create(data);
@@ -26,7 +31,26 @@ export class PhysicalDeviceService {
   }
 
   async update(id: string, data: UpdatePhysicalDeviceInput) {
-    await this.findById(id);
+    const existing = await this.findById(id);
+
+    // When a houseId is being assigned for the first time (or forced re-sync),
+    // resolve the abstract device from the catalog using the Zigbee model data.
+    const assigningToHouse =
+      data.houseId && data.houseId !== existing.houseId;
+    const needsCatalogSync =
+      assigningToHouse && !existing.deviceTypeId && !data.deviceTypeId;
+
+    if (needsCatalogSync) {
+      const sync = await this.catalogService.syncWithCatalog({
+        model: existing.model,
+        manufacturerName: existing.manufacturerName,
+        capabilities: existing.capabilities,
+      });
+      if (sync.deviceTypeId) data = { ...data, deviceTypeId: sync.deviceTypeId };
+      if (sync.abstractDeviceId)
+        data = { ...data, deviceId: String(sync.abstractDeviceId) };
+    }
+
     return this.repository.update(id, data);
   }
 

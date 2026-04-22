@@ -41,6 +41,9 @@ var __importStar = (this && this.__importStar) || (function () {
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 var ZigbeeMqttService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ZigbeeMqttService = void 0;
@@ -126,6 +129,45 @@ let ZigbeeMqttService = ZigbeeMqttService_1 = class ZigbeeMqttService {
         this.logger.log(`Запрос списка устройств у моста: ${topic}`);
         return { ok: true };
     }
+    permitJoin(enable, time = 254) {
+        if (!this.client?.connected || !this.topicPrefix) {
+            return { ok: false, error: 'MQTT не подключён' };
+        }
+        const topic = `${this.topicPrefix}/bridge/request/permit_join`;
+        const body = JSON.stringify(enable ? { value: true, time: Math.max(1, Math.min(254, Math.trunc(time))) } : { value: false });
+        this.client.publish(topic, body, { qos: 0 }, (err) => {
+            if (err)
+                this.logger.error(`Ошибка publish ${topic}`, err);
+        });
+        this.logger.log(`MQTT → ${topic}\n${body}`);
+        return { ok: true };
+    }
+    removeDevice(idOrName, force = false) {
+        if (!this.client?.connected || !this.topicPrefix) {
+            return { ok: false, error: 'MQTT не подключён' };
+        }
+        const topic = `${this.topicPrefix}/bridge/request/device/remove`;
+        const body = JSON.stringify({ id: idOrName, force });
+        this.client.publish(topic, body, { qos: 0 }, (err) => {
+            if (err)
+                this.logger.error(`Ошибка publish ${topic}`, err);
+        });
+        this.logger.log(`MQTT → ${topic}\n${body}`);
+        return { ok: true };
+    }
+    sendDeviceCommand(topicName, payload) {
+        if (!this.client?.connected || !this.topicPrefix) {
+            return { ok: false, error: 'MQTT не подключён' };
+        }
+        const topic = `${this.topicPrefix}/${topicName}/set`;
+        const body = JSON.stringify(payload);
+        this.client.publish(topic, body, { qos: 0 }, (err) => {
+            if (err)
+                this.logger.error(`Ошибка publish ${topic}`, err);
+        });
+        this.logger.log(`MQTT → ${topic}\n${body}`);
+        return { ok: true, topic };
+    }
     maybeRequestBridgeDevicesAfterSubscribe() {
         const v = this.config.get('ZIGBEE_MQTT_REQUEST_DEVICES_ON_CONNECT') ??
             process.env.ZIGBEE_MQTT_REQUEST_DEVICES_ON_CONNECT;
@@ -154,6 +196,7 @@ let ZigbeeMqttService = ZigbeeMqttService_1 = class ZigbeeMqttService {
 exports.ZigbeeMqttService = ZigbeeMqttService;
 exports.ZigbeeMqttService = ZigbeeMqttService = ZigbeeMqttService_1 = __decorate([
     (0, common_1.Injectable)(),
+    __param(1, (0, common_1.Inject)((0, common_1.forwardRef)(() => zigbee_ingest_service_1.ZigbeeIngestService))),
     __metadata("design:paramtypes", [config_1.ConfigService,
         zigbee_ingest_service_1.ZigbeeIngestService])
 ], ZigbeeMqttService);

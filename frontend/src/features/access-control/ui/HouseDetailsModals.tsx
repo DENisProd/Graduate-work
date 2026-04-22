@@ -1,6 +1,5 @@
 'use client';
 
-import { houseDevicesApi } from '@/lib/api-client';
 import { accessServiceRequest } from '@/lib/access-service-http';
 import { useTranslation } from '@/hooks';
 import { useToast } from '@/components/shared/toast';
@@ -41,32 +40,9 @@ export function HouseDetailsModals() {
 
   const addDeviceModalOpen = useAddDeviceModalStore((s) => s.isOpen);
   const addDeviceModalHouseId = useAddDeviceModalStore((s) => s.houseId);
-  const addDeviceModalStep = useAddDeviceModalStore((s) => s.step);
-  const addDeviceModalFormData = useAddDeviceModalStore((s) => s.formData);
-  const addDeviceModalLoading = useAddDeviceModalStore((s) => s.isLoading);
-  const addDeviceModalSetStep = useAddDeviceModalStore((s) => s.setStep);
-  const addDeviceModalSetFormData = useAddDeviceModalStore((s) => s.setFormData);
-  const addDeviceModalSetLoading = useAddDeviceModalStore((s) => s.setLoading);
   const addDeviceModalClose = useAddDeviceModalStore((s) => s.close);
 
   const { showToast } = useToast();
-
-  const handleAddDeviceSubmit = async (
-    data: Parameters<typeof houseDevicesApi.create>[1]
-  ) => {
-    if (!addDeviceModalHouseId) return;
-    try {
-      await houseDevicesApi.create(addDeviceModalHouseId, data);
-      setStatus(t('common.success'));
-      addDeviceModalClose();
-      showToast(t('admin.accessControl.addDevice.success'), 'success');
-      await loadAll();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : t('common.error');
-      showToast(message, 'error');
-      throw err;
-    }
-  };
 
   if (houseId == null) return null;
 
@@ -132,13 +108,10 @@ export function HouseDetailsModals() {
         isOpen={addDeviceModalOpen}
         onOpenChange={(open) => !open && addDeviceModalClose()}
         houseId={addDeviceModalHouseId}
-        step={addDeviceModalStep}
-        formData={addDeviceModalFormData}
-        isLoading={addDeviceModalLoading}
-        onStepChange={addDeviceModalSetStep}
-        onFormDataChange={addDeviceModalSetFormData}
-        onSetLoading={addDeviceModalSetLoading}
-        onSubmit={handleAddDeviceSubmit}
+        onDeviceAdded={() => {
+          showToast(t('admin.accessControl.pairing.addedSuccess'), 'success');
+          void loadAll();
+        }}
         onClose={addDeviceModalClose}
       />
     </>

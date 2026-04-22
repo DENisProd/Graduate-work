@@ -7,11 +7,17 @@ import {
 import { Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import type { Server, Socket } from 'socket.io';
 import type { Subscription } from 'rxjs';
-import { zigbeeSocketSubscribeSchema } from './schemas/zigbee.schemas';
+import {
+  zigbeeSocketCommandSchema,
+  zigbeeSocketSubscribeSchema,
+} from './schemas/zigbee.schemas';
 import { ZigbeeRealtimeService } from './zigbee-realtime.service';
+import { ZigbeeService } from './zigbee.service';
 import { ZigbeeStateRepository } from './zigbee-state.repository';
 import { ZigbeeDeviceRepository } from './zigbee-device.repository';
 import type { ZigbeeStateRealtimePayload } from './zigbee-realtime.service';
+
+const PAIRING_ROOM = 'pairing';
 
 function roomForIeee(ieee: string): string {
   return `zigbee:${ieee}`;
@@ -47,6 +53,8 @@ export class ZigbeeRealtimeGateway
 {
   private readonly logger = new Logger(ZigbeeRealtimeGateway.name);
   private sub?: Subscription;
+  private pairingSub?: Subscription;
+  private pairingStatusSub?: Subscription;
 
   @WebSocketServer()
   server!: Server;
@@ -55,11 +63,18 @@ export class ZigbeeRealtimeGateway
     private readonly realtime: ZigbeeRealtimeService,
     private readonly states: ZigbeeStateRepository,
     private readonly devices: ZigbeeDeviceRepository,
+    private readonly zigbee: ZigbeeService,
   ) {}
 
   onModuleInit(): void {
     this.sub = this.realtime.stateUpdates$.subscribe((p) => {
       this.emitState(p);
+    });
+    this.pairingSub = this.zigbee.pairingEvents$.subscribe((event) => {
+      this.server?.to(PAIRING_ROOM).emit('zigbee:pairing:event', event);
+    });
+    this.pairingStatusSub = this.zigbee.pairingStatus$.subscribe((status) => {
+      this.server?.to(PAIRING_ROOM).emit('zigbee:pairing:status', status);
     });
   }
 
@@ -69,6 +84,8 @@ export class ZigbeeRealtimeGateway
 
   onModuleDestroy(): void {
     this.sub?.unsubscribe();
+    this.pairingSub?.unsubscribe();
+    this.pairingStatusSub?.unsubscribe();
   }
 
   private emitState(p: ZigbeeStateRealtimePayload): void {
@@ -90,6 +107,36 @@ export class ZigbeeRealtimeGateway
       payload: p.payload,
       stateId: p.stateId,
     };
+  }
+
+  /**
+   * Emits pairing events for all currently known Zigbee devices to a single client.
+   * Devices with full data (model/capabilities) are emitted as interview_done so the
+   * user can add them immediately. Devices with no data yet are emitted as joined.
+   * Called when a client subscribes to the pairing room.
+   */
+  private async emitExistingDevicesToClient(client: Socket): Promise<void> {
+    try {
+      const { items } = await this.zigbee.listDevices({ page: 1, limit: 100 });
+      for (const dev of items) {
+        const fullyKnown =
+          Boolean(dev.modelId) || (dev.capabilities?.length ?? 0) > 0;
+        client.emit('zigbee:pairing:event', {
+          type: fullyKnown ? 'interview_done' : 'joined',
+          ieeeAddr: dev.ieeeAddr,
+          friendlyName: dev.friendlyName ?? dev.ieeeAddr,
+          physicalDeviceId: dev.physicalDeviceId,
+          model: dev.modelId ?? null,
+          manufacturer: dev.manufacturerName ?? null,
+          capabilities: dev.capabilities ?? [],
+          supported: fullyKnown,
+        });
+      }
+    } catch (e) {
+      this.logger.warn(
+        `emitExistingDevicesToClient failed: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
   }
 
   private async resolveIeeeList(body: unknown): Promise<{
@@ -161,6 +208,92 @@ export class ZigbeeRealtimeGateway
     );
 
     return { ok: true as const, subscribed: ieees.length, snapshots };
+  }
+
+  /**
+   * Команда управления устройством. Пример:
+   * `{ deviceIeeeAddr: '0xabc…', payload: { state: 'ON' } }`
+   */
+  @SubscribeMessage('zigbee:command')
+  async onCommand(_client: Socket, body: unknown) {
+    const parsed = zigbeeSocketCommandSchema.safeParse(body);
+    if (!parsed.success) {
+      return {
+        ok: false as const,
+        error:
+          parsed.error.flatten().formErrors.join('; ') || 'Невалидное тело',
+      };
+    }
+
+    const { deviceIeeeAddr, physicalDeviceId, payload } = parsed.data;
+
+    let ieeeAddr: string | undefined = deviceIeeeAddr;
+
+    if (!ieeeAddr && physicalDeviceId) {
+      const map = await this.devices.findIeeeAddrsByPhysicalIds([
+        physicalDeviceId,
+      ]);
+      ieeeAddr = map.get(physicalDeviceId);
+    }
+
+    if (!ieeeAddr) {
+      return { ok: false as const, error: 'Устройство не найдено' };
+    }
+
+    const result = await this.zigbee.sendCommand(
+      ieeeAddr,
+      payload as Record<string, unknown>,
+    );
+    return result;
+  }
+
+  /**
+   * Подписаться на события сопряжения — войти в pairing-комнату —
+   * БЕЗ включения permit_join. Вызывается при открытии модалки,
+   * чтобы device_announce/joined/interview события приходили клиенту
+   * даже до нажатия кнопки "Начать".
+   * Сразу же отдаёт все уже известные устройства, чтобы модалка не была пустой.
+   */
+  @SubscribeMessage('zigbee:pairing:watch')
+  async onPairingWatch(client: Socket) {
+    await client.join(PAIRING_ROOM);
+    void this.emitExistingDevicesToClient(client);
+    return { ok: true as const };
+  }
+
+  /** Отписаться от событий сопряжения (без отключения permit_join). */
+  @SubscribeMessage('zigbee:pairing:unwatch')
+  async onPairingUnwatch(client: Socket) {
+    await client.leave(PAIRING_ROOM);
+    return { ok: true as const };
+  }
+
+  /**
+   * Включить режим сопряжения (permit_join) и подписаться на события.
+   * Клиент автоматически входит в комнату `pairing`.
+   * Сразу же отдаёт все уже известные устройства.
+   */
+  @SubscribeMessage('zigbee:pairing:start')
+  async onPairingStart(client: Socket, body: unknown) {
+    const time =
+      body !== null &&
+      typeof body === 'object' &&
+      typeof (body as Record<string, unknown>).time === 'number'
+        ? Math.max(1, Math.min(254, Math.trunc((body as Record<string, unknown>).time as number)))
+        : 254;
+    await client.join(PAIRING_ROOM);
+    void this.emitExistingDevicesToClient(client);
+    const result = this.zigbee.permitJoin(true, time);
+    if (!result.ok) return { ok: false as const, error: result.error };
+    return { ok: true as const, time };
+  }
+
+  /** Выключить permit_join. Клиент остаётся в pairing-комнате (продолжает получать события). */
+  @SubscribeMessage('zigbee:pairing:stop')
+  async onPairingStop(client: Socket) {
+    const result = this.zigbee.permitJoin(false);
+    if (!result.ok) return { ok: false as const, error: result.error };
+    return { ok: true as const };
   }
 
   /**

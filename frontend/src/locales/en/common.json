@@ -432,6 +432,24 @@
         "submit": "Add device",
         "success": "Device added"
       },
+      "pairing": {
+        "title": "Pair Zigbee device",
+        "description": "Put your Zigbee device into pairing mode, then start the search below. The bridge will allow new devices to join for the selected duration.",
+        "duration": "Search duration",
+        "start": "Start pairing",
+        "stop": "Stop",
+        "searching": "Searching for devices…",
+        "waitingForDevices": "Waiting for a device to join…",
+        "found": "Found {{count}} device(s)",
+        "noSocket": "Real-time connection is not active. Open the Devices tab first to connect.",
+        "startError": "Failed to start pairing mode",
+        "addToHouse": "Add to house",
+        "adding": "Adding…",
+        "addedSuccess": "Device added",
+        "addError": "Failed to add device",
+        "interviewFailed": "Interview failed — device may not be supported",
+        "deviceNamePlaceholder": "Device name (optional)"
+      },
       "connectedDevices": {
         "sectionTitle": "Devices",
         "protocolZigbee": "Zigbee",
@@ -464,7 +482,21 @@
         "telemetryBattery": "Battery",
         "telemetryColorMode": "Color mode",
         "telemetryVoltage": "Voltage",
-        "telemetryTamper": "Tamper"
+        "telemetryTamper": "Tamper",
+        "controlPanel": "Controls",
+        "controlOn": "ON",
+        "controlOff": "OFF",
+        "controlPending": "Sending…",
+        "controlError": "Command failed",
+        "controlBrightness": "Brightness",
+        "controlColorTemp": "Color temp",
+        "controlColor": "Color",
+        "controlNoSocket": "Connect to realtime to use controls",
+        "removeDevice": "Remove device",
+        "removeDeviceConfirmTitle": "Remove device?",
+        "removeDeviceConfirmText": "This will permanently delete the device from the system and remove it from the Zigbee coordinator. All telemetry history will also be deleted. This action cannot be undone.",
+        "removeDeviceSuccess": "Device removed from system",
+        "removeDeviceError": "Failed to remove device"
       },
       "scenarioEditor": {
         "titleCreate": "Create scenario",

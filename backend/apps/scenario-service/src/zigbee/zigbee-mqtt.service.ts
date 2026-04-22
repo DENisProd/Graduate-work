@@ -1,4 +1,6 @@
 import {
+  forwardRef,
+  Inject,
   Injectable,
   Logger,
   OnModuleDestroy,
@@ -18,6 +20,7 @@ export class ZigbeeMqttService implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     private readonly config: ConfigService,
+    @Inject(forwardRef(() => ZigbeeIngestService))
     private readonly ingest: ZigbeeIngestService,
   ) {}
 
@@ -104,6 +107,69 @@ export class ZigbeeMqttService implements OnModuleInit, OnModuleDestroy {
     });
     this.logger.log(`Запрос списка устройств у моста: ${topic}`);
     return { ok: true };
+  }
+
+  /**
+   * Включает / выключает режим сопряжения (permit_join) на мосту zigbee2mqtt.
+   * `time` — таймаут в секундах (1–254), используется только при включении.
+   */
+  permitJoin(
+    enable: boolean,
+    time = 254,
+  ): { ok: true } | { ok: false; error: string } {
+    if (!this.client?.connected || !this.topicPrefix) {
+      return { ok: false, error: 'MQTT не подключён' };
+    }
+    const topic = `${this.topicPrefix}/bridge/request/permit_join`;
+    const body = JSON.stringify(
+      enable ? { value: true, time: Math.max(1, Math.min(254, Math.trunc(time))) } : { value: false },
+    );
+    this.client.publish(topic, body, { qos: 0 }, (err) => {
+      if (err) this.logger.error(`Ошибка publish ${topic}`, err);
+    });
+    this.logger.log(`MQTT → ${topic}\n${body}`);
+    return { ok: true };
+  }
+
+  /**
+   * Удаляет устройство с Zigbee-координатора через `…/bridge/request/device/remove`.
+   * `idOrName` — friendlyName или IEEE-адрес.
+   * `force` — принудительное удаление (для недоступных устройств).
+   */
+  removeDevice(
+    idOrName: string,
+    force = false,
+  ): { ok: true } | { ok: false; error: string } {
+    if (!this.client?.connected || !this.topicPrefix) {
+      return { ok: false, error: 'MQTT не подключён' };
+    }
+    const topic = `${this.topicPrefix}/bridge/request/device/remove`;
+    const body = JSON.stringify({ id: idOrName, force });
+    this.client.publish(topic, body, { qos: 0 }, (err) => {
+      if (err) this.logger.error(`Ошибка publish ${topic}`, err);
+    });
+    this.logger.log(`MQTT → ${topic}\n${body}`);
+    return { ok: true };
+  }
+
+  /**
+   * Отправляет команду управления Zigbee-устройству через топик `…/<topicName>/set`.
+   * `topicName` — friendlyName или IEEE-адрес (zigbee2mqtt принимает оба варианта).
+   */
+  sendDeviceCommand(
+    topicName: string,
+    payload: Record<string, unknown>,
+  ): { ok: true; topic: string } | { ok: false; error: string } {
+    if (!this.client?.connected || !this.topicPrefix) {
+      return { ok: false, error: 'MQTT не подключён' };
+    }
+    const topic = `${this.topicPrefix}/${topicName}/set`;
+    const body = JSON.stringify(payload);
+    this.client.publish(topic, body, { qos: 0 }, (err) => {
+      if (err) this.logger.error(`Ошибка publish ${topic}`, err);
+    });
+    this.logger.log(`MQTT → ${topic}\n${body}`);
+    return { ok: true, topic };
   }
 
   private maybeRequestBridgeDevicesAfterSubscribe(): void {

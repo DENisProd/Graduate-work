@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "description": "Access control service (NestJS + Prisma)",
   "scripts": {
-    "build": "nest build && tsc-alias -p tsconfig.json",
-    "start": "cross-env NODE_OPTIONS=--enable-source-maps nest start",
-    "start:dev": "cross-env NODE_OPTIONS=--enable-source-maps nest start --watch",
-    "start:debug": "cross-env NODE_OPTIONS=--enable-source-maps nest start --debug --watch",
-    "start:prod": "cross-env NODE_OPTIONS=--enable-source-maps node dist/main",
+    "build": "nest build && tsc-alias -p tsconfig.build.json",
+    "start": "bun run src/main.ts",
+    "start:dev": "bun --watch run src/main.ts",
+    "start:debug": "bun --inspect --watch run src/main.ts",
+    "start:prod": "node dist/main",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:push": "prisma db push",
@@ -31,7 +31,6 @@
     "rxjs": "^7.8.0"
   },
   "devDependencies": {
-    "cross-env": "^7.0.3",
     "@nestjs/cli": "^10.0.0",
     "@types/express": "^4.17.25",
     "@types/node": "^20.0.0",

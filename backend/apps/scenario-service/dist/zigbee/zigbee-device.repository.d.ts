@@ -25,6 +25,7 @@ export declare class ZigbeeDeviceRepository {
     findByIeeeAddr(ieeeAddr: string): Promise<ZigbeeDevice | null>;
     findByFriendlyName(friendlyName: string): Promise<ZigbeeDevice | null>;
     findIeeeAddrsByPhysicalIds(ids: string[]): Promise<Map<string, string>>;
+    deleteByIeeeAddr(ieeeAddr: string): Promise<ZigbeeDevice | null>;
     findMany(query: ListZigbeeDevicesQuery): Promise<{
         items: ZigbeeDevice[];
         total: number;

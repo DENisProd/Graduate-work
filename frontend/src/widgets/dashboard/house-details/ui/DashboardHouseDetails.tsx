@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { HouseDetailsModals } from '@/features/access-control';
 import { HouseDetailsWidget } from '@/widgets/house-details';
@@ -11,6 +11,7 @@ import { useCurrentUserId } from '@/hooks';
 export function DashboardHouseDetails() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { status: sessionStatus } = useSession();
   const currentUserId = useCurrentUserId();
 
@@ -19,6 +20,7 @@ export function DashboardHouseDetails() {
 
   const setHouseId = useAccessControlStore((s) => s.setHouseId);
   const setOwnerIdFromUrl = useAccessControlStore((s) => s.setOwnerIdFromUrl);
+  const setActiveTab = useAccessControlStore((s) => s.setActiveTab);
   const loadAll = useAccessControlStore((s) => s.loadAll);
   const reset = useAccessControlStore((s) => s.reset);
 
@@ -26,9 +28,11 @@ export function DashboardHouseDetails() {
     if (!houseId || currentUserId == null) return;
     setHouseId(houseId);
     setOwnerIdFromUrl(currentUserId);
+    const tabFromUrl = searchParams.get('tab');
+    if (tabFromUrl) setActiveTab(tabFromUrl);
     loadAll();
     return () => reset();
-  }, [houseId, currentUserId, setHouseId, setOwnerIdFromUrl, loadAll, reset]);
+  }, [houseId, currentUserId, setHouseId, setOwnerIdFromUrl, setActiveTab, loadAll, reset]);
 
   useEffect(() => {
     if (sessionStatus === 'loading') return;

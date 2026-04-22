@@ -5,10 +5,25 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  loadEnv({ path: join(__dirname, '../../.env') });
+  loadEnv({ path: join(process.cwd(), '../../.env') });
   const port = Number(process.env.DEVICE_SERVICE_PORT ?? process.env.PORT ?? 3000);
 
+  console.log("PORT", port);
+
   const app = await NestFactory.create(AppModule);
+
+  app.enableCors({
+    origin: ['http://localhost:3000'],
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'X-User-Id',
+      'Accept',
+    ],
+    credentials: true,
+  });
 
   const config = new DocumentBuilder()
     .setTitle('Device Service API')

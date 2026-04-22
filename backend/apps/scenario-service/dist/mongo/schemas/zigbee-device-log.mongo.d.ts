@@ -30,17 +30,7 @@ export declare class ZigbeeDeviceLogModel {
     metadata?: Record<string, unknown> | null;
 }
 export type ZigbeeDeviceLogDocument = HydratedDocument<ZigbeeDeviceLogModel>;
-export declare const ZigbeeDeviceLogSchema: import("mongoose").Schema<ZigbeeDeviceLogModel, import("mongoose").Model<ZigbeeDeviceLogModel, any, any, any, (import("mongoose").Document<unknown, any, ZigbeeDeviceLogModel, any, import("mongoose").DefaultSchemaOptions> & ZigbeeDeviceLogModel & {
-    _id: import("mongoose").Types.ObjectId;
-} & {
-    __v: number;
-} & {
-    id: string;
-}) | (import("mongoose").Document<unknown, any, ZigbeeDeviceLogModel, any, import("mongoose").DefaultSchemaOptions> & ZigbeeDeviceLogModel & {
-    _id: import("mongoose").Types.ObjectId;
-} & {
-    __v: number;
-}), any, ZigbeeDeviceLogModel>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, ZigbeeDeviceLogModel, import("mongoose").Document<unknown, {}, ZigbeeDeviceLogModel, {
+export declare const ZigbeeDeviceLogSchema: import("mongoose").Schema<ZigbeeDeviceLogModel, import("mongoose").Model<ZigbeeDeviceLogModel, any, any, any, any, any, ZigbeeDeviceLogModel>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, ZigbeeDeviceLogModel, import("mongoose").Document<unknown, {}, ZigbeeDeviceLogModel, {
     id: string;
 }, import("mongoose").DefaultSchemaOptions> & Omit<ZigbeeDeviceLogModel & {
     _id: import("mongoose").Types.ObjectId;

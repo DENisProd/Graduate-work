@@ -8,7 +8,7 @@ import { HttpExceptionFilter } from './modules/common/filters/http-exception.fil
 import { ErrorResponse } from './modules/common/dto/error-response.dto';
 
 async function bootstrap() {
-  loadEnv({ path: join(__dirname, '../../.env') });
+  loadEnv({ path: join(process.cwd(), '../../.env') });
   const port = Number(process.env.ACCESS_CONTROL_SERVICE_PORT ?? 8085);
 
   const app = await NestFactory.create(AppModule);

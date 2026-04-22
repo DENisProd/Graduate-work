@@ -2,7 +2,7 @@ import { z } from 'zod';
 export declare const createPhysicalDeviceSchema: z.ZodObject<{
     name: z.ZodString;
     description: z.ZodOptional<z.ZodString>;
-    deviceTypeId: z.ZodNumber;
+    deviceTypeId: z.ZodOptional<z.ZodNumber>;
     houseId: z.ZodString;
     deviceId: z.ZodOptional<z.ZodString>;
     roomId: z.ZodOptional<z.ZodString>;
@@ -12,9 +12,9 @@ export declare const createPhysicalDeviceSchema: z.ZodObject<{
     serialNumber: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     name: string;
-    deviceTypeId: number;
     houseId: string;
     description?: string | undefined;
+    deviceTypeId?: number | undefined;
     deviceId?: string | undefined;
     roomId?: string | undefined;
     firmwareVersion?: string | undefined;
@@ -23,9 +23,9 @@ export declare const createPhysicalDeviceSchema: z.ZodObject<{
     serialNumber?: string | undefined;
 }, {
     name: string;
-    deviceTypeId: number;
     houseId: string;
     description?: string | undefined;
+    deviceTypeId?: number | undefined;
     deviceId?: string | undefined;
     roomId?: string | undefined;
     firmwareVersion?: string | undefined;
@@ -37,7 +37,7 @@ export type CreatePhysicalDeviceInput = z.infer<typeof createPhysicalDeviceSchem
 export declare const updatePhysicalDeviceSchema: z.ZodObject<{
     name: z.ZodOptional<z.ZodString>;
     description: z.ZodOptional<z.ZodOptional<z.ZodString>>;
-    deviceTypeId: z.ZodOptional<z.ZodNumber>;
+    deviceTypeId: z.ZodOptional<z.ZodOptional<z.ZodNumber>>;
     houseId: z.ZodOptional<z.ZodString>;
     deviceId: z.ZodOptional<z.ZodOptional<z.ZodString>>;
     roomId: z.ZodOptional<z.ZodOptional<z.ZodString>>;
@@ -46,8 +46,8 @@ export declare const updatePhysicalDeviceSchema: z.ZodObject<{
     macAddress: z.ZodOptional<z.ZodOptional<z.ZodString>>;
     serialNumber: z.ZodOptional<z.ZodOptional<z.ZodString>>;
 }, "strip", z.ZodTypeAny, {
-    description?: string | undefined;
     name?: string | undefined;
+    description?: string | undefined;
     deviceTypeId?: number | undefined;
     houseId?: string | undefined;
     deviceId?: string | undefined;
@@ -57,8 +57,8 @@ export declare const updatePhysicalDeviceSchema: z.ZodObject<{
     macAddress?: string | undefined;
     serialNumber?: string | undefined;
 }, {
-    description?: string | undefined;
     name?: string | undefined;
+    description?: string | undefined;
     deviceTypeId?: number | undefined;
     houseId?: string | undefined;
     deviceId?: string | undefined;
@@ -81,9 +81,9 @@ export declare const listPhysicalDevicesQuerySchema: z.ZodObject<{
     houseId?: string | undefined;
     roomId?: string | undefined;
 }, {
-    page?: unknown;
-    limit?: unknown;
     houseId?: string | undefined;
     roomId?: string | undefined;
+    page?: unknown;
+    limit?: unknown;
 }>;
 export type ListPhysicalDevicesQuery = z.infer<typeof listPhysicalDevicesQuerySchema>;

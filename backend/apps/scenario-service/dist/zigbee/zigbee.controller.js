@@ -35,9 +35,23 @@ let ZigbeeController = class ZigbeeController {
             throw new common_1.NotFoundException(`ZigbeeDevice ${ieeeAddr} not found`);
         return device;
     }
-    upsertDevice(body) {
-        const input = zigbee_schemas_1.upsertZigbeeDeviceSchema.parse(body);
-        return this.service.upsertDevice(input);
+    async removeDevice(ieeeAddr, force) {
+        const result = await this.service.removeDevice(ieeeAddr, force === 'true');
+        if (!result.ok) {
+            throw new common_1.NotFoundException(result.error);
+        }
+        return { ok: true, deleted: result.device };
+    }
+    async sendCommand(ieeeAddr, body) {
+        const { payload } = zigbee_schemas_1.zigbeeCommandSchema.parse(body);
+        const result = await this.service.sendCommand(ieeeAddr, payload);
+        if (!result.ok) {
+            if (result.error.includes('не найдено')) {
+                throw new common_1.NotFoundException(result.error);
+            }
+            throw new common_1.ServiceUnavailableException(result.error);
+        }
+        return { ok: true, topic: result.topic };
     }
     requestDevicesSyncFromBridge() {
         const r = this.zigbeeMqtt.requestBridgeDeviceList();
@@ -48,6 +62,20 @@ let ZigbeeController = class ZigbeeController {
             ok: true,
             message: 'Запрос списка устройств отправлен в zigbee2mqtt; ответ придёт в bridge/devices и будет сохранён в БД.',
         };
+    }
+    upsertDevice(body) {
+        const input = zigbee_schemas_1.upsertZigbeeDeviceSchema.parse(body);
+        return this.service.upsertDevice(input);
+    }
+    permitJoin(body) {
+        const b = body;
+        const enable = Boolean(b?.enable);
+        const time = typeof b?.time === 'number' ? Math.max(1, Math.min(254, Math.trunc(b.time))) : 254;
+        const result = this.zigbeeMqtt.permitJoin(enable, time);
+        if (!result.ok) {
+            throw new common_1.ServiceUnavailableException(result.error ?? 'MQTT недоступен');
+        }
+        return { ok: true, enable, time: enable ? time : undefined };
     }
     createState(body) {
         const input = zigbee_schemas_1.createZigbeeStateSchema.parse(body);
@@ -106,6 +134,73 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], ZigbeeController.prototype, "getDevice", null);
 __decorate([
+    (0, common_1.Delete)('devices/:ieeeAddr'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Удалить устройство из системы (полная рассинхронизация)',
+        description: 'Удаляет устройство из MongoDB и отправляет команду удаления на Zigbee-координатор через MQTT. ' +
+            'Также удаляет историю состояний и логи устройства. ' +
+            'MQTT-команда выполняется best-effort: если мост недоступен, удаление из БД всё равно произойдёт.',
+    }),
+    (0, swagger_1.ApiParam)({ name: 'ieeeAddr', description: 'Zigbee IEEE address' }),
+    (0, swagger_1.ApiQuery)({
+        name: 'force',
+        required: false,
+        type: Boolean,
+        description: 'Принудительное удаление (для недоступных устройств)',
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Устройство удалено' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Устройство не найдено' }),
+    __param(0, (0, common_1.Param)('ieeeAddr')),
+    __param(1, (0, common_1.Query)('force')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], ZigbeeController.prototype, "removeDevice", null);
+__decorate([
+    (0, common_1.Post)('devices/:ieeeAddr/command'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Отправить команду управления Zigbee-устройству через MQTT (…/set)',
+        description: 'Публикует payload в топик `zigbee2mqtt/<friendlyName>/set`. ' +
+            'Примеры: `{"state":"ON"}`, `{"brightness":200}`, `{"color_temp":300}`.',
+    }),
+    (0, swagger_1.ApiParam)({ name: 'ieeeAddr', description: 'Zigbee IEEE address' }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            required: ['payload'],
+            properties: {
+                payload: {
+                    type: 'object',
+                    additionalProperties: true,
+                    example: { state: 'ON', brightness: 200 },
+                },
+            },
+        },
+    }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Команда отправлена' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Устройство не найдено' }),
+    (0, swagger_1.ApiResponse)({ status: 503, description: 'MQTT не подключён' }),
+    __param(0, (0, common_1.Param)('ieeeAddr')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], ZigbeeController.prototype, "sendCommand", null);
+__decorate([
+    (0, common_1.Post)('devices:sync-from-bridge'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Синхронизация списка устройств с zigbee2mqtt (MQTT request → bridge/devices → MongoDB)',
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Запрос отправлен; при ответе брокера записи обновятся в PhysicalDevice',
+    }),
+    (0, swagger_1.ApiResponse)({ status: 503, description: 'MQTT не подключён' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], ZigbeeController.prototype, "requestDevicesSyncFromBridge", null);
+__decorate([
     (0, common_1.Post)('devices:upsert'),
     (0, swagger_1.ApiOperation)({
         summary: 'Upsert Zigbee device (by ieeeAddr)',
@@ -134,19 +229,27 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], ZigbeeController.prototype, "upsertDevice", null);
 __decorate([
-    (0, common_1.Post)('devices:sync-from-bridge'),
+    (0, common_1.Post)('permit-join'),
     (0, swagger_1.ApiOperation)({
-        summary: 'Синхронизация списка устройств с zigbee2mqtt (MQTT request → bridge/devices → MongoDB)',
+        summary: 'Включить / выключить режим сопряжения (permit_join) на мосту zigbee2mqtt',
     }),
-    (0, swagger_1.ApiResponse)({
-        status: 200,
-        description: 'Запрос отправлен; при ответе брокера записи обновятся в PhysicalDevice',
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            required: ['enable'],
+            properties: {
+                enable: { type: 'boolean', description: 'true — включить, false — выключить' },
+                time: { type: 'number', description: 'Таймаут в секундах (1–254), только при enable=true', default: 254 },
+            },
+        },
     }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Команда отправлена' }),
     (0, swagger_1.ApiResponse)({ status: 503, description: 'MQTT не подключён' }),
+    __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
-], ZigbeeController.prototype, "requestDevicesSyncFromBridge", null);
+], ZigbeeController.prototype, "permitJoin", null);
 __decorate([
     (0, common_1.Post)('states'),
     (0, swagger_1.ApiOperation)({

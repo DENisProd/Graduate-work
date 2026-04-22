@@ -14,17 +14,7 @@ export declare class ZigbeeDeviceStateModel {
     battery?: number | null;
 }
 export type ZigbeeDeviceStateDocument = HydratedDocument<ZigbeeDeviceStateModel>;
-export declare const ZigbeeStateSchema: import("mongoose").Schema<ZigbeeDeviceStateModel, import("mongoose").Model<ZigbeeDeviceStateModel, any, any, any, (import("mongoose").Document<unknown, any, ZigbeeDeviceStateModel, any, import("mongoose").DefaultSchemaOptions> & ZigbeeDeviceStateModel & {
-    _id: import("mongoose").Types.ObjectId;
-} & {
-    __v: number;
-} & {
-    id: string;
-}) | (import("mongoose").Document<unknown, any, ZigbeeDeviceStateModel, any, import("mongoose").DefaultSchemaOptions> & ZigbeeDeviceStateModel & {
-    _id: import("mongoose").Types.ObjectId;
-} & {
-    __v: number;
-}), any, ZigbeeDeviceStateModel>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, ZigbeeDeviceStateModel, import("mongoose").Document<unknown, {}, ZigbeeDeviceStateModel, {
+export declare const ZigbeeStateSchema: import("mongoose").Schema<ZigbeeDeviceStateModel, import("mongoose").Model<ZigbeeDeviceStateModel, any, any, any, any, any, ZigbeeDeviceStateModel>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, ZigbeeDeviceStateModel, import("mongoose").Document<unknown, {}, ZigbeeDeviceStateModel, {
     id: string;
 }, import("mongoose").DefaultSchemaOptions> & Omit<ZigbeeDeviceStateModel & {
     _id: import("mongoose").Types.ObjectId;

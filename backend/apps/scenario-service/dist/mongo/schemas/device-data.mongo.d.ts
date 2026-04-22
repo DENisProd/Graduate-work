@@ -13,17 +13,7 @@ export declare class DeviceDataModel {
     timestamp: Date;
 }
 export type DeviceDataDocument = HydratedDocument<DeviceDataModel>;
-export declare const DeviceDataSchema: import("mongoose").Schema<DeviceDataModel, import("mongoose").Model<DeviceDataModel, any, any, any, (import("mongoose").Document<unknown, any, DeviceDataModel, any, import("mongoose").DefaultSchemaOptions> & DeviceDataModel & {
-    _id: Types.ObjectId;
-} & {
-    __v: number;
-} & {
-    id: string;
-}) | (import("mongoose").Document<unknown, any, DeviceDataModel, any, import("mongoose").DefaultSchemaOptions> & DeviceDataModel & {
-    _id: Types.ObjectId;
-} & {
-    __v: number;
-}), any, DeviceDataModel>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, DeviceDataModel, import("mongoose").Document<unknown, {}, DeviceDataModel, {
+export declare const DeviceDataSchema: import("mongoose").Schema<DeviceDataModel, import("mongoose").Model<DeviceDataModel, any, any, any, any, any, DeviceDataModel>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, DeviceDataModel, import("mongoose").Document<unknown, {}, DeviceDataModel, {
     id: string;
 }, import("mongoose").DefaultSchemaOptions> & Omit<DeviceDataModel & {
     _id: Types.ObjectId;

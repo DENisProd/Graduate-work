@@ -8,6 +8,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 var ZigbeeIngestService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ZigbeeIngestService = void 0;
@@ -110,8 +113,10 @@ let ZigbeeIngestService = ZigbeeIngestService_1 = class ZigbeeIngestService {
         const obj = parseJsonObject(payload);
         if (!obj)
             return;
-        const permitJoin = obj.permit_join;
-        this.logger.debug(`bridge/state: permit_join=${String(permitJoin)}, coordinator=${String(obj.coordinator ?? '')}`);
+        const permitJoin = Boolean(obj.permit_join);
+        const timeout = typeof obj.permit_join_timeout === 'number' ? obj.permit_join_timeout : null;
+        this.zigbee.emitPairingStatus({ permitJoin, timeout });
+        this.logger.debug(`bridge/state: permit_join=${String(permitJoin)}, timeout=${String(timeout)}`);
     }
     onBridgeInfo(payload) {
         const raw = parseJson(payload);
@@ -147,6 +152,7 @@ let ZigbeeIngestService = ZigbeeIngestService_1 = class ZigbeeIngestService {
 exports.ZigbeeIngestService = ZigbeeIngestService;
 exports.ZigbeeIngestService = ZigbeeIngestService = ZigbeeIngestService_1 = __decorate([
     (0, common_1.Injectable)(),
+    __param(0, (0, common_1.Inject)((0, common_1.forwardRef)(() => zigbee_service_1.ZigbeeService))),
     __metadata("design:paramtypes", [zigbee_service_1.ZigbeeService])
 ], ZigbeeIngestService);
 //# sourceMappingURL=zigbee-ingest.service.js.map

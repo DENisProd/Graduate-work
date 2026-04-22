@@ -5,16 +5,22 @@ import { ResourceNotFoundException } from '../common/exceptions';
 import { HouseRequestDto } from './dto/house-request.dto';
 import { HouseUpdateRequestDto } from './dto/house-update-request.dto';
 import { House, User, Prisma } from '@prisma/client';
-import { HouseRolesService } from '../house-roles/house-roles.service';
+import type { HouseRolesService } from '../house-roles/house-roles.service';
 
 type HouseWithOwner = House & { owner: User };
+
+function houseRolesServiceRef() {
+  const { HouseRolesService } =
+    require('../house-roles/house-roles.service') as typeof import('../house-roles/house-roles.service');
+  return HouseRolesService;
+}
 
 @Injectable()
 export class HousesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly userService: UserService,
-    @Inject(forwardRef(() => HouseRolesService))
+    @Inject(forwardRef(houseRolesServiceRef))
     private readonly houseRolesService: HouseRolesService,
   ) {}
 

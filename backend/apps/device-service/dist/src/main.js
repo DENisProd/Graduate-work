@@ -6,7 +6,7 @@ const core_1 = require("@nestjs/core");
 const swagger_1 = require("@nestjs/swagger");
 const app_module_1 = require("./app.module");
 async function bootstrap() {
-    (0, dotenv_1.config)({ path: (0, path_1.join)(__dirname, '../../../.env') });
+    (0, dotenv_1.config)({ path: (0, path_1.join)(process.cwd(), '../../.env') });
     const port = Number(process.env.DEVICE_SERVICE_PORT ?? process.env.PORT ?? 3000);
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     const config = new swagger_1.DocumentBuilder()

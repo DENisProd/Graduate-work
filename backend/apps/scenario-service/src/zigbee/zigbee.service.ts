@@ -1,12 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
+import { Subject } from 'rxjs';
 import { DeviceDataService } from '../device-data/device-data.service';
 import { ZigbeeDeviceLogSource } from '../mongo/schemas/zigbee-device-log.mongo';
 import { ZigbeeDeviceLogRepository } from './zigbee-device-log.repository';
 import {
   canonicalZigbeeIeeeAddr,
+  ZigbeeDevice,
   ZigbeeDeviceRepository,
 } from './zigbee-device.repository';
 import { ZigbeeLinkRepository } from './zigbee-link.repository';
+import { ZigbeeMqttService } from './zigbee-mqtt.service';
 import { ZigbeeRealtimeService } from './zigbee-realtime.service';
 import { ZigbeeStateRepository } from './zigbee-state.repository';
 import { normalizeZigbeePayload } from './normalize-zigbee-payload';
@@ -21,8 +24,37 @@ import {
   type UpsertZigbeeDeviceInput,
 } from './schemas/zigbee.schemas';
 
+export interface ZigbeePairingEvent {
+  type: 'joined' | 'interview_started' | 'interview_done' | 'interview_failed';
+  ieeeAddr: string;
+  friendlyName: string;
+  supported?: boolean;
+  definition?: Record<string, unknown> | null;
+  capabilities?: string[];
+  physicalDeviceId?: string | null;
+  model?: string | null;
+  manufacturer?: string | null;
+}
+
+export interface ZigbeePairingStatus {
+  permitJoin: boolean;
+  timeout?: number | null;
+}
+
+/** TTL (мс) блокировки авто-воссоздания после удаления устройства. */
+const DELETED_DEVICE_TTL_MS = 120_000; // 2 минуты
+
 @Injectable()
 export class ZigbeeService {
+  readonly pairingEvents$ = new Subject<ZigbeePairingEvent>();
+  readonly pairingStatus$ = new Subject<ZigbeePairingStatus>();
+
+  /**
+   * IEEE-адреса недавно удалённых устройств → время истечения запрета.
+   * Предотвращает авто-воссоздание устройства из входящих MQTT-пакетов.
+   */
+  private readonly recentlyDeleted = new Map<string, number>();
+
   constructor(
     private readonly devices: ZigbeeDeviceRepository,
     private readonly states: ZigbeeStateRepository,
@@ -30,7 +62,23 @@ export class ZigbeeService {
     private readonly deviceLogs: ZigbeeDeviceLogRepository,
     private readonly realtime: ZigbeeRealtimeService,
     private readonly deviceData: DeviceDataService,
+    @Inject(forwardRef(() => ZigbeeMqttService))
+    private readonly mqtt: ZigbeeMqttService,
   ) {}
+
+  private markDeleted(canonical: string): void {
+    this.recentlyDeleted.set(canonical, Date.now() + DELETED_DEVICE_TTL_MS);
+  }
+
+  private isRecentlyDeleted(canonical: string): boolean {
+    const expiry = this.recentlyDeleted.get(canonical);
+    if (expiry === undefined) return false;
+    if (Date.now() > expiry) {
+      this.recentlyDeleted.delete(canonical);
+      return false;
+    }
+    return true;
+  }
 
   upsertDevice(input: UpsertZigbeeDeviceInput) {
     return this.devices.upsertByIeeeAddr(input);
@@ -100,6 +148,17 @@ export class ZigbeeService {
     return this.links.findMany(query);
   }
 
+  permitJoin(
+    enable: boolean,
+    time = 254,
+  ): { ok: true } | { ok: false; error: string } {
+    return this.mqtt.permitJoin(enable, time);
+  }
+
+  emitPairingStatus(status: ZigbeePairingStatus): void {
+    this.pairingStatus$.next(status);
+  }
+
   /**
    * События zigbee2mqtt/bridge/event (появление устройства, интервью и т.д.).
    */
@@ -117,16 +176,117 @@ export class ZigbeeService {
     const fn = d.friendly_name ?? d.friendlyName;
     const friendlyName = typeof fn === 'string' ? fn : undefined;
 
+    // Если устройство было недавно удалено — игнорируем bridge-события для него.
+    // Исключение: device_leave/remove — их всё равно обрабатывать нет смысла.
+    if (this.isRecentlyDeleted(canonicalZigbeeIeeeAddr(ieeeRaw))) return;
+
     switch (eventType) {
-      case 'device_announce':
-      case 'device_joined':
-      case 'device_interview':
-      case 'interview_successful':
-        await this.upsertDevice({
+      case 'device_announce': {
+        await this.upsertDevice({ ieeeAddr: ieeeRaw, friendlyName });
+        // Notify pairing room so the device appears in the modal.
+        // If the device already has full data (was previously interviewed),
+        // emit interview_done so the user can add it immediately without waiting.
+        const annDev = await this.devices.findByIeeeAddr(ieeeRaw);
+        const fullyKnown =
+          Boolean(annDev?.modelId) || (annDev?.capabilities?.length ?? 0) > 0;
+        this.pairingEvents$.next({
+          type: fullyKnown ? 'interview_done' : 'joined',
           ieeeAddr: ieeeRaw,
-          friendlyName,
+          friendlyName: friendlyName ?? ieeeRaw,
+          physicalDeviceId: annDev?.id ?? null,
+          model: annDev?.modelId ?? null,
+          manufacturer: annDev?.manufacturerName ?? null,
+          capabilities: annDev?.capabilities ?? [],
+          supported: fullyKnown,
         });
         break;
+      }
+
+      case 'device_joined': {
+        await this.upsertDevice({ ieeeAddr: ieeeRaw, friendlyName });
+        const dev = await this.devices.findByIeeeAddr(ieeeRaw);
+        this.pairingEvents$.next({
+          type: 'joined',
+          ieeeAddr: ieeeRaw,
+          friendlyName: friendlyName ?? ieeeRaw,
+          physicalDeviceId: dev?.id ?? null,
+        });
+        break;
+      }
+
+      case 'device_interview': {
+        const status = d.status;
+        await this.upsertDevice({ ieeeAddr: ieeeRaw, friendlyName });
+
+        if (status === 'started') {
+          const dev = await this.devices.findByIeeeAddr(ieeeRaw);
+          this.pairingEvents$.next({
+            type: 'interview_started',
+            ieeeAddr: ieeeRaw,
+            friendlyName: friendlyName ?? ieeeRaw,
+            physicalDeviceId: dev?.id ?? null,
+          });
+        } else if (status === 'successful') {
+          const defRaw = d.definition;
+          const definition =
+            defRaw && typeof defRaw === 'object' && !Array.isArray(defRaw)
+              ? (defRaw as Record<string, unknown>)
+              : null;
+          const capabilities = definition
+            ? capabilitiesFromBridgeDefinition(definition)
+            : undefined;
+          const manufacturerRaw = d.manufacturer ?? (definition?.vendor);
+          const manufacturer =
+            typeof manufacturerRaw === 'string' ? manufacturerRaw : null;
+          const modelRaw = d.model_id ?? d.modelID ?? (definition?.model);
+          const model = typeof modelRaw === 'string' ? modelRaw : null;
+
+          await this.upsertDevice({
+            ieeeAddr: ieeeRaw,
+            friendlyName,
+            ...(definition ? { definition } : {}),
+            ...(capabilities ? { capabilities } : {}),
+            ...(manufacturer ? { manufacturerName: manufacturer } : {}),
+            ...(model ? { modelId: model } : {}),
+          });
+          const dev = await this.devices.findByIeeeAddr(ieeeRaw);
+          this.pairingEvents$.next({
+            type: 'interview_done',
+            ieeeAddr: ieeeRaw,
+            friendlyName: friendlyName ?? ieeeRaw,
+            supported: Boolean(d.supported),
+            definition,
+            capabilities: capabilities ?? [],
+            physicalDeviceId: dev?.id ?? null,
+            model: dev?.modelId ?? model,
+            manufacturer: dev?.manufacturerName ?? manufacturer,
+          });
+        } else if (status === 'failed') {
+          const dev = await this.devices.findByIeeeAddr(ieeeRaw);
+          this.pairingEvents$.next({
+            type: 'interview_failed',
+            ieeeAddr: ieeeRaw,
+            friendlyName: friendlyName ?? ieeeRaw,
+            physicalDeviceId: dev?.id ?? null,
+          });
+        }
+        break;
+      }
+
+      case 'interview_successful': {
+        // Older Z2M format fallback
+        await this.upsertDevice({ ieeeAddr: ieeeRaw, friendlyName });
+        const dev = await this.devices.findByIeeeAddr(ieeeRaw);
+        this.pairingEvents$.next({
+          type: 'interview_done',
+          ieeeAddr: ieeeRaw,
+          friendlyName: friendlyName ?? ieeeRaw,
+          supported: true,
+          physicalDeviceId: dev?.id ?? null,
+        });
+        break;
+      }
+
       default:
         break;
     }
@@ -214,6 +374,56 @@ export class ZigbeeService {
   }
 
   /**
+   * Полное удаление устройства из системы:
+   * 1. Отправляет команду на удаление с координатора Zigbee через MQTT (best-effort).
+   * 2. Удаляет документ PhysicalDevice из MongoDB.
+   * 3. Удаляет историю состояний и логов устройства.
+   */
+  async removeDevice(
+    ieeeAddr: string,
+    force = true,
+  ): Promise<{ ok: true; device: ZigbeeDevice } | { ok: false; error: string }> {
+    const canonical = canonicalZigbeeIeeeAddr(ieeeAddr);
+    const device = await this.devices.findByIeeeAddr(canonical);
+    if (!device) {
+      return { ok: false, error: `Устройство ${ieeeAddr} не найдено` };
+    }
+
+    // Блокируем авто-воссоздание из входящих MQTT-пакетов
+    this.markDeleted(canonical);
+
+    // Best-effort: send remove command to Zigbee coordinator via MQTT.
+    // force=true: мост удаляет запись из своей конфигурации немедленно,
+    // не дожидаясь ответа устройства (важно для спящих battery-устройств).
+    this.mqtt.removeDevice(device.friendlyName ?? canonical, force);
+
+    // Cascade delete from MongoDB
+    await Promise.all([
+      this.devices.deleteByIeeeAddr(canonical),
+      this.states.deleteManyByIeeeAddr(canonical),
+      this.deviceLogs.deleteManyByIeeeAddr(canonical),
+    ]);
+
+    return { ok: true, device };
+  }
+
+  /**
+   * Отправляет команду управления устройству через MQTT (`…/<friendlyName>/set`).
+   * Резолвит friendlyName по IEEE-адресу; если не найден — использует сам IEEE-адрес.
+   */
+  async sendCommand(
+    ieeeAddr: string,
+    payload: Record<string, unknown>,
+  ): Promise<{ ok: true; topic: string } | { ok: false; error: string }> {
+    const device = await this.devices.findByIeeeAddr(ieeeAddr);
+    if (!device) {
+      return { ok: false, error: `Устройство ${ieeeAddr} не найдено` };
+    }
+    const topicName = device.friendlyName ?? device.ieeeAddr;
+    return this.mqtt.sendDeviceCommand(topicName, payload);
+  }
+
+  /**
    * Состояние с топика `zigbee2mqtt/<имя>`.
    * Имя часто совпадает с IEEE (`0x` + 16 hex), а не только с human-friendly_name.
    */
@@ -240,6 +450,11 @@ export class ZigbeeService {
     if (!ieeeAddr) return;
 
     ieeeAddr = canonicalZigbeeIeeeAddr(ieeeAddr);
+
+    // Если устройство было недавно удалено — игнорируем входящие данные,
+    // чтобы не воссоздавать его в MongoDB (спящие устройства могут успеть
+    // прислать пакет раньше, чем мост обработает команду remove).
+    if (this.isRecentlyDeleted(ieeeAddr)) return;
 
     let device = await this.devices.findByIeeeAddr(ieeeAddr);
     if (!device) {

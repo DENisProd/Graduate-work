@@ -22,17 +22,7 @@ export declare class PhysicalDeviceModel {
     updatedAt: Date;
 }
 export type PhysicalDeviceDocument = HydratedDocument<PhysicalDeviceModel>;
-export declare const PhysicalDeviceSchema: import("mongoose").Schema<PhysicalDeviceModel, import("mongoose").Model<PhysicalDeviceModel, any, any, any, (import("mongoose").Document<unknown, any, PhysicalDeviceModel, any, import("mongoose").DefaultSchemaOptions> & PhysicalDeviceModel & {
-    _id: import("mongoose").Types.ObjectId;
-} & {
-    __v: number;
-} & {
-    id: string;
-}) | (import("mongoose").Document<unknown, any, PhysicalDeviceModel, any, import("mongoose").DefaultSchemaOptions> & PhysicalDeviceModel & {
-    _id: import("mongoose").Types.ObjectId;
-} & {
-    __v: number;
-}), any, PhysicalDeviceModel>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, PhysicalDeviceModel, import("mongoose").Document<unknown, {}, PhysicalDeviceModel, {
+export declare const PhysicalDeviceSchema: import("mongoose").Schema<PhysicalDeviceModel, import("mongoose").Model<PhysicalDeviceModel, any, any, any, any, any, PhysicalDeviceModel>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, PhysicalDeviceModel, import("mongoose").Document<unknown, {}, PhysicalDeviceModel, {
     id: string;
 }, import("mongoose").DefaultSchemaOptions> & Omit<PhysicalDeviceModel & {
     _id: import("mongoose").Types.ObjectId;

@@ -11,17 +11,7 @@ export declare class ScenarioExecutionModel {
     endedAt?: Date | null;
 }
 export type ScenarioExecutionDocument = HydratedDocument<ScenarioExecutionModel>;
-export declare const ScenarioExecutionSchema: import("mongoose").Schema<ScenarioExecutionModel, import("mongoose").Model<ScenarioExecutionModel, any, any, any, (import("mongoose").Document<unknown, any, ScenarioExecutionModel, any, import("mongoose").DefaultSchemaOptions> & ScenarioExecutionModel & {
-    _id: import("mongoose").Types.ObjectId;
-} & {
-    __v: number;
-} & {
-    id: string;
-}) | (import("mongoose").Document<unknown, any, ScenarioExecutionModel, any, import("mongoose").DefaultSchemaOptions> & ScenarioExecutionModel & {
-    _id: import("mongoose").Types.ObjectId;
-} & {
-    __v: number;
-}), any, ScenarioExecutionModel>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, ScenarioExecutionModel, import("mongoose").Document<unknown, {}, ScenarioExecutionModel, {
+export declare const ScenarioExecutionSchema: import("mongoose").Schema<ScenarioExecutionModel, import("mongoose").Model<ScenarioExecutionModel, any, any, any, any, any, ScenarioExecutionModel>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, ScenarioExecutionModel, import("mongoose").Document<unknown, {}, ScenarioExecutionModel, {
     id: string;
 }, import("mongoose").DefaultSchemaOptions> & Omit<ScenarioExecutionModel & {
     _id: import("mongoose").Types.ObjectId;

@@ -29,7 +29,7 @@ import {
   AccessRightFormModal,
   InvitationFormModal,
 } from './modals';
-import { LabeledInput } from './house-details/LabeledInput';
+import { LabeledInput } from './house-details/tabs/LabeledInput';
 
 export type HousePanelSubpage = 'house_members' | 'house_rooms' | 'access_house_access_rights';
 

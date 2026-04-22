@@ -20,17 +20,7 @@ export declare class DeviceNetworkLinkModel {
     collectedAt: Date;
 }
 export type DeviceNetworkLinkDocument = HydratedDocument<DeviceNetworkLinkModel>;
-export declare const DeviceNetworkLinkSchema: import("mongoose").Schema<DeviceNetworkLinkModel, import("mongoose").Model<DeviceNetworkLinkModel, any, any, any, (import("mongoose").Document<unknown, any, DeviceNetworkLinkModel, any, import("mongoose").DefaultSchemaOptions> & DeviceNetworkLinkModel & {
-    _id: Types.ObjectId;
-} & {
-    __v: number;
-} & {
-    id: string;
-}) | (import("mongoose").Document<unknown, any, DeviceNetworkLinkModel, any, import("mongoose").DefaultSchemaOptions> & DeviceNetworkLinkModel & {
-    _id: Types.ObjectId;
-} & {
-    __v: number;
-}), any, DeviceNetworkLinkModel>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, DeviceNetworkLinkModel, import("mongoose").Document<unknown, {}, DeviceNetworkLinkModel, {
+export declare const DeviceNetworkLinkSchema: import("mongoose").Schema<DeviceNetworkLinkModel, import("mongoose").Model<DeviceNetworkLinkModel, any, any, any, any, any, DeviceNetworkLinkModel>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, DeviceNetworkLinkModel, import("mongoose").Document<unknown, {}, DeviceNetworkLinkModel, {
     id: string;
 }, import("mongoose").DefaultSchemaOptions> & Omit<DeviceNetworkLinkModel & {
     _id: Types.ObjectId;

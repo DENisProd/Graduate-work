@@ -1,12 +1,14 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   NotFoundException,
   Param,
   Post,
   Query,
   ServiceUnavailableException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import {
   ApiBody,
@@ -27,6 +29,7 @@ import {
   listZigbeeStatesQuerySchema,
   Protocol,
   upsertZigbeeDeviceSchema,
+  zigbeeCommandSchema,
   ZigbeeDeviceType,
 } from './schemas/zigbee.schemas';
 
@@ -72,6 +75,98 @@ export class ZigbeeController {
     return device;
   }
 
+  @Delete('devices/:ieeeAddr')
+  @ApiOperation({
+    summary: 'Удалить устройство из системы (полная рассинхронизация)',
+    description:
+      'Удаляет устройство из MongoDB и отправляет команду удаления на Zigbee-координатор через MQTT. ' +
+      'Также удаляет историю состояний и логи устройства. ' +
+      'MQTT-команда выполняется best-effort: если мост недоступен, удаление из БД всё равно произойдёт.',
+  })
+  @ApiParam({ name: 'ieeeAddr', description: 'Zigbee IEEE address' })
+  @ApiQuery({
+    name: 'force',
+    required: false,
+    type: Boolean,
+    description: 'Принудительное удаление (для недоступных устройств)',
+  })
+  @ApiResponse({ status: 200, description: 'Устройство удалено' })
+  @ApiResponse({ status: 404, description: 'Устройство не найдено' })
+  async removeDevice(
+    @Param('ieeeAddr') ieeeAddr: string,
+    @Query('force') force?: string,
+  ) {
+    const result = await this.service.removeDevice(ieeeAddr, force === 'true');
+    if (!result.ok) {
+      throw new NotFoundException(result.error);
+    }
+    return { ok: true, deleted: result.device };
+  }
+
+  @Post('devices/:ieeeAddr/command')
+  @ApiOperation({
+    summary: 'Отправить команду управления Zigbee-устройству через MQTT (…/set)',
+    description:
+      'Публикует payload в топик `zigbee2mqtt/<friendlyName>/set`. ' +
+      'Примеры: `{"state":"ON"}`, `{"brightness":200}`, `{"color_temp":300}`.',
+  })
+  @ApiParam({ name: 'ieeeAddr', description: 'Zigbee IEEE address' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['payload'],
+      properties: {
+        payload: {
+          type: 'object',
+          additionalProperties: true,
+          example: { state: 'ON', brightness: 200 },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 201, description: 'Команда отправлена' })
+  @ApiResponse({ status: 404, description: 'Устройство не найдено' })
+  @ApiResponse({ status: 503, description: 'MQTT не подключён' })
+  async sendCommand(
+    @Param('ieeeAddr') ieeeAddr: string,
+    @Body() body: unknown,
+  ) {
+    const { payload } = zigbeeCommandSchema.parse(body);
+    const result = await this.service.sendCommand(ieeeAddr, payload);
+    if (!result.ok) {
+      if (result.error.includes('не найдено')) {
+        throw new NotFoundException(result.error);
+      }
+      throw new ServiceUnavailableException(result.error);
+    }
+    return { ok: true, topic: result.topic };
+  }
+
+  @Post('devices:sync-from-bridge')
+  @ApiOperation({
+    summary:
+      'Синхронизация списка устройств с zigbee2mqtt (MQTT request → bridge/devices → MongoDB)',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Запрос отправлен; при ответе брокера записи обновятся в PhysicalDevice',
+  })
+  @ApiResponse({ status: 503, description: 'MQTT не подключён' })
+  requestDevicesSyncFromBridge() {
+    const r = this.zigbeeMqtt.requestBridgeDeviceList();
+    if (!r.ok) {
+      throw new ServiceUnavailableException(
+        r.error ?? 'MQTT недоступен. Задайте ZIGBEE_MQTT_URL и дождитесь подключения.',
+      );
+    }
+    return {
+      ok: true,
+      message:
+        'Запрос списка устройств отправлен в zigbee2mqtt; ответ придёт в bridge/devices и будет сохранён в БД.',
+    };
+  }
+
   @Post('devices:upsert')
   @ApiOperation({
     summary: 'Upsert Zigbee device (by ieeeAddr)',
@@ -99,29 +194,33 @@ export class ZigbeeController {
     return this.service.upsertDevice(input);
   }
 
-  @Post('devices:sync-from-bridge')
+  @Post('permit-join')
   @ApiOperation({
-    summary:
-      'Синхронизация списка устройств с zigbee2mqtt (MQTT request → bridge/devices → MongoDB)',
+    summary: 'Включить / выключить режим сопряжения (permit_join) на мосту zigbee2mqtt',
   })
-  @ApiResponse({
-    status: 200,
-    description:
-      'Запрос отправлен; при ответе брокера записи обновятся в PhysicalDevice',
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['enable'],
+      properties: {
+        enable: { type: 'boolean', description: 'true — включить, false — выключить' },
+        time: { type: 'number', description: 'Таймаут в секундах (1–254), только при enable=true', default: 254 },
+      },
+    },
   })
+  @ApiResponse({ status: 201, description: 'Команда отправлена' })
   @ApiResponse({ status: 503, description: 'MQTT не подключён' })
-  requestDevicesSyncFromBridge() {
-    const r = this.zigbeeMqtt.requestBridgeDeviceList();
-    if (!r.ok) {
+  permitJoin(@Body() body: unknown) {
+    const b = body as Record<string, unknown>;
+    const enable = Boolean(b?.enable);
+    const time = typeof b?.time === 'number' ? Math.max(1, Math.min(254, Math.trunc(b.time))) : 254;
+    const result = this.zigbeeMqtt.permitJoin(enable, time);
+    if (!result.ok) {
       throw new ServiceUnavailableException(
-        r.error ?? 'MQTT недоступен. Задайте ZIGBEE_MQTT_URL и дождитесь подключения.',
+        (result as { ok: false; error: string }).error ?? 'MQTT недоступен',
       );
     }
-    return {
-      ok: true,
-      message:
-        'Запрос списка устройств отправлен в zigbee2mqtt; ответ придёт в bridge/devices и будет сохранён в БД.',
-    };
+    return { ok: true, enable, time: enable ? time : undefined };
   }
 
   @Post('states')

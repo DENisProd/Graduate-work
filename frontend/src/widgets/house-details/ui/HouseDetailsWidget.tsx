@@ -1,11 +1,12 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { getHouseRole } from '@/components/ui/role-badge';
 import { useTranslation, useCanEditHouseRoles, useCurrentUserId } from '@/hooks';
-import { useAccessControlStore, type HouseDetailsTab } from '@/store/access-control-store';
+import { useAccessControlStore, type HouseDetailsTab, normalizeHouseDetailsTab } from '@/store/access-control-store';
 
 import {
   HouseDetailsHeader,
@@ -28,9 +29,27 @@ export function HouseDetailsWidget({
   isAdmin,
 }: HouseDetailsWidgetProps) {
   const { t } = useTranslation();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const house = useAccessControlStore((s) => s.house);
-  const activeTab = useAccessControlStore((s) => s.activeTab);
+  const storeActiveTab = useAccessControlStore((s) => s.activeTab);
   const setActiveTab = useAccessControlStore((s) => s.setActiveTab);
+
+  const activeTab = useMemo(() => {
+    const tabFromUrl = searchParams.get('tab');
+    return tabFromUrl ? normalizeHouseDetailsTab(tabFromUrl) : storeActiveTab;
+  }, [searchParams, storeActiveTab]);
+
+  const handleTabChange = useCallback(
+    (tab: string) => {
+      setActiveTab(tab);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('tab', tab);
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [setActiveTab, router, pathname, searchParams],
+  );
   const setMemberModalOpen = useAccessControlStore((s) => s.setMemberModalOpen);
   const openMemberDetail = useAccessControlStore((s) => s.openMemberDetail);
   const removeMember = useAccessControlStore((s) => s.removeMember);
@@ -64,7 +83,7 @@ export function HouseDetailsWidget({
         isAdmin={isAdmin}
         ownerId={house?.ownerId}
       />
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList className="h-10 w-full p-1">
           {tabs.map((tab) => (
             <TabsTrigger

@@ -8,18 +8,24 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ZigbeeService = void 0;
 const common_1 = require("@nestjs/common");
+const rxjs_1 = require("rxjs");
 const device_data_service_1 = require("../device-data/device-data.service");
 const zigbee_device_log_mongo_1 = require("../mongo/schemas/zigbee-device-log.mongo");
 const zigbee_device_log_repository_1 = require("./zigbee-device-log.repository");
 const zigbee_device_repository_1 = require("./zigbee-device.repository");
 const zigbee_link_repository_1 = require("./zigbee-link.repository");
+const zigbee_mqtt_service_1 = require("./zigbee-mqtt.service");
 const zigbee_realtime_service_1 = require("./zigbee-realtime.service");
 const zigbee_state_repository_1 = require("./zigbee-state.repository");
 const normalize_zigbee_payload_1 = require("./normalize-zigbee-payload");
 const zigbee_schemas_1 = require("./schemas/zigbee.schemas");
+const DELETED_DEVICE_TTL_MS = 120_000;
 let ZigbeeService = class ZigbeeService {
     devices;
     states;
@@ -27,13 +33,31 @@ let ZigbeeService = class ZigbeeService {
     deviceLogs;
     realtime;
     deviceData;
-    constructor(devices, states, links, deviceLogs, realtime, deviceData) {
+    mqtt;
+    pairingEvents$ = new rxjs_1.Subject();
+    pairingStatus$ = new rxjs_1.Subject();
+    recentlyDeleted = new Map();
+    constructor(devices, states, links, deviceLogs, realtime, deviceData, mqtt) {
         this.devices = devices;
         this.states = states;
         this.links = links;
         this.deviceLogs = deviceLogs;
         this.realtime = realtime;
         this.deviceData = deviceData;
+        this.mqtt = mqtt;
+    }
+    markDeleted(canonical) {
+        this.recentlyDeleted.set(canonical, Date.now() + DELETED_DEVICE_TTL_MS);
+    }
+    isRecentlyDeleted(canonical) {
+        const expiry = this.recentlyDeleted.get(canonical);
+        if (expiry === undefined)
+            return false;
+        if (Date.now() > expiry) {
+            this.recentlyDeleted.delete(canonical);
+            return false;
+        }
+        return true;
     }
     upsertDevice(input) {
         return this.devices.upsertByIeeeAddr(input);
@@ -88,6 +112,12 @@ let ZigbeeService = class ZigbeeService {
     listLinks(query) {
         return this.links.findMany(query);
     }
+    permitJoin(enable, time = 254) {
+        return this.mqtt.permitJoin(enable, time);
+    }
+    emitPairingStatus(status) {
+        this.pairingStatus$.next(status);
+    }
     async applyBridgeEvent(payload) {
         const eventType = payload.type;
         if (typeof eventType !== 'string')
@@ -101,16 +131,104 @@ let ZigbeeService = class ZigbeeService {
             return;
         const fn = d.friendly_name ?? d.friendlyName;
         const friendlyName = typeof fn === 'string' ? fn : undefined;
+        if (this.isRecentlyDeleted((0, zigbee_device_repository_1.canonicalZigbeeIeeeAddr)(ieeeRaw)))
+            return;
         switch (eventType) {
-            case 'device_announce':
-            case 'device_joined':
-            case 'device_interview':
-            case 'interview_successful':
-                await this.upsertDevice({
+            case 'device_announce': {
+                await this.upsertDevice({ ieeeAddr: ieeeRaw, friendlyName });
+                const annDev = await this.devices.findByIeeeAddr(ieeeRaw);
+                const fullyKnown = Boolean(annDev?.modelId) || (annDev?.capabilities?.length ?? 0) > 0;
+                this.pairingEvents$.next({
+                    type: fullyKnown ? 'interview_done' : 'joined',
                     ieeeAddr: ieeeRaw,
-                    friendlyName,
+                    friendlyName: friendlyName ?? ieeeRaw,
+                    physicalDeviceId: annDev?.id ?? null,
+                    model: annDev?.modelId ?? null,
+                    manufacturer: annDev?.manufacturerName ?? null,
+                    capabilities: annDev?.capabilities ?? [],
+                    supported: fullyKnown,
                 });
                 break;
+            }
+            case 'device_joined': {
+                await this.upsertDevice({ ieeeAddr: ieeeRaw, friendlyName });
+                const dev = await this.devices.findByIeeeAddr(ieeeRaw);
+                this.pairingEvents$.next({
+                    type: 'joined',
+                    ieeeAddr: ieeeRaw,
+                    friendlyName: friendlyName ?? ieeeRaw,
+                    physicalDeviceId: dev?.id ?? null,
+                });
+                break;
+            }
+            case 'device_interview': {
+                const status = d.status;
+                await this.upsertDevice({ ieeeAddr: ieeeRaw, friendlyName });
+                if (status === 'started') {
+                    const dev = await this.devices.findByIeeeAddr(ieeeRaw);
+                    this.pairingEvents$.next({
+                        type: 'interview_started',
+                        ieeeAddr: ieeeRaw,
+                        friendlyName: friendlyName ?? ieeeRaw,
+                        physicalDeviceId: dev?.id ?? null,
+                    });
+                }
+                else if (status === 'successful') {
+                    const defRaw = d.definition;
+                    const definition = defRaw && typeof defRaw === 'object' && !Array.isArray(defRaw)
+                        ? defRaw
+                        : null;
+                    const capabilities = definition
+                        ? capabilitiesFromBridgeDefinition(definition)
+                        : undefined;
+                    const manufacturerRaw = d.manufacturer ?? (definition?.vendor);
+                    const manufacturer = typeof manufacturerRaw === 'string' ? manufacturerRaw : null;
+                    const modelRaw = d.model_id ?? d.modelID ?? (definition?.model);
+                    const model = typeof modelRaw === 'string' ? modelRaw : null;
+                    await this.upsertDevice({
+                        ieeeAddr: ieeeRaw,
+                        friendlyName,
+                        ...(definition ? { definition } : {}),
+                        ...(capabilities ? { capabilities } : {}),
+                        ...(manufacturer ? { manufacturerName: manufacturer } : {}),
+                        ...(model ? { modelId: model } : {}),
+                    });
+                    const dev = await this.devices.findByIeeeAddr(ieeeRaw);
+                    this.pairingEvents$.next({
+                        type: 'interview_done',
+                        ieeeAddr: ieeeRaw,
+                        friendlyName: friendlyName ?? ieeeRaw,
+                        supported: Boolean(d.supported),
+                        definition,
+                        capabilities: capabilities ?? [],
+                        physicalDeviceId: dev?.id ?? null,
+                        model: dev?.modelId ?? model,
+                        manufacturer: dev?.manufacturerName ?? manufacturer,
+                    });
+                }
+                else if (status === 'failed') {
+                    const dev = await this.devices.findByIeeeAddr(ieeeRaw);
+                    this.pairingEvents$.next({
+                        type: 'interview_failed',
+                        ieeeAddr: ieeeRaw,
+                        friendlyName: friendlyName ?? ieeeRaw,
+                        physicalDeviceId: dev?.id ?? null,
+                    });
+                }
+                break;
+            }
+            case 'interview_successful': {
+                await this.upsertDevice({ ieeeAddr: ieeeRaw, friendlyName });
+                const dev = await this.devices.findByIeeeAddr(ieeeRaw);
+                this.pairingEvents$.next({
+                    type: 'interview_done',
+                    ieeeAddr: ieeeRaw,
+                    friendlyName: friendlyName ?? ieeeRaw,
+                    supported: true,
+                    physicalDeviceId: dev?.id ?? null,
+                });
+                break;
+            }
             default:
                 break;
         }
@@ -180,6 +298,29 @@ let ZigbeeService = class ZigbeeService {
             });
         }
     }
+    async removeDevice(ieeeAddr, force = true) {
+        const canonical = (0, zigbee_device_repository_1.canonicalZigbeeIeeeAddr)(ieeeAddr);
+        const device = await this.devices.findByIeeeAddr(canonical);
+        if (!device) {
+            return { ok: false, error: `Устройство ${ieeeAddr} не найдено` };
+        }
+        this.markDeleted(canonical);
+        this.mqtt.removeDevice(device.friendlyName ?? canonical, force);
+        await Promise.all([
+            this.devices.deleteByIeeeAddr(canonical),
+            this.states.deleteManyByIeeeAddr(canonical),
+            this.deviceLogs.deleteManyByIeeeAddr(canonical),
+        ]);
+        return { ok: true, device };
+    }
+    async sendCommand(ieeeAddr, payload) {
+        const device = await this.devices.findByIeeeAddr(ieeeAddr);
+        if (!device) {
+            return { ok: false, error: `Устройство ${ieeeAddr} не найдено` };
+        }
+        const topicName = device.friendlyName ?? device.ieeeAddr;
+        return this.mqtt.sendDeviceCommand(topicName, payload);
+    }
     async ingestMqttDeviceState(topicSegment, payload) {
         let ieeeAddr;
         const byName = await this.devices.findByFriendlyName(topicSegment);
@@ -200,6 +341,8 @@ let ZigbeeService = class ZigbeeService {
         if (!ieeeAddr)
             return;
         ieeeAddr = (0, zigbee_device_repository_1.canonicalZigbeeIeeeAddr)(ieeeAddr);
+        if (this.isRecentlyDeleted(ieeeAddr))
+            return;
         let device = await this.devices.findByIeeeAddr(ieeeAddr);
         if (!device) {
             await this.devices.upsertByIeeeAddr({
@@ -222,12 +365,14 @@ let ZigbeeService = class ZigbeeService {
 exports.ZigbeeService = ZigbeeService;
 exports.ZigbeeService = ZigbeeService = __decorate([
     (0, common_1.Injectable)(),
+    __param(6, (0, common_1.Inject)((0, common_1.forwardRef)(() => zigbee_mqtt_service_1.ZigbeeMqttService))),
     __metadata("design:paramtypes", [zigbee_device_repository_1.ZigbeeDeviceRepository,
         zigbee_state_repository_1.ZigbeeStateRepository,
         zigbee_link_repository_1.ZigbeeLinkRepository,
         zigbee_device_log_repository_1.ZigbeeDeviceLogRepository,
         zigbee_realtime_service_1.ZigbeeRealtimeService,
-        device_data_service_1.DeviceDataService])
+        device_data_service_1.DeviceDataService,
+        zigbee_mqtt_service_1.ZigbeeMqttService])
 ], ZigbeeService);
 function collectExposedProperties(node, out) {
     if (node === null || node === undefined)

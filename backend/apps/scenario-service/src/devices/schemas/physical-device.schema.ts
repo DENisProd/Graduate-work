@@ -4,7 +4,7 @@ import { paginationQuerySchema } from '../../common/schemas/pagination';
 export const createPhysicalDeviceSchema = z.object({
   name: z.string().min(1).max(255),
   description: z.string().max(1000).optional(),
-  deviceTypeId: z.coerce.number().int().min(1),
+  deviceTypeId: z.coerce.number().int().min(1).optional(),
   houseId: z.string().min(1).max(255),
   deviceId: z.string().max(255).optional(),
   roomId: z.string().max(255).optional(),

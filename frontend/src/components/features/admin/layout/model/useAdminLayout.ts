@@ -52,7 +52,7 @@ export function useAdminLayout() {
   const deviceIdFromPath =
     pathname.match(/^\/admin\/devices\/(\d+)/)?.[1] ?? null;
   const houseIdFromPath =
-    pathname.match(/^\/admin\/access-control\/houses\/(\d+)/)?.[1] ?? null;
+    pathname.match(/^\/admin\/access-control\/houses\/([\w-]+)/)?.[1] ?? null;
 
   useEffect(() => {
     if (deviceIdFromPath) {
@@ -82,7 +82,7 @@ export function useAdminLayout() {
     if (houseIdFromPath) {
       setSelectedHouseId(houseIdFromPath);
       housesApi
-        .getById(Number(houseIdFromPath))
+        .getById(houseIdFromPath)
         .then((house) => setSelectedHouseName(house.name ?? null))
         .catch(() => setSelectedHouseName(null));
     } else {

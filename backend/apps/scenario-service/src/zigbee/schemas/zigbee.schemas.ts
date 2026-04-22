@@ -158,3 +158,28 @@ export const zigbeeSocketSubscribeSchema = z
 export type ZigbeeSocketSubscribePayload = z.infer<
   typeof zigbeeSocketSubscribeSchema
 >;
+
+/** REST-команда устройству: { payload: { state: 'ON' } } */
+export const zigbeeCommandSchema = z.object({
+  payload: z.record(z.unknown()).refine((v) => Object.keys(v).length > 0, {
+    message: 'payload не может быть пустым',
+  }),
+});
+export type ZigbeeCommandInput = z.infer<typeof zigbeeCommandSchema>;
+
+/** Socket.IO-команда: устройство задаётся по ieeeAddr или physicalDeviceId */
+export const zigbeeSocketCommandSchema = z
+  .object({
+    deviceIeeeAddr: z.string().min(3).max(64).optional(),
+    physicalDeviceId: z.string().min(24).max(24).optional(),
+    payload: z.record(z.unknown()),
+  })
+  .refine((v) => v.deviceIeeeAddr || v.physicalDeviceId, {
+    message: 'Укажите deviceIeeeAddr или physicalDeviceId',
+  })
+  .refine((v) => Object.keys(v.payload).length > 0, {
+    message: 'payload не может быть пустым',
+  });
+export type ZigbeeSocketCommandPayload = z.infer<
+  typeof zigbeeSocketCommandSchema
+>;

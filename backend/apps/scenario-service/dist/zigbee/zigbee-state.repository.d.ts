@@ -12,6 +12,7 @@ export declare class ZigbeeStateRepository {
     create(input: CreateZigbeeStateInput): Promise<ZigbeeDeviceState>;
     private mapPlain;
     findLatestByDeviceIeeeAddrs(deviceIeeeAddrs: string[]): Promise<Map<string, ZigbeeDeviceState>>;
+    deleteManyByIeeeAddr(ieeeAddr: string): Promise<number>;
     findMany(query: ListZigbeeStatesQuery): Promise<{
         items: ZigbeeDeviceState[];
         total: number;

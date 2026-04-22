@@ -9,10 +9,23 @@ export declare class ZigbeeController {
         total: number;
     }>;
     getDevice(ieeeAddr: string): Promise<import("./zigbee-device.repository").ZigbeeDevice>;
-    upsertDevice(body: unknown): Promise<import("./zigbee-device.repository").ZigbeeDevice>;
+    removeDevice(ieeeAddr: string, force?: string): Promise<{
+        ok: boolean;
+        deleted: import("./zigbee-device.repository").ZigbeeDevice;
+    }>;
+    sendCommand(ieeeAddr: string, body: unknown): Promise<{
+        ok: boolean;
+        topic: string;
+    }>;
     requestDevicesSyncFromBridge(): {
         ok: boolean;
         message: string;
+    };
+    upsertDevice(body: unknown): Promise<import("./zigbee-device.repository").ZigbeeDevice>;
+    permitJoin(body: unknown): {
+        ok: boolean;
+        enable: boolean;
+        time: number | undefined;
     };
     createState(body: unknown): Promise<import("./zigbee-state.repository").ZigbeeDeviceState>;
     listStates(query: unknown): Promise<{

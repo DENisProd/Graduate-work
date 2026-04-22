@@ -148,6 +148,14 @@ let ZigbeeDeviceRepository = class ZigbeeDeviceRepository {
         }
         return out;
     }
+    async deleteByIeeeAddr(ieeeAddr) {
+        const canonical = canonicalZigbeeIeeeAddr(ieeeAddr);
+        const dev = await this.findByIeeeAddr(canonical);
+        if (!dev)
+            return null;
+        await this.model.findByIdAndDelete(new mongoose_2.Types.ObjectId(dev.id)).exec();
+        return dev;
+    }
     async findMany(query) {
         const and = [{ protocolAddress: { $ne: null } }];
         if (query.type)

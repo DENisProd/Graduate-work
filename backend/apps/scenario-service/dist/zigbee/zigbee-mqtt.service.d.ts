@@ -16,6 +16,25 @@ export declare class ZigbeeMqttService implements OnModuleInit, OnModuleDestroy 
         ok: false;
         error: string;
     };
+    permitJoin(enable: boolean, time?: number): {
+        ok: true;
+    } | {
+        ok: false;
+        error: string;
+    };
+    removeDevice(idOrName: string, force?: boolean): {
+        ok: true;
+    } | {
+        ok: false;
+        error: string;
+    };
+    sendDeviceCommand(topicName: string, payload: Record<string, unknown>): {
+        ok: true;
+        topic: string;
+    } | {
+        ok: false;
+        error: string;
+    };
     private maybeRequestBridgeDevicesAfterSubscribe;
     private logIncomingMqtt;
 }

@@ -1,0 +1,136 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+
+export interface CatalogDeviceType {
+  id: number;
+  code: string;
+  name: string;
+}
+
+export interface CatalogDeviceCategory {
+  id: number;
+  code: string;
+  name: string;
+  deviceType?: CatalogDeviceType | null;
+}
+
+export interface CatalogDevice {
+  id: number;
+  code: string;
+  name: string | null;
+  category: CatalogDeviceCategory | null;
+}
+
+@Injectable()
+export class DeviceCatalogClient {
+  private readonly logger = new Logger(DeviceCatalogClient.name);
+  private readonly baseUrl: string;
+
+  constructor(config: ConfigService) {
+    this.baseUrl = (
+      config.get<string>('DEVICE_SERVICE_URL') ?? 'http://localhost:3000'
+    ).replace(/\/$/, '');
+  }
+
+  private async get<T>(path: string): Promise<T | null> {
+    try {
+      const res = await fetch(`${this.baseUrl}${path}`);
+      if (res.status === 404) return null;
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json() as Promise<T>;
+    } catch (e) {
+      this.logger.error(
+        `GET ${path} failed: ${e instanceof Error ? e.message : String(e)}`,
+      );
+      return null;
+    }
+  }
+
+  private async post<T>(path: string, body: unknown): Promise<T | null> {
+    try {
+      const res = await fetch(`${this.baseUrl}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
+      }
+      return res.json() as Promise<T>;
+    } catch (e) {
+      this.logger.error(
+        `POST ${path} failed: ${e instanceof Error ? e.message : String(e)}`,
+      );
+      return null;
+    }
+  }
+
+  findDeviceByCode(code: string): Promise<CatalogDevice | null> {
+    return this.get<CatalogDevice>(
+      `/api/v1/devices/code/${encodeURIComponent(code)}`,
+    );
+  }
+
+  findDeviceTypeByCode(code: string): Promise<CatalogDeviceType | null> {
+    return this.get<CatalogDeviceType>(
+      `/api/v1/device-types/code/${encodeURIComponent(code)}`,
+    );
+  }
+
+  findDeviceCategoryByCode(code: string): Promise<CatalogDeviceCategory | null> {
+    return this.get<CatalogDeviceCategory>(
+      `/api/v1/device-categories/code/${encodeURIComponent(code)}`,
+    );
+  }
+
+  createDeviceType(code: string, name: string): Promise<CatalogDeviceType | null> {
+    return this.post<CatalogDeviceType>('/api/v1/admin/device-types', {
+      code,
+      active: true,
+      translations: { en: { name }, ru: { name } },
+    });
+  }
+
+  createDeviceCategory(
+    code: string,
+    name: string,
+    deviceTypeId: number,
+  ): Promise<CatalogDeviceCategory | null> {
+    return this.post<CatalogDeviceCategory>('/api/v1/admin/device-categories', {
+      code,
+      deviceTypeId,
+      active: true,
+      translations: { en: { name }, ru: { name } },
+    });
+  }
+
+  createDevice(
+    code: string,
+    name: string,
+    deviceCategoryId: number,
+  ): Promise<CatalogDevice | null> {
+    return this.post<CatalogDevice>('/api/v1/admin/devices', {
+      code,
+      deviceCategoryId,
+      status: 'OFFLINE',
+      active: true,
+      translations: { en: { name }, ru: { name } },
+    });
+  }
+
+  createDeviceFunction(
+    code: string,
+    name: string,
+    deviceId: number,
+    functionType: 'READ' | 'WRITE' | 'READ_WRITE' = 'READ_WRITE',
+  ): Promise<{ id: number } | null> {
+    return this.post<{ id: number }>('/api/v1/admin/device-functions', {
+      code,
+      deviceId,
+      functionType,
+      active: true,
+      translations: { en: { name }, ru: { name } },
+    });
+  }
+}

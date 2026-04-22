@@ -85,6 +85,11 @@ export class ZigbeeDeviceLogRepository {
     });
   }
 
+  async deleteManyByIeeeAddr(ieeeAddr: string): Promise<number> {
+    const result = await this.model.deleteMany({ deviceIeeeAddr: ieeeAddr }).exec();
+    return result.deletedCount ?? 0;
+  }
+
   async findMany(
     query: ListZigbeeDeviceLogsQuery,
   ): Promise<{ items: ZigbeeDeviceLogEntry[]; total: number }> {

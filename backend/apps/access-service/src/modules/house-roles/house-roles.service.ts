@@ -1,6 +1,6 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { HousesService } from '../houses/houses.service';
+import type { HousesService } from '../houses/houses.service';
 import { ResourceNotFoundException, ForbiddenException, BadRequestException } from '../common/exceptions';
 import {
   AccessRightType,
@@ -10,11 +10,17 @@ import {
 } from '@prisma/client';
 import { SYSTEM_ROLE_NAMES, SYSTEM_ROLE_PRIORITIES, SYSTEM_ROLE_PERMISSIONS } from './constants';
 
+function housesServiceRef() {
+  const { HousesService } =
+    require('../houses/houses.service') as typeof import('../houses/houses.service');
+  return HousesService;
+}
+
 @Injectable()
 export class HouseRolesService {
   constructor(
     private readonly prisma: PrismaService,
-    @Inject(forwardRef(() => HousesService))
+    @Inject(forwardRef(housesServiceRef))
     private readonly housesService: HousesService,
   ) {}
 

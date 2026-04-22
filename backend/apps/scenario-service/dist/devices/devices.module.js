@@ -13,6 +13,7 @@ const physical_device_controller_1 = require("./physical-device.controller");
 const physical_device_service_1 = require("./physical-device.service");
 const physical_device_repository_1 = require("./physical-device.repository");
 const physical_device_mongo_1 = require("../mongo/schemas/physical-device.mongo");
+const device_catalog_module_1 = require("../device-catalog/device-catalog.module");
 let DevicesModule = class DevicesModule {
 };
 exports.DevicesModule = DevicesModule;
@@ -22,6 +23,7 @@ exports.DevicesModule = DevicesModule = __decorate([
             mongoose_1.MongooseModule.forFeature([
                 { name: physical_device_mongo_1.PHYSICAL_DEVICE_MODEL, schema: physical_device_mongo_1.PhysicalDeviceSchema },
             ]),
+            device_catalog_module_1.DeviceCatalogModule,
         ],
         controllers: [physical_device_controller_1.PhysicalDeviceController],
         providers: [physical_device_service_1.PhysicalDeviceService, physical_device_repository_1.PhysicalDeviceRepository],

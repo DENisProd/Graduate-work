@@ -15,8 +15,10 @@ const websockets_1 = require("@nestjs/websockets");
 const common_1 = require("@nestjs/common");
 const zigbee_schemas_1 = require("./schemas/zigbee.schemas");
 const zigbee_realtime_service_1 = require("./zigbee-realtime.service");
+const zigbee_service_1 = require("./zigbee.service");
 const zigbee_state_repository_1 = require("./zigbee-state.repository");
 const zigbee_device_repository_1 = require("./zigbee-device.repository");
+const PAIRING_ROOM = 'pairing';
 function roomForIeee(ieee) {
     return `zigbee:${ieee}`;
 }
@@ -38,17 +40,27 @@ let ZigbeeRealtimeGateway = ZigbeeRealtimeGateway_1 = class ZigbeeRealtimeGatewa
     realtime;
     states;
     devices;
+    zigbee;
     logger = new common_1.Logger(ZigbeeRealtimeGateway_1.name);
     sub;
+    pairingSub;
+    pairingStatusSub;
     server;
-    constructor(realtime, states, devices) {
+    constructor(realtime, states, devices, zigbee) {
         this.realtime = realtime;
         this.states = states;
         this.devices = devices;
+        this.zigbee = zigbee;
     }
     onModuleInit() {
         this.sub = this.realtime.stateUpdates$.subscribe((p) => {
             this.emitState(p);
+        });
+        this.pairingSub = this.zigbee.pairingEvents$.subscribe((event) => {
+            this.server?.to(PAIRING_ROOM).emit('zigbee:pairing:event', event);
+        });
+        this.pairingStatusSub = this.zigbee.pairingStatus$.subscribe((status) => {
+            this.server?.to(PAIRING_ROOM).emit('zigbee:pairing:status', status);
         });
     }
     afterInit() {
@@ -56,6 +68,8 @@ let ZigbeeRealtimeGateway = ZigbeeRealtimeGateway_1 = class ZigbeeRealtimeGatewa
     }
     onModuleDestroy() {
         this.sub?.unsubscribe();
+        this.pairingSub?.unsubscribe();
+        this.pairingStatusSub?.unsubscribe();
     }
     emitState(p) {
         if (!this.server)
@@ -75,6 +89,27 @@ let ZigbeeRealtimeGateway = ZigbeeRealtimeGateway_1 = class ZigbeeRealtimeGatewa
             payload: p.payload,
             stateId: p.stateId,
         };
+    }
+    async emitExistingDevicesToClient(client) {
+        try {
+            const { items } = await this.zigbee.listDevices({ page: 1, limit: 100 });
+            for (const dev of items) {
+                const fullyKnown = Boolean(dev.modelId) || (dev.capabilities?.length ?? 0) > 0;
+                client.emit('zigbee:pairing:event', {
+                    type: fullyKnown ? 'interview_done' : 'joined',
+                    ieeeAddr: dev.ieeeAddr,
+                    friendlyName: dev.friendlyName ?? dev.ieeeAddr,
+                    physicalDeviceId: dev.physicalDeviceId,
+                    model: dev.modelId ?? null,
+                    manufacturer: dev.manufacturerName ?? null,
+                    capabilities: dev.capabilities ?? [],
+                    supported: fullyKnown,
+                });
+            }
+        }
+        catch (e) {
+            this.logger.warn(`emitExistingDevicesToClient failed: ${e instanceof Error ? e.message : String(e)}`);
+        }
     }
     async resolveIeeeList(body) {
         const parsed = zigbee_schemas_1.zigbeeSocketSubscribeSchema.safeParse(body);
@@ -136,6 +171,56 @@ let ZigbeeRealtimeGateway = ZigbeeRealtimeGateway_1 = class ZigbeeRealtimeGatewa
         const snapshots = snapshotRows.filter((x) => x !== null);
         return { ok: true, subscribed: ieees.length, snapshots };
     }
+    async onCommand(_client, body) {
+        const parsed = zigbee_schemas_1.zigbeeSocketCommandSchema.safeParse(body);
+        if (!parsed.success) {
+            return {
+                ok: false,
+                error: parsed.error.flatten().formErrors.join('; ') || 'Невалидное тело',
+            };
+        }
+        const { deviceIeeeAddr, physicalDeviceId, payload } = parsed.data;
+        let ieeeAddr = deviceIeeeAddr;
+        if (!ieeeAddr && physicalDeviceId) {
+            const map = await this.devices.findIeeeAddrsByPhysicalIds([
+                physicalDeviceId,
+            ]);
+            ieeeAddr = map.get(physicalDeviceId);
+        }
+        if (!ieeeAddr) {
+            return { ok: false, error: 'Устройство не найдено' };
+        }
+        const result = await this.zigbee.sendCommand(ieeeAddr, payload);
+        return result;
+    }
+    async onPairingWatch(client) {
+        await client.join(PAIRING_ROOM);
+        void this.emitExistingDevicesToClient(client);
+        return { ok: true };
+    }
+    async onPairingUnwatch(client) {
+        await client.leave(PAIRING_ROOM);
+        return { ok: true };
+    }
+    async onPairingStart(client, body) {
+        const time = body !== null &&
+            typeof body === 'object' &&
+            typeof body.time === 'number'
+            ? Math.max(1, Math.min(254, Math.trunc(body.time)))
+            : 254;
+        await client.join(PAIRING_ROOM);
+        void this.emitExistingDevicesToClient(client);
+        const result = this.zigbee.permitJoin(true, time);
+        if (!result.ok)
+            return { ok: false, error: result.error };
+        return { ok: true, time };
+    }
+    async onPairingStop(client) {
+        const result = this.zigbee.permitJoin(false);
+        if (!result.ok)
+            return { ok: false, error: result.error };
+        return { ok: true };
+    }
     async onUnsubscribe(client, body) {
         const track = trackedIeees(client);
         const empty = body === null ||
@@ -174,6 +259,36 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], ZigbeeRealtimeGateway.prototype, "onSubscribe", null);
 __decorate([
+    (0, websockets_1.SubscribeMessage)('zigbee:command'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Function, Object]),
+    __metadata("design:returntype", Promise)
+], ZigbeeRealtimeGateway.prototype, "onCommand", null);
+__decorate([
+    (0, websockets_1.SubscribeMessage)('zigbee:pairing:watch'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Function]),
+    __metadata("design:returntype", Promise)
+], ZigbeeRealtimeGateway.prototype, "onPairingWatch", null);
+__decorate([
+    (0, websockets_1.SubscribeMessage)('zigbee:pairing:unwatch'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Function]),
+    __metadata("design:returntype", Promise)
+], ZigbeeRealtimeGateway.prototype, "onPairingUnwatch", null);
+__decorate([
+    (0, websockets_1.SubscribeMessage)('zigbee:pairing:start'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Function, Object]),
+    __metadata("design:returntype", Promise)
+], ZigbeeRealtimeGateway.prototype, "onPairingStart", null);
+__decorate([
+    (0, websockets_1.SubscribeMessage)('zigbee:pairing:stop'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Function]),
+    __metadata("design:returntype", Promise)
+], ZigbeeRealtimeGateway.prototype, "onPairingStop", null);
+__decorate([
     (0, websockets_1.SubscribeMessage)('zigbee:unsubscribe'),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Function, Object]),
@@ -189,6 +304,7 @@ exports.ZigbeeRealtimeGateway = ZigbeeRealtimeGateway = ZigbeeRealtimeGateway_1 
     }),
     __metadata("design:paramtypes", [zigbee_realtime_service_1.ZigbeeRealtimeService,
         zigbee_state_repository_1.ZigbeeStateRepository,
-        zigbee_device_repository_1.ZigbeeDeviceRepository])
+        zigbee_device_repository_1.ZigbeeDeviceRepository,
+        zigbee_service_1.ZigbeeService])
 ], ZigbeeRealtimeGateway);
 //# sourceMappingURL=zigbee-realtime.gateway.js.map

@@ -15,6 +15,30 @@ type ZigbeeUnsubscribeAck =
   | { ok: true; left: 'all' | number }
   | { ok: false; error: string };
 
+export type ZigbeeCommandAck =
+  | { ok: true; topic: string }
+  | { ok: false; error: string };
+
+export interface ZigbeePairingEvent {
+  type: 'joined' | 'interview_started' | 'interview_done' | 'interview_failed';
+  ieeeAddr: string;
+  friendlyName: string;
+  supported?: boolean;
+  definition?: Record<string, unknown> | null;
+  capabilities?: string[];
+  physicalDeviceId?: string | null;
+  model?: string | null;
+  manufacturer?: string | null;
+}
+
+export interface ZigbeePairingStatus {
+  permitJoin: boolean;
+  timeout?: number | null;
+}
+
+type PairingEventListener = (event: ZigbeePairingEvent) => void;
+type PairingStatusListener = (status: ZigbeePairingStatus) => void;
+
 function readAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
   const keys = ['keycloak-token', 'access_token', 'token', 'smart-home-token'];
@@ -59,6 +83,13 @@ class ZigbeeTelemetryManager {
   private currentMergedKey: string | null = null;
   private connectionListeners = new Set<() => void>();
   private applyTail: Promise<void> = Promise.resolve();
+  private pairingEventListeners = new Set<PairingEventListener>();
+  private pairingStatusListeners = new Set<PairingStatusListener>();
+  /** Tracks whether pairing mode is active so it can be restored after reconnect. */
+  private pairingActive = false;
+  private pairingTime = 254;
+  /** Tracks passive pairing-room subscription (modal open, permit_join not yet started). */
+  private watchingPairing = false;
 
   subscribeConnection(onStoreChange: () => void): () => void {
     this.connectionListeners.add(onStoreChange);
@@ -151,6 +182,16 @@ class ZigbeeTelemetryManager {
       this.currentMergedKey = null;
       this.emitConnectionChange();
       this.enqueueApplySubscription();
+      // Restore pairing room membership after reconnect.
+      // watchPairing rejoins the room; if pairing was active, also re-enable permit_join.
+      if (this.pairingActive) {
+        void this.emitAck<{ ok: boolean; error?: string }>(
+          'zigbee:pairing:start',
+          { time: this.pairingTime },
+        );
+      } else if (this.watchingPairing) {
+        void this.emitAck<{ ok: boolean }>('zigbee:pairing:watch', {});
+      }
     });
 
     socket.on('disconnect', () => {
@@ -165,9 +206,19 @@ class ZigbeeTelemetryManager {
     socket.on('zigbee:state', (wire: ZigbeeStateWire) => {
       this.dispatchState(wire);
     });
+
+    socket.on('zigbee:pairing:event', (event: ZigbeePairingEvent) => {
+      this.pairingEventListeners.forEach((cb) => cb(event));
+    });
+
+    socket.on('zigbee:pairing:status', (status: ZigbeePairingStatus) => {
+      this.pairingStatusListeners.forEach((cb) => cb(status));
+    });
   }
 
   private closeSocket() {
+    this.pairingActive = false;
+    this.watchingPairing = false;
     if (this.socket) {
       this.socket.removeAllListeners();
       this.socket.disconnect();
@@ -185,6 +236,64 @@ class ZigbeeTelemetryManager {
           console.warn('[ZigbeeTelemetry] apply subscription failed', e);
         }
       });
+  }
+
+  async sendCommand(
+    device: { deviceIeeeAddr?: string; physicalDeviceId?: string },
+    payload: Record<string, unknown>,
+  ): Promise<ZigbeeCommandAck> {
+    const result = await this.emitAck<ZigbeeCommandAck>('zigbee:command', {
+      ...device,
+      payload,
+    });
+    return result ?? { ok: false, error: 'No response from server (timeout)' };
+  }
+
+  /**
+   * Join the pairing room on the server WITHOUT enabling permit_join.
+   * Called when the pairing modal opens so device_announce/joined events
+   * are received even before the user clicks "Start".
+   */
+  async watchPairing(): Promise<void> {
+    this.watchingPairing = true;
+    await this.emitAck<{ ok: boolean }>('zigbee:pairing:watch', {});
+  }
+
+  /** Leave the pairing room without touching permit_join. */
+  async unwatchPairing(): Promise<void> {
+    this.watchingPairing = false;
+    await this.emitAck<{ ok: boolean }>('zigbee:pairing:unwatch', {});
+  }
+
+  async startPairing(time = 254): Promise<{ ok: boolean; error?: string }> {
+    const result = await this.emitAck<{ ok: boolean; error?: string }>(
+      'zigbee:pairing:start',
+      { time },
+    );
+    if (result?.ok) {
+      this.pairingActive = true;
+      this.pairingTime = time;
+    }
+    return result ?? { ok: false, error: 'No response from server (timeout)' };
+  }
+
+  async stopPairing(): Promise<{ ok: boolean; error?: string }> {
+    this.pairingActive = false;
+    const result = await this.emitAck<{ ok: boolean; error?: string }>(
+      'zigbee:pairing:stop',
+      {},
+    );
+    return result ?? { ok: false, error: 'No response from server (timeout)' };
+  }
+
+  onPairingEvent(listener: PairingEventListener): () => void {
+    this.pairingEventListeners.add(listener);
+    return () => this.pairingEventListeners.delete(listener);
+  }
+
+  onPairingStatus(listener: PairingStatusListener): () => void {
+    this.pairingStatusListeners.add(listener);
+    return () => this.pairingStatusListeners.delete(listener);
   }
 
   private emitAck<T>(event: string, data: unknown): Promise<T | undefined> {
