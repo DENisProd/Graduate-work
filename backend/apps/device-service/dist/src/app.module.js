@@ -18,6 +18,7 @@ const device_types_module_1 = require("./device-types/device-types.module");
 const device_categories_module_1 = require("./device-categories/device-categories.module");
 const device_functions_module_1 = require("./device-functions/device-functions.module");
 const device_function_actions_module_1 = require("./device-function-actions/device-function-actions.module");
+const integration_module_1 = require("./integration/integration.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -34,6 +35,7 @@ exports.AppModule = AppModule = __decorate([
             device_categories_module_1.DeviceCategoriesModule,
             device_functions_module_1.DeviceFunctionsModule,
             device_function_actions_module_1.DeviceFunctionActionsModule,
+            integration_module_1.IntegrationModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

@@ -24,6 +24,7 @@ const zigbee_device_log_repository_1 = require("./zigbee-device-log.repository")
 const zigbee_realtime_service_1 = require("./zigbee-realtime.service");
 const zigbee_realtime_gateway_1 = require("./zigbee-realtime.gateway");
 const device_data_module_1 = require("../device-data/device-data.module");
+const device_catalog_module_1 = require("../device-catalog/device-catalog.module");
 let ZigbeeModule = class ZigbeeModule {
 };
 exports.ZigbeeModule = ZigbeeModule;
@@ -31,6 +32,7 @@ exports.ZigbeeModule = ZigbeeModule = __decorate([
     (0, common_1.Module)({
         imports: [
             device_data_module_1.DeviceDataModule,
+            device_catalog_module_1.DeviceCatalogModule,
             mongoose_1.MongooseModule.forFeature([
                 { name: physical_device_mongo_1.PHYSICAL_DEVICE_MODEL, schema: physical_device_mongo_1.PhysicalDeviceSchema },
                 { name: device_network_link_mongo_1.DEVICE_NETWORK_LINK_MODEL, schema: device_network_link_mongo_1.DeviceNetworkLinkSchema },

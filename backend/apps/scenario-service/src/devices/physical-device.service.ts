@@ -44,11 +44,15 @@ export class PhysicalDeviceService {
       const sync = await this.catalogService.syncWithCatalog({
         model: existing.model,
         manufacturerName: existing.manufacturerName,
-        capabilities: existing.capabilities,
+        definition: existing.definition,
+        friendlyName: existing.friendlyName,
+        ieeeAddr: existing.protocolAddress,
       });
       if (sync.deviceTypeId) data = { ...data, deviceTypeId: sync.deviceTypeId };
-      if (sync.abstractDeviceId)
-        data = { ...data, deviceId: String(sync.abstractDeviceId) };
+      if (sync.deviceId) data = { ...data, deviceId: sync.deviceId };
+      if (sync.deviceCategoryId) {
+        data = { ...data, deviceCategoryId: sync.deviceCategoryId };
+      }
     }
 
     return this.repository.update(id, data);

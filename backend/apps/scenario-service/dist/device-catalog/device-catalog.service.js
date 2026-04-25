@@ -14,30 +14,6 @@ exports.DeviceCatalogService = void 0;
 const common_1 = require("@nestjs/common");
 const device_catalog_client_1 = require("./device-catalog.client");
 const ZIGBEE_TYPE_CODE = 'ZIGBEE';
-const READ_ONLY_CAPABILITIES = new Set([
-    'battery',
-    'battery_low',
-    'battery_voltage',
-    'co2',
-    'contact',
-    'current',
-    'energy',
-    'humidity',
-    'illuminance',
-    'illuminance_lux',
-    'linkquality',
-    'power',
-    'pressure',
-    'temperature',
-    'voltage',
-    'water_leak',
-    'smoke',
-    'gas',
-    'carbon_monoxide',
-    'tamper',
-    'vibration',
-    'action',
-]);
 function toUpperCode(s, maxLen = 50) {
     return s
         .toUpperCase()
@@ -54,8 +30,15 @@ function toLowerCode(s, maxLen = 50) {
         .replace(/^_+|_+$/g, '')
         .slice(0, maxLen);
 }
-function functionType(capability) {
-    return READ_ONLY_CAPABILITIES.has(capability) ? 'READ' : 'READ_WRITE';
+function titleFromCode(s) {
+    const normalized = toLowerCode(s, 120);
+    if (!normalized)
+        return 'Unknown';
+    return normalized
+        .split('_')
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ');
 }
 let DeviceCatalogService = DeviceCatalogService_1 = class DeviceCatalogService {
     client;
@@ -64,94 +47,128 @@ let DeviceCatalogService = DeviceCatalogService_1 = class DeviceCatalogService {
         this.client = client;
     }
     async syncWithCatalog(input) {
-        const model = input.model?.trim();
-        if (!model) {
-            return { deviceTypeId: null, abstractDeviceId: null };
+        const modelFromDefinition = typeof input.definition?.model === 'string'
+            ? input.definition.model
+            : null;
+        const model = modelFromDefinition?.trim() || input.model?.trim() || null;
+        if (!model && !input.ieeeAddr?.trim()) {
+            return { deviceTypeId: null, deviceId: null, deviceCategoryId: null };
         }
+        const categoryCode = this.buildCategoryCode({
+            manufacturerName: input.manufacturerName,
+            model,
+            definition: input.definition ?? null,
+        });
+        const deviceCode = this.buildDeviceCode({
+            manufacturerName: input.manufacturerName,
+            model,
+            definition: input.definition ?? null,
+            ieeeAddr: input.ieeeAddr,
+        });
+        if (!deviceCode) {
+            return { deviceTypeId: null, deviceId: null, deviceCategoryId: null };
+        }
+        const typeName = titleFromCode(ZIGBEE_TYPE_CODE);
+        const categoryName = titleFromCode(categoryCode);
+        const deviceName = this.pickDeviceName(input.friendlyName, model, deviceCode);
         try {
-            const existing = await this.client.findDeviceByCode(model);
-            if (existing) {
-                this.logger.debug(`Catalog hit: model=${model} → abstractDeviceId=${existing.id}`);
-                const typeId = await this.resolveTypeId(existing.category);
-                return { deviceTypeId: typeId, abstractDeviceId: existing.id };
+            const ensured = await this.client.ensureCatalog({
+                deviceTypeCode: ZIGBEE_TYPE_CODE,
+                deviceCategoryCode: categoryCode,
+                deviceCode,
+                translations: {
+                    deviceType: {
+                        en: { name: typeName },
+                        ru: { name: typeName },
+                    },
+                    deviceCategory: {
+                        en: { name: categoryName },
+                        ru: { name: categoryName },
+                    },
+                    device: {
+                        en: { name: deviceName },
+                        ru: { name: deviceName },
+                    },
+                },
+            });
+            if (!ensured) {
+                return { deviceTypeId: null, deviceId: null, deviceCategoryId: null };
             }
-            const deviceType = await this.findOrCreateDeviceType();
-            if (!deviceType) {
-                this.logger.warn('Cannot find/create ZIGBEE device type — skipping sync');
-                return { deviceTypeId: null, abstractDeviceId: null };
+            if (ensured.created.category || ensured.created.device) {
+                this.logger.log(`Catalog ensured for code=${deviceCode}: categoryCreated=${ensured.created.category}, deviceCreated=${ensured.created.device}`);
             }
-            const categoryCode = this.buildCategoryCode(input.manufacturerName);
-            const categoryName = input.manufacturerName?.trim()
-                ? `Zigbee ${input.manufacturerName.trim()}`
-                : 'Zigbee Generic';
-            const category = await this.findOrCreateCategory(categoryCode, categoryName, deviceType.id);
-            if (!category) {
-                this.logger.warn(`Cannot find/create category ${categoryCode} — returning typeId only`);
-                return { deviceTypeId: deviceType.id, abstractDeviceId: null };
-            }
-            const device = await this.client.createDevice(model, model, category.id);
-            if (!device) {
-                this.logger.warn(`Cannot create abstract device ${model} in catalog`);
-                return { deviceTypeId: deviceType.id, abstractDeviceId: null };
-            }
-            this.logger.log(`Created catalog entry: model=${model} type=${ZIGBEE_TYPE_CODE} category=${categoryCode} abstractDeviceId=${device.id}`);
-            await this.createFunctions(device.id, input.capabilities ?? []);
-            return { deviceTypeId: deviceType.id, abstractDeviceId: device.id };
+            const zigbeeType = await this.client.findDeviceTypeByCode(ZIGBEE_TYPE_CODE);
+            return {
+                deviceTypeId: zigbeeType?.id ?? null,
+                deviceId: ensured.deviceId,
+                deviceCategoryId: ensured.deviceCategoryId,
+            };
         }
         catch (e) {
-            this.logger.error(`syncWithCatalog failed for model=${model}: ${e instanceof Error ? e.message : String(e)}`);
-            return { deviceTypeId: null, abstractDeviceId: null };
+            this.logger.error(`syncWithCatalog failed for code=${deviceCode}: ${e instanceof Error ? e.message : String(e)}`);
+            return { deviceTypeId: null, deviceId: null, deviceCategoryId: null };
         }
     }
-    async resolveTypeId(category) {
-        if (!category)
-            return null;
-        if (category.deviceType?.id)
-            return category.deviceType.id;
-        if (category.code) {
-            const full = await this.client.findDeviceCategoryByCode(category.code);
-            if (full?.deviceType?.id)
-                return full.deviceType.id;
+    buildCategoryCode(input) {
+        const manufacturer = input.manufacturerName?.trim();
+        const model = input.model?.trim();
+        if (manufacturer && model) {
+            const code = toUpperCode(`${manufacturer}_${model}`);
+            if (code)
+                return `ZIGBEE_${code}`.slice(0, 50);
         }
-        const type = await this.client.findDeviceTypeByCode(ZIGBEE_TYPE_CODE);
-        return type?.id ?? null;
-    }
-    async findOrCreateDeviceType() {
-        const existing = await this.client.findDeviceTypeByCode(ZIGBEE_TYPE_CODE);
-        if (existing)
-            return existing;
-        const created = await this.client.createDeviceType(ZIGBEE_TYPE_CODE, 'Zigbee');
-        if (created)
-            return created;
-        return this.client.findDeviceTypeByCode(ZIGBEE_TYPE_CODE);
-    }
-    async findOrCreateCategory(code, name, deviceTypeId) {
-        const existing = await this.client.findDeviceCategoryByCode(code);
-        if (existing)
-            return existing;
-        const created = await this.client.createDeviceCategory(code, name, deviceTypeId);
-        if (created)
-            return created;
-        return this.client.findDeviceCategoryByCode(code);
-    }
-    buildCategoryCode(manufacturer) {
-        if (!manufacturer?.trim())
-            return 'ZIGBEE_GENERIC';
-        const suffix = toUpperCode(manufacturer.trim(), 40);
-        if (!suffix)
-            return 'ZIGBEE_GENERIC';
-        return `ZIGBEE_${suffix}`.slice(0, 50);
-    }
-    async createFunctions(deviceId, capabilities) {
-        for (const cap of capabilities) {
-            const code = toLowerCode(cap);
-            if (!code || !/^[a-z][a-z0-9_]*$/.test(code))
-                continue;
-            const result = await this.client.createDeviceFunction(code, cap, deviceId, functionType(cap));
-            if (!result) {
-                this.logger.debug(`Skipped function ${code} for device ${deviceId} (may already exist)`);
-            }
+        if (model) {
+            const code = toUpperCode(model);
+            if (code)
+                return `ZIGBEE_${code}`.slice(0, 50);
         }
+        const definitionModel = typeof input.definition?.model === 'string'
+            ? input.definition.model.trim()
+            : '';
+        if (definitionModel) {
+            const code = toUpperCode(definitionModel);
+            if (code)
+                return `ZIGBEE_${code}`.slice(0, 50);
+        }
+        return 'ZIGBEE_UNKNOWN';
+    }
+    buildDeviceCode(input) {
+        const manufacturer = input.manufacturerName?.trim();
+        const model = input.model?.trim();
+        if (manufacturer && model) {
+            const code = toUpperCode(`ZIGBEE_${manufacturer}_${model}`, 100);
+            if (code)
+                return code;
+        }
+        if (model) {
+            const code = toUpperCode(`ZIGBEE_${model}`, 100);
+            if (code)
+                return code;
+        }
+        const definitionModel = typeof input.definition?.model === 'string'
+            ? input.definition.model.trim()
+            : '';
+        if (definitionModel) {
+            const code = toUpperCode(`ZIGBEE_${definitionModel}`, 100);
+            if (code)
+                return code;
+        }
+        const ieee = input.ieeeAddr?.trim();
+        if (ieee) {
+            const code = toUpperCode(`ZIGBEE_${ieee}`, 100);
+            if (code)
+                return code;
+        }
+        return null;
+    }
+    pickDeviceName(friendlyName, model, fallbackCode) {
+        const fn = friendlyName?.trim();
+        if (fn)
+            return fn;
+        const md = model?.trim();
+        if (md)
+            return md;
+        return titleFromCode(fallbackCode ?? 'unknown');
     }
 };
 exports.DeviceCatalogService = DeviceCatalogService;

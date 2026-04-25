@@ -32,6 +32,7 @@ export class DevicesService {
             description: entity.deviceCategory.translations?.[0]?.description ?? null,
             deviceType: null,
             active: entity.deviceCategory.active,
+            isModerated: entity.deviceCategory.isModerated,
             createdAt: entity.deviceCategory.createdAt,
             updatedAt: entity.deviceCategory.updatedAt,
             translations:
@@ -49,6 +50,7 @@ export class DevicesService {
       serialNumber: entity.serialNumber,
       firmwareVersion: entity.firmwareVersion,
       active: entity.active,
+      isModerated: entity.isModerated,
       lastSeenAt: entity.lastSeenAt,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
@@ -188,6 +190,7 @@ export class DevicesService {
         serialNumber: request.serialNumber,
         firmwareVersion: request.firmwareVersion,
         active: request.active ?? true,
+        isModerated: request.isModerated ?? true,
         translations: {
           create: Object.entries(request.translations).map(([locale, t]) => ({
             locale,
@@ -217,6 +220,7 @@ export class DevicesService {
         serialNumber: request.serialNumber ?? undefined,
         firmwareVersion: request.firmwareVersion ?? undefined,
         active: request.active ?? undefined,
+        ...(request.isModerated !== undefined ? { isModerated: request.isModerated } : {}),
       },
       include: {
         translations: true,

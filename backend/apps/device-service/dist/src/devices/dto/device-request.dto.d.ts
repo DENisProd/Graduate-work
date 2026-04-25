@@ -10,5 +10,6 @@ export declare class DeviceRequest {
     serialNumber?: string | null;
     firmwareVersion?: string | null;
     active?: boolean;
+    isModerated?: boolean;
     translations: Record<string, DeviceTranslationRequest>;
 }

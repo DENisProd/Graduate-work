@@ -24,6 +24,8 @@ export const upsertZigbeeDeviceSchema = z.object({
   type: zigbeeDeviceTypeSchema.optional(),
   manufacturerName: z.string().max(255).optional(),
   modelId: z.string().max(255).optional(),
+  deviceId: z.coerce.number().int().min(1).optional(),
+  deviceCategoryId: z.coerce.number().int().min(1).optional(),
   friendlyName: z.string().max(255).optional(),
   lastSeen: z.coerce.date().optional(),
   definition: z.record(z.unknown()).optional(),

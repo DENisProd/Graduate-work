@@ -6,5 +6,6 @@ export declare class DeviceCategoryRequest {
     code: string;
     deviceTypeId: number;
     active?: boolean;
+    isModerated?: boolean;
     translations: Record<string, DeviceCategoryTranslationRequest>;
 }

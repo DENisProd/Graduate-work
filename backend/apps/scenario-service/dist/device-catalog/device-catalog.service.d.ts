@@ -1,7 +1,8 @@
 import { DeviceCatalogClient } from './device-catalog.client';
 export interface DeviceCatalogSyncResult {
     deviceTypeId: number | null;
-    abstractDeviceId: number | null;
+    deviceId: number | null;
+    deviceCategoryId: number | null;
 }
 export declare class DeviceCatalogService {
     private readonly client;
@@ -10,11 +11,11 @@ export declare class DeviceCatalogService {
     syncWithCatalog(input: {
         model?: string | null;
         manufacturerName?: string | null;
-        capabilities?: string[];
+        definition?: Record<string, unknown> | null;
+        friendlyName?: string | null;
+        ieeeAddr?: string | null;
     }): Promise<DeviceCatalogSyncResult>;
-    private resolveTypeId;
-    private findOrCreateDeviceType;
-    private findOrCreateCategory;
     private buildCategoryCode;
-    private createFunctions;
+    private buildDeviceCode;
+    private pickDeviceName;
 }

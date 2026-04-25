@@ -8,7 +8,20 @@ const app_module_1 = require("./app.module");
 async function bootstrap() {
     (0, dotenv_1.config)({ path: (0, path_1.join)(process.cwd(), '../../.env') });
     const port = Number(process.env.DEVICE_SERVICE_PORT ?? process.env.PORT ?? 3000);
+    console.log("PORT", port);
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    app.enableCors({
+        origin: ['http://localhost:3000'],
+        methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+        allowedHeaders: [
+            'Content-Type',
+            'Authorization',
+            'X-Requested-With',
+            'X-User-Id',
+            'Accept',
+        ],
+        credentials: true,
+    });
     const config = new swagger_1.DocumentBuilder()
         .setTitle('Device Service API')
         .setDescription([

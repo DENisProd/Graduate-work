@@ -16,6 +16,33 @@ export interface CatalogDevice {
     name: string | null;
     category: CatalogDeviceCategory | null;
 }
+export interface EnsureCatalogPayload {
+    deviceTypeCode: string;
+    deviceCategoryCode: string;
+    deviceCode: string;
+    translations?: {
+        deviceType?: Record<string, {
+            name: string;
+            description?: string | null;
+        }>;
+        deviceCategory?: Record<string, {
+            name: string;
+            description?: string | null;
+        }>;
+        device?: Record<string, {
+            name: string;
+            description?: string | null;
+        }>;
+    };
+}
+export interface EnsureCatalogResult {
+    deviceId: number;
+    deviceCategoryId: number;
+    created: {
+        category: boolean;
+        device: boolean;
+    };
+}
 export declare class DeviceCatalogClient {
     private readonly logger;
     private readonly baseUrl;
@@ -31,4 +58,5 @@ export declare class DeviceCatalogClient {
     createDeviceFunction(code: string, name: string, deviceId: number, functionType?: 'READ' | 'WRITE' | 'READ_WRITE'): Promise<{
         id: number;
     } | null>;
+    ensureCatalog(payload: EnsureCatalogPayload): Promise<EnsureCatalogResult | null>;
 }

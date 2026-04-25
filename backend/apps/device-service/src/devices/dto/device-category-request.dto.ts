@@ -42,6 +42,11 @@ export class DeviceCategoryRequest {
   @IsBoolean()
   active?: boolean = true;
 
+  @ApiPropertyOptional({ description: 'По умолчанию true (проверенная вручную запись)' })
+  @IsOptional()
+  @IsBoolean()
+  isModerated?: boolean = true;
+
   @ApiProperty({
     description: 'Переводы по коду локали',
     example: { en: { name: 'Temperature sensor' } },

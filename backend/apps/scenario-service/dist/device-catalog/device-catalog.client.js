@@ -93,6 +93,9 @@ let DeviceCatalogClient = DeviceCatalogClient_1 = class DeviceCatalogClient {
             translations: { en: { name }, ru: { name } },
         });
     }
+    ensureCatalog(payload) {
+        return this.post('/api/v1/integration/catalog/ensure', payload);
+    }
 };
 exports.DeviceCatalogClient = DeviceCatalogClient;
 exports.DeviceCatalogClient = DeviceCatalogClient = DeviceCatalogClient_1 = __decorate([

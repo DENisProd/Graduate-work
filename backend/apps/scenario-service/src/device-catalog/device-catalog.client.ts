@@ -21,6 +21,32 @@ export interface CatalogDevice {
   category: CatalogDeviceCategory | null;
 }
 
+export interface EnsureCatalogPayload {
+  deviceTypeCode: string;
+  deviceCategoryCode: string;
+  deviceCode: string;
+  translations?: {
+    deviceType?: Record<
+      string,
+      { name: string; description?: string | null }
+    >;
+    deviceCategory?: Record<
+      string,
+      { name: string; description?: string | null }
+    >;
+    device?: Record<string, { name: string; description?: string | null }>;
+  };
+}
+
+export interface EnsureCatalogResult {
+  deviceId: number;
+  deviceCategoryId: number;
+  created: {
+    category: boolean;
+    device: boolean;
+  };
+}
+
 @Injectable()
 export class DeviceCatalogClient {
   private readonly logger = new Logger(DeviceCatalogClient.name);
@@ -132,5 +158,14 @@ export class DeviceCatalogClient {
       active: true,
       translations: { en: { name }, ru: { name } },
     });
+  }
+
+  ensureCatalog(
+    payload: EnsureCatalogPayload,
+  ): Promise<EnsureCatalogResult | null> {
+    return this.post<EnsureCatalogResult>(
+      '/api/v1/integration/catalog/ensure',
+      payload,
+    );
   }
 }

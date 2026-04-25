@@ -19,6 +19,7 @@ class PhysicalDeviceResponseDto {
     houseId;
     roomId;
     deviceId;
+    deviceCategoryId;
     firmwareVersion;
     ipAddress;
     macAddress;
@@ -55,6 +56,10 @@ __decorate([
     (0, swagger_1.ApiProperty)({ required: false, nullable: true }),
     __metadata("design:type", Object)
 ], PhysicalDeviceResponseDto.prototype, "deviceId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ required: false, nullable: true }),
+    __metadata("design:type", Object)
+], PhysicalDeviceResponseDto.prototype, "deviceCategoryId", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({ required: false, nullable: true }),
     __metadata("design:type", Object)

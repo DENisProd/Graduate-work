@@ -18,8 +18,11 @@ export class PhysicalDeviceModel {
   @Prop({ type: String, default: null })
   roomId?: string | null;
 
-  @Prop({ type: String, default: null })
-  deviceId?: string | null;
+  @Prop({ type: Number, default: null })
+  deviceId?: number | null;
+
+  @Prop({ type: Number, default: null })
+  deviceCategoryId?: number | null;
 
   // Zigbee identity (flattened — no nested object)
   @Prop({ type: String, default: null })

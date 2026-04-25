@@ -6,7 +6,8 @@ export declare class PhysicalDeviceModel {
     description?: string | null;
     houseId?: string | null;
     roomId?: string | null;
-    deviceId?: string | null;
+    deviceId?: number | null;
+    deviceCategoryId?: number | null;
     protocolAddress?: string | null;
     networkAddress?: number | null;
     type?: ZigbeeDeviceType;
@@ -67,7 +68,16 @@ export declare const PhysicalDeviceSchema: import("mongoose").Schema<PhysicalDev
     }, "id"> & {
         id: string;
     }> | undefined;
-    deviceId?: import("mongoose").SchemaDefinitionProperty<string | null | undefined, PhysicalDeviceModel, import("mongoose").Document<unknown, {}, PhysicalDeviceModel, {
+    deviceId?: import("mongoose").SchemaDefinitionProperty<number | null | undefined, PhysicalDeviceModel, import("mongoose").Document<unknown, {}, PhysicalDeviceModel, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<PhysicalDeviceModel & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    deviceCategoryId?: import("mongoose").SchemaDefinitionProperty<number | null | undefined, PhysicalDeviceModel, import("mongoose").Document<unknown, {}, PhysicalDeviceModel, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<PhysicalDeviceModel & {
         _id: import("mongoose").Types.ObjectId;

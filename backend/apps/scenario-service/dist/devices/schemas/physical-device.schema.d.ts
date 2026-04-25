@@ -4,7 +4,8 @@ export declare const createPhysicalDeviceSchema: z.ZodObject<{
     description: z.ZodOptional<z.ZodString>;
     deviceTypeId: z.ZodOptional<z.ZodNumber>;
     houseId: z.ZodString;
-    deviceId: z.ZodOptional<z.ZodString>;
+    deviceId: z.ZodOptional<z.ZodNumber>;
+    deviceCategoryId: z.ZodOptional<z.ZodNumber>;
     roomId: z.ZodOptional<z.ZodString>;
     firmwareVersion: z.ZodOptional<z.ZodString>;
     ipAddress: z.ZodUnion<[z.ZodOptional<z.ZodString>, z.ZodLiteral<"">]>;
@@ -15,7 +16,8 @@ export declare const createPhysicalDeviceSchema: z.ZodObject<{
     houseId: string;
     description?: string | undefined;
     deviceTypeId?: number | undefined;
-    deviceId?: string | undefined;
+    deviceId?: number | undefined;
+    deviceCategoryId?: number | undefined;
     roomId?: string | undefined;
     firmwareVersion?: string | undefined;
     ipAddress?: string | undefined;
@@ -26,7 +28,8 @@ export declare const createPhysicalDeviceSchema: z.ZodObject<{
     houseId: string;
     description?: string | undefined;
     deviceTypeId?: number | undefined;
-    deviceId?: string | undefined;
+    deviceId?: number | undefined;
+    deviceCategoryId?: number | undefined;
     roomId?: string | undefined;
     firmwareVersion?: string | undefined;
     ipAddress?: string | undefined;
@@ -39,7 +42,8 @@ export declare const updatePhysicalDeviceSchema: z.ZodObject<{
     description: z.ZodOptional<z.ZodOptional<z.ZodString>>;
     deviceTypeId: z.ZodOptional<z.ZodOptional<z.ZodNumber>>;
     houseId: z.ZodOptional<z.ZodString>;
-    deviceId: z.ZodOptional<z.ZodOptional<z.ZodString>>;
+    deviceId: z.ZodOptional<z.ZodOptional<z.ZodNumber>>;
+    deviceCategoryId: z.ZodOptional<z.ZodOptional<z.ZodNumber>>;
     roomId: z.ZodOptional<z.ZodOptional<z.ZodString>>;
     firmwareVersion: z.ZodOptional<z.ZodOptional<z.ZodString>>;
     ipAddress: z.ZodOptional<z.ZodUnion<[z.ZodOptional<z.ZodString>, z.ZodLiteral<"">]>>;
@@ -50,7 +54,8 @@ export declare const updatePhysicalDeviceSchema: z.ZodObject<{
     description?: string | undefined;
     deviceTypeId?: number | undefined;
     houseId?: string | undefined;
-    deviceId?: string | undefined;
+    deviceId?: number | undefined;
+    deviceCategoryId?: number | undefined;
     roomId?: string | undefined;
     firmwareVersion?: string | undefined;
     ipAddress?: string | undefined;
@@ -61,7 +66,8 @@ export declare const updatePhysicalDeviceSchema: z.ZodObject<{
     description?: string | undefined;
     deviceTypeId?: number | undefined;
     houseId?: string | undefined;
-    deviceId?: string | undefined;
+    deviceId?: number | undefined;
+    deviceCategoryId?: number | undefined;
     roomId?: string | undefined;
     firmwareVersion?: string | undefined;
     ipAddress?: string | undefined;

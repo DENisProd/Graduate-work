@@ -26,6 +26,8 @@ exports.upsertZigbeeDeviceSchema = zod_1.z.object({
     type: exports.zigbeeDeviceTypeSchema.optional(),
     manufacturerName: zod_1.z.string().max(255).optional(),
     modelId: zod_1.z.string().max(255).optional(),
+    deviceId: zod_1.z.coerce.number().int().min(1).optional(),
+    deviceCategoryId: zod_1.z.coerce.number().int().min(1).optional(),
     friendlyName: zod_1.z.string().max(255).optional(),
     lastSeen: zod_1.z.coerce.date().optional(),
     definition: zod_1.z.record(zod_1.z.unknown()).optional(),

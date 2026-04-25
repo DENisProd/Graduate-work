@@ -27,10 +27,12 @@ import { ZigbeeDeviceLogRepository } from './zigbee-device-log.repository';
 import { ZigbeeRealtimeService } from './zigbee-realtime.service';
 import { ZigbeeRealtimeGateway } from './zigbee-realtime.gateway';
 import { DeviceDataModule } from '../device-data/device-data.module';
+import { DeviceCatalogModule } from '../device-catalog/device-catalog.module';
 
 @Module({
   imports: [
     DeviceDataModule,
+    DeviceCatalogModule,
     MongooseModule.forFeature([
       { name: PHYSICAL_DEVICE_MODEL, schema: PhysicalDeviceSchema },
       { name: DEVICE_NETWORK_LINK_MODEL, schema: DeviceNetworkLinkSchema },

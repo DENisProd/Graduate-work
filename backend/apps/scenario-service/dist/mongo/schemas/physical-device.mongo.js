@@ -19,6 +19,7 @@ let PhysicalDeviceModel = class PhysicalDeviceModel {
     houseId;
     roomId;
     deviceId;
+    deviceCategoryId;
     protocolAddress;
     networkAddress;
     type;
@@ -51,9 +52,13 @@ __decorate([
     __metadata("design:type", Object)
 ], PhysicalDeviceModel.prototype, "roomId", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ type: String, default: null }),
+    (0, mongoose_1.Prop)({ type: Number, default: null }),
     __metadata("design:type", Object)
 ], PhysicalDeviceModel.prototype, "deviceId", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Number, default: null }),
+    __metadata("design:type", Object)
+], PhysicalDeviceModel.prototype, "deviceCategoryId", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ type: String, default: null }),
     __metadata("design:type", Object)

@@ -5,7 +5,8 @@ export declare class PhysicalDeviceResponseDto {
     deviceTypeId: number;
     houseId: string;
     roomId?: string | null;
-    deviceId?: string | null;
+    deviceId?: number | null;
+    deviceCategoryId?: number | null;
     firmwareVersion?: string | null;
     ipAddress?: string | null;
     macAddress?: string | null;

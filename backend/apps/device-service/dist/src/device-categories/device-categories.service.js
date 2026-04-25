@@ -48,6 +48,7 @@ let DeviceCategoriesService = class DeviceCategoriesService {
             description: entity.translations?.[0]?.description ?? null,
             deviceType: this.toDeviceType(entity.deviceType),
             active: entity.active,
+            isModerated: entity.isModerated,
             createdAt: entity.createdAt,
             updatedAt: entity.updatedAt,
             translations,
@@ -134,6 +135,7 @@ let DeviceCategoriesService = class DeviceCategoriesService {
                 code: request.code,
                 deviceType: { connect: { id: request.deviceTypeId } },
                 active: request.active ?? true,
+                isModerated: request.isModerated ?? true,
                 translations: {
                     create: Object.entries(request.translations).map(([locale, t]) => ({
                         locale,
@@ -154,6 +156,7 @@ let DeviceCategoriesService = class DeviceCategoriesService {
                 code: request.code,
                 deviceType: { connect: { id: request.deviceTypeId } },
                 active: request.active ?? undefined,
+                ...(request.isModerated !== undefined ? { isModerated: request.isModerated } : {}),
             },
             include: { translations: true, deviceType: { include: { translations: true } } },
         });

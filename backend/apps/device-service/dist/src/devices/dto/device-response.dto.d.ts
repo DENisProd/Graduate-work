@@ -22,6 +22,7 @@ export interface DeviceCategoryResponse {
     description?: string | null;
     deviceType?: DeviceTypeResponse | null;
     active: boolean;
+    isModerated: boolean;
     createdAt: Date;
     updatedAt: Date | null;
     translations?: Record<string, TranslationResponse> | null;
@@ -67,6 +68,7 @@ export interface DeviceResponse {
     serialNumber?: string | null;
     firmwareVersion?: string | null;
     active: boolean;
+    isModerated: boolean;
     lastSeenAt: Date | null;
     createdAt: Date;
     updatedAt: Date | null;

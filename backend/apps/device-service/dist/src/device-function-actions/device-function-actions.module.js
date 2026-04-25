@@ -10,12 +10,13 @@ exports.DeviceFunctionActionsModule = void 0;
 const common_1 = require("@nestjs/common");
 const device_function_actions_service_1 = require("./device-function-actions.service");
 const device_function_actions_controller_1 = require("./device-function-actions.controller");
+const admin_device_function_actions_controller_1 = require("../admin/admin-device-function-actions.controller");
 let DeviceFunctionActionsModule = class DeviceFunctionActionsModule {
 };
 exports.DeviceFunctionActionsModule = DeviceFunctionActionsModule;
 exports.DeviceFunctionActionsModule = DeviceFunctionActionsModule = __decorate([
     (0, common_1.Module)({
-        controllers: [device_function_actions_controller_1.DeviceFunctionActionsController],
+        controllers: [device_function_actions_controller_1.DeviceFunctionActionsController, admin_device_function_actions_controller_1.AdminDeviceFunctionActionsController],
         providers: [device_function_actions_service_1.DeviceFunctionActionsService],
     })
 ], DeviceFunctionActionsModule);

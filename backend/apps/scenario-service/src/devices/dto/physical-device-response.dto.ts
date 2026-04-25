@@ -20,7 +20,10 @@ export class PhysicalDeviceResponseDto {
   roomId?: string | null;
 
   @ApiProperty({ required: false, nullable: true })
-  deviceId?: string | null;
+  deviceId?: number | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  deviceCategoryId?: number | null;
 
   @ApiProperty({ required: false, nullable: true })
   firmwareVersion?: string | null;

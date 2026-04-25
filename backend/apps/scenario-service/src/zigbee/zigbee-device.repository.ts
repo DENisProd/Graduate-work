@@ -23,6 +23,8 @@ export function canonicalZigbeeIeeeAddr(ieee: string): string {
 export type ZigbeeDevice = {
   id: string;
   physicalDeviceId: string;
+  deviceId?: number | null;
+  deviceCategoryId?: number | null;
   ieeeAddr: string;
   networkAddress?: number | null;
   type?: PhysicalDeviceModel['type'];
@@ -49,6 +51,8 @@ export class ZigbeeDeviceRepository {
     return {
       id: _id.toHexString(),
       physicalDeviceId: _id.toHexString(),
+      deviceId: doc.deviceId ?? null,
+      deviceCategoryId: doc.deviceCategoryId ?? null,
       ieeeAddr: protocolAddress,
       networkAddress: doc.networkAddress ?? null,
       type: doc.type,
@@ -88,6 +92,10 @@ export class ZigbeeDeviceRepository {
               ? { manufacturerName: input.manufacturerName ?? null }
               : {}),
             ...('modelId' in input ? { model: input.modelId ?? null } : {}),
+            ...('deviceId' in input ? { deviceId: input.deviceId ?? null } : {}),
+            ...('deviceCategoryId' in input
+              ? { deviceCategoryId: input.deviceCategoryId ?? null }
+              : {}),
             ...('friendlyName' in input
               ? { friendlyName: input.friendlyName ?? null }
               : {}),

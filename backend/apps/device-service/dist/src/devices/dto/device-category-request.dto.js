@@ -31,6 +31,7 @@ __decorate([
 class DeviceCategoryRequest {
     constructor() {
         this.active = true;
+        this.isModerated = true;
     }
 }
 exports.DeviceCategoryRequest = DeviceCategoryRequest;
@@ -54,6 +55,12 @@ __decorate([
     (0, class_validator_1.IsBoolean)(),
     __metadata("design:type", Boolean)
 ], DeviceCategoryRequest.prototype, "active", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'По умолчанию true (проверенная вручную запись)' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], DeviceCategoryRequest.prototype, "isModerated", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({
         description: 'Переводы по коду локали',

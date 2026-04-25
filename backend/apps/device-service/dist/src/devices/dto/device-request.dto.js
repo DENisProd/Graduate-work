@@ -33,6 +33,7 @@ class DeviceRequest {
     constructor() {
         this.status = device_status_enum_1.DeviceStatus.OFFLINE;
         this.active = true;
+        this.isModerated = true;
     }
 }
 exports.DeviceRequest = DeviceRequest;
@@ -74,6 +75,12 @@ __decorate([
     (0, class_validator_1.IsBoolean)(),
     __metadata("design:type", Boolean)
 ], DeviceRequest.prototype, "active", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'По умолчанию true (проверенная вручную запись)' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], DeviceRequest.prototype, "isModerated", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({
         description: 'Переводы name/description по коду локали (например en, ru). Значения — объекты с полями name и опционально description.',

@@ -1,6 +1,7 @@
-import { forwardRef, Inject, Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { Subject } from 'rxjs';
 import { DeviceDataService } from '../device-data/device-data.service';
+import { DeviceCatalogService } from '../device-catalog/device-catalog.service';
 import { ZigbeeDeviceLogSource } from '../mongo/schemas/zigbee-device-log.mongo';
 import { ZigbeeDeviceLogRepository } from './zigbee-device-log.repository';
 import {
@@ -46,6 +47,7 @@ const DELETED_DEVICE_TTL_MS = 120_000; // 2 минуты
 
 @Injectable()
 export class ZigbeeService {
+  private readonly logger = new Logger(ZigbeeService.name);
   readonly pairingEvents$ = new Subject<ZigbeePairingEvent>();
   readonly pairingStatus$ = new Subject<ZigbeePairingStatus>();
 
@@ -62,6 +64,7 @@ export class ZigbeeService {
     private readonly deviceLogs: ZigbeeDeviceLogRepository,
     private readonly realtime: ZigbeeRealtimeService,
     private readonly deviceData: DeviceDataService,
+    private readonly catalogService: DeviceCatalogService,
     @Inject(forwardRef(() => ZigbeeMqttService))
     private readonly mqtt: ZigbeeMqttService,
   ) {}
@@ -80,8 +83,45 @@ export class ZigbeeService {
     return true;
   }
 
-  upsertDevice(input: UpsertZigbeeDeviceInput) {
-    return this.devices.upsertByIeeeAddr(input);
+  async upsertDevice(input: UpsertZigbeeDeviceInput) {
+    const device = await this.devices.upsertByIeeeAddr(input);
+    await this.enrichDeviceCatalogLinks(device, input);
+    return this.devices.findByIeeeAddr(device.ieeeAddr).then((v) => v ?? device);
+  }
+
+  private async enrichDeviceCatalogLinks(
+    device: ZigbeeDevice,
+    input: UpsertZigbeeDeviceInput,
+  ): Promise<void> {
+    try {
+      const synced = await this.catalogService.syncWithCatalog({
+        manufacturerName: input.manufacturerName ?? device.manufacturerName,
+        model: input.modelId ?? device.modelId,
+        definition: input.definition ?? device.definition,
+        friendlyName: input.friendlyName ?? device.friendlyName,
+        ieeeAddr: input.ieeeAddr ?? device.ieeeAddr,
+      });
+
+      if (!synced.deviceId || !synced.deviceCategoryId) return;
+      if (
+        device.deviceId === synced.deviceId &&
+        device.deviceCategoryId === synced.deviceCategoryId
+      ) {
+        return;
+      }
+
+      await this.devices.upsertByIeeeAddr({
+        ieeeAddr: device.ieeeAddr,
+        deviceId: synced.deviceId,
+        deviceCategoryId: synced.deviceCategoryId,
+      });
+    } catch (error) {
+      // Catalog links are best-effort and must not break Zigbee ingestion.
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(
+        `catalog-link-enrich failed for ${device.ieeeAddr}: ${message}`,
+      );
+    }
   }
 
   async createState(
@@ -356,7 +396,7 @@ export class ZigbeeService {
 
       const capabilities = capabilitiesFromBridgeDefinition(definition);
 
-      await this.devices.upsertByIeeeAddr({
+      await this.upsertDevice({
         ieeeAddr: ieeeRaw,
         friendlyName,
         type,
@@ -458,7 +498,7 @@ export class ZigbeeService {
 
     let device = await this.devices.findByIeeeAddr(ieeeAddr);
     if (!device) {
-      await this.devices.upsertByIeeeAddr({
+      await this.upsertDevice({
         ieeeAddr,
         ...(ieeeAddrFromZ2mTopicName(topicSegment) === undefined &&
         topicSegment.trim().length > 0

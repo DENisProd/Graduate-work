@@ -11,11 +11,13 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var ZigbeeService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ZigbeeService = void 0;
 const common_1 = require("@nestjs/common");
 const rxjs_1 = require("rxjs");
 const device_data_service_1 = require("../device-data/device-data.service");
+const device_catalog_service_1 = require("../device-catalog/device-catalog.service");
 const zigbee_device_log_mongo_1 = require("../mongo/schemas/zigbee-device-log.mongo");
 const zigbee_device_log_repository_1 = require("./zigbee-device-log.repository");
 const zigbee_device_repository_1 = require("./zigbee-device.repository");
@@ -26,24 +28,27 @@ const zigbee_state_repository_1 = require("./zigbee-state.repository");
 const normalize_zigbee_payload_1 = require("./normalize-zigbee-payload");
 const zigbee_schemas_1 = require("./schemas/zigbee.schemas");
 const DELETED_DEVICE_TTL_MS = 120_000;
-let ZigbeeService = class ZigbeeService {
+let ZigbeeService = ZigbeeService_1 = class ZigbeeService {
     devices;
     states;
     links;
     deviceLogs;
     realtime;
     deviceData;
+    catalogService;
     mqtt;
+    logger = new common_1.Logger(ZigbeeService_1.name);
     pairingEvents$ = new rxjs_1.Subject();
     pairingStatus$ = new rxjs_1.Subject();
     recentlyDeleted = new Map();
-    constructor(devices, states, links, deviceLogs, realtime, deviceData, mqtt) {
+    constructor(devices, states, links, deviceLogs, realtime, deviceData, catalogService, mqtt) {
         this.devices = devices;
         this.states = states;
         this.links = links;
         this.deviceLogs = deviceLogs;
         this.realtime = realtime;
         this.deviceData = deviceData;
+        this.catalogService = catalogService;
         this.mqtt = mqtt;
     }
     markDeleted(canonical) {
@@ -59,8 +64,36 @@ let ZigbeeService = class ZigbeeService {
         }
         return true;
     }
-    upsertDevice(input) {
-        return this.devices.upsertByIeeeAddr(input);
+    async upsertDevice(input) {
+        const device = await this.devices.upsertByIeeeAddr(input);
+        await this.enrichDeviceCatalogLinks(device, input);
+        return this.devices.findByIeeeAddr(device.ieeeAddr).then((v) => v ?? device);
+    }
+    async enrichDeviceCatalogLinks(device, input) {
+        try {
+            const synced = await this.catalogService.syncWithCatalog({
+                manufacturerName: input.manufacturerName ?? device.manufacturerName,
+                model: input.modelId ?? device.modelId,
+                definition: input.definition ?? device.definition,
+                friendlyName: input.friendlyName ?? device.friendlyName,
+                ieeeAddr: input.ieeeAddr ?? device.ieeeAddr,
+            });
+            if (!synced.deviceId || !synced.deviceCategoryId)
+                return;
+            if (device.deviceId === synced.deviceId &&
+                device.deviceCategoryId === synced.deviceCategoryId) {
+                return;
+            }
+            await this.devices.upsertByIeeeAddr({
+                ieeeAddr: device.ieeeAddr,
+                deviceId: synced.deviceId,
+                deviceCategoryId: synced.deviceCategoryId,
+            });
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            this.logger.warn(`catalog-link-enrich failed for ${device.ieeeAddr}: ${message}`);
+        }
     }
     async createState(input, options) {
         const normalized = (0, normalize_zigbee_payload_1.normalizeZigbeePayload)(input.payload);
@@ -283,7 +316,7 @@ let ZigbeeService = class ZigbeeService {
                 lastSeen = new Date(ls);
             }
             const capabilities = capabilitiesFromBridgeDefinition(definition);
-            await this.devices.upsertByIeeeAddr({
+            await this.upsertDevice({
                 ieeeAddr: ieeeRaw,
                 friendlyName,
                 type,
@@ -345,7 +378,7 @@ let ZigbeeService = class ZigbeeService {
             return;
         let device = await this.devices.findByIeeeAddr(ieeeAddr);
         if (!device) {
-            await this.devices.upsertByIeeeAddr({
+            await this.upsertDevice({
                 ieeeAddr,
                 ...(ieeeAddrFromZ2mTopicName(topicSegment) === undefined &&
                     topicSegment.trim().length > 0
@@ -363,15 +396,16 @@ let ZigbeeService = class ZigbeeService {
     }
 };
 exports.ZigbeeService = ZigbeeService;
-exports.ZigbeeService = ZigbeeService = __decorate([
+exports.ZigbeeService = ZigbeeService = ZigbeeService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __param(6, (0, common_1.Inject)((0, common_1.forwardRef)(() => zigbee_mqtt_service_1.ZigbeeMqttService))),
+    __param(7, (0, common_1.Inject)((0, common_1.forwardRef)(() => zigbee_mqtt_service_1.ZigbeeMqttService))),
     __metadata("design:paramtypes", [zigbee_device_repository_1.ZigbeeDeviceRepository,
         zigbee_state_repository_1.ZigbeeStateRepository,
         zigbee_link_repository_1.ZigbeeLinkRepository,
         zigbee_device_log_repository_1.ZigbeeDeviceLogRepository,
         zigbee_realtime_service_1.ZigbeeRealtimeService,
         device_data_service_1.DeviceDataService,
+        device_catalog_service_1.DeviceCatalogService,
         zigbee_mqtt_service_1.ZigbeeMqttService])
 ], ZigbeeService);
 function collectExposedProperties(node, out) {

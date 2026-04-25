@@ -1,5 +1,6 @@
 import { Subject } from 'rxjs';
 import { DeviceDataService } from '../device-data/device-data.service';
+import { DeviceCatalogService } from '../device-catalog/device-catalog.service';
 import { ZigbeeDeviceLogSource } from '../mongo/schemas/zigbee-device-log.mongo';
 import { ZigbeeDeviceLogRepository } from './zigbee-device-log.repository';
 import { ZigbeeDevice, ZigbeeDeviceRepository } from './zigbee-device.repository';
@@ -30,14 +31,17 @@ export declare class ZigbeeService {
     private readonly deviceLogs;
     private readonly realtime;
     private readonly deviceData;
+    private readonly catalogService;
     private readonly mqtt;
+    private readonly logger;
     readonly pairingEvents$: Subject<ZigbeePairingEvent>;
     readonly pairingStatus$: Subject<ZigbeePairingStatus>;
     private readonly recentlyDeleted;
-    constructor(devices: ZigbeeDeviceRepository, states: ZigbeeStateRepository, links: ZigbeeLinkRepository, deviceLogs: ZigbeeDeviceLogRepository, realtime: ZigbeeRealtimeService, deviceData: DeviceDataService, mqtt: ZigbeeMqttService);
+    constructor(devices: ZigbeeDeviceRepository, states: ZigbeeStateRepository, links: ZigbeeLinkRepository, deviceLogs: ZigbeeDeviceLogRepository, realtime: ZigbeeRealtimeService, deviceData: DeviceDataService, catalogService: DeviceCatalogService, mqtt: ZigbeeMqttService);
     private markDeleted;
     private isRecentlyDeleted;
     upsertDevice(input: UpsertZigbeeDeviceInput): Promise<ZigbeeDevice>;
+    private enrichDeviceCatalogLinks;
     createState(input: CreateZigbeeStateInput, options?: {
         logSource?: ZigbeeDeviceLogSource;
     }): Promise<import("./zigbee-state.repository").ZigbeeDeviceState>;

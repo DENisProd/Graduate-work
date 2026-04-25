@@ -39,6 +39,8 @@ let ZigbeeDeviceRepository = class ZigbeeDeviceRepository {
         return {
             id: _id.toHexString(),
             physicalDeviceId: _id.toHexString(),
+            deviceId: doc.deviceId ?? null,
+            deviceCategoryId: doc.deviceCategoryId ?? null,
             ieeeAddr: protocolAddress,
             networkAddress: doc.networkAddress ?? null,
             type: doc.type,
@@ -72,6 +74,10 @@ let ZigbeeDeviceRepository = class ZigbeeDeviceRepository {
                     ? { manufacturerName: input.manufacturerName ?? null }
                     : {}),
                 ...('modelId' in input ? { model: input.modelId ?? null } : {}),
+                ...('deviceId' in input ? { deviceId: input.deviceId ?? null } : {}),
+                ...('deviceCategoryId' in input
+                    ? { deviceCategoryId: input.deviceCategoryId ?? null }
+                    : {}),
                 ...('friendlyName' in input
                     ? { friendlyName: input.friendlyName ?? null }
                     : {}),

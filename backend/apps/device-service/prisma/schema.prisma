@@ -23,6 +23,7 @@ model DeviceCategory {
   deviceType  DeviceType                @relation(fields: [deviceTypeId], references: [id])
   deviceTypeId Int
   active      Boolean                   @default(true)
+  isModerated Boolean                   @default(true)
   createdAt   DateTime                  @default(now())
   updatedAt   DateTime                  @updatedAt
   devices     Device[]
@@ -38,6 +39,7 @@ model Device {
   serialNumber   String?              @db.VarChar(100)
   firmwareVersion String?             @db.VarChar(50)
   active         Boolean              @default(true)
+  isModerated    Boolean              @default(true)
   lastSeenAt     DateTime?
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt

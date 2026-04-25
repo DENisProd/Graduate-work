@@ -6,6 +6,8 @@ export declare function canonicalZigbeeIeeeAddr(ieee: string): string;
 export type ZigbeeDevice = {
     id: string;
     physicalDeviceId: string;
+    deviceId?: number | null;
+    deviceCategoryId?: number | null;
     ieeeAddr: string;
     networkAddress?: number | null;
     type?: PhysicalDeviceModel['type'];
