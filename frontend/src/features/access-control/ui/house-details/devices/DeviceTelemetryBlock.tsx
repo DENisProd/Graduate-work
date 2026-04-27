@@ -6,19 +6,21 @@ import type { useTranslation } from '@/hooks';
 
 type DevicesTabTranslate = ReturnType<typeof useTranslation>['t'];
 
-function formatPresentMetric(value: string | number | boolean): string {
-  if (typeof value === 'boolean') return value ? 'ON' : 'OFF';
-  return String(value);
-}
-
-function payloadNumber(payload: Record<string, unknown>, key: string): number | null {
-  const v = payload[key];
-  return typeof v === 'number' && !Number.isNaN(v) ? v : null;
-}
-
 function payloadBool(payload: Record<string, unknown>, key: string): boolean | null {
   const v = payload[key];
   return typeof v === 'boolean' ? v : null;
+}
+
+function BatteryIcon({ level }: { level: number }) {
+  const color = level > 50 ? 'var(--color-emerald-500, #22c55e)' : level > 20 ? 'var(--color-yellow-500, #eab308)' : 'var(--color-red-500, #ef4444)';
+  const fillW = Math.max(0, Math.min(100, level));
+  return (
+    <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden>
+      <rect x="0.5" y="0.5" width="15" height="9" rx="1.5" stroke="currentColor" strokeWidth="1" />
+      <rect x="16" y="3" width="2" height="4" rx="0.5" fill="currentColor" />
+      <rect x="1.5" y="1.5" width={`${(fillW / 100) * 13}`} height="7" rx="1" fill={color} />
+    </svg>
+  );
 }
 
 export function DeviceTelemetryBlock({
@@ -35,12 +37,7 @@ export function DeviceTelemetryBlock({
   const m = live?.metrics;
   const payload = live?.payload ?? {};
 
-  const voltage = payloadNumber(payload, 'voltage');
   const tamper = payloadBool(payload, 'tamper');
-
-  const lq = m?.linkquality;
-  const hasLq = typeof lq === 'number' && !Number.isNaN(lq);
-  const lqPct = hasLq ? Math.min(100, Math.round((lq / 255) * 100)) : 0;
 
   const stateStr = m?.state;
   const hasState = typeof stateStr === 'string' && stateStr.trim().length > 0;
@@ -71,8 +68,10 @@ export function DeviceTelemetryBlock({
     hasHumidity ||
     hasBattery ||
     hasColorMode ||
-    voltage !== null ||
     tamper !== null;
+
+  const yesText = t('common.yes');
+  const noText = t('common.no');
 
   return (
     <div className="space-y-2 border-t border-border pt-2">
@@ -86,20 +85,6 @@ export function DeviceTelemetryBlock({
           </span>
         ) : null}
       </div>
-      {hasLq ? (
-        <div className="space-y-0.5">
-          <div className="flex justify-between text-[11px] text-muted-foreground">
-            <span>{t('admin.accessControl.connectedDevices.telemetryLink')}</span>
-            <span>{lq}</span>
-          </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-            <div
-              className="h-full rounded-full bg-emerald-500/80 transition-all"
-              style={{ width: `${lqPct}%` }}
-            />
-          </div>
-        </div>
-      ) : null}
       {hasMetricGrid ? (
         <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
           {hasState ? (
@@ -118,26 +103,28 @@ export function DeviceTelemetryBlock({
             <>
               <span>{t('admin.accessControl.connectedDevices.telemetryOccupancy')}</span>
               <span className="text-right text-foreground">
-                {formatPresentMetric(occupancy)}
+                {occupancy ? yesText : noText}
               </span>
             </>
           ) : null}
           {hasTemperature ? (
             <>
               <span>{t('admin.accessControl.connectedDevices.telemetryTemp')}</span>
-              <span className="text-right text-foreground">{temperature}</span>
+              <span className="text-right text-foreground">{temperature}°</span>
             </>
           ) : null}
           {hasHumidity ? (
             <>
               <span>{t('admin.accessControl.connectedDevices.telemetryHumidity')}</span>
-              <span className="text-right text-foreground">{humidity}</span>
+              <span className="text-right text-foreground">{humidity}%</span>
             </>
           ) : null}
           {hasBattery ? (
             <>
-              <span>{t('admin.accessControl.connectedDevices.telemetryBattery')}</span>
-              <span className="text-right text-foreground">{battery}</span>
+              <span className="flex items-center">
+                <BatteryIcon level={battery} />
+              </span>
+              <span className="text-right text-foreground">{battery}%</span>
             </>
           ) : null}
           {hasColorMode ? (
@@ -146,16 +133,12 @@ export function DeviceTelemetryBlock({
               <span className="text-right text-foreground">{colorModeStr}</span>
             </>
           ) : null}
-          {voltage !== null ? (
-            <>
-              <span>{t('admin.accessControl.connectedDevices.telemetryVoltage')}</span>
-              <span className="text-right text-foreground">{voltage}</span>
-            </>
-          ) : null}
           {tamper !== null ? (
             <>
               <span>{t('admin.accessControl.connectedDevices.telemetryTamper')}</span>
-              <span className="text-right text-foreground">{formatPresentMetric(tamper)}</span>
+              <span className="text-right text-foreground">
+                {tamper ? yesText : noText}
+              </span>
             </>
           ) : null}
         </div>

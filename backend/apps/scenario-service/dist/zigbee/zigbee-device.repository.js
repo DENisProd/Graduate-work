@@ -177,9 +177,7 @@ let ZigbeeDeviceRepository = class ZigbeeDeviceRepository {
             });
         }
         if (query.houseId) {
-            and.push({
-                $or: [{ houseId: query.houseId }, { houseId: null }],
-            });
+            and.push({ $or: [{ houseId: query.houseId }, { type: 'Coordinator' }] });
         }
         const filter = { $and: and };
         const { skip, take } = (0, pagination_1.skipTake)({ page: query.page, limit: query.limit });

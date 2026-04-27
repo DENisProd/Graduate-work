@@ -5,6 +5,8 @@ import { Card } from '@/components/ui/card';
 import { Home } from 'lucide-react';
 import type { HouseResponse } from '@/types/api';
 import { useTranslation } from '@/hooks';
+import { physicalDevicesApi, scenariosApi } from '@/lib/api-client';
+import { useState, useEffect } from 'react';
 
 interface DashboardHouseCardProps {
   house: HouseResponse;
@@ -13,7 +15,23 @@ interface DashboardHouseCardProps {
 
 export function DashboardHouseCard({ house, basePath = '/dashboard/houses' }: DashboardHouseCardProps) {
   const { t } = useTranslation();
-  const href = `${basePath}/${house.id}`;
+  const routeHouseId = house.uuid ?? String(house.id);
+  const href = `${basePath}/${encodeURIComponent(routeHouseId)}`;
+  const [deviceCount, setDeviceCount] = useState<number | null>(null);
+  const [scenarioCount, setScenarioCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    Promise.all([
+      physicalDevicesApi.getAll({ houseId: house.id, limit: 1 }),
+      scenariosApi.getAll({ houseId: house.id, status: 'ONLINE', limit: 1 }),
+    ])
+      .then(([devices, scenarios]) => {
+        setDeviceCount(devices.total);
+        setScenarioCount(scenarios.total);
+      })
+      .catch(() => {});
+  }, [house.id]);
+
   return (
     <Link href={href}>
       <Card className="flex h-full cursor-pointer flex-col border border-border bg-card p-6 shadow transition-shadow hover:shadow-lg">
@@ -33,11 +51,11 @@ export function DashboardHouseCard({ house, basePath = '/dashboard/houses' }: Da
         <div className="mt-auto space-y-2">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">{t('dashboard.devices')}</span>
-            <span className="font-medium">—</span>
+            <span className="font-medium">{deviceCount ?? '—'}</span>
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">{t('dashboard.activeScenarios')}</span>
-            <span className="font-medium">—</span>
+            <span className="font-medium">{scenarioCount ?? '—'}</span>
           </div>
         </div>
       </Card>

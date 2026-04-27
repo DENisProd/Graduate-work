@@ -119,6 +119,8 @@ export class ZigbeeRealtimeGateway
     try {
       const { items } = await this.zigbee.listDevices({ page: 1, limit: 100 });
       for (const dev of items) {
+        // Coordinator is not a "pairable" device; don't show it in pairing UI.
+        if (dev.type === 'Coordinator') continue;
         const fullyKnown =
           Boolean(dev.modelId) || (dev.capabilities?.length ?? 0) > 0;
         client.emit('zigbee:pairing:event', {
@@ -282,7 +284,8 @@ export class ZigbeeRealtimeGateway
         ? Math.max(1, Math.min(254, Math.trunc((body as Record<string, unknown>).time as number)))
         : 254;
     await client.join(PAIRING_ROOM);
-    void this.emitExistingDevicesToClient(client);
+    // Do NOT emit existing devices on "start pairing":
+    // the UI should focus on devices that join during this session.
     const result = this.zigbee.permitJoin(true, time);
     if (!result.ok) return { ok: false as const, error: result.error };
     return { ok: true as const, time };

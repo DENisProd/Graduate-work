@@ -109,14 +109,14 @@ export function AdminHeader({
         });
 
         const houseId =
-          pathname.match(/^\/admin\/access-control\/houses\/(\d+)/)?.[1] ??
+          pathname.match(/^\/admin\/access-control\/houses\/([^/]+)/)?.[1] ??
           selectedHouseId;
         if (houseId) {
           const houseLabel =
             selectedHouseName ?? `${t('admin.accessControl.manageHouse')} #${houseId}`;
           breadcrumbs.push({
             label: houseLabel,
-            href: `/admin/access-control/houses/${houseId}`,
+            href: `/admin/access-control/houses/${encodeURIComponent(houseId)}`,
           });
         }
 
@@ -135,9 +135,9 @@ export function AdminHeader({
 
   const handleBack = () => {
     // Navigate back to house details
-    const houseId = pathname.match(/\/houses\/(\d+)\//)?.[1];
+    const houseId = pathname.match(/\/houses\/([^/]+)\//)?.[1];
     if (houseId) {
-      router.push(`/admin/access-control/houses/${houseId}`);
+      router.push(`/admin/access-control/houses/${encodeURIComponent(houseId)}`);
     } else {
       router.back();
     }

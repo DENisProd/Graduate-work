@@ -170,6 +170,8 @@ let ZigbeeService = ZigbeeService_1 = class ZigbeeService {
             case 'device_announce': {
                 await this.upsertDevice({ ieeeAddr: ieeeRaw, friendlyName });
                 const annDev = await this.devices.findByIeeeAddr(ieeeRaw);
+                if (annDev?.type === zigbee_schemas_1.ZigbeeDeviceType.Coordinator)
+                    break;
                 const fullyKnown = Boolean(annDev?.modelId) || (annDev?.capabilities?.length ?? 0) > 0;
                 this.pairingEvents$.next({
                     type: fullyKnown ? 'interview_done' : 'joined',
@@ -186,6 +188,8 @@ let ZigbeeService = ZigbeeService_1 = class ZigbeeService {
             case 'device_joined': {
                 await this.upsertDevice({ ieeeAddr: ieeeRaw, friendlyName });
                 const dev = await this.devices.findByIeeeAddr(ieeeRaw);
+                if (dev?.type === zigbee_schemas_1.ZigbeeDeviceType.Coordinator)
+                    break;
                 this.pairingEvents$.next({
                     type: 'joined',
                     ieeeAddr: ieeeRaw,
@@ -199,6 +203,8 @@ let ZigbeeService = ZigbeeService_1 = class ZigbeeService {
                 await this.upsertDevice({ ieeeAddr: ieeeRaw, friendlyName });
                 if (status === 'started') {
                     const dev = await this.devices.findByIeeeAddr(ieeeRaw);
+                    if (dev?.type === zigbee_schemas_1.ZigbeeDeviceType.Coordinator)
+                        break;
                     this.pairingEvents$.next({
                         type: 'interview_started',
                         ieeeAddr: ieeeRaw,
@@ -227,6 +233,8 @@ let ZigbeeService = ZigbeeService_1 = class ZigbeeService {
                         ...(model ? { modelId: model } : {}),
                     });
                     const dev = await this.devices.findByIeeeAddr(ieeeRaw);
+                    if (dev?.type === zigbee_schemas_1.ZigbeeDeviceType.Coordinator)
+                        break;
                     this.pairingEvents$.next({
                         type: 'interview_done',
                         ieeeAddr: ieeeRaw,
@@ -241,6 +249,8 @@ let ZigbeeService = ZigbeeService_1 = class ZigbeeService {
                 }
                 else if (status === 'failed') {
                     const dev = await this.devices.findByIeeeAddr(ieeeRaw);
+                    if (dev?.type === zigbee_schemas_1.ZigbeeDeviceType.Coordinator)
+                        break;
                     this.pairingEvents$.next({
                         type: 'interview_failed',
                         ieeeAddr: ieeeRaw,
@@ -253,6 +263,8 @@ let ZigbeeService = ZigbeeService_1 = class ZigbeeService {
             case 'interview_successful': {
                 await this.upsertDevice({ ieeeAddr: ieeeRaw, friendlyName });
                 const dev = await this.devices.findByIeeeAddr(ieeeRaw);
+                if (dev?.type === zigbee_schemas_1.ZigbeeDeviceType.Coordinator)
+                    break;
                 this.pairingEvents$.next({
                     type: 'interview_done',
                     ieeeAddr: ieeeRaw,
@@ -386,6 +398,18 @@ let ZigbeeService = ZigbeeService_1 = class ZigbeeService {
                     : {}),
             });
             device = await this.devices.findByIeeeAddr(ieeeAddr);
+            if (device && device.type !== zigbee_schemas_1.ZigbeeDeviceType.Coordinator) {
+                this.pairingEvents$.next({
+                    type: 'joined',
+                    ieeeAddr: device.ieeeAddr,
+                    friendlyName: device.friendlyName ?? device.ieeeAddr,
+                    physicalDeviceId: device.id,
+                    model: device.modelId ?? null,
+                    manufacturer: device.manufacturerName ?? null,
+                    capabilities: device.capabilities ?? [],
+                    supported: Boolean(device.modelId) || (device.capabilities?.length ?? 0) > 0,
+                });
+            }
         }
         await this.devices.touchLastSeen(ieeeAddr);
         const created = await this.createState({ deviceIeeeAddr: ieeeAddr, payload }, { logSource: zigbee_device_log_mongo_1.ZigbeeDeviceLogSource.Mqtt });

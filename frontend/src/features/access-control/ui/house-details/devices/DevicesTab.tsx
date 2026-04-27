@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppButton } from '@/components/ui/app-button';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +23,8 @@ export function DevicesTab({ houseId, activeTab }: DevicesTabProps) {
   const { showToast } = useToast();
   const router = useRouter();
   const openAddDeviceModal = useAddDeviceModalStore((s) => s.open);
+  const addDeviceModalOpen = useAddDeviceModalStore((s) => s.isOpen);
+  const prevAddDeviceModalOpenRef = useRef(addDeviceModalOpen);
 
   const [devices, setDevices] = useState<ZigbeeDeviceListItem[]>([]);
   const [devicesTotal, setDevicesTotal] = useState(0);
@@ -153,6 +155,16 @@ export function DevicesTab({ houseId, activeTab }: DevicesTabProps) {
     void loadDevices(controller.signal);
     return () => controller.abort();
   }, [activeTab, loadDevices]);
+
+  // Refresh list after closing "Add device" modal, since it can update houseId on a device.
+  useEffect(() => {
+    const prev = prevAddDeviceModalOpenRef.current;
+    prevAddDeviceModalOpenRef.current = addDeviceModalOpen;
+    if (activeTab !== 'devices') return;
+    if (prev && !addDeviceModalOpen) {
+      void loadDevices();
+    }
+  }, [addDeviceModalOpen, activeTab, loadDevices]);
 
   const devicesPages = Math.max(1, Math.ceil(devicesTotal / devicesLimit));
 

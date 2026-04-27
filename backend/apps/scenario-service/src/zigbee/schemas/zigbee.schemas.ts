@@ -73,7 +73,7 @@ export type CreateZigbeeLinksBatchInput = z.infer<
 const listZigbeeDevicesQuerySchemaBase = z.object({
   q: z.string().max(255).optional(),
   type: zigbeeDeviceTypeSchema.optional(),
-  /** When set, include devices assigned to this house and devices with no house yet */
+  /** When set, include only devices assigned to this house */
   houseId: z.string().min(1).max(255).optional(),
 });
 export const listZigbeeDevicesQuerySchema =

@@ -247,6 +247,8 @@ export interface HouseRequest {
 
 export interface HouseResponse {
   id: number;
+  /** Optional UUID/external id used by some access-service routes */
+  uuid?: string;
   name: string;
   ownerId: string;
   ownerAvatarUrl?: string;
@@ -590,13 +592,14 @@ export interface PhysicalDeviceResponse {
 
 export interface DeviceDataResponse {
   id: string;
-  deviceId?: string | null;
-  deviceTypeId: number;
-  deviceFunction: string;
+  deviceId: string;
+  capability: string;
+  attribute?: string | null;
   type: 'FLOAT' | 'NUMBER' | 'STRING' | 'BOOLEAN';
+  value: unknown;
   unit?: string | null;
+  quality?: number | null;
   timestamp: string;
-  data: Record<string, unknown>;
 }
 
 export interface ScenarioResponse {

@@ -134,7 +134,8 @@ let ZigbeeMqttService = ZigbeeMqttService_1 = class ZigbeeMqttService {
             return { ok: false, error: 'MQTT не подключён' };
         }
         const topic = `${this.topicPrefix}/bridge/request/permit_join`;
-        const body = JSON.stringify(enable ? { value: true, time: Math.max(1, Math.min(254, Math.trunc(time))) } : { value: false });
+        const t = Math.max(1, Math.min(254, Math.trunc(time)));
+        const body = enable ? String(t) : 'false';
         this.client.publish(topic, body, { qos: 0 }, (err) => {
             if (err)
                 this.logger.error(`Ошибка publish ${topic}`, err);

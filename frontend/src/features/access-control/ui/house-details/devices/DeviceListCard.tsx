@@ -167,7 +167,9 @@ export function DeviceListCard({
       <CardHeader className="relative z-[1] flex flex-row items-start justify-between gap-2 space-y-0">
         <div className="min-w-0 flex-1">
           <CardTitle className="truncate text-base">
-            {[vendor, model].filter(Boolean).join(' · ') || zigbeeDisplayName(device)}
+            {device.name?.trim()
+              ? device.name.trim()
+              : ([vendor, model].filter(Boolean).join(' · ') || zigbeeDisplayName(device))}
           </CardTitle>
           {defDescription ? (
             <CardDescription className="line-clamp-2 text-xs">{defDescription}</CardDescription>

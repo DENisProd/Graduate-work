@@ -121,9 +121,12 @@ export class ZigbeeMqttService implements OnModuleInit, OnModuleDestroy {
       return { ok: false, error: 'MQTT не подключён' };
     }
     const topic = `${this.topicPrefix}/bridge/request/permit_join`;
-    const body = JSON.stringify(
-      enable ? { value: true, time: Math.max(1, Math.min(254, Math.trunc(time))) } : { value: false },
-    );
+    // Zigbee2MQTT payload compatibility:
+    // - Some setups reject JSON objects with "Invalid payload".
+    // - Publishing a number (seconds) is widely accepted to enable permit_join for that duration.
+    // - Publishing `false` disables permit_join.
+    const t = Math.max(1, Math.min(254, Math.trunc(time)));
+    const body = enable ? String(t) : 'false';
     this.client.publish(topic, body, { qos: 0 }, (err) => {
       if (err) this.logger.error(`Ошибка publish ${topic}`, err);
     });

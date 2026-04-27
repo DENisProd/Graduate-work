@@ -227,6 +227,7 @@ export class ZigbeeService {
         // If the device already has full data (was previously interviewed),
         // emit interview_done so the user can add it immediately without waiting.
         const annDev = await this.devices.findByIeeeAddr(ieeeRaw);
+        if (annDev?.type === ZigbeeDeviceType.Coordinator) break;
         const fullyKnown =
           Boolean(annDev?.modelId) || (annDev?.capabilities?.length ?? 0) > 0;
         this.pairingEvents$.next({
@@ -245,6 +246,7 @@ export class ZigbeeService {
       case 'device_joined': {
         await this.upsertDevice({ ieeeAddr: ieeeRaw, friendlyName });
         const dev = await this.devices.findByIeeeAddr(ieeeRaw);
+        if (dev?.type === ZigbeeDeviceType.Coordinator) break;
         this.pairingEvents$.next({
           type: 'joined',
           ieeeAddr: ieeeRaw,
@@ -260,6 +262,7 @@ export class ZigbeeService {
 
         if (status === 'started') {
           const dev = await this.devices.findByIeeeAddr(ieeeRaw);
+          if (dev?.type === ZigbeeDeviceType.Coordinator) break;
           this.pairingEvents$.next({
             type: 'interview_started',
             ieeeAddr: ieeeRaw,
@@ -290,6 +293,7 @@ export class ZigbeeService {
             ...(model ? { modelId: model } : {}),
           });
           const dev = await this.devices.findByIeeeAddr(ieeeRaw);
+          if (dev?.type === ZigbeeDeviceType.Coordinator) break;
           this.pairingEvents$.next({
             type: 'interview_done',
             ieeeAddr: ieeeRaw,
@@ -303,6 +307,7 @@ export class ZigbeeService {
           });
         } else if (status === 'failed') {
           const dev = await this.devices.findByIeeeAddr(ieeeRaw);
+          if (dev?.type === ZigbeeDeviceType.Coordinator) break;
           this.pairingEvents$.next({
             type: 'interview_failed',
             ieeeAddr: ieeeRaw,
@@ -317,6 +322,7 @@ export class ZigbeeService {
         // Older Z2M format fallback
         await this.upsertDevice({ ieeeAddr: ieeeRaw, friendlyName });
         const dev = await this.devices.findByIeeeAddr(ieeeRaw);
+        if (dev?.type === ZigbeeDeviceType.Coordinator) break;
         this.pairingEvents$.next({
           type: 'interview_done',
           ieeeAddr: ieeeRaw,
@@ -506,6 +512,23 @@ export class ZigbeeService {
           : {}),
       });
       device = await this.devices.findByIeeeAddr(ieeeAddr);
+
+      // Fallback: some Zigbee2MQTT setups/devices don't emit `bridge/event` for joins,
+      // but we still receive telemetry on `zigbee2mqtt/<friendlyName|ieee>`.
+      // When a device is first seen via telemetry and inserted into MongoDB,
+      // emit a pairing event so the UI can show it in the pairing modal.
+      if (device && device.type !== ZigbeeDeviceType.Coordinator) {
+        this.pairingEvents$.next({
+          type: 'joined',
+          ieeeAddr: device.ieeeAddr,
+          friendlyName: device.friendlyName ?? device.ieeeAddr,
+          physicalDeviceId: device.id,
+          model: device.modelId ?? null,
+          manufacturer: device.manufacturerName ?? null,
+          capabilities: device.capabilities ?? [],
+          supported: Boolean(device.modelId) || (device.capabilities?.length ?? 0) > 0,
+        });
+      }
     }
 
     await this.devices.touchLastSeen(ieeeAddr);

@@ -42,14 +42,14 @@ export function DashboardHeader({
       });
 
       const houseId =
-        pathname.match(/^\/dashboard\/houses\/(\d+)/)?.[1] ?? selectedHouseId;
+        pathname.match(/^\/dashboard\/houses\/([^/]+)/)?.[1] ?? selectedHouseId;
 
       if (houseId) {
         const houseLabel =
           selectedHouseName ?? `${t('dashboard.myHouses')} #${houseId}`;
         breadcrumbs.push({
           label: houseLabel,
-          href: `/dashboard/houses/${houseId}`,
+          href: `/dashboard/houses/${encodeURIComponent(houseId)}`,
         });
 
         if (pathname.includes('/room-planner')) {
@@ -66,9 +66,9 @@ export function DashboardHeader({
   const showBackButton = pathname.includes('/room-planner');
 
   const handleBack = () => {
-    const houseId = pathname.match(/\/houses\/(\d+)\//)?.[1];
+    const houseId = pathname.match(/\/houses\/([^/]+)\//)?.[1];
     if (houseId) {
-      router.push(`/dashboard/houses/${houseId}`);
+      router.push(`/dashboard/houses/${encodeURIComponent(houseId)}`);
     } else {
       router.back();
     }

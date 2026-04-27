@@ -6,8 +6,8 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Activity, Home, Zap } from 'lucide-react';
 import { Card } from '@heroui/react';
-import { accessApiClient } from '@/lib/api-client';
-import type { HouseResponse } from '@/types/api';
+import { accessApiClient, physicalDevicesApi, scenariosApi, zigbeeDevicesApi } from '@/lib/api-client';
+import type { HouseResponse, PhysicalDeviceResponse } from '@/types/api';
 import { toArray } from '@/features/access-control';
 import { DashboardHouseCard } from '@/features/dashboard/ui/DashboardHouseCard';
 
@@ -22,61 +22,73 @@ interface DashboardEvent {
   result: EventResult;
 }
 
-const MOCK_EVENTS: DashboardEvent[] = [
-  {
-    id: '1',
-    timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-    house: '—',
-    device: '—',
-    action: '—',
-    result: 'SUCCESS',
-  },
-  {
-    id: '2',
-    timestamp: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-    house: '—',
-    device: '—',
-    action: '—',
-    result: 'SUCCESS',
-  },
-  {
-    id: '3',
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    house: '—',
-    device: '—',
-    action: '—',
-    result: 'DENIED',
-  },
-];
-
 const PREVIEW_HOUSES_LIMIT = 6;
 
 export default function DashboardPage() {
   const { t, ready } = useTranslation();
   const currentUserId = useCurrentUserId();
   const [houses, setHouses] = useState<HouseResponse[]>([]);
-  const [housesLoading, setHousesLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [totalDevices, setTotalDevices] = useState(0);
+  const [totalActiveScenarios, setTotalActiveScenarios] = useState(0);
+  const [recentEvents, setRecentEvents] = useState<DashboardEvent[]>([]);
+  const [eventsCount, setEventsCount] = useState(0);
 
-  const loadHouses = useCallback(async () => {
-    if (currentUserId == null) {
-      setHouses([]);
-      return;
-    }
+  const loadData = useCallback(async () => {
+    if (currentUserId == null) return;
+    setLoading(true);
     try {
-      setHousesLoading(true);
-      const data = await accessApiClient.houses.getHousesByUser(currentUserId, { page: 0, size: PREVIEW_HOUSES_LIMIT });
-      setHouses(toArray<HouseResponse>(data));
+      const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const [housesData, devicesCountData, scenariosData, allDevicesData, logsData] = await Promise.all([
+        accessApiClient.houses.getHousesByUser(currentUserId, { page: 0, size: PREVIEW_HOUSES_LIMIT }),
+        physicalDevicesApi.getAll({ limit: 1 }),
+        scenariosApi.getAll({ status: 'ONLINE', limit: 1 }),
+        physicalDevicesApi.getAll({ limit: 100 }),
+        zigbeeDevicesApi.listDeviceLogs({ from: since24h, limit: 5 }),
+      ]);
+
+      const fetchedHouses = toArray<HouseResponse>(housesData);
+      setHouses(fetchedHouses);
+      setTotalDevices(devicesCountData.total);
+      setTotalActiveScenarios(scenariosData.total);
+      setEventsCount(logsData.total);
+
+      // Lookup maps
+      const houseById = new Map(fetchedHouses.map((h) => [String(h.id), h.name]));
+      const deviceByIeee = new Map<string, PhysicalDeviceResponse>();
+      for (const device of allDevicesData.items) {
+        if (device.protocolAddress) deviceByIeee.set(device.protocolAddress, device);
+      }
+
+      setRecentEvents(
+        logsData.items.map((log, i) => {
+          const ieeeAddr = String(log['deviceIeeeAddr'] ?? '');
+          const physDevice = deviceByIeee.get(ieeeAddr);
+          const deviceName = (physDevice?.friendlyName ?? physDevice?.name ?? ieeeAddr) || '—';
+          const houseId = physDevice?.houseId != null ? String(physDevice.houseId) : null;
+          const houseName = houseId ? (houseById.get(houseId) ?? '—') : '—';
+          const rawKind = String(log['kind'] ?? log['source'] ?? '');
+
+          return {
+            id: String(log['id'] ?? log['_id'] ?? i),
+            timestamp: String(log['timestamp'] ?? log['createdAt'] ?? new Date().toISOString()),
+            house: houseName,
+            device: deviceName,
+            action: rawKind,
+            result: 'SUCCESS' as EventResult,
+          };
+        }),
+      );
     } catch (e) {
       console.error(e);
-      setHouses([]);
     } finally {
-      setHousesLoading(false);
+      setLoading(false);
     }
   }, [currentUserId]);
 
   useEffect(() => {
-    loadHouses();
-  }, [loadHouses]);
+    loadData();
+  }, [loadData]);
 
   if (!ready) {
     return (
@@ -86,10 +98,14 @@ export default function DashboardPage() {
     );
   }
 
-  const totalDevices = 0;
-  const totalActiveScenarios = 0;
-  const eventsCount = MOCK_EVENTS.length;
-  const recentEvents = MOCK_EVENTS.slice(0, 5);
+  const translateAction = (raw: string) => {
+    const key = `dashboard.recentEvents.actions.${raw}` as const;
+    const translated = t(key as Parameters<typeof t>[0]);
+    return translated !== key ? translated : raw || '—';
+  };
+
+  const translateResult = (result: EventResult) =>
+    t(`dashboard.recentEvents.results.${result}` as Parameters<typeof t>[0]);
 
   const resultClass = (result: EventResult) => {
     switch (result) {
@@ -156,7 +172,7 @@ export default function DashboardPage() {
             {t('dashboard.viewAll')}
           </Link>
         </div>
-        {housesLoading ? (
+        {loading ? (
           <div className="flex justify-center py-12">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent" />
           </div>
@@ -215,12 +231,12 @@ export default function DashboardPage() {
                         </td>
                         <td className="py-3 px-4">{event.house}</td>
                         <td className="py-3 px-4">{event.device}</td>
-                        <td className="py-3 px-4">{event.action}</td>
+                        <td className="py-3 px-4">{translateAction(event.action)}</td>
                         <td className="py-3 px-4">
                           <span
                             className={`inline-flex rounded px-2 py-1 text-xs font-medium ${resultClass(event.result)}`}
                           >
-                            {event.result}
+                            {translateResult(event.result)}
                           </span>
                         </td>
                       </tr>

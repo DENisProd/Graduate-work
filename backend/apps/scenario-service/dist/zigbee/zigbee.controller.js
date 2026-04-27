@@ -114,7 +114,7 @@ __decorate([
         name: 'houseId',
         required: false,
         type: String,
-        description: 'Дом: устройства с этим houseId или без привязки к дому',
+        description: 'Дом: только устройства с этим houseId',
     }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Devices list' }),
     __param(0, (0, common_1.Query)()),

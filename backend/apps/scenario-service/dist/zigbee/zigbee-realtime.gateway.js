@@ -94,6 +94,8 @@ let ZigbeeRealtimeGateway = ZigbeeRealtimeGateway_1 = class ZigbeeRealtimeGatewa
         try {
             const { items } = await this.zigbee.listDevices({ page: 1, limit: 100 });
             for (const dev of items) {
+                if (dev.type === 'Coordinator')
+                    continue;
                 const fullyKnown = Boolean(dev.modelId) || (dev.capabilities?.length ?? 0) > 0;
                 client.emit('zigbee:pairing:event', {
                     type: fullyKnown ? 'interview_done' : 'joined',
@@ -209,7 +211,6 @@ let ZigbeeRealtimeGateway = ZigbeeRealtimeGateway_1 = class ZigbeeRealtimeGatewa
             ? Math.max(1, Math.min(254, Math.trunc(body.time)))
             : 254;
         await client.join(PAIRING_ROOM);
-        void this.emitExistingDevicesToClient(client);
         const result = this.zigbee.permitJoin(true, time);
         if (!result.ok)
             return { ok: false, error: result.error };

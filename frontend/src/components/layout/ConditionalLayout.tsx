@@ -8,10 +8,14 @@ export function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdmin = pathname?.startsWith('/admin') || pathname?.startsWith('/dashboard');
 
+  if (isAdmin) {
+    return <SharedElementTransition>{children}</SharedElementTransition>;
+  }
+
   return (
     <SharedElementTransition>
       <div className="flex min-h-screen flex-col">
-        {!isAdmin && <Header />}
+        <Header />
         <main className="flex-1">{children}</main>
         <Footer />
       </div>

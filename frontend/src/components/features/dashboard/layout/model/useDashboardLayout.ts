@@ -17,14 +17,13 @@ export function useDashboardLayout() {
     null,
   );
 
-  const houseIdFromPath =
-    pathname.match(/^\/dashboard\/houses\/(\d+)/)?.[1] ?? null;
+  const houseIdFromPath = pathname.match(/^\/dashboard\/houses\/([^/]+)/)?.[1] ?? null;
 
   useEffect(() => {
     if (houseIdFromPath) {
       setSelectedHouseId(houseIdFromPath);
       housesApi
-        .getById(Number(houseIdFromPath))
+        .getById(decodeURIComponent(houseIdFromPath))
         .then((house) => setSelectedHouseName(house.name ?? null))
         .catch(() => setSelectedHouseName(null));
     } else {

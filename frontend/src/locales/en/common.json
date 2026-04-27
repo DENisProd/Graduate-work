@@ -28,7 +28,9 @@
     "search": "Search by name...",
     "signIn": "Sign in",
     "optional": "optional",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "yes": "Yes",
+    "no": "No"
   },
   "navigation": {
     "home": "Home",
@@ -38,7 +40,9 @@
     "settings": "Settings",
     "about": "About",
     "admin": "Admin Panel",
-    "room_planner": "Room Planner"
+    "room_planner": "Room Planner",
+    "overview": "Overview",
+    "properties": "Properties"
   },
   "theme": {
     "light": "Light",
@@ -105,7 +109,18 @@
       "house": "House",
       "device": "Device",
       "action": "Action",
-      "result": "Result"
+      "result": "Result",
+      "actions": {
+        "state_ingest": "State update",
+        "bridge_event": "Bridge event",
+        "mqtt": "MQTT",
+        "api": "API"
+      },
+      "results": {
+        "SUCCESS": "Success",
+        "DENIED": "Denied",
+        "ERROR": "Error"
+      }
     },
     "sidebar": {
       "open": "Open menu"
@@ -470,6 +485,54 @@
         "definitionJsonTitle": "definition (full JSON)",
         "scalarFields": "Device fields",
         "fullDeviceJsonTitle": "Full device object (JSON)",
+        "deviceDetails": {
+          "statusLabel": "Status",
+          "groups": {
+            "identity": "Identity",
+            "network": "Network",
+            "hardware": "Hardware",
+            "location": "Location",
+            "timestamps": "Timestamps"
+          },
+          "fields": {
+            "id": "ID",
+            "friendlyName": "Friendly name",
+            "name": "Name",
+            "protocolAddress": "Protocol address (IEEE)",
+            "networkAddress": "Network address",
+            "ipAddress": "IP address",
+            "macAddress": "MAC address",
+            "manufacturerName": "Manufacturer",
+            "model": "Model",
+            "firmwareVersion": "Firmware version",
+            "serialNumber": "Serial number",
+            "description": "Description",
+            "houseId": "House ID",
+            "roomId": "Room ID",
+            "deviceTypeId": "Device type ID",
+            "deviceId": "Device ID",
+            "lastSeen": "Last seen",
+            "createdAt": "Created at",
+            "updatedAt": "Updated at"
+          },
+          "json": {
+            "lines": "{{count}} lines",
+            "language": "json",
+            "copy": "Copy",
+            "copied": "Copied"
+          },
+          "history": {
+            "title": "Telemetry History",
+            "loading": "Loading history…",
+            "empty": "No telemetry data recorded yet",
+            "emptyFilter": "No records for this filter",
+            "loadMore": "Load more",
+            "refresh": "Refresh",
+            "filterAll": "All time",
+            "allCapabilities": "All",
+            "total": "{{count}} records"
+          }
+        },
         "telemetryLive": "Live",
         "telemetryDisconnected": "No realtime link",
         "telemetryNow": "Now",

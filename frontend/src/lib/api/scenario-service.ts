@@ -133,7 +133,19 @@ export const physicalDevicesApi = {
 
   update: (
     id: string,
-    data: { houseId?: string; name?: string; roomId?: string | null; description?: string | null },
+    data: {
+      houseId?: string;
+      name?: string;
+      roomId?: string | null;
+      description?: string | null;
+      deviceCategoryId?: number | null;
+      deviceTypeId?: number | null;
+      deviceId?: number | null;
+      firmwareVersion?: string | null;
+      ipAddress?: string | null;
+      macAddress?: string | null;
+      serialNumber?: string | null;
+    },
   ): Promise<PhysicalDeviceResponse> =>
     physicalDevicesApiCall(`/physical-devices/${id}`, {
       method: 'PATCH',

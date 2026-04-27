@@ -55,7 +55,7 @@ export class ZigbeeController {
     name: 'houseId',
     required: false,
     type: String,
-    description: 'Дом: устройства с этим houseId или без привязки к дому',
+    description: 'Дом: только устройства с этим houseId',
   })
   @ApiResponse({ status: 200, description: 'Devices list' })
   listDevices(@Query() query: unknown) {

@@ -138,6 +138,7 @@ export function usePairing({ enabled }: UsePairingOptions): UsePairingResult {
       if (!isConnected) return { ok: false, error: 'Socket not connected' };
       const result = await zigbeeTelemetryManager.startPairing(time);
       if (result.ok) {
+        setDevices([]);
         setIsActive(true);
         activeRef.current = true;
         startCountdown(time);

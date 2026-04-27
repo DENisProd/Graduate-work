@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AppButton } from '@/components/ui/app-button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { physicalDevicesApi } from '@/lib/api-client';
+import { ApiError, physicalDevicesApi, zigbeeDevicesApi } from '@/lib/api-client';
+import { deviceCategoriesApi } from '@/lib/api/device-service';
 import { useTranslation } from '@/hooks';
 import { usePairing } from '../../hooks/usePairing';
 import type { PairingDevice } from '../../hooks/usePairing';
@@ -19,6 +20,7 @@ interface AddDeviceModalProps {
 }
 
 const SEARCH_DURATION = 240;
+const MAX_CATEGORIES = 2000;
 
 function pad2(n: number) {
   return String(Math.floor(n)).padStart(2, '0');
@@ -50,110 +52,6 @@ function StatusIcon({ status }: { status: PairingDevice['status'] }) {
   );
 }
 
-// --- Single discovered device card ---
-function DeviceCard({
-  device,
-  houseId,
-  onAdded,
-  t,
-}: {
-  device: PairingDevice;
-  houseId: string;
-  onAdded: (ieeeAddr: string) => void;
-  t: ReturnType<typeof useTranslation>['t'];
-}) {
-  const [name, setName] = useState(
-    device.friendlyName.startsWith('0x') ? '' : device.friendlyName,
-  );
-  const [adding, setAdding] = useState(false);
-  const [added, setAdded] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleAdd = async () => {
-    if (!device.physicalDeviceId) return;
-    setAdding(true);
-    setError(null);
-    try {
-      await physicalDevicesApi.update(device.physicalDeviceId, {
-        houseId,
-        ...(name.trim() ? { name: name.trim() } : {}),
-      });
-      setAdded(true);
-      onAdded(device.ieeeAddr);
-    } catch {
-      setError(t('admin.accessControl.pairing.addError'));
-    } finally {
-      setAdding(false);
-    }
-  };
-
-  const canAdd = device.status === 'done' && Boolean(device.physicalDeviceId) && !added;
-
-  return (
-    <div
-      className={cn(
-        'rounded-lg border border-border bg-card p-3 text-sm transition-colors',
-        added && 'border-emerald-500/40 bg-emerald-500/5',
-        device.status === 'failed' && 'border-destructive/30 opacity-60',
-      )}
-    >
-      <div className="flex items-start gap-2.5">
-        <div className="mt-0.5 shrink-0">
-          <StatusIcon status={added ? 'done' : device.status} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-medium text-foreground">
-            {device.model ?? device.friendlyName}
-          </p>
-          <p className="truncate text-[11px] text-muted-foreground">
-            {device.manufacturer ? `${device.manufacturer} · ` : ''}
-            {device.ieeeAddr}
-          </p>
-          {device.capabilities.length > 0 && (
-            <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-              {device.capabilities.slice(0, 6).join(', ')}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {canAdd && (
-        <div className="mt-2.5 space-y-2">
-          <Input
-            placeholder={t('admin.accessControl.pairing.deviceNamePlaceholder')}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="h-8 text-xs"
-          />
-          {error && <p className="text-[11px] text-destructive">{error}</p>}
-          <AppButton
-            size="sm"
-            onClick={handleAdd}
-            disabled={adding}
-            className="w-full"
-          >
-            {adding
-              ? t('admin.accessControl.pairing.adding')
-              : t('admin.accessControl.pairing.addToHouse')}
-          </AppButton>
-        </div>
-      )}
-
-      {added && (
-        <p className="mt-1.5 text-[11px] text-emerald-600 dark:text-emerald-400">
-          {t('admin.accessControl.pairing.addedSuccess')}
-        </p>
-      )}
-
-      {device.status === 'failed' && (
-        <p className="mt-1 text-[11px] text-destructive">
-          {t('admin.accessControl.pairing.interviewFailed')}
-        </p>
-      )}
-    </div>
-  );
-}
-
 // --- Main modal ---
 export function AddDeviceModal({
   isOpen,
@@ -163,20 +61,100 @@ export function AddDeviceModal({
   onClose,
 }: AddDeviceModalProps) {
   const { t } = useTranslation();
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [startError, setStartError] = useState<string | null>(null);
   const addedIeees = useRef(new Set<string>());
+  const [selected, setSelected] = useState<PairingDevice | null>(null);
+  const [deviceName, setDeviceName] = useState('');
+  const [categoryId, setCategoryId] = useState<number | null>(null);
+  const [categories, setCategories] = useState<Array<{ id: number; name: string }>>([]);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const [existing, setExisting] = useState<{ ieee: Set<string>; physicalIds: Set<string> }>({
+    ieee: new Set<string>(),
+    physicalIds: new Set<string>(),
+  });
 
   const { isActive, isSocketConnected, timeLeft, devices, start, stop, clearDevices } = usePairing({
     enabled: isOpen,
   });
+
+  // Load devices already connected to this house to hide them from pairing list.
+  useEffect(() => {
+    if (!isOpen || !houseId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        // scenario-service enforces limit<=100 in Zod pagination schema
+        const limit = 100;
+        const allItems: Array<{
+          ieeeAddr?: string | null;
+          physicalDeviceId?: string | null;
+          id?: string | null;
+        }> = [];
+
+        for (let page = 1; page <= 50; page++) {
+          const result = await zigbeeDevicesApi.list({ houseId, page, limit });
+          const pageItems: Array<{
+            ieeeAddr?: string | null;
+            physicalDeviceId?: string | null;
+            id?: string | null;
+          }> = Array.isArray(result)
+            ? (result as any[])
+            : (result && typeof result === 'object' && Array.isArray((result as any).items))
+              ? ((result as any).items as any[])
+              : (result && typeof result === 'object' && Array.isArray((result as any).data))
+                ? ((result as any).data as any[])
+                : (result && typeof result === 'object' && Array.isArray((result as any).content))
+                  ? ((result as any).content as any[])
+                  : [];
+
+          allItems.push(...pageItems);
+          if (pageItems.length < limit) break;
+        }
+
+        if (cancelled) return;
+        const ieee = new Set<string>();
+        const physicalIds = new Set<string>();
+        for (const d of allItems) {
+          if (typeof d.ieeeAddr === 'string' && d.ieeeAddr) ieee.add(d.ieeeAddr);
+          if (typeof d.physicalDeviceId === 'string' && d.physicalDeviceId) physicalIds.add(d.physicalDeviceId);
+          if (typeof d.id === 'string' && d.id) physicalIds.add(d.id);
+        }
+        setExisting({ ieee, physicalIds });
+      } catch (e) {
+        // Pairing should still work even if this fails; just don't filter.
+        if (e instanceof ApiError && e.status === 401) return;
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, houseId]);
 
   // Clear local state when modal closes (stop() is handled by handleOpenChange)
   useEffect(() => {
     if (!isOpen && isActive) {
       clearDevices();
       addedIeees.current.clear();
+      setExisting({ ieee: new Set<string>(), physicalIds: new Set<string>() });
     }
   }, [isOpen, isActive, clearDevices]);
+
+  // Reset wizard state when opening
+  useEffect(() => {
+    if (!isOpen) return;
+    setStep(1);
+    setSelected(null);
+    setDeviceName('');
+    setCategoryId(null);
+    setCategories([]);
+    setCategoriesError(null);
+    setSaving(false);
+    setSaveError(null);
+  }, [isOpen]);
 
   const handleOpenChange = (open: boolean) => {
     if (!open) {
@@ -184,6 +162,11 @@ export function AddDeviceModal({
       clearDevices();
       addedIeees.current.clear();
       setStartError(null);
+      setStep(1);
+      setSelected(null);
+      setDeviceName('');
+      setCategoryId(null);
+      setSaveError(null);
       onClose();
     }
     onOpenChange(open);
@@ -197,10 +180,79 @@ export function AddDeviceModal({
 
   const handleDeviceAdded = (ieeeAddr: string) => {
     addedIeees.current.add(ieeeAddr);
+    setExisting((prev) => {
+      const ieee = new Set(prev.ieee);
+      ieee.add(ieeeAddr);
+      return { ...prev, ieee };
+    });
     onDeviceAdded?.();
   };
 
   const progressPct = isActive ? (timeLeft / SEARCH_DURATION) * 100 : 0;
+  const visibleDevices = useMemo(() => {
+    const existingIeee = existing.ieee;
+    const existingPhysical = existing.physicalIds;
+    return devices.filter((d) => {
+      if (addedIeees.current.has(d.ieeeAddr)) return false;
+      if (existingIeee.has(d.ieeeAddr)) return false;
+      if (d.physicalDeviceId && existingPhysical.has(d.physicalDeviceId)) return false;
+      return true;
+    });
+  }, [devices, existing.ieee, existing.physicalIds]);
+
+  const canSelect = (d: PairingDevice) =>
+    d.status === 'done' && Boolean(d.physicalDeviceId);
+
+  const handleSelect = async (d: PairingDevice) => {
+    setSelected(d);
+    const fallback =
+      (d.friendlyName && !d.friendlyName.startsWith('0x') ? d.friendlyName : '') ||
+      d.model ||
+      (d.manufacturer && d.model ? `${d.manufacturer} ${d.model}` : '') ||
+      'New device';
+    setDeviceName(fallback);
+    setStep(2);
+
+    // Load categories lazily
+    try {
+      setCategoriesError(null);
+      const all = await deviceCategoriesApi.getAll();
+      const items = (all ?? [])
+        .slice(0, MAX_CATEGORIES)
+        .map((c) => ({ id: c.id, name: (c as any).name ?? c.code ?? String(c.id) }));
+      setCategories(items);
+    } catch {
+      setCategoriesError('Не удалось загрузить категории устройств');
+    }
+  };
+
+  const handleSave = async () => {
+    if (!houseId || !selected?.physicalDeviceId) return;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const name = deviceName.trim();
+      if (!name) {
+        setSaveError('Введите название устройства');
+        return;
+      }
+      await physicalDevicesApi.update(selected.physicalDeviceId, {
+        houseId,
+        name,
+        ...(categoryId ? { deviceCategoryId: categoryId } : {}),
+      });
+      handleDeviceAdded(selected.ieeeAddr);
+      setStep(3);
+    } catch {
+      setSaveError(t('admin.accessControl.pairing.addError'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleFinish = () => {
+    handleOpenChange(false);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -210,6 +262,25 @@ export function AddDeviceModal({
         </DialogHeader>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden">
+          {/* Step header */}
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">
+              {step === 1
+                ? '1. Сопряжение'
+                : step === 2
+                  ? '2. Настройка'
+                  : '3. Рекомендованные сценарии'}
+            </span>
+            {step !== 1 && (
+              <AppButton
+                variant="secondary"
+                size="sm"
+                onClick={() => setStep((s) => (s > 1 ? ((s - 1) as 1 | 2 | 3) : 1))}
+              >
+                Назад
+              </AppButton>
+            )}
+          </div>
 
           {/* Not connected warning */}
           {!isSocketConnected && (
@@ -218,8 +289,8 @@ export function AddDeviceModal({
             </div>
           )}
 
-          {/* Idle state — show only when not searching AND no devices found yet */}
-          {!isActive && devices.length === 0 && (
+          {/* STEP 1 */}
+          {step === 1 && !isActive && devices.length === 0 && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
                 {t('admin.accessControl.pairing.description')}
@@ -240,7 +311,7 @@ export function AddDeviceModal({
           )}
 
           {/* Active pairing state — timer + stop button; hidden once time runs out */}
-          {isActive && (
+          {step === 1 && isActive && (
             <div className="space-y-3">
               {/* Timer bar */}
               <div className="space-y-1.5">
@@ -270,34 +341,137 @@ export function AddDeviceModal({
           )}
 
           {/* Discovered devices list */}
-          {devices.length > 0 && (
+          {step === 1 && visibleDevices.length > 0 && (
             <div className="space-y-2">
               <p className="text-xs font-medium text-foreground">
-                {t('admin.accessControl.pairing.found', { count: devices.length })}
+                {t('admin.accessControl.pairing.found', { count: visibleDevices.length })}
               </p>
               <div className="space-y-2">
-                {devices.map((device) => (
-                  houseId ? (
-                    <DeviceCard
-                      key={device.ieeeAddr}
-                      device={device}
-                      houseId={houseId}
-                      onAdded={handleDeviceAdded}
-                      t={t}
-                    />
-                  ) : null
+                {visibleDevices.map((device) => (
+                  <div
+                    key={device.ieeeAddr}
+                    className={cn(
+                      'rounded-lg border border-border bg-card p-3 text-sm transition-colors',
+                      device.status === 'failed' && 'border-destructive/30 opacity-60',
+                    )}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <div className="mt-0.5 shrink-0">
+                        <StatusIcon status={device.status} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium text-foreground">
+                          {device.model ?? device.friendlyName}
+                        </p>
+                        <p className="truncate text-[11px] text-muted-foreground">
+                          {device.manufacturer ? `${device.manufacturer} · ` : ''}
+                          {device.ieeeAddr}
+                        </p>
+                        {device.capabilities.length > 0 && (
+                          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                            {device.capabilities.slice(0, 6).join(', ')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-2.5">
+                      <AppButton
+                        size="sm"
+                        className="w-full"
+                        disabled={!houseId || !canSelect(device)}
+                        onClick={() => void handleSelect(device)}
+                      >
+                        Настроить
+                      </AppButton>
+                      {device.status === 'failed' && (
+                        <p className="mt-1 text-[11px] text-destructive">
+                          {t('admin.accessControl.pairing.interviewFailed')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
           )}
 
           {/* Empty state while active */}
-          {isActive && devices.length === 0 && (
+          {step === 1 && isActive && devices.length === 0 && (
             <div className="flex flex-col items-center gap-2 py-6 text-center">
               <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
               <p className="text-xs text-muted-foreground">
                 {t('admin.accessControl.pairing.waitingForDevices')}
               </p>
+            </div>
+          )}
+
+          {/* STEP 2: details */}
+          {step === 2 && selected && (
+            <div className="space-y-4">
+              <div className="rounded-lg border border-border bg-card p-3">
+                <p className="text-sm font-medium text-foreground">
+                  {selected.model ?? selected.friendlyName}
+                </p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  {selected.manufacturer ? `${selected.manufacturer} · ` : ''}
+                  {selected.ieeeAddr}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-foreground">Название</p>
+                <Input
+                  value={deviceName}
+                  onChange={(e) => setDeviceName(e.target.value)}
+                  placeholder="Например: Датчик движения в прихожей"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-foreground">Категория</p>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={categoryId ?? ''}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setCategoryId(v ? Number(v) : null);
+                  }}
+                >
+                  <option value="">Не выбрано</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                {categoriesError && (
+                  <p className="text-[11px] text-destructive">{categoriesError}</p>
+                )}
+              </div>
+
+              {saveError && <p className="text-[11px] text-destructive">{saveError}</p>}
+
+              <AppButton
+                onClick={() => void handleSave()}
+                disabled={saving || !houseId || !selected.physicalDeviceId}
+                className="w-full"
+              >
+                {saving ? 'Сохранение…' : 'Добавить устройство'}
+              </AppButton>
+            </div>
+          )}
+
+          {/* STEP 3: scenarios placeholder */}
+          {step === 3 && (
+            <div className="space-y-4">
+              <div className="rounded-lg border border-border bg-card p-3 text-sm text-muted-foreground">
+                Рекомендуемые сценарии (заглушка). Здесь можно будет предложить готовые
+                автоматизации для выбранного типа устройства.
+              </div>
+              <AppButton onClick={handleFinish} className="w-full">
+                Готово
+              </AppButton>
             </div>
           )}
         </div>

@@ -208,9 +208,9 @@ export class ZigbeeDeviceRepository {
       });
     }
     if (query.houseId) {
-      and.push({
-        $or: [{ houseId: query.houseId }, { houseId: null }],
-      });
+      // Show the Coordinator in house view even if it isn't assigned to a house yet.
+      // (Coordinator is a shared infrastructure device but users expect to see it in the list.)
+      and.push({ $or: [{ houseId: query.houseId }, { type: 'Coordinator' }] });
     }
     const filter = { $and: and };
 

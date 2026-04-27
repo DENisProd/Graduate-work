@@ -28,7 +28,9 @@
     "search": "Поиск по названию...",
     "signIn": "Войти",
     "optional": "необязательно",
-    "confirm": "Подтвердить"
+    "confirm": "Подтвердить",
+    "yes": "Да",
+    "no": "Нет"
   },
   "navigation": {
     "home": "Главная",
@@ -38,7 +40,9 @@
     "settings": "Настройки",
     "about": "О системе",
     "admin": "Админ панель",
-    "room_planner": "Конструктор планировки"
+    "room_planner": "Конструктор планировки",
+    "overview": "Обзор",
+    "properties": "Управление"
   },
   "theme": {
     "light": "Светлая",
@@ -105,7 +109,18 @@
       "house": "Дом",
       "device": "Устройство",
       "action": "Действие",
-      "result": "Результат"
+      "result": "Результат",
+      "actions": {
+        "state_ingest": "Обновление состояния",
+        "bridge_event": "Событие моста",
+        "mqtt": "MQTT",
+        "api": "API"
+      },
+      "results": {
+        "SUCCESS": "Успешно",
+        "DENIED": "Отказано",
+        "ERROR": "Ошибка"
+      }
     },
     "sidebar": {
       "open": "Открыть меню"
@@ -472,6 +487,54 @@
         "definitionJsonTitle": "definition (полный JSON)",
         "scalarFields": "Поля устройства",
         "fullDeviceJsonTitle": "Полный объект устройства (JSON)",
+        "deviceDetails": {
+          "statusLabel": "Статус",
+          "groups": {
+            "identity": "Идентификация",
+            "network": "Сеть",
+            "hardware": "Оборудование",
+            "location": "Расположение",
+            "timestamps": "Время"
+          },
+          "fields": {
+            "id": "ID",
+            "friendlyName": "Понятное имя",
+            "name": "Название",
+            "protocolAddress": "Protocol address (IEEE)",
+            "networkAddress": "Network address",
+            "ipAddress": "IP-адрес",
+            "macAddress": "MAC-адрес",
+            "manufacturerName": "Производитель",
+            "model": "Модель",
+            "firmwareVersion": "Версия прошивки",
+            "serialNumber": "Серийный номер",
+            "description": "Описание",
+            "houseId": "ID дома",
+            "roomId": "ID комнаты",
+            "deviceTypeId": "ID типа устройства",
+            "deviceId": "ID устройства",
+            "lastSeen": "Последняя активность",
+            "createdAt": "Создано",
+            "updatedAt": "Обновлено"
+          },
+          "json": {
+            "lines": "{{count}} строк",
+            "language": "json",
+            "copy": "Копировать",
+            "copied": "Скопировано"
+          },
+          "history": {
+            "title": "История телеметрии",
+            "loading": "Загрузка истории…",
+            "empty": "Данные телеметрии пока не записаны",
+            "emptyFilter": "Нет записей по этому фильтру",
+            "loadMore": "Загрузить ещё",
+            "refresh": "Обновить",
+            "filterAll": "Всё время",
+            "allCapabilities": "Все",
+            "total": "{{count}} записей"
+          }
+        },
         "telemetryLive": "Онлайн",
         "telemetryDisconnected": "Офлайн",
         "telemetryNow": "Сейчас",
