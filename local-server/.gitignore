@@ -1,0 +1,17 @@
+/target
+**/*.rs.bk
+Cargo.lock.bak
+
+# SQLite (и WAL/SHM)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+data/
+
+# Local config overrides
+config/local.toml
+
+# IDE
+.idea/
+.vscode/

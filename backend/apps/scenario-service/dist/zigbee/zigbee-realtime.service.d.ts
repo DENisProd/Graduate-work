@@ -19,7 +19,7 @@ export type ZigbeeStateRealtimePayload = {
 };
 export declare class ZigbeeRealtimeService {
     private readonly stateSubject;
-    readonly stateUpdates$: import("rxjs").Observable<ZigbeeStateRealtimePayload>;
+    readonly stateUpdates$: any;
     publishStateUpdate(state: ZigbeeDeviceState, meta: {
         physicalDeviceId?: string | null;
         friendlyName?: string | null;

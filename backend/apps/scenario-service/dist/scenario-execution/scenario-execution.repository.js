@@ -94,6 +94,6 @@ exports.ScenarioExecutionRepository = ScenarioExecutionRepository;
 exports.ScenarioExecutionRepository = ScenarioExecutionRepository = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(scenario_execution_mongo_1.SCENARIO_EXECUTION_MODEL)),
-    __metadata("design:paramtypes", [Function])
+    __metadata("design:paramtypes", [Object])
 ], ScenarioExecutionRepository);
 //# sourceMappingURL=scenario-execution.repository.js.map

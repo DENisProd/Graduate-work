@@ -19,6 +19,7 @@ const scenario_module_1 = require("./scenario/scenario.module");
 const scenario_execution_module_1 = require("./scenario-execution/scenario-execution.module");
 const device_data_module_1 = require("./device-data/device-data.module");
 const zigbee_module_1 = require("./zigbee/zigbee.module");
+const llm_module_1 = require("./llm/llm.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -41,6 +42,7 @@ exports.AppModule = AppModule = __decorate([
                     return { uri: url };
                 },
             }),
+            llm_module_1.LlmModule,
             devices_module_1.DevicesModule,
             scenario_module_1.ScenarioModule,
             scenario_execution_module_1.ScenarioExecutionModule,

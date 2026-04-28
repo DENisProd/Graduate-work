@@ -1,4 +1,5 @@
 import { DeviceCatalogClient } from './device-catalog.client';
+import { LlmService } from '../llm/llm.service';
 export interface DeviceCatalogSyncResult {
     deviceTypeId: number | null;
     deviceId: number | null;
@@ -6,8 +7,9 @@ export interface DeviceCatalogSyncResult {
 }
 export declare class DeviceCatalogService {
     private readonly client;
+    private readonly llm;
     private readonly logger;
-    constructor(client: DeviceCatalogClient);
+    constructor(client: DeviceCatalogClient, llm: LlmService | null);
     syncWithCatalog(input: {
         model?: string | null;
         manufacturerName?: string | null;
@@ -15,6 +17,8 @@ export declare class DeviceCatalogService {
         friendlyName?: string | null;
         ieeeAddr?: string | null;
     }): Promise<DeviceCatalogSyncResult>;
+    private enrichWithLlm;
+    private createFunctions;
     private buildCategoryCode;
     private buildDeviceCode;
     private pickDeviceName;

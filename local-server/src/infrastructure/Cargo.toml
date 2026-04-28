@@ -1,0 +1,22 @@
+[package]
+name        = "local-server-infrastructure"
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+authors.workspace    = true
+repository.workspace = true
+description = "Outbound adapters: SQLite repos, MQTT, HTTP clients, GPIO."
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[dependencies]
+local-server-application = { path = "../application" }
+local-server-core        = { path = "../core" }
+async-trait = { workspace = true }
+sqlx        = { version = "0.8", default-features = false, features = ["sqlite", "runtime-tokio", "migrate", "macros", "json", "chrono", "uuid"] }
+tokio       = { workspace = true }
+serde       = { workspace = true }
+serde_json  = { workspace = true }
+thiserror   = { workspace = true }
+tracing     = { workspace = true }

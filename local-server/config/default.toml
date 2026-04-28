@@ -1,0 +1,9 @@
+# Default configuration. Committed to VCS.
+# Override per-machine in `local.toml` (gitignored) or via environment
+# variables (`LOCAL_SERVER_PORT`, `DATABASE_URL`).
+
+port = 8080
+database_url = "sqlite:./data/local.db"
+max_db_connections = 5
+busy_timeout_ms = 5000
+graceful_shutdown_secs = 10

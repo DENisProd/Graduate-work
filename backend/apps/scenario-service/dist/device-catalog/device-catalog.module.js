@@ -10,11 +10,13 @@ exports.DeviceCatalogModule = void 0;
 const common_1 = require("@nestjs/common");
 const device_catalog_client_1 = require("./device-catalog.client");
 const device_catalog_service_1 = require("./device-catalog.service");
+const llm_module_1 = require("../llm/llm.module");
 let DeviceCatalogModule = class DeviceCatalogModule {
 };
 exports.DeviceCatalogModule = DeviceCatalogModule;
 exports.DeviceCatalogModule = DeviceCatalogModule = __decorate([
     (0, common_1.Module)({
+        imports: [llm_module_1.LlmModule],
         providers: [device_catalog_client_1.DeviceCatalogClient, device_catalog_service_1.DeviceCatalogService],
         exports: [device_catalog_service_1.DeviceCatalogService],
     })

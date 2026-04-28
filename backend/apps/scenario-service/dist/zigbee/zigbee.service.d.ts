@@ -1,4 +1,3 @@
-import { Subject } from 'rxjs';
 import { DeviceDataService } from '../device-data/device-data.service';
 import { DeviceCatalogService } from '../device-catalog/device-catalog.service';
 import { ZigbeeDeviceLogSource } from '../mongo/schemas/zigbee-device-log.mongo';
@@ -34,8 +33,8 @@ export declare class ZigbeeService {
     private readonly catalogService;
     private readonly mqtt;
     private readonly logger;
-    readonly pairingEvents$: Subject<ZigbeePairingEvent>;
-    readonly pairingStatus$: Subject<ZigbeePairingStatus>;
+    readonly pairingEvents$: any;
+    readonly pairingStatus$: any;
     private readonly recentlyDeleted;
     constructor(devices: ZigbeeDeviceRepository, states: ZigbeeStateRepository, links: ZigbeeLinkRepository, deviceLogs: ZigbeeDeviceLogRepository, realtime: ZigbeeRealtimeService, deviceData: DeviceDataService, catalogService: DeviceCatalogService, mqtt: ZigbeeMqttService);
     private markDeleted;

@@ -1,0 +1,37 @@
+[workspace]
+members = [
+    "src/core",
+    "src/application",
+    "src/infrastructure",
+    "src/interfaces",
+    "src/gateway",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["Smart Home Team"]
+repository = "https://github.com/example/Graduate-work"
+
+[workspace.dependencies]
+tokio        = { version = "1", features = ["full"] }
+serde        = { version = "1", features = ["derive"] }
+serde_json   = "1"
+thiserror    = "1"
+tracing      = "0.1"
+chrono       = { version = "0.4", features = ["serde"] }
+uuid         = { version = "1", features = ["v4", "serde"] }
+async-trait  = "0.1"
+anyhow       = "1"
+
+[profile.release]
+lto           = true
+codegen-units = 1
+strip         = true
+panic         = "abort"
+opt-level     = 3
+
+[profile.dev]
+opt-level = 0

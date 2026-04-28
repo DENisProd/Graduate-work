@@ -1,0 +1,31 @@
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub enum PhysicalDeviceType {
+    Coordinator,
+    Router,
+    EndDevice,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PhysicalDevice {
+    pub id: Uuid,
+    pub name: Option<String>,
+    pub house_id: Option<String>,
+    pub room_id: Option<String>,
+    pub device_id: Option<i64>,
+    pub device_category_id: Option<i64>,
+    pub protocol_address: Option<String>,
+    pub network_address: Option<i64>,
+    pub r#type: Option<PhysicalDeviceType>,
+    pub manufacturer_name: Option<String>,
+    pub model: Option<String>,
+    pub friendly_name: Option<String>,
+    pub firmware_version: Option<String>,
+    pub last_seen: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}

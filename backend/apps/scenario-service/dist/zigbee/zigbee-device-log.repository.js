@@ -100,6 +100,6 @@ exports.ZigbeeDeviceLogRepository = ZigbeeDeviceLogRepository;
 exports.ZigbeeDeviceLogRepository = ZigbeeDeviceLogRepository = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(zigbee_device_log_mongo_1.ZIGBEE_DEVICE_LOG_MODEL)),
-    __metadata("design:paramtypes", [Function])
+    __metadata("design:paramtypes", [Object])
 ], ZigbeeDeviceLogRepository);
 //# sourceMappingURL=zigbee-device-log.repository.js.map

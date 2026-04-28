@@ -8,6 +8,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DeviceDataSchema = exports.DeviceDataModel = exports.DEVICE_DATA_MODEL = void 0;
 const mongoose_1 = require("@nestjs/mongoose");
@@ -27,7 +28,7 @@ let DeviceDataModel = class DeviceDataModel {
 exports.DeviceDataModel = DeviceDataModel;
 __decorate([
     (0, mongoose_1.Prop)({ required: true, type: mongoose_2.Types.ObjectId }),
-    __metadata("design:type", mongoose_2.Types.ObjectId)
+    __metadata("design:type", typeof (_a = typeof mongoose_2.Types !== "undefined" && mongoose_2.Types.ObjectId) === "function" ? _a : Object)
 ], DeviceDataModel.prototype, "deviceId", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ required: true, type: String }),

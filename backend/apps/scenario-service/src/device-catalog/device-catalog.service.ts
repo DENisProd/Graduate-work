@@ -1,5 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { DeviceCatalogClient } from './device-catalog.client';
+import { LlmService } from '../llm/llm.service';
+import { llmDeviceCatalogSchema, type LlmDeviceCatalogResult } from '../llm/llm.types';
 
 export interface DeviceCatalogSyncResult {
   /** ID of DeviceType in device-service (for now always ZIGBEE). */
@@ -44,7 +46,10 @@ function titleFromCode(s: string): string {
 export class DeviceCatalogService {
   private readonly logger = new Logger(DeviceCatalogService.name);
 
-  constructor(private readonly client: DeviceCatalogClient) {}
+  constructor(
+    private readonly client: DeviceCatalogClient,
+    @Optional() private readonly llm?: LlmService,
+  ) {}
 
   async syncWithCatalog(input: {
     model?: string | null;
@@ -78,8 +83,17 @@ export class DeviceCatalogService {
     }
 
     const typeName = titleFromCode(ZIGBEE_TYPE_CODE);
-    const categoryName = titleFromCode(categoryCode);
-    const deviceName = this.pickDeviceName(input.friendlyName, model, deviceCode);
+    const fallbackCategoryName = titleFromCode(categoryCode);
+    const fallbackDeviceName = this.pickDeviceName(input.friendlyName, model, deviceCode);
+
+    const llmResult = await this.enrichWithLlm({
+      model,
+      manufacturerName: input.manufacturerName,
+      exposes: Array.isArray(input.definition?.exposes)
+        ? (input.definition!.exposes as unknown[])
+        : [],
+      friendlyName: input.friendlyName,
+    });
 
     try {
       const ensured = await this.client.ensureCatalog({
@@ -92,12 +106,12 @@ export class DeviceCatalogService {
             ru: { name: typeName },
           },
           deviceCategory: {
-            en: { name: categoryName },
-            ru: { name: categoryName },
+            en: { name: llmResult?.category.en.name ?? fallbackCategoryName, description: llmResult?.category.en.description },
+            ru: { name: llmResult?.category.ru.name ?? fallbackCategoryName, description: llmResult?.category.ru.description },
           },
           device: {
-            en: { name: deviceName },
-            ru: { name: deviceName },
+            en: { name: llmResult?.device.en.name ?? fallbackDeviceName, description: llmResult?.device.en.description },
+            ru: { name: llmResult?.device.ru.name ?? fallbackDeviceName, description: llmResult?.device.ru.description },
           },
         },
       });
@@ -112,6 +126,10 @@ export class DeviceCatalogService {
         );
       }
 
+      if (ensured.created.device && llmResult && llmResult.functions.length > 0) {
+        await this.createFunctions(ensured.deviceId, llmResult.functions);
+      }
+
       const zigbeeType = await this.client.findDeviceTypeByCode(ZIGBEE_TYPE_CODE);
       return {
         deviceTypeId: zigbeeType?.id ?? null,
@@ -123,6 +141,57 @@ export class DeviceCatalogService {
         `syncWithCatalog failed for code=${deviceCode}: ${e instanceof Error ? e.message : String(e)}`,
       );
       return { deviceTypeId: null, deviceId: null, deviceCategoryId: null };
+    }
+  }
+
+  private async enrichWithLlm(input: {
+    model: string | null;
+    manufacturerName?: string | null;
+    exposes: unknown[];
+    friendlyName?: string | null;
+  }): Promise<LlmDeviceCatalogResult | null> {
+    if (!this.llm) return null;
+
+    const systemPrompt = `You are a smart home device expert. Given a Zigbee device's technical data, generate a JSON object with human-friendly names and descriptions in English and Russian, and a list of device functions derived from the "exposes" capabilities.
+
+Rules:
+- category: the product family / manufacturer category (e.g. "IKEA Smart Lighting", "Aqara Sensors")
+- device: the specific device model name (friendly, not a code)
+- functions: derive from exposes properties; use lower_snake_case codes (e.g. "brightness", "color_temp", "occupancy"); type READ for sensors, WRITE for actuators, READ_WRITE for both
+- Return ONLY valid JSON matching this schema exactly:
+{
+  "category": { "en": { "name": string, "description"?: string }, "ru": { "name": string, "description"?: string } },
+  "device":   { "en": { "name": string, "description"?: string }, "ru": { "name": string, "description"?: string } },
+  "functions": [{ "code": string, "type": "READ"|"WRITE"|"READ_WRITE", "en": { "name": string }, "ru": { "name": string } }]
+}`;
+
+    const userPrompt = `Device model: ${input.model ?? 'unknown'}
+Manufacturer: ${input.manufacturerName ?? 'unknown'}
+Friendly name: ${input.friendlyName ?? 'unknown'}
+Zigbee exposes: ${JSON.stringify(input.exposes.slice(0, 30), null, 2)}`;
+
+    const result = await this.llm.generateJson(systemPrompt, userPrompt, llmDeviceCatalogSchema, 2);
+
+    if (!result) {
+      this.logger.warn(`LLM enrichment skipped for model=${input.model ?? 'unknown'}, using fallback names`);
+    }
+
+    return result;
+  }
+
+  private async createFunctions(
+    deviceId: number,
+    functions: LlmDeviceCatalogResult['functions'],
+  ): Promise<void> {
+    for (const fn of functions) {
+      try {
+        await this.client.createDeviceFunction(fn.code, fn.en.name, deviceId, fn.type);
+        this.logger.log(`Created function code=${fn.code} for deviceId=${deviceId}`);
+      } catch (e) {
+        this.logger.warn(
+          `Failed to create function code=${fn.code}: ${e instanceof Error ? e.message : String(e)}`,
+        );
+      }
     }
   }
 

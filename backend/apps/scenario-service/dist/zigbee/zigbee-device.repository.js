@@ -197,6 +197,6 @@ exports.ZigbeeDeviceRepository = ZigbeeDeviceRepository;
 exports.ZigbeeDeviceRepository = ZigbeeDeviceRepository = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(physical_device_mongo_1.PHYSICAL_DEVICE_MODEL)),
-    __metadata("design:paramtypes", [Function])
+    __metadata("design:paramtypes", [Object])
 ], ZigbeeDeviceRepository);
 //# sourceMappingURL=zigbee-device.repository.js.map

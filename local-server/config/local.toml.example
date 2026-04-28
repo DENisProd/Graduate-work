@@ -1,0 +1,6 @@
+# Per-machine overrides. Copy to `local.toml` (gitignored) and edit.
+#
+# port = 9090
+# database_url = "sqlite:/var/lib/local-server/local.db"
+# max_db_connections = 10
+# graceful_shutdown_secs = 15

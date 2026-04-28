@@ -1,0 +1,18 @@
+[package]
+name        = "local-server-core"
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+authors.workspace    = true
+repository.workspace = true
+description = "Domain core: entities and pure errors. Zero infrastructure deps."
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[dependencies]
+serde      = { workspace = true }
+serde_json = { workspace = true }
+thiserror  = { workspace = true }
+chrono     = { workspace = true }
+uuid       = { workspace = true }

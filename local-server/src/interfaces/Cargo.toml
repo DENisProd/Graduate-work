@@ -1,0 +1,21 @@
+[package]
+name        = "local-server-interfaces"
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+authors.workspace    = true
+repository.workspace = true
+description = "Inbound adapters: axum HTTP routes, Socket.IO websocket gateway."
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[dependencies]
+local-server-application = { path = "../application" }
+local-server-core        = { path = "../core" }
+axum        = { version = "0.7", features = ["macros"] }
+tower-http  = { version = "0.5", features = ["cors", "trace"] }
+tokio       = { workspace = true }
+serde       = { workspace = true }
+serde_json  = { workspace = true }
+tracing     = { workspace = true }

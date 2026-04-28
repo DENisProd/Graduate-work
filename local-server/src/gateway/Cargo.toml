@@ -1,0 +1,33 @@
+[package]
+name        = "local-server"
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+authors.workspace    = true
+repository.workspace = true
+description = "Local-server binary: dependency injection wiring + tokio runtime."
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[[bin]]
+name = "local-server"
+path = "src/main.rs"
+
+[dependencies]
+local-server-application    = { path = "../application" }
+local-server-infrastructure = { path = "../infrastructure" }
+local-server-interfaces     = { path = "../interfaces" }
+local-server-core           = { path = "../core" }
+axum     = { version = "0.7" }
+tokio    = { workspace = true }
+serde    = { workspace = true }
+config   = { version = "0.14", default-features = false, features = ["toml"] }
+tracing  = { workspace = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+anyhow   = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+tower      = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"
