@@ -1,5 +1,6 @@
 use axum::{extract::State, routing::get, Json, Router};
 use serde::Serialize;
+use utoipa::ToSchema;
 
 use crate::HttpAppState;
 
@@ -13,14 +14,25 @@ pub fn router(state: HttpAppState) -> Router {
         .with_state(state)
 }
 
-#[derive(Debug, Serialize)]
-struct HealthResponse {
+#[derive(Debug, Serialize, ToSchema)]
+pub struct HealthResponse {
+    /// Overall service status. Always `"ok"` when the handler is reachable.
     status: &'static str,
+    /// Semver version of the running binary.
     version: &'static str,
+    /// SQLite connectivity: `"ok"` or `"error"`.
     db: &'static str,
 }
 
-async fn health(State(state): State<HttpAppState>) -> Json<HealthResponse> {
+#[utoipa::path(
+    get,
+    path = "/api/v1/system/health",
+    responses(
+        (status = 200, description = "Service is alive", body = HealthResponse)
+    ),
+    tag = "system"
+)]
+pub async fn health(State(state): State<HttpAppState>) -> Json<HealthResponse> {
     let db = match state.health.check_db().await {
         Ok(()) => "ok",
         Err(err) => {

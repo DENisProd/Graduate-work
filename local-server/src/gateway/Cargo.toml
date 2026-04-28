@@ -28,6 +28,6 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 anyhow   = { workspace = true }
 
 [dev-dependencies]
-serde_json = { workspace = true }
-tower      = { version = "0.5", features = ["util"] }
+serde_json     = { workspace = true }
+tower          = { version = "0.5", features = ["util"] }
 http-body-util = "0.1"

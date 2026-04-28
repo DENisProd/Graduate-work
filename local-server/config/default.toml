@@ -7,3 +7,5 @@ database_url = "sqlite:./data/local.db"
 max_db_connections = 5
 busy_timeout_ms = 5000
 graceful_shutdown_secs = 10
+mqtt_topic_prefix = "zigbee2mqtt"
+# mqtt_url = "mqtt://localhost:1883"  # uncomment or set ZIGBEE_MQTT_URL env var

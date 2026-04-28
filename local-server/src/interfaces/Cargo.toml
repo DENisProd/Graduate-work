@@ -13,9 +13,14 @@ unsafe_code = "forbid"
 [dependencies]
 local-server-application = { path = "../application" }
 local-server-core        = { path = "../core" }
-axum        = { version = "0.7", features = ["macros"] }
-tower-http  = { version = "0.5", features = ["cors", "trace"] }
-tokio       = { workspace = true }
-serde       = { workspace = true }
-serde_json  = { workspace = true }
-tracing     = { workspace = true }
+axum              = { version = "0.7", features = ["macros"] }
+tower-http        = { version = "0.5", features = ["cors", "trace"] }
+tokio             = { workspace = true }
+serde             = { workspace = true }
+serde_json        = { workspace = true }
+tracing           = { workspace = true }
+utoipa            = { version = "4", features = ["axum_extras"] }
+utoipa-swagger-ui = { version = "7", features = ["axum"] }
+uuid              = { workspace = true }
+chrono            = { workspace = true }
+socketioxide      = "0.15"

@@ -1,2 +1,2 @@
-//! Domain services (ScenarioEngine, AccessEvaluator, OtaService, …).
-//! Filled in by LS-004 / LS-005 / LS-007.
+pub mod zigbee_realtime;
+pub use zigbee_realtime::ZigbeeRealtimeService;

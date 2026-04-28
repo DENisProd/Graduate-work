@@ -1,8 +1,11 @@
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context;
+use local_server_application::ports::MqttClient;
 use local_server_infrastructure::persistence::{init_pool, SqlitePoolConfig};
-use local_server_interfaces::http;
+use local_server_infrastructure::{run_ingestion, RumqttcClient};
+use local_server_interfaces::{http, websocket};
 use tokio::net::TcpListener;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
@@ -22,6 +25,7 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!(
         port = cfg.port,
         database_url = %cfg.database_url,
+        mqtt_url = ?cfg.mqtt_url,
         version = VERSION,
         "starting local-server",
     );
@@ -35,7 +39,50 @@ async fn main() -> anyhow::Result<()> {
     .context("initialising SQLite pool")?;
 
     let state = AppState::new(pool);
-    let app = http::router(state.http_state(VERSION));
+
+    // Optional MQTT client + ingestion loop
+    let mqtt_client: Option<Arc<dyn MqttClient>> = match &cfg.mqtt_url {
+        Some(url) => {
+            match RumqttcClient::connect(url, &cfg.mqtt_topic_prefix).await {
+                Ok(client) => {
+                    let rx = client.message_receiver();
+                    tokio::spawn(run_ingestion(
+                        rx,
+                        state.zigbee_repo.clone(),
+                        state.realtime_svc.clone(),
+                        cfg.mqtt_topic_prefix.clone(),
+                    ));
+                    Some(client as Arc<dyn MqttClient>)
+                }
+                Err(e) => {
+                    tracing::warn!(error = %e, "MQTT unavailable, continuing without it");
+                    None
+                }
+            }
+        }
+        None => {
+            tracing::info!("MQTT not configured (set ZIGBEE_MQTT_URL to enable)");
+            None
+        }
+    };
+
+    // Build HTTP router then wrap with Socket.IO layer
+    let http_router = http::router(
+        state.http_state(VERSION),
+        state.device_repo.clone(),
+        state.phys_repo.clone(),
+        state.zigbee_repo.clone(),
+        mqtt_client.clone(),
+        cfg.mqtt_topic_prefix.clone(),
+    );
+
+    let app = websocket::apply_to_router(
+        http_router,
+        mqtt_client,
+        state.zigbee_repo.clone(),
+        state.realtime_svc.clone(),
+        cfg.mqtt_topic_prefix.clone(),
+    );
 
     let listener = TcpListener::bind(("0.0.0.0", cfg.port))
         .await
@@ -67,8 +114,6 @@ fn init_tracing() {
         .init();
 }
 
-/// Resolves on the first received `Ctrl+C` (Windows + Unix) or `SIGTERM`
-/// (Unix only). Used as the graceful-shutdown trigger for `axum::serve`.
 async fn shutdown_signal() {
     let ctrl_c = async {
         if let Err(err) = tokio::signal::ctrl_c().await {
@@ -98,9 +143,6 @@ async fn shutdown_signal() {
     }
 }
 
-/// Caps graceful shutdown at `deadline` measured from when the shutdown
-/// signal first fires. Keeps `axum::serve(...).with_graceful_shutdown(...)`
-/// from hanging indefinitely on stuck in-flight requests.
 async fn enforce_shutdown_deadline(deadline: Duration) {
     shutdown_signal().await;
     tokio::time::sleep(deadline).await;

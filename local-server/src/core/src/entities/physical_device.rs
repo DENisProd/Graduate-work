@@ -10,10 +10,33 @@ pub enum PhysicalDeviceType {
     EndDevice,
 }
 
+impl PhysicalDeviceType {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            PhysicalDeviceType::Coordinator => "Coordinator",
+            PhysicalDeviceType::Router => "Router",
+            PhysicalDeviceType::EndDevice => "EndDevice",
+        }
+    }
+}
+
+impl std::str::FromStr for PhysicalDeviceType {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Coordinator" => Ok(PhysicalDeviceType::Coordinator),
+            "Router" => Ok(PhysicalDeviceType::Router),
+            "EndDevice" => Ok(PhysicalDeviceType::EndDevice),
+            other => Err(format!("unknown physical device type: {other}")),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PhysicalDevice {
     pub id: Uuid,
     pub name: Option<String>,
+    pub description: Option<String>,
     pub house_id: Option<String>,
     pub room_id: Option<String>,
     pub device_id: Option<i64>,
