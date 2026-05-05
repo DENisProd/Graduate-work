@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, Input } from '@heroui/react';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { AdminSelect } from '@/components/shared/AdminSelect';
-import { Button } from '@heroui/react';
+import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/hooks';
 import { useRoomPlannerStore } from '@/store/room-planner-store';
 import { isValidOpeningPosition } from '@/domain/room-planner/snapping';
@@ -395,7 +396,7 @@ export function PropertyPanel() {
                     updateDoor(selectedDoor.id, { width });
                   }
                 }}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-accent"
+                className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-muted accent-accent"
               />
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>20 {t('admin.roomPlanner.cm')}</span>
@@ -483,7 +484,7 @@ export function PropertyPanel() {
                     updateWindow(selectedWindow.id, { width });
                   }
                 }}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-accent"
+                className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-muted accent-accent"
               />
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>20 {t('admin.roomPlanner.cm')}</span>

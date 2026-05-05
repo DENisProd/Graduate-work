@@ -1,6 +1,6 @@
 'use client';
 
-import { Button } from '@heroui/react';
+import { Button } from '@/components/ui/button';
 import { useLanguage, useTranslation } from '@/hooks';
 import { localeNames, i18nConfig } from '@/config';
 import type { Locale } from '@/types';
@@ -58,9 +58,9 @@ export function LanguageSwitcher() {
   if (!mounted) {
     return (
       <Button
-        isIconOnly
         aria-label="Select language"
         variant="ghost"
+        size="icon"
         className="h-10 w-10"
       >
         <GlobeIcon className="h-5 w-5" />
@@ -76,9 +76,9 @@ export function LanguageSwitcher() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          isIconOnly
           aria-label={t('language.select')}
           variant="ghost"
+          size="icon"
           className="h-10 w-10"
         >
           <FlagIcon locale={locale} className="h-5 w-5" />

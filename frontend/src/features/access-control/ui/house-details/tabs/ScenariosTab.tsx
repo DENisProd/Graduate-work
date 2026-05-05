@@ -212,12 +212,6 @@ export function ScenariosTab({ houseId, activeTab }: ScenariosTabProps) {
               </SelectContent>
             </Select>
           </div>
-          <Input
-            className="h-8 w-[220px]"
-            placeholder={locale === 'ru' ? 'creatorId (опц.)' : 'creatorId (optional)'}
-            value={creatorIdFilter}
-            onChange={(e) => setCreatorIdFilter(e.target.value)}
-          />
           <span className="text-xs text-muted-foreground">
             {t('admin.page')} {scenariosPage} / {scenariosPages}
           </span>
@@ -267,12 +261,6 @@ export function ScenariosTab({ houseId, activeTab }: ScenariosTabProps) {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-1 text-sm text-muted-foreground">
-                <div>
-                  {locale === 'ru' ? 'Обновлено' : 'Updated'}: {formatDateTime(scenario.updatedAt, locale)}
-                </div>
-                <div>
-                  {locale === 'ru' ? 'Пространство' : 'Space'}: {String(scenario.definition?.scope?.spaceId ?? scenario.houseId)}
-                </div>
                 <div className="flex flex-wrap gap-2 pt-2">
                   <Button size="sm" variant="secondary" onClick={() => openEdit(scenario)}>
                     {locale === 'ru' ? 'Открыть' : 'Open'}

@@ -10,12 +10,13 @@ interface GlowCardProps {
   customSize?: boolean; // When true, ignores size prop and uses width/height or className
 }
 
+/** Hue centers aligned with brand (indigo ~264, hearth orange ~32, spirit teal ~174). */
 const glowColorMap = {
-  blue: { base: 220, spread: 200 },
-  purple: { base: 280, spread: 300 },
-  green: { base: 120, spread: 200 },
-  red: { base: 0, spread: 200 },
-  orange: { base: 30, spread: 200 }
+  blue: { base: 264, spread: 72 },
+  purple: { base: 285, spread: 56 },
+  green: { base: 174, spread: 88 },
+  red: { base: 18, spread: 72 },
+  orange: { base: 32, spread: 88 },
 };
 
 const sizeMap = {
@@ -68,7 +69,7 @@ const GlowCard: React.FC<GlowCardProps> = ({
       '--spread': spread,
       '--radius': '28',
       '--border': '2',
-      '--backdrop': 'hsl(0 0% 60% / 0.12)',
+      '--backdrop': 'color-mix(in srgb, var(--card) 88%, var(--primary) 12%)',
       '--backup-border': 'var(--backdrop)',
       '--size': '160',
       '--outer': '1',
@@ -82,7 +83,7 @@ const GlowCard: React.FC<GlowCardProps> = ({
         var(--spotlight-size) var(--spotlight-size) at
         calc(var(--x, 0) * 1px)
         calc(var(--y, 0) * 1px),
-        hsl(var(--hue, 210) calc(var(--saturation, 100) * 1%) calc(var(--lightness, 70) * 1%) / var(--bg-spot-opacity, 0.1)), transparent
+        hsl(var(--hue, 264) calc(var(--saturation, 100) * 1%) calc(var(--lightness, 70) * 1%) / var(--bg-spot-opacity, 0.1)), transparent
       )`,
       backgroundColor: 'var(--backdrop, transparent)',
       backgroundSize: 'calc(100% + (2 * var(--border-size))) calc(100% + (2 * var(--border-size)))',
@@ -128,7 +129,7 @@ const GlowCard: React.FC<GlowCardProps> = ({
         calc(var(--spotlight-size) * 0.75) calc(var(--spotlight-size) * 0.75) at
         calc(var(--x, 0) * 1px)
         calc(var(--y, 0) * 1px),
-        hsl(var(--hue, 210) calc(var(--saturation, 100) * 1%) calc(var(--lightness, 50) * 1%) / var(--border-spot-opacity, 1)), transparent 100%
+        hsl(var(--hue, 264) calc(var(--saturation, 100) * 1%) calc(var(--lightness, 50) * 1%) / var(--border-spot-opacity, 1)), transparent 100%
       );
       filter: brightness(1.4);
     }
@@ -175,7 +176,7 @@ const GlowCard: React.FC<GlowCardProps> = ({
           relative 
           grid 
           grid-rows-[1fr_auto] 
-          shadow-[0_16px_40px_-26px_rgba(0,0,0,0.28)] 
+          shadow-[0_16px_40px_-26px_rgba(26,35,126,0.14)] dark:shadow-[0_16px_40px_-26px_rgba(0,0,0,0.55)]
           p-4 
           gap-4 
           backdrop-blur-[5px]

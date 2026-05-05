@@ -3,6 +3,8 @@
 import { Line, Group, Rect, Text } from 'react-konva';
 import type { Wall, ProjectMode } from '@/domain/room-planner';
 import { useMemo } from 'react';
+import { isValidOpeningPosition } from '@/domain/room-planner/snapping';
+import { domovoyCanvas, domovoyRoomPlanner } from '@/lib/domovoy-canvas-palette';
 
 interface DoorWindowPreviewLayerProps {
   walls: Wall[];
@@ -10,8 +12,6 @@ interface DoorWindowPreviewLayerProps {
   mousePosition: { x: number; y: number } | null;
   lastValidPosition?: { wallId: string; position: number; point: { x: number; y: number } } | null;
 }
-
-import { isValidOpeningPosition } from '@/domain/room-planner/snapping';
 
 export function DoorWindowPreviewLayer({
   walls,
@@ -106,7 +106,13 @@ export function DoorWindowPreviewLayer({
         {/* Preview Line */}
         <Line
           points={[start.x, start.y, end.x, end.y]}
-          stroke={isPhantom ? "#9CA3AF" : (mode === 'doors' ? "#8B5CF6" : "#3B82F6")}
+          stroke={
+            isPhantom
+              ? domovoyRoomPlanner.phantomMuted
+              : mode === 'doors'
+                ? domovoyCanvas.primaryMid
+                : domovoyCanvas.teal
+          }
           strokeWidth={targetWall.thickness + 4}
           lineCap="butt"
           opacity={isPhantom ? 0.3 : 0.5}
@@ -118,7 +124,13 @@ export function DoorWindowPreviewLayer({
           y={center.y}
           width={width}
           height={10}
-          fill={isPhantom ? "#9CA3AF" : (mode === 'doors' ? "#8B5CF6" : "#3B82F6")}
+          fill={
+            isPhantom
+              ? domovoyRoomPlanner.phantomMuted
+              : mode === 'doors'
+                ? domovoyCanvas.primaryMid
+                : domovoyCanvas.teal
+          }
           opacity={isPhantom ? 0.3 : 0.5}
           rotation={(angle * 180) / Math.PI}
           offsetX={halfWidth}

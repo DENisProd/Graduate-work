@@ -23,4 +23,184 @@ export declare class PhysicalDeviceModel {
     updatedAt: Date;
 }
 export type PhysicalDeviceDocument = HydratedDocument<PhysicalDeviceModel>;
-export declare const PhysicalDeviceSchema: any;
+export declare const PhysicalDeviceSchema: import("mongoose").Schema<PhysicalDeviceModel, import("mongoose").Model<PhysicalDeviceModel, any, any, any, any, any, PhysicalDeviceModel>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, PhysicalDeviceModel, import("mongoose").Document<unknown, {}, PhysicalDeviceModel, {
+    id: string;
+}, import("mongoose").DefaultSchemaOptions> & Omit<PhysicalDeviceModel & {
+    _id: import("mongoose").Types.ObjectId;
+} & {
+    __v: number;
+}, "id"> & {
+    id: string;
+}, {
+    name?: import("mongoose").SchemaDefinitionProperty<string | null | undefined, PhysicalDeviceModel, import("mongoose").Document<unknown, {}, PhysicalDeviceModel, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<PhysicalDeviceModel & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    description?: import("mongoose").SchemaDefinitionProperty<string | null | undefined, PhysicalDeviceModel, import("mongoose").Document<unknown, {}, PhysicalDeviceModel, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<PhysicalDeviceModel & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    houseId?: import("mongoose").SchemaDefinitionProperty<string | null | undefined, PhysicalDeviceModel, import("mongoose").Document<unknown, {}, PhysicalDeviceModel, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<PhysicalDeviceModel & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    roomId?: import("mongoose").SchemaDefinitionProperty<string | null | undefined, PhysicalDeviceModel, import("mongoose").Document<unknown, {}, PhysicalDeviceModel, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<PhysicalDeviceModel & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    deviceId?: import("mongoose").SchemaDefinitionProperty<number | null | undefined, PhysicalDeviceModel, import("mongoose").Document<unknown, {}, PhysicalDeviceModel, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<PhysicalDeviceModel & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    deviceCategoryId?: import("mongoose").SchemaDefinitionProperty<number | null | undefined, PhysicalDeviceModel, import("mongoose").Document<unknown, {}, PhysicalDeviceModel, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<PhysicalDeviceModel & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    protocolAddress?: import("mongoose").SchemaDefinitionProperty<string | null | undefined, PhysicalDeviceModel, import("mongoose").Document<unknown, {}, PhysicalDeviceModel, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<PhysicalDeviceModel & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    networkAddress?: import("mongoose").SchemaDefinitionProperty<number | null | undefined, PhysicalDeviceModel, import("mongoose").Document<unknown, {}, PhysicalDeviceModel, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<PhysicalDeviceModel & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    type?: import("mongoose").SchemaDefinitionProperty<ZigbeeDeviceType | undefined, PhysicalDeviceModel, import("mongoose").Document<unknown, {}, PhysicalDeviceModel, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<PhysicalDeviceModel & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    deviceTypeId?: import("mongoose").SchemaDefinitionProperty<number | null | undefined, PhysicalDeviceModel, import("mongoose").Document<unknown, {}, PhysicalDeviceModel, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<PhysicalDeviceModel & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    manufacturerName?: import("mongoose").SchemaDefinitionProperty<string | null | undefined, PhysicalDeviceModel, import("mongoose").Document<unknown, {}, PhysicalDeviceModel, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<PhysicalDeviceModel & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    model?: import("mongoose").SchemaDefinitionProperty<string | null | undefined, PhysicalDeviceModel, import("mongoose").Document<unknown, {}, PhysicalDeviceModel, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<PhysicalDeviceModel & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    friendlyName?: import("mongoose").SchemaDefinitionProperty<string | null | undefined, PhysicalDeviceModel, import("mongoose").Document<unknown, {}, PhysicalDeviceModel, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<PhysicalDeviceModel & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    firmwareVersion?: import("mongoose").SchemaDefinitionProperty<string | null | undefined, PhysicalDeviceModel, import("mongoose").Document<unknown, {}, PhysicalDeviceModel, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<PhysicalDeviceModel & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    lastSeen?: import("mongoose").SchemaDefinitionProperty<Date | null | undefined, PhysicalDeviceModel, import("mongoose").Document<unknown, {}, PhysicalDeviceModel, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<PhysicalDeviceModel & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    definition?: import("mongoose").SchemaDefinitionProperty<Record<string, unknown> | null | undefined, PhysicalDeviceModel, import("mongoose").Document<unknown, {}, PhysicalDeviceModel, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<PhysicalDeviceModel & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    capabilities?: import("mongoose").SchemaDefinitionProperty<string[] | undefined, PhysicalDeviceModel, import("mongoose").Document<unknown, {}, PhysicalDeviceModel, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<PhysicalDeviceModel & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    createdAt?: import("mongoose").SchemaDefinitionProperty<Date, PhysicalDeviceModel, import("mongoose").Document<unknown, {}, PhysicalDeviceModel, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<PhysicalDeviceModel & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    updatedAt?: import("mongoose").SchemaDefinitionProperty<Date, PhysicalDeviceModel, import("mongoose").Document<unknown, {}, PhysicalDeviceModel, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<PhysicalDeviceModel & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+}, PhysicalDeviceModel>;

@@ -36,5 +36,16 @@ export class UserService {
     }
     return user;
   }
+
+  /** Обновляет или создаёт пользователя с отображаемым именем (идемпотентно по externalUserId). */
+  async upsertDisplayName(externalUserId: string, displayName: string): Promise<void> {
+    const trimmed = displayName.trim().slice(0, 255);
+    if (!trimmed) return;
+    await this.prisma.user.upsert({
+      where: { externalUserId },
+      create: { externalUserId, displayName: trimmed },
+      update: { displayName: trimmed },
+    });
+  }
 }
 

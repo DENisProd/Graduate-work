@@ -1,6 +1,6 @@
 'use client';
 
-import { Button } from '@heroui/react';
+import { Button } from '@/components/ui/button';
 import { useTheme } from '@/hooks';
 import { useTranslation } from '@/hooks';
 import type { ThemeMode } from '@/types';
@@ -84,9 +84,9 @@ export function ThemeSwitcher() {
   if (!mounted) {
     return (
       <Button
-        isIconOnly
         aria-label="Toggle theme"
         variant="ghost"
+        size="icon"
         className="h-10 w-10"
       >
         <div className="h-5 w-5" />
@@ -104,9 +104,9 @@ export function ThemeSwitcher() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          isIconOnly
           aria-label={t('theme.toggle')}
           variant="ghost"
+          size="icon"
           className="h-10 w-10"
         >
           <CurrentIcon className="h-5 w-5" />
@@ -142,9 +142,9 @@ export function ThemeToggle() {
   if (!mounted) {
     return (
       <Button
-        isIconOnly
         aria-label="Toggle theme"
         variant="ghost"
+        size="icon"
         className="h-10 w-10"
       >
         <div className="h-5 w-5" />
@@ -154,11 +154,11 @@ export function ThemeToggle() {
 
   return (
     <Button
-      isIconOnly
       aria-label={t('theme.toggle')}
       variant="ghost"
+      size="icon"
       className="h-10 w-10"
-      onPress={toggleTheme}
+      onClick={toggleTheme}
     >
       {isDark ? (
         <SunIcon className="h-5 w-5" />

@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Card, Chip } from '@heroui/react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import {
   housesApi,
   houseRoomsApi,
@@ -210,7 +212,7 @@ export function AccessControlAdmin() {
   };
 
   const startEditRoom = (room: HouseRoomResponse) => {
-    setEditingRoomId(room.id);
+    setEditingRoomId(Number(room.id));
     setRoomForm({ name: room.name ?? room.externalId ?? '', houseId: Number(room.houseId) });
   };
 
@@ -400,7 +402,7 @@ export function AccessControlAdmin() {
           <h2 className="text-2xl font-semibold">{t('admin.accessControl.title')}</h2>
           <p className="text-muted text-sm">{t('admin.subtitle')}</p>
         </div>
-        {status && <Chip color="default">{status}</Chip>}
+        {status && <Badge variant="secondary">{status}</Badge>}
       </div>
 
       <Card>
@@ -469,7 +471,7 @@ export function AccessControlAdmin() {
                       <Card.Title>{house.name}</Card.Title>
                       <Card.Description>{house.address}</Card.Description>
                     </div>
-                    <Chip>{house.ownerId}</Chip>
+                    <Badge variant="outline">{house.ownerId}</Badge>
                   </Card.Header>
                   <Card.Footer className="flex gap-2">
                     <Button size="sm" variant="secondary" onPress={() => startEditHouse(house)}>
@@ -543,7 +545,7 @@ export function AccessControlAdmin() {
                       <Card.Title>{room.name ?? room.externalId ?? '—'}</Card.Title>
                       <Card.Description>{room.houseName}</Card.Description>
                     </div>
-                    <Chip>{room.houseId}</Chip>
+                    <Badge variant="outline">{String(room.houseId)}</Badge>
                   </Card.Header>
                   <Card.Footer className="flex gap-2">
                     <Button size="sm" variant="secondary" onPress={() => startEditRoom(room)}>
@@ -595,7 +597,7 @@ export function AccessControlAdmin() {
                       <Card.Title>{member.userId}</Card.Title>
                       <Card.Description>{member.houseName}</Card.Description>
                     </div>
-                    <Chip>{member.houseId}</Chip>
+                    <Badge variant="outline">{String(member.houseId)}</Badge>
                   </Card.Header>
                   <Card.Footer>
                     <Button
@@ -701,7 +703,7 @@ export function AccessControlAdmin() {
                       <Card.Title>{invitation.email}</Card.Title>
                       <Card.Description>{invitation.status}</Card.Description>
                     </div>
-                    <Chip>{invitation.houseId}</Chip>
+                    <Badge variant="outline">{String(invitation.houseId)}</Badge>
                   </Card.Header>
                   <Card.Content>
                     <p className="text-sm text-muted">{invitation.expiresAt ? new Date(invitation.expiresAt).toLocaleString() : '—'}</p>
@@ -834,7 +836,7 @@ export function AccessControlAdmin() {
                         {right.houseRoomName || right.houseName || '—'}
                       </Card.Description>
                     </div>
-                    <Chip>{right.userId ?? right.houseMemberId ?? '—'}</Chip>
+                    <Badge variant="outline">{String(right.userId ?? right.houseMemberId ?? '—')}</Badge>
                   </Card.Header>
                 </Card>
               ))}

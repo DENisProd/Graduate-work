@@ -2,6 +2,7 @@
 
 import { Text, Line, Group } from 'react-konva';
 import type { Wall } from '@/domain/room-planner';
+import { domovoyRoomPlanner } from '@/lib/domovoy-canvas-palette';
 
 interface MeasurementLayerProps {
   walls: Wall[];
@@ -53,7 +54,7 @@ export function MeasurementLayer({ walls, show }: MeasurementLayerProps) {
                 wall.b.x + offsetX,
                 wall.b.y + offsetY
               ]}
-              stroke="#6B7280"
+              stroke={domovoyRoomPlanner.measurement}
               strokeWidth={1}
               dash={[5, 5]}
               listening={false}
@@ -64,7 +65,7 @@ export function MeasurementLayer({ walls, show }: MeasurementLayerProps) {
               y={centerY + offsetY - 10}
               text={formatLength(length)}
               fontSize={12}
-              fill="#6B7280"
+              fill={domovoyRoomPlanner.measurement}
               align="center"
               rotation={angle}
               offsetX={formatLength(length).length * 3}

@@ -18,6 +18,7 @@ import type { DeviceType } from '@/domain/room-planner';
 import type { Stage as KonvaStage } from 'konva/lib/Stage';
 
 import { useTheme } from '@/hooks';
+import { domovoyRoomPlanner } from '@/lib/domovoy-canvas-palette';
 
 const CANVAS_WIDTH = 1920; // 16:9 aspect ratio
 const CANVAS_HEIGHT = 1080;
@@ -348,7 +349,7 @@ export function CanvasStage({ width, height }: CanvasStageProps) {
   };
 
   return (
-    <div className="relative w-full h-full overflow-hidden bg-gray-50 dark:bg-gray-900">
+    <div className="relative size-full overflow-hidden bg-surface-2">
       <Stage
         ref={stageRef}
         width={stageSize.width}
@@ -457,10 +458,18 @@ export function CanvasStage({ width, height }: CanvasStageProps) {
             y={0}
             width={VIRTUAL_SIZE}
             height={VIRTUAL_SIZE}
-            fill={resolvedTheme === 'dark' ? '#1f2937' : '#ffffff'} // gray-800 for dark, white for light
-            shadowColor="black"
+            fill={
+              resolvedTheme === 'dark'
+                ? domovoyRoomPlanner.canvasSurfaceDark
+                : domovoyRoomPlanner.canvasSurfaceLight
+            }
+            shadowColor={
+              resolvedTheme === 'dark'
+                ? domovoyRoomPlanner.canvasShadowDark
+                : domovoyRoomPlanner.canvasShadowLight
+            }
             shadowBlur={10}
-            shadowOpacity={0.1}
+            shadowOpacity={resolvedTheme === 'dark' ? 0.35 : 0.08}
             listening={true}
             // onClick removed - Stage handles all clicks to prevent double handling
           />
@@ -470,7 +479,7 @@ export function CanvasStage({ width, height }: CanvasStageProps) {
             y={0}
             width={VIRTUAL_SIZE}
             height={VIRTUAL_SIZE}
-            stroke="#ef4444"
+            stroke={domovoyRoomPlanner.boundsWarning}
             strokeWidth={2}
             dash={[10, 10]}
             listening={false}

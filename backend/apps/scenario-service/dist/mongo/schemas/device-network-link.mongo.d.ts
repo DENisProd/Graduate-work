@@ -20,4 +20,85 @@ export declare class DeviceNetworkLinkModel {
     collectedAt: Date;
 }
 export type DeviceNetworkLinkDocument = HydratedDocument<DeviceNetworkLinkModel>;
-export declare const DeviceNetworkLinkSchema: any;
+export declare const DeviceNetworkLinkSchema: import("mongoose").Schema<DeviceNetworkLinkModel, import("mongoose").Model<DeviceNetworkLinkModel, any, any, any, any, any, DeviceNetworkLinkModel>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, DeviceNetworkLinkModel, import("mongoose").Document<unknown, {}, DeviceNetworkLinkModel, {
+    id: string;
+}, import("mongoose").DefaultSchemaOptions> & Omit<DeviceNetworkLinkModel & {
+    _id: Types.ObjectId;
+} & {
+    __v: number;
+}, "id"> & {
+    id: string;
+}, {
+    sourceDeviceId?: import("mongoose").SchemaDefinitionProperty<Types.ObjectId, DeviceNetworkLinkModel, import("mongoose").Document<unknown, {}, DeviceNetworkLinkModel, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<DeviceNetworkLinkModel & {
+        _id: Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    targetDeviceId?: import("mongoose").SchemaDefinitionProperty<Types.ObjectId, DeviceNetworkLinkModel, import("mongoose").Document<unknown, {}, DeviceNetworkLinkModel, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<DeviceNetworkLinkModel & {
+        _id: Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    protocol?: import("mongoose").SchemaDefinitionProperty<Protocol, DeviceNetworkLinkModel, import("mongoose").Document<unknown, {}, DeviceNetworkLinkModel, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<DeviceNetworkLinkModel & {
+        _id: Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    linkQuality?: import("mongoose").SchemaDefinitionProperty<number | null | undefined, DeviceNetworkLinkModel, import("mongoose").Document<unknown, {}, DeviceNetworkLinkModel, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<DeviceNetworkLinkModel & {
+        _id: Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    rssi?: import("mongoose").SchemaDefinitionProperty<number | null | undefined, DeviceNetworkLinkModel, import("mongoose").Document<unknown, {}, DeviceNetworkLinkModel, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<DeviceNetworkLinkModel & {
+        _id: Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    lqi?: import("mongoose").SchemaDefinitionProperty<number | null | undefined, DeviceNetworkLinkModel, import("mongoose").Document<unknown, {}, DeviceNetworkLinkModel, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<DeviceNetworkLinkModel & {
+        _id: Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    metadata?: import("mongoose").SchemaDefinitionProperty<Record<string, unknown> | null | undefined, DeviceNetworkLinkModel, import("mongoose").Document<unknown, {}, DeviceNetworkLinkModel, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<DeviceNetworkLinkModel & {
+        _id: Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    collectedAt?: import("mongoose").SchemaDefinitionProperty<Date, DeviceNetworkLinkModel, import("mongoose").Document<unknown, {}, DeviceNetworkLinkModel, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<DeviceNetworkLinkModel & {
+        _id: Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+}, DeviceNetworkLinkModel>;

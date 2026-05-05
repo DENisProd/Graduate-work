@@ -19,7 +19,7 @@ type MemberWithUserAndHouseMapper = {
   id: string;
   houseId: string;
   joinedAt: Date;
-  user: { externalUserId: string; avatarUrl: string | null };
+  user: { externalUserId: string; avatarUrl: string | null; displayName: string | null };
   house: { id: string; name: string };
   roles: (HouseMemberRole & {
     assignedAt: Date;
@@ -65,6 +65,7 @@ export function toHouseMemberListItemResponse(m: MemberWithUserAndHouseMapper): 
   return {
     id: m.id,
     userId: m.user.externalUserId,
+    userDisplayName: m.user.displayName?.trim() || undefined,
     userAvatarUrl: m.user.avatarUrl ?? undefined,
     joinedAt: formatDate(m.joinedAt),
     roles: m.roles.map(toHouseMemberRoleBrief),

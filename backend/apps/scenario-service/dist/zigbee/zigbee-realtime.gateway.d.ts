@@ -56,7 +56,7 @@ export declare class ZigbeeRealtimeGateway implements OnModuleInit, OnModuleDest
         topic: string;
     } | {
         ok: false;
-        error: any;
+        error: string;
     }>;
     onPairingWatch(client: Socket): Promise<{
         ok: true;

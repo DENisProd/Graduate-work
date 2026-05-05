@@ -38,9 +38,9 @@ export function ScenarioPlannerWidget(props: { houseId?: string }) {
   return (
     <div className="flex flex-col h-full">
       <Toolbar />
-      <div className="flex flex-1 overflow-hidden p-4 gap-4 bg-gray-50 dark:bg-gray-900">
+      <div className="flex flex-1 overflow-hidden gap-4 bg-surface-2 p-4">
         <CatalogPanel />
-        <Card className="flex-1 relative overflow-hidden gap-0 py-0 bg-white dark:bg-black">
+        <Card className="relative flex-1 gap-0 overflow-hidden bg-card py-0">
           <CardContent className="h-full p-0">
             <CanvasStage />
           </CardContent>

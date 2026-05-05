@@ -1,5 +1,6 @@
-import { DashboardHouseDetails } from '@/widgets/dashboard';
+import { HouseOverviewPage } from '@/features/dashboard/ui/HouseOverviewPage';
 
-export default function Page() {
-  return <DashboardHouseDetails />;
+export default function HouseOverviewRoutePage() {
+  return <HouseOverviewPage />;
 }
+

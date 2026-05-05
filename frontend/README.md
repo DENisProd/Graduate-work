@@ -7,7 +7,7 @@
 - **Next.js 16** - React фреймворк с App Router
 - **TypeScript** - статическая типизация
 - **Zustand** - управление состоянием
-- **HeroUI v3** - UI компоненты
+- **shadcn/ui** - UI компоненты
 - **Tailwind CSS v4** - стилизация
 - **Framer Motion** - анимации
 
@@ -167,10 +167,6 @@ interface LanguageStore {
   }
 }
 ```
-
-### HeroUI v3
-
-Проект использует HeroUI v3 (beta) с Tailwind CSS v4. Компоненты работают без Provider.
 
 ## Добавление новых переводов
 

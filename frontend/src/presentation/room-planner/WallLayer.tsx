@@ -6,6 +6,7 @@ import { useRoomPlannerStore } from '@/store/room-planner-store';
 import { useState } from 'react';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import { snapPoint, GRID_SIZE } from '@/domain/room-planner/snapping';
+import { domovoyCanvas, domovoyRoomPlanner } from '@/lib/domovoy-canvas-palette';
 
 interface WallLayerProps {
   walls: Wall[];
@@ -113,7 +114,7 @@ export function WallLayer({ walls, mode }: WallLayerProps) {
          <Line
            key="phantom-next"
            points={[pos.x, pos.y, wall.b.x, wall.b.y]}
-           stroke="#10B981"
+           stroke={domovoyCanvas.tealBright}
            strokeWidth={wall.thickness}
            opacity={0.5}
            dash={[10, 10]}
@@ -128,7 +129,7 @@ export function WallLayer({ walls, mode }: WallLayerProps) {
          <Line
            key="phantom-prev"
            points={[prevWall.a.x, prevWall.a.y, pos.x, pos.y]}
-           stroke="#10B981"
+           stroke={domovoyCanvas.tealBright}
            strokeWidth={prevWall.thickness}
            opacity={0.5}
            dash={[10, 10]}
@@ -148,7 +149,7 @@ export function WallLayer({ walls, mode }: WallLayerProps) {
           <Line
             key={`wall-${index}`}
             points={[wall.a.x, wall.a.y, wall.b.x, wall.b.y]}
-            stroke={isSelected ? "#10B981" : "#4B5563"}
+            stroke={isSelected ? domovoyCanvas.selection : domovoyRoomPlanner.wallNeutral}
             strokeWidth={isSelected ? wall.thickness + 2 : wall.thickness}
             lineCap="butt"
             lineJoin="miter"
@@ -175,8 +176,8 @@ export function WallLayer({ walls, mode }: WallLayerProps) {
             x={pendingWallStart.x}
             y={pendingWallStart.y}
             radius={8}
-            fill="#10B981"
-            stroke="#059669"
+            fill={domovoyCanvas.handle}
+            stroke={domovoyCanvas.handleHover}
             strokeWidth={2}
             listening={false}
           />
@@ -206,12 +207,12 @@ export function WallLayer({ walls, mode }: WallLayerProps) {
                   radius={mode === 'select' ? 8 : isFirstPoint ? 8 : 5}
                   fill={
                     isFirstPoint
-                      ? '#10B981' // First point is always green
-                      : (selectedWallPointIndex === pointIndex)
-                      ? '#10B981'
-                      : '#3B82F6'
+                      ? domovoyCanvas.handle
+                      : selectedWallPointIndex === pointIndex
+                        ? domovoyCanvas.handle
+                        : domovoyCanvas.primaryMid
                   }
-                  stroke={isFirstPoint ? '#059669' : '#1E40AF'}
+                  stroke={isFirstPoint ? domovoyCanvas.handleHover : domovoyCanvas.primary}
                   strokeWidth={2}
                   listening={false} // Let the invisible hit area handle events
                 />
@@ -280,11 +281,11 @@ export function WallLayer({ walls, mode }: WallLayerProps) {
                     y={wall.b.y}
                     radius={mode === 'select' ? 8 : 5}
                     fill={
-                      (selectedWallPointIndex === (isLastPoint ? walls.length : index + 1))
-                        ? '#10B981'
-                        : '#3B82F6'
+                      selectedWallPointIndex === (isLastPoint ? walls.length : index + 1)
+                        ? domovoyCanvas.handle
+                        : domovoyCanvas.primaryMid
                     }
-                    stroke="#1E40AF"
+                    stroke={domovoyCanvas.primary}
                     strokeWidth={2}
                     listening={false}
                   />

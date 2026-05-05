@@ -1,6 +1,6 @@
 'use client';
 
-import { Button } from '@heroui/react';
+import { Button } from '@/components/ui/button';
 import {
   Sidebar,
   SidebarContent,

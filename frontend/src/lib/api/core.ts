@@ -59,12 +59,20 @@ function getCurrentUserId(): string | null {
   return useUserStore.getState().user?.id ?? null;
 }
 
+function getOptionalUserDisplayNameHeader(): Record<string, string> {
+  if (typeof window === 'undefined') return {};
+  const name = useUserStore.getState().user?.name?.trim();
+  if (!name) return {};
+  return { 'X-User-Display-Name': encodeURIComponent(name) };
+}
+
 export async function apiCall<T>(endpoint: string, options?: ApiCallOptions): Promise<T> {
   const { baseUrl, ...requestOptions } = options || {};
   const url = `${baseUrl ?? API_BASE_URL}${endpoint}`;
   const locale = getCurrentLocale();
   const token = getAuthToken();
   const userId = getCurrentUserId();
+  const isAccessService = (baseUrl ?? API_BASE_URL) === ACCESS_API_BASE_URL;
 
   try {
     const response = await fetch(url, {
@@ -74,6 +82,7 @@ export async function apiCall<T>(endpoint: string, options?: ApiCallOptions): Pr
         'Accept-Language': locale,
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(userId ? { 'X-User-Id': userId } : {}),
+        ...(isAccessService ? getOptionalUserDisplayNameHeader() : {}),
         ...requestOptions.headers,
       },
     });

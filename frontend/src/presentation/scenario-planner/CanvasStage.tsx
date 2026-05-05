@@ -6,28 +6,15 @@ import type { KonvaEventObject } from 'konva/lib/Node';
 import type { Stage as KonvaStage } from 'konva/lib/Stage';
 import { useScenarioPlannerStore, type ScenarioPlannerNode } from '@/store/scenario-planner-store';
 import { useTheme } from '@/hooks';
+import {
+  domovoyCanvas,
+  domovoyRoomPlanner,
+  scenarioNodeColor,
+} from '@/lib/domovoy-canvas-palette';
 
 const DEFAULT_CANVAS_WIDTH = 1920;
 const DEFAULT_CANVAS_HEIGHT = 1080;
 const VIRTUAL_SIZE = 5000;
-
-const nodeColor = (type: ScenarioPlannerNode['type'], theme: 'light' | 'dark') => {
-  const base =
-    type === 'start'
-      ? theme === 'dark'
-        ? '#2563eb'
-        : '#1d4ed8'
-      : type === 'end'
-        ? theme === 'dark'
-          ? '#7c3aed'
-          : '#6d28d9'
-        : type === 'trigger'
-          ? '#3b82f6'
-          : type === 'condition'
-            ? '#8b5cf6'
-            : '#10b981';
-  return base;
-};
 
 export function CanvasStage() {
   const { resolvedTheme } = useTheme();
@@ -209,8 +196,11 @@ export function CanvasStage() {
   };
 
   const theme = resolvedTheme === 'dark' ? 'dark' : 'light';
-  const bg = theme === 'dark' ? '#0b1220' : '#ffffff';
-  const grid = theme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const bg =
+    theme === 'dark' ? domovoyRoomPlanner.canvasSurfaceDark : domovoyRoomPlanner.canvasSurfaceLight;
+  const grid = theme === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(26, 35, 126, 0.08)';
+  const edgeStroke =
+    theme === 'dark' ? 'rgba(159, 168, 218, 0.38)' : 'rgba(26, 35, 126, 0.32)';
 
   const gridLines = useMemo(() => {
     const step = 80;
@@ -259,7 +249,7 @@ export function CanvasStage() {
           <Line
             key={c.id}
             points={c.points}
-            stroke={theme === 'dark' ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)'}
+            stroke={edgeStroke}
             strokeWidth={2}
             tension={0.25}
             bezier
@@ -269,16 +259,16 @@ export function CanvasStage() {
 
         {nodes.map((n) => {
           const isSelected = n.id === selectedNodeId;
-          const fill = nodeColor(n.type, theme);
+          const fill = scenarioNodeColor(n.type, theme);
           const border =
             n.type === 'start' || n.type === 'end'
               ? theme === 'dark'
-                ? 'rgba(255,255,255,0.42)'
-                : 'rgba(17,24,39,0.28)'
+                ? 'rgba(232, 234, 246, 0.45)'
+                : 'rgba(26, 35, 126, 0.35)'
               : isSelected
                 ? theme === 'dark'
-                  ? '#ffffff'
-                  : '#111827'
+                  ? domovoyCanvas.secondaryLight
+                  : domovoyCanvas.primary
                 : 'rgba(0,0,0,0)';
 
           return (
@@ -329,7 +319,7 @@ export function CanvasStage() {
                 width={196}
                 text={n.title}
                 fontSize={13}
-                fill="#ffffff"
+                fill={domovoyCanvas.onAccent}
                 fontStyle={isSelected ? 'bold' : 'normal'}
               />
             </Group>

@@ -1,1 +1,2 @@
-export { DashboardHouseDetails } from './ui/DashboardHouseDetails';
+export { HouseDashboardLayout } from './ui/HouseDashboardLayout';
+

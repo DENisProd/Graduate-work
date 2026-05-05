@@ -2,7 +2,9 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Card, Chip, Button } from '@heroui/react';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 import { houseInvitationsApi } from '@/lib/api-client';
 import type { HouseInvitationResponse } from '@/types/api';
@@ -158,7 +160,7 @@ function InviteContent() {
                 <p className="text-lg font-semibold">
                   {invitation.houseName ?? t('admin.accessControl.houses')}
                 </p>
-                {invitation.status && <Chip size="sm">{invitation.status}</Chip>}
+                {invitation.status && <Badge variant="secondary">{invitation.status}</Badge>}
               </div>
 
               {invitation.expiresAt && (

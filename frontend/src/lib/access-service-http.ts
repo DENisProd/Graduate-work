@@ -70,18 +70,29 @@ export async function accessServiceRequest<T>(
   const locale = getCurrentLocale();
   const token = getAuthToken();
   const userId = getCurrentUserId();
+  const displayName = useUserStore.getState().user?.name?.trim();
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    'Accept-Language': locale,
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (userId) headers['X-User-Id'] = userId;
+  if (displayName != null && displayName.length > 0) {
+    headers['X-User-Display-Name'] = encodeURIComponent(displayName);
+  }
+  if (options?.headers && typeof options.headers === 'object' && !Array.isArray(options.headers)) {
+    const extra = options.headers as Record<string, string>;
+    for (const [k, v] of Object.entries(extra)) {
+      if (v !== undefined && v !== null) headers[k] = String(v);
+    }
+  }
 
   try {
     const response = await fetch(url, {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        'Accept-Language': locale,
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(userId ? { 'X-User-Id': userId } : {}),
-        ...options?.headers,
-      },
+      headers,
     });
 
     if (!response.ok) {

@@ -35,6 +35,8 @@ export default function LandingPage() {
     },
   ];
 
+  const featureGlowColors = ['blue', 'orange', 'green'] as const;
+
   const valueProps = [
     {
       title: t('landing.valueProps.items.scale.title'),
@@ -87,11 +89,11 @@ export default function LandingPage() {
               <p className="text-muted-foreground">{t('landing.features.description')}</p>
             </div>
             <div className="grid gap-6 md:grid-cols-3">
-              {featureList.map((feature) => (
+              {featureList.map((feature, index) => (
                 <GlowCard
                   key={feature.title}
                   customSize
-                  glowColor="blue"
+                  glowColor={featureGlowColors[index % featureGlowColors.length]}
                   className="h-full w-full border border-border bg-card/80 p-6"
                 >
                   <div className="space-y-3">

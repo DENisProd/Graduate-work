@@ -16,6 +16,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.DeviceCatalogService = void 0;
 const common_1 = require("@nestjs/common");
 const device_catalog_client_1 = require("./device-catalog.client");
+const llm_service_1 = require("../llm/llm.service");
 const llm_types_1 = require("../llm/llm.types");
 const ZIGBEE_TYPE_CODE = 'ZIGBEE';
 function toUpperCode(s, maxLen = 50) {
@@ -228,6 +229,7 @@ exports.DeviceCatalogService = DeviceCatalogService;
 exports.DeviceCatalogService = DeviceCatalogService = DeviceCatalogService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(1, (0, common_1.Optional)()),
-    __metadata("design:paramtypes", [device_catalog_client_1.DeviceCatalogClient, Object])
+    __metadata("design:paramtypes", [device_catalog_client_1.DeviceCatalogClient,
+        llm_service_1.LlmService])
 ], DeviceCatalogService);
 //# sourceMappingURL=device-catalog.service.js.map

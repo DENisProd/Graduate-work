@@ -28,7 +28,7 @@ export default function DashboardDeviceDetailsPage() {
     <DeviceDetails
       houseId={houseId}
       deviceId={deviceId}
-      backHref={`/dashboard/houses/${encodeURIComponent(houseId)}`}
+      backHref={`/dashboard/houses/${encodeURIComponent(houseId)}/devices`}
       backLabel={t('common.back')}
     />
   );

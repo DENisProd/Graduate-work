@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Button } from '@heroui/react';
+import { Button } from '@/components/ui/button';
 import { ThemeSwitcher, LanguageSwitcher } from '@/components/ui';
 import { useSidebar } from '@/components/ui/sidebar';
 import { AccountBlock } from '@/features/auth';
@@ -18,6 +18,22 @@ type Breadcrumb = {
   label: string;
   href?: string;
 };
+
+const HOUSE_SECTION_KEYS = ['rooms', 'members', 'roles', 'devices', 'scenarios'] as const;
+
+function sectionLabel(
+  t: DashboardHeaderProps['t'],
+  seg: (typeof HOUSE_SECTION_KEYS)[number],
+): string {
+  const map: Record<(typeof HOUSE_SECTION_KEYS)[number], Parameters<DashboardHeaderProps['t']>[0]> = {
+    rooms: 'dashboard.sections.rooms',
+    members: 'dashboard.sections.members',
+    roles: 'dashboard.sections.roles',
+    devices: 'dashboard.sections.devices',
+    scenarios: 'dashboard.sections.scenarios',
+  };
+  return t(map[seg]);
+}
 
 export function DashboardHeader({
   t,
@@ -47,13 +63,34 @@ export function DashboardHeader({
       if (houseId) {
         const houseLabel =
           selectedHouseName ?? `${t('dashboard.myHouses')} #${houseId}`;
+        const hid = encodeURIComponent(houseId);
         breadcrumbs.push({
           label: houseLabel,
-          href: `/dashboard/houses/${encodeURIComponent(houseId)}`,
+          href: `/dashboard/houses/${hid}`,
         });
 
         if (pathname.includes('/room-planner')) {
           breadcrumbs.push({ label: t('navigation.room_planner') });
+          return breadcrumbs;
+        }
+
+        const parts = pathname.split('/').filter(Boolean);
+        const houseIdx = parts.indexOf('houses');
+        const seg = houseIdx >= 0 ? parts[houseIdx + 2] : undefined;
+
+        if (seg === 'devices' && parts[houseIdx + 3]) {
+          breadcrumbs.push({
+            label: t('dashboard.sections.devices'),
+            href: `/dashboard/houses/${hid}/devices`,
+          });
+          breadcrumbs.push({ label: t('dashboard.breadcrumb.device') });
+          return breadcrumbs;
+        }
+
+        if (seg && (HOUSE_SECTION_KEYS as readonly string[]).includes(seg)) {
+          breadcrumbs.push({
+            label: sectionLabel(t, seg as (typeof HOUSE_SECTION_KEYS)[number]),
+          });
         }
       }
 

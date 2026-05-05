@@ -236,7 +236,7 @@ export function DeviceListCard({
               <span
                 aria-hidden
                 className={cn(
-                  'pointer-events-none block h-[1.125rem] w-[1.125rem] rounded-full bg-white shadow-sm transition-transform duration-200',
+                  'pointer-events-none block h-[1.125rem] w-[1.125rem] rounded-full bg-primary-foreground shadow-sm transition-transform duration-200',
                   displayIsOn ? 'translate-x-[0.875rem]' : 'translate-x-0'
                 )}
               />

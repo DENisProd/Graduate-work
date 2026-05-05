@@ -36,6 +36,7 @@ export class MemberEffectivePermissionDto {
 export class HouseMemberListItemDto {
   @ApiProperty({ format: 'uuid', example: UUID_EX }) id!: string;
   @ApiProperty({ format: 'uuid', example: '6ba7b810-9dad-11d1-80b4-00c04fd430c8' }) userId!: string;
+  @ApiPropertyOptional({ example: 'Иван Петров' }) userDisplayName?: string;
   @ApiPropertyOptional({ example: 'https://cdn.example/avatar.png' }) userAvatarUrl?: string;
   @ApiProperty({ example: '2024-01-01 12:00:00' }) joinedAt!: string;
   @ApiProperty({ type: [HouseMemberRoleBriefDto], description: 'Назначенные роли участника в доме' })
@@ -45,6 +46,7 @@ export class HouseMemberListItemDto {
 export class HouseMemberResponseDto {
   @ApiProperty({ format: 'uuid', example: UUID_EX }) id!: string;
   @ApiProperty({ format: 'uuid', example: '6ba7b810-9dad-11d1-80b4-00c04fd430c8' }) userId!: string;
+  @ApiPropertyOptional({ example: 'Иван Петров' }) userDisplayName?: string;
   @ApiPropertyOptional({ example: 'https://cdn.example/avatar.png' }) userAvatarUrl?: string;
   @ApiProperty({ format: 'uuid', example: UUID_EX }) houseId!: string;
   @ApiProperty({ example: 'Мой дом' }) houseName!: string;

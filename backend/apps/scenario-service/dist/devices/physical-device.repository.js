@@ -87,6 +87,6 @@ exports.PhysicalDeviceRepository = PhysicalDeviceRepository;
 exports.PhysicalDeviceRepository = PhysicalDeviceRepository = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(physical_device_mongo_1.PHYSICAL_DEVICE_MODEL)),
-    __metadata("design:paramtypes", [Object])
+    __metadata("design:paramtypes", [Function])
 ], PhysicalDeviceRepository);
 //# sourceMappingURL=physical-device.repository.js.map

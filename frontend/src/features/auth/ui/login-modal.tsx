@@ -1,7 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Input, Modal } from '@heroui/react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useUserStore } from '@/store';
 import { useTranslation } from '@/hooks';
 import type { CurrentUser } from '@/types';
@@ -35,36 +44,37 @@ export function LoginModal({ isOpen, onOpenChange }: LoginModalProps) {
   };
 
   return (
-    <Modal isOpen={isOpen} onOpenChange={handleClose}>
-      <Modal.Backdrop>
-        <Modal.Container>
-          <Modal.Dialog className="max-w-md overflow-hidden rounded-xl">
-            <Modal.Header className="rounded-t-xl border-b border-border">
-              <Modal.Heading>{t('auth.mockLoginTitle')}</Modal.Heading>
-            </Modal.Header>
-            <Modal.Body className="px-4 py-4">
-              <Input
-                placeholder={t('admin.accessControl.placeholders.userId')}
-                type="text"
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)}
-              />
-            </Modal.Body>
-            <Modal.Footer className="rounded-b-xl border-t border-border">
-              <Button variant="secondary" onPress={() => handleClose(false)}>
-                {t('common.cancel')}
-              </Button>
-              <Button
-                variant="primary"
-                onPress={handleSubmit}
-                isDisabled={!userId.trim()}
-              >
-                {t('auth.login')}
-              </Button>
-            </Modal.Footer>
-          </Modal.Dialog>
-        </Modal.Container>
-      </Modal.Backdrop>
-    </Modal>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t('auth.mockLoginTitle')}</DialogTitle>
+          <DialogDescription className="sr-only">
+            {t('auth.mockLoginTitle')}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-2">
+          <Input
+            placeholder={t('admin.accessControl.placeholders.userId')}
+            type="text"
+            value={userId}
+            onChange={(e) => setUserId(e.target.value)}
+          />
+        </div>
+
+        <DialogFooter>
+          <Button variant="secondary" onClick={() => handleClose(false)}>
+            {t('common.cancel')}
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleSubmit}
+            isDisabled={!userId.trim()}
+          >
+            {t('auth.login')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

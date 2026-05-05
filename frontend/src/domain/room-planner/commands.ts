@@ -1,7 +1,7 @@
 // Command pattern for undo/redo
 
 import type { Point, DeviceType, DeviceAnchor } from './types';
-import type { RoomEntity } from './entities';
+import { RoomEntity } from './entities';
 
 export interface Command {
   execute(room: RoomEntity): RoomEntity;

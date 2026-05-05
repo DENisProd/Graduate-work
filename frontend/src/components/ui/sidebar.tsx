@@ -206,6 +206,20 @@ function Sidebar({
     )
   }
 
+  // `motion.div` has its own `onDrag` signature (Framer Motion),
+  // which conflicts with the native HTML `onDrag` type from div props.
+  // We don't use native drag events here, so we omit it for the motion container.
+  const {
+    onDrag: _onDrag,
+    onDragStart: _onDragStart,
+    onDragEnd: _onDragEnd,
+    onDragEnter: _onDragEnter,
+    onDragLeave: _onDragLeave,
+    onDragOver: _onDragOver,
+    onDrop: _onDrop,
+    ...desktopProps
+  } = props
+
   return (
     <div
       className="group peer text-sidebar-foreground hidden md:block"
@@ -250,7 +264,7 @@ function Sidebar({
         }}
         layout
         transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
-        {...props}
+        {...(desktopProps as any)}
       >
         <div
           data-sidebar="sidebar"

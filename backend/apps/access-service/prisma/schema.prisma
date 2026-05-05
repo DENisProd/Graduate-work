@@ -70,6 +70,8 @@ model User {
 
   externalUserId String  @unique @map("external_user_id")
   avatarUrl      String? @map("avatar_url")
+  /** Имя для UI (Keycloak / клиент), синхронизируется заголовком X-User-Display-Name */
+  displayName    String? @map("display_name") @db.VarChar(255)
 
   memberships   HouseMember[]
   ownedHouses   House[]       @relation("HouseOwner")
@@ -204,6 +206,8 @@ model Resource {
   policies             AccessPolicy[]
   effectivePermissions EffectivePermission[]
 
+  metadata Json? @map("metadata")
+
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([houseId])
@@ -331,4 +335,167 @@ model AccessAuditLog {
   @@index([actorId])
   @@index([resourceId])
   @@map("access_audit_logs")
+}
+
+////////////////////////////////////////////////////////////
+// DEVICE CATALOG
+////////////////////////////////////////////////////////////
+
+enum DeviceStatus {
+  ONLINE
+  OFFLINE
+}
+
+enum DeviceFunctionType {
+  READ
+  WRITE
+  READ_WRITE
+}
+
+enum ActionType {
+  TOGGLE
+  COMMAND
+  VALUE
+}
+
+model DeviceType {
+  id           Int                    @id @default(autoincrement())
+  code         String                 @unique @db.VarChar(50)
+  active       Boolean                @default(true)
+  createdAt    DateTime               @default(now()) @map("created_at")
+  updatedAt    DateTime               @updatedAt @map("updated_at")
+  categories   DeviceCategory[]
+  translations DeviceTypeTranslation[]
+
+  @@map("device_types")
+}
+
+model DeviceCategory {
+  id           Int                        @id @default(autoincrement())
+  code         String                     @unique @db.VarChar(50)
+  deviceTypeId Int                        @map("device_type_id")
+  deviceType   DeviceType                 @relation(fields: [deviceTypeId], references: [id])
+  active       Boolean                    @default(true)
+  isModerated  Boolean                    @default(true) @map("is_moderated")
+  createdAt    DateTime                   @default(now()) @map("created_at")
+  updatedAt    DateTime                   @updatedAt @map("updated_at")
+  devices      Device[]
+  translations DeviceCategoryTranslation[]
+
+  @@map("device_categories")
+}
+
+model Device {
+  id               Int                @id @default(autoincrement())
+  code             String             @unique @db.VarChar(100)
+  deviceCategoryId Int                @map("device_category_id")
+  deviceCategory   DeviceCategory     @relation(fields: [deviceCategoryId], references: [id])
+  status           DeviceStatus       @default(OFFLINE)
+  serialNumber     String?            @db.VarChar(100) @map("serial_number")
+  firmwareVersion  String?            @db.VarChar(50) @map("firmware_version")
+  active           Boolean            @default(true)
+  isModerated      Boolean            @default(true) @map("is_moderated")
+  lastSeenAt       DateTime?          @map("last_seen_at")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+  translations     DeviceTranslation[]
+  functions        DeviceFunction[]
+
+  @@map("devices")
+}
+
+model DeviceFunction {
+  id           Int                       @id @default(autoincrement())
+  code         String                    @db.VarChar(50)
+  deviceId     Int                       @map("device_id")
+  device       Device                    @relation(fields: [deviceId], references: [id])
+  functionType DeviceFunctionType        @map("function_type")
+  currentValue String?                   @map("current_value")
+  minValue     Float?                    @map("min_value")
+  maxValue     Float?                    @map("max_value")
+  unit         String?                   @db.VarChar(50)
+  active       Boolean                   @default(true)
+  createdAt    DateTime                  @default(now()) @map("created_at")
+  updatedAt    DateTime                  @updatedAt @map("updated_at")
+  translations DeviceFunctionTranslation[]
+  actions      DeviceFunctionAction[]
+
+  @@unique([deviceId, code])
+  @@map("device_functions")
+}
+
+model DeviceFunctionAction {
+  id               Int                             @id @default(autoincrement())
+  code             String                          @db.VarChar(50)
+  deviceFunctionId Int                             @map("device_function_id")
+  deviceFunction   DeviceFunction                  @relation(fields: [deviceFunctionId], references: [id])
+  actionType       ActionType                      @map("action_type")
+  payloadTemplate  String?                         @map("payload_template")
+  active           Boolean                         @default(true)
+  createdAt        DateTime                        @default(now()) @map("created_at")
+  updatedAt        DateTime                        @updatedAt @map("updated_at")
+  translations     DeviceFunctionActionTranslation[]
+
+  @@unique([deviceFunctionId, code])
+  @@map("device_function_actions")
+}
+
+model DeviceTranslation {
+  id       Int    @id @default(autoincrement())
+  locale   String @db.VarChar(10)
+  name     String
+  description String?
+  deviceId Int    @map("device_id")
+  device   Device @relation(fields: [deviceId], references: [id])
+
+  @@unique([deviceId, locale])
+  @@map("device_translations")
+}
+
+model DeviceCategoryTranslation {
+  id               Int            @id @default(autoincrement())
+  locale           String         @db.VarChar(10)
+  name             String
+  description      String?
+  deviceCategoryId Int            @map("device_category_id")
+  deviceCategory   DeviceCategory @relation(fields: [deviceCategoryId], references: [id])
+
+  @@unique([deviceCategoryId, locale])
+  @@map("device_category_translations")
+}
+
+model DeviceTypeTranslation {
+  id           Int        @id @default(autoincrement())
+  locale       String     @db.VarChar(10)
+  name         String
+  description  String?
+  deviceTypeId Int        @map("device_type_id")
+  deviceType   DeviceType @relation(fields: [deviceTypeId], references: [id])
+
+  @@unique([deviceTypeId, locale])
+  @@map("device_type_translations")
+}
+
+model DeviceFunctionTranslation {
+  id               Int            @id @default(autoincrement())
+  locale           String         @db.VarChar(10)
+  name             String
+  description      String?
+  deviceFunctionId Int            @map("device_function_id")
+  deviceFunction   DeviceFunction @relation(fields: [deviceFunctionId], references: [id])
+
+  @@unique([deviceFunctionId, locale])
+  @@map("device_function_translations")
+}
+
+model DeviceFunctionActionTranslation {
+  id                   Int                  @id @default(autoincrement())
+  locale               String               @db.VarChar(10)
+  name                 String
+  description          String?
+  deviceFunctionActionId Int                @map("device_function_action_id")
+  deviceFunctionAction DeviceFunctionAction @relation(fields: [deviceFunctionActionId], references: [id])
+
+  @@unique([deviceFunctionActionId, locale])
+  @@map("device_function_action_translations")
 }

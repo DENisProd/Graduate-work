@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Button } from '@heroui/react';
+import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/hooks';
 import {
   DropdownMenu,
@@ -102,8 +102,10 @@ export function AccountBlock() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" sideOffset={6}>
-        <DropdownMenuItem asChild>
-          <Link href="/profile">{t('auth.profile')}</Link>
+        <DropdownMenuItem>
+          <Link href="/profile" className="w-full">
+            {t('auth.profile')}
+          </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem

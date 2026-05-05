@@ -72,6 +72,6 @@ exports.ZigbeeLinkRepository = ZigbeeLinkRepository;
 exports.ZigbeeLinkRepository = ZigbeeLinkRepository = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(device_network_link_mongo_1.DEVICE_NETWORK_LINK_MODEL)),
-    __metadata("design:paramtypes", [Object])
+    __metadata("design:paramtypes", [Function])
 ], ZigbeeLinkRepository);
 //# sourceMappingURL=zigbee-link.repository.js.map

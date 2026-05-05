@@ -45,7 +45,6 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 var ZigbeeMqttService_1;
-var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ZigbeeMqttService = void 0;
 const common_1 = require("@nestjs/common");
@@ -199,6 +198,7 @@ exports.ZigbeeMqttService = ZigbeeMqttService;
 exports.ZigbeeMqttService = ZigbeeMqttService = ZigbeeMqttService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(1, (0, common_1.Inject)((0, common_1.forwardRef)(() => zigbee_ingest_service_1.ZigbeeIngestService))),
-    __metadata("design:paramtypes", [typeof (_a = typeof config_1.ConfigService !== "undefined" && config_1.ConfigService) === "function" ? _a : Object, zigbee_ingest_service_1.ZigbeeIngestService])
+    __metadata("design:paramtypes", [config_1.ConfigService,
+        zigbee_ingest_service_1.ZigbeeIngestService])
 ], ZigbeeMqttService);
 //# sourceMappingURL=zigbee-mqtt.service.js.map

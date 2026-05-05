@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, ButtonGroup } from '@heroui/react';
+import { Button } from '@/components/ui/button';
 import { DoorOpen, Grid3X3, Hand, Home, Minus, MousePointer2, Plug, Plus, Redo2, Ruler, Square, Undo2 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/animate-ui/components/radix/tabs';
 import { useRoomPlannerStore } from '@/store/room-planner-store';
@@ -133,7 +133,7 @@ export function Toolbar() {
 
       <div className="mx-2 h-6 w-px bg-border" />
 
-      <ButtonGroup size="sm">
+      <div className="inline-flex items-center gap-1 rounded-md border border-border bg-background p-1">
         <Button
           onPress={undo}
           isDisabled={!canUndo}
@@ -154,11 +154,11 @@ export function Toolbar() {
         >
           <Redo2 className="size-4" />
         </Button>
-      </ButtonGroup>
+      </div>
 
       <div className="mx-2 h-6 w-px bg-border" />
 
-      <ButtonGroup size="sm">
+      <div className="inline-flex items-center gap-1 rounded-md border border-border bg-background p-1">
         <Button
           onPress={() => setZoom(Math.max(50, zoom - 10))}
           isIconOnly
@@ -178,7 +178,7 @@ export function Toolbar() {
         >
           <Plus className="size-4" />
         </Button>
-      </ButtonGroup>
+      </div>
 
       <div className="flex-1" />
 
@@ -203,7 +203,7 @@ export function Toolbar() {
 
       <div className="mx-2 h-6 w-px bg-border" />
 
-      <ButtonGroup size="sm">
+      <div className="inline-flex items-center gap-1 rounded-md border border-border bg-background p-1">
         <Button
           onPress={handleExport}
           variant="ghost"
@@ -235,7 +235,7 @@ export function Toolbar() {
             {t('admin.roomPlanner.reset')}
           </Button>
         )}
-      </ButtonGroup>
+      </div>
       
       {mode === 'walls' && pendingWallStart && (
         <>

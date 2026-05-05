@@ -3,6 +3,7 @@
 import { Line, Circle, Group, Text } from 'react-konva';
 import type { Point, ProjectMode, Wall } from '@/domain/room-planner';
 import { snapPoint, GRID_SIZE } from '@/domain/room-planner/snapping';
+import { domovoyCanvas } from '@/lib/domovoy-canvas-palette';
 
 interface WallPreviewLayerProps {
   mode: ProjectMode;
@@ -36,7 +37,7 @@ export function WallPreviewLayer({
           x={snappedPos.x}
           y={snappedPos.y}
           radius={5}
-          fill="#10B981"
+          fill={domovoyCanvas.handle}
           opacity={0.5}
           listening={false}
         />
@@ -52,7 +53,7 @@ export function WallPreviewLayer({
         {/* Phantom Wall Line */}
         <Line
           points={[pendingWallStart.x, pendingWallStart.y, snappedPos.x, snappedPos.y]}
-          stroke="#10B981"
+          stroke={domovoyCanvas.tealBright}
           strokeWidth={20} // Same as real wall
           opacity={0.3}
           lineCap="butt"
@@ -62,7 +63,7 @@ export function WallPreviewLayer({
         {/* Guide Line (thin) */}
         <Line
           points={[pendingWallStart.x, pendingWallStart.y, snappedPos.x, snappedPos.y]}
-          stroke="#059669"
+          stroke={domovoyCanvas.handleHover}
           strokeWidth={2}
           dash={[5, 5]}
         />
@@ -72,7 +73,7 @@ export function WallPreviewLayer({
           x={snappedPos.x}
           y={snappedPos.y}
           radius={5}
-          fill="#10B981"
+          fill={domovoyCanvas.handle}
           listening={false}
         />
 
@@ -82,7 +83,7 @@ export function WallPreviewLayer({
           y={(pendingWallStart.y + snappedPos.y) / 2}
           text={`${Math.round(Math.sqrt(Math.pow(snappedPos.x - pendingWallStart.x, 2) + Math.pow(snappedPos.y - pendingWallStart.y, 2)))}`}
           fontSize={14}
-          fill="#059669"
+          fill={domovoyCanvas.handleHover}
           align="center"
           verticalAlign="middle"
           offsetX={10}

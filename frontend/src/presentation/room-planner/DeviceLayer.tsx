@@ -4,6 +4,7 @@ import { Group, Circle, Text } from 'react-konva';
 import { useRoomPlannerStore } from '@/store/room-planner-store';
 import type { Device, ProjectMode } from '@/domain/room-planner';
 import type { KonvaEventObject } from 'konva/lib/Node';
+import { domovoyCanvas, roomDeviceColor } from '@/lib/domovoy-canvas-palette';
 
 interface DeviceLayerProps {
   devices: Device[];
@@ -17,15 +18,6 @@ const DEVICE_ICONS: Record<string, string> = {
   'temperature-sensor': '🌡️',
   camera: '📹',
   dimmer: '💡',
-};
-
-const DEVICE_COLORS: Record<string, string> = {
-  socket: '#10B981',
-  switch: '#3B82F6',
-  'motion-sensor': '#F59E0B',
-  'temperature-sensor': '#EF4444',
-  camera: '#8B5CF6',
-  dimmer: '#FBBF24',
 };
 
 export function DeviceLayer({ devices, mode }: DeviceLayerProps) {
@@ -65,7 +57,7 @@ export function DeviceLayer({ devices, mode }: DeviceLayerProps) {
     <>
       {devices.map((device) => {
         const isSelected = selectedDeviceId === device.id;
-        const color = DEVICE_COLORS[device.type] || '#6B7280';
+        const color = roomDeviceColor(device.type);
         const icon = DEVICE_ICONS[device.type] || '📦';
 
         return (
@@ -81,7 +73,7 @@ export function DeviceLayer({ devices, mode }: DeviceLayerProps) {
             <Circle
               radius={20}
               fill={color}
-              stroke={isSelected ? '#1E40AF' : '#FFFFFF'}
+              stroke={isSelected ? domovoyCanvas.selection : domovoyCanvas.onAccent}
               strokeWidth={isSelected ? 3 : 1}
               opacity={0.9}
             />
@@ -95,7 +87,7 @@ export function DeviceLayer({ devices, mode }: DeviceLayerProps) {
             {isSelected && (
               <Circle
                 radius={25}
-                stroke="#3B82F6"
+                stroke={domovoyCanvas.primaryMid}
                 strokeWidth={2}
                 dash={[5, 5]}
                 listening={false}

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Button } from '@heroui/react';
+import { Button } from '@/components/ui/button';
 import { ThemeSwitcher, LanguageSwitcher } from '@/components/ui';
 import { useSidebar } from '@/components/ui/sidebar';
 import { AccountBlock } from '@/features/auth';

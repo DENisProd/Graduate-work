@@ -2,7 +2,16 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-function Card({ className, ...props }: React.ComponentProps<"div">) {
+type CardComponent = React.FC<React.ComponentProps<"div">> & {
+  Header: typeof CardHeader
+  Footer: typeof CardFooter
+  Title: typeof CardTitle
+  Action: typeof CardAction
+  Description: typeof CardDescription
+  Content: typeof CardContent
+}
+
+const Card = (({ className, ...props }: React.ComponentProps<"div">) => {
   return (
     <div
       data-slot="card"
@@ -13,7 +22,7 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
       {...props}
     />
   )
-}
+}) as CardComponent
 
 function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -80,6 +89,15 @@ function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
     />
   )
 }
+
+// Back-compat API for legacy usage like <Card.Header /> (<HeroUI>-style).
+// This keeps the app code concise while still using shadcn/ui primitives.
+Card.Header = CardHeader
+Card.Footer = CardFooter
+Card.Title = CardTitle
+Card.Action = CardAction
+Card.Description = CardDescription
+Card.Content = CardContent
 
 export {
   Card,

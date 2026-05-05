@@ -310,6 +310,8 @@ export interface HouseMemberRoleBriefDto {
 export interface HouseMemberResponse {
   id: string;
   userId: string;
+  /** Отображаемое имя (с access-service, синхронизируется с клиента). */
+  userDisplayName?: string;
   userAvatarUrl?: string;
   houseId?: string;
   houseName?: string;

@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, ButtonGroup } from '@heroui/react';
+import { Button } from '@/components/ui/button';
 import { Hand, Link2, MousePointer2, Target } from 'lucide-react';
 import { useScenarioPlannerStore } from '@/store/scenario-planner-store';
 import { useTranslation } from '@/hooks';
@@ -16,7 +16,7 @@ export function Toolbar() {
 
   return (
     <div className="flex items-center gap-2 p-4 border-b border-border bg-background">
-      <ButtonGroup size="sm">
+      <div className="inline-flex items-center gap-1 rounded-md border border-border bg-background p-1">
         <Button
           isIconOnly
           variant={mode === 'select' ? 'solid' : 'ghost'}
@@ -41,11 +41,11 @@ export function Toolbar() {
         >
           <Hand className="size-4" />
         </Button>
-      </ButtonGroup>
+      </div>
 
       <div className="mx-2 h-6 w-px bg-border" />
 
-      <ButtonGroup size="sm">
+      <div className="inline-flex items-center gap-1 rounded-md border border-border bg-background p-1">
         <Button isIconOnly variant="ghost" onPress={() => setZoom(zoom - 10)} aria-label="Zoom out">
           −
         </Button>
@@ -53,7 +53,7 @@ export function Toolbar() {
         <Button isIconOnly variant="ghost" onPress={() => setZoom(zoom + 10)} aria-label="Zoom in">
           +
         </Button>
-      </ButtonGroup>
+      </div>
 
       <div className="flex-1" />
 

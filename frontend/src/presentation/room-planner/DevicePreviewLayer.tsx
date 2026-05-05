@@ -1,6 +1,9 @@
+'use client';
+
 import { Group, Circle, Text } from 'react-konva';
 import type { DeviceType } from '@/domain/room-planner';
 import { useMemo } from 'react';
+import { domovoyCanvas, roomDeviceColor } from '@/lib/domovoy-canvas-palette';
 
 interface DevicePreviewLayerProps {
   type: DeviceType | null;
@@ -16,20 +19,11 @@ const DEVICE_ICONS: Record<string, string> = {
   dimmer: '💡',
 };
 
-const DEVICE_COLORS: Record<string, string> = {
-  socket: '#10B981',
-  switch: '#3B82F6',
-  'motion-sensor': '#F59E0B',
-  'temperature-sensor': '#EF4444',
-  camera: '#8B5CF6',
-  dimmer: '#FBBF24',
-};
-
 export function DevicePreviewLayer({ type, mousePosition }: DevicePreviewLayerProps) {
   const preview = useMemo(() => {
     if (!type || !mousePosition) return null;
 
-    const color = DEVICE_COLORS[type] || '#6B7280';
+    const color = roomDeviceColor(type);
     const icon = DEVICE_ICONS[type] || '📦';
 
     return (
@@ -42,7 +36,7 @@ export function DevicePreviewLayer({ type, mousePosition }: DevicePreviewLayerPr
         <Circle
           radius={20}
           fill={color}
-          stroke="#FFFFFF"
+          stroke={domovoyCanvas.onAccent}
           strokeWidth={1}
           dash={[5, 5]}
         />

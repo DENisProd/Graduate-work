@@ -309,7 +309,7 @@ export function InvitationFormModal({
                   isDisabled={resourcesLoading}
                 />
                 <AdminSelect
-                  label={t('admin.accessControl.device')}
+                  label={t('admin.device')}
                   placeholder={t('admin.accessControl.placeholders.deviceId')}
                   value={deviceId}
                   onChange={setDeviceId}
@@ -318,7 +318,7 @@ export function InvitationFormModal({
                   isDisabled={resourcesLoading}
                 />
                 <AdminSelect
-                  label={t('admin.accessControl.deviceFunction')}
+                  label={t('admin.deviceFunction')}
                   placeholder={t('admin.accessControl.placeholders.deviceFunctionId')}
                   value={deviceFunctionId}
                   onChange={setDeviceFunctionId}

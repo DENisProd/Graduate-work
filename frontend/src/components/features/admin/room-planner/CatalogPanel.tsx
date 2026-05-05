@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Card } from '@heroui/react';
+import { Card } from '@/components/ui/card';
 import { AppWindow, DoorOpen } from 'lucide-react';
 import {
   Accordion,

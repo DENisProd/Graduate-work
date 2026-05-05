@@ -1,8 +1,11 @@
 'use client';
 
+import * as React from 'react';
 import { Line } from 'react-konva';
 
 import { GRID_SIZE } from '@/domain/room-planner/snapping';
+import { useTheme } from '@/hooks';
+import { domovoyRoomPlanner } from '@/lib/domovoy-canvas-palette';
 
 interface GridLayerProps {
   width: number;
@@ -12,9 +15,15 @@ interface GridLayerProps {
 }
 
 export function GridLayer({ width, height, gridSize = GRID_SIZE, show = true }: GridLayerProps) {
+  const { resolvedTheme } = useTheme();
   if (!show) return null;
 
-  const lines: JSX.Element[] = [];
+  const stroke =
+    resolvedTheme === 'dark'
+      ? domovoyRoomPlanner.gridStrokeDark
+      : domovoyRoomPlanner.gridStrokeLight;
+
+  const lines: React.ReactElement[] = [];
 
   // Vertical lines
   for (let x = 0; x <= width; x += gridSize) {
@@ -22,7 +31,7 @@ export function GridLayer({ width, height, gridSize = GRID_SIZE, show = true }: 
       <Line
         key={`v-${x}`}
         points={[x, 0, x, height]}
-        stroke="#E5E7EB"
+        stroke={stroke}
         strokeWidth={0.5}
         listening={false}
         dash={[2, 2]}
@@ -36,7 +45,7 @@ export function GridLayer({ width, height, gridSize = GRID_SIZE, show = true }: 
       <Line
         key={`h-${y}`}
         points={[0, y, width, y]}
-        stroke="#E5E7EB"
+        stroke={stroke}
         strokeWidth={0.5}
         listening={false}
         dash={[2, 2]}

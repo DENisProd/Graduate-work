@@ -1,28 +1,30 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { JetBrains_Mono, Manrope } from 'next/font/google';
 import './globals.css';
 import { ToastProvider } from '@/components/shared';
 import { ConditionalLayout } from '@/components/layout';
 import { AuthSessionProvider } from '@/features/auth/ui/session-provider';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin', 'latin-ext'],
+const manrope = Manrope({
+  variable: '--font-manrope',
+  subsets: ['latin', 'latin-ext', 'cyrillic'],
+  weight: ['400', '500', '600', '700'],
 });
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin', 'latin-ext'],
+const jetbrainsMono = JetBrains_Mono({
+  variable: '--font-jetbrains-mono',
+  subsets: ['latin', 'latin-ext', 'cyrillic'],
+  weight: ['400', '500', '600'],
 });
 
 export const metadata: Metadata = {
   title: {
-    default: 'Smart Home System',
-    template: '%s | Smart Home',
+    default: 'Домовой',
+    template: '%s | Домовой',
   },
-  description: 'Control your smart home with ease. Manage all your devices and rooms from one place.',
-  keywords: ['smart home', 'home automation', 'IoT', 'devices'],
-  authors: [{ name: 'Smart Home Team' }],
+  description: 'Домовой — система умного дома. Управляйте устройствами и автоматизациями в одном месте.',
+  keywords: ['умный дом', 'домовой', 'автоматизация', 'IoT', 'устройства'],
+  authors: [{ name: 'Domovoy Team' }],
 };
 
 export const viewport = {
@@ -92,7 +94,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${manrope.variable} ${jetbrainsMono.variable} antialiased`}>
         <ToastProvider>
           <AuthSessionProvider>
             <ConditionalLayout>{children}</ConditionalLayout>

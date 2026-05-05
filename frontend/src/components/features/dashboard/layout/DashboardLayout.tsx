@@ -43,6 +43,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           expandedGroups={expandedGroups}
           toggleGroup={toggleGroup}
           t={t}
+          selectedHouseId={selectedHouseId}
+          selectedHouseName={selectedHouseName}
         />
 
         <SidebarInset className="flex min-w-0 flex-1 flex-col">
@@ -68,3 +70,4 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     </SidebarProvider>
   );
 }
+

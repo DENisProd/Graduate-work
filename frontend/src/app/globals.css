@@ -1,9 +1,6 @@
 /* Tailwind CSS v4 - Must be first */
 @import "tailwindcss";
 
-/* HeroUI v3 styles - Must be after Tailwind */
-@import "@heroui/styles";
-
 /* Application theme variables (light/dark) */
 @import "../styles/themes/index.css";
 @import "tw-animate-css";
@@ -30,7 +27,7 @@ html[data-theme="dark"] {
 }
 
 body {
-  font-family: var(--font-geist-sans, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+  font-family: var(--font-manrope, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
   min-height: 100vh;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
@@ -111,8 +108,18 @@ body {
 
 /* Theme variables for Tailwind */
 @theme inline {
-  --font-sans: var(--font-geist-sans, system-ui);
-  --font-mono: var(--font-geist-mono, monospace);
+  --font-sans: var(--font-manrope, system-ui);
+  --font-mono: var(
+    --font-jetbrains-mono,
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    'Liberation Mono',
+    'Courier New',
+    monospace
+  );
   /* Theme-based colors for Tailwind utilities */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -260,7 +267,7 @@ html[data-theme="dark"] [data-slot="input"] textarea,
 @layer base {
   input::placeholder,
   textarea::placeholder {
-    @apply text-gray-400 dark:text-gray-300;
+    @apply text-muted-foreground;
   }
   * {
     @apply border-border outline-ring/50;
@@ -278,8 +285,10 @@ html[data-theme="dark"] [data-slot="input"] textarea,
   --card-foreground: oklch(0.129 0.042 264.695);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: #717EEE;
+  --primary: #1A237E;
   --primary-foreground: #ffffff;
+  --brand-secondary: #FF9800;
+  --brand-teal: #009688;
   --secondary: oklch(0.968 0.007 247.896);
   --secondary-foreground: oklch(0.208 0.042 265.755);
   --muted: oklch(0.968 0.007 247.896);
@@ -297,12 +306,24 @@ html[data-theme="dark"] [data-slot="input"] textarea,
   --chart-5: oklch(0.769 0.188 70.08);
   --sidebar: oklch(0.984 0.003 247.858);
   --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: #717EEE;
+  --sidebar-primary: #1A237E;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: oklch(0.968 0.007 247.896);
   --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
   --sidebar-border: oklch(0.929 0.013 255.508);
   --sidebar-ring: oklch(0.704 0.04 256.788);
+
+  /* Layered surfaces (aligned with brand neutrals, same hue family as foreground) */
+  --content-area: oklch(0.985 0.004 247.858);
+  --surface-1: oklch(0.993 0.003 247.858);
+  --surface-2: oklch(0.968 0.007 247.896);
+  --surface-3: oklch(0.948 0.011 255.508);
+
+  /* Shadows tinted to the primary hue (avoid pure gray “floating” panels) */
+  --shadow-color: 264 32% 18%;
+  --shadow-sm: 0 1px 2px 0 hsl(var(--shadow-color) / 0.06);
+  --shadow-md: 0 4px 6px -1px hsl(var(--shadow-color) / 0.08);
+  --shadow-lg: 0 10px 15px -3px hsl(var(--shadow-color) / 0.12);
 }
 
 .dark {
@@ -312,8 +333,10 @@ html[data-theme="dark"] [data-slot="input"] textarea,
   --card-foreground: oklch(0.984 0.003 247.858);
   --popover: oklch(0.17 0.035 264.695);
   --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: #717EEE;
+  --primary: #1A237E;
   --primary-foreground: #ffffff;
+  --brand-secondary: #FF9800;
+  --brand-teal: #009688;
   --secondary: oklch(0.279 0.041 260.031);
   --secondary-foreground: oklch(0.984 0.003 247.858);
   --muted: oklch(0.279 0.041 260.031);
@@ -331,12 +354,22 @@ html[data-theme="dark"] [data-slot="input"] textarea,
   --chart-5: oklch(0.645 0.246 16.439);
   --sidebar: oklch(0.15 0.03 264.695);
   --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: #717EEE;
+  --sidebar-primary: #1A237E;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: oklch(0.279 0.041 260.031);
   --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.551 0.027 264.364);
+
+  --content-area: oklch(0.132 0.041 264.695);
+  --surface-1: oklch(0.145 0.038 264.695);
+  --surface-2: oklch(0.165 0.036 264.695);
+  --surface-3: oklch(0.19 0.038 260.031);
+
+  --shadow-color: 264 45% 6%;
+  --shadow-sm: 0 1px 2px 0 hsl(var(--shadow-color) / 0.35);
+  --shadow-md: 0 4px 6px -1px hsl(var(--shadow-color) / 0.45);
+  --shadow-lg: 0 10px 15px -3px hsl(var(--shadow-color) / 0.5);
 }
 
 @layer base {

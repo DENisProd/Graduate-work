@@ -10,19 +10,12 @@ import type { Point } from '@/domain/room-planner';
 import { snapPoint } from '@/domain/room-planner/snapping';
 import { GRID_SIZE } from '@/domain/room-planner/snapping';
 import { useTheme } from '@/hooks';
-
-const REGION_FILLS = [
-  'rgba(59, 130, 246, 0.2)',
-  'rgba(34, 197, 94, 0.2)',
-  'rgba(234, 179, 8, 0.2)',
-  'rgba(249, 115, 22, 0.2)',
-  'rgba(168, 85, 247, 0.2)',
-  'rgba(236, 72, 153, 0.2)',
-];
-
-function getRegionFill(index: number): string {
-  return REGION_FILLS[index % REGION_FILLS.length];
-}
+import {
+  getRegionFill,
+  regionLabelFill,
+  regionStrokeColors,
+  domovoyCanvas,
+} from '@/lib/domovoy-canvas-palette';
 
 function centroid(points: Point[]): Point {
   if (points.length === 0) return { x: 0, y: 0 };
@@ -70,8 +63,8 @@ export function RegionLayer() {
       .catch(() => setHouseRooms([]));
   }, [houseId]);
 
-  const strokeColor = resolvedTheme === 'dark' ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.15)';
-  const strokeSelected = resolvedTheme === 'dark' ? 'rgba(96, 165, 250, 0.9)' : 'rgba(59, 130, 246, 0.9)';
+  const theme = resolvedTheme === 'dark' ? 'dark' : 'light';
+  const { default: strokeColor, selected: strokeSelected } = regionStrokeColors(theme);
 
   return (
     <>
@@ -90,14 +83,14 @@ export function RegionLayer() {
             stroke={isSelected ? strokeSelected : strokeColor}
             strokeWidth={isSelected ? 2.5 : 1}
             listening={mode === 'rooms' || mode === 'select'}
-            onClick={(e: KonvaEventObject<MouseEvent>) => {
+            onClick={(e) => {
               e.cancelBubble = true;
               if (e.evt) e.evt.stopPropagation();
               if (mode === 'rooms' || mode === 'select') {
                 selectRegion(region.id);
               }
             }}
-            onTap={(e: KonvaEventObject<PointerEvent>) => {
+            onTap={(e) => {
               e.cancelBubble = true;
               if (e.evt) e.evt.stopPropagation();
               if (mode === 'rooms' || mode === 'select') {
@@ -125,7 +118,7 @@ export function RegionLayer() {
             text={roomName}
             fontSize={16}
             fontFamily="sans-serif"
-            fill={resolvedTheme === 'dark' ? '#e5e7eb' : '#374151'}
+            fill={regionLabelFill(resolvedTheme)}
             align="center"
             verticalAlign="middle"
             offsetX={approxW / 2}
@@ -152,7 +145,7 @@ export function RegionLayer() {
               hitStrokeWidth={20}
               lineCap="round"
               listening={mode === 'rooms' || mode === 'select'}
-              onClick={(e: KonvaEventObject<MouseEvent>) => {
+              onClick={(e) => {
                 e.cancelBubble = true;
                 if (e.evt) e.evt.stopPropagation();
                 const stage = e.target.getStage();
@@ -170,7 +163,7 @@ export function RegionLayer() {
                 );
                 addRegionPoint(region.id, edgeIndex, projected);
               }}
-              onTap={(e: KonvaEventObject<PointerEvent>) => {
+              onTap={(e) => {
                 e.cancelBubble = true;
                 if (e.evt) e.evt.stopPropagation();
                 const stage = e.target.getStage();
@@ -206,8 +199,16 @@ export function RegionLayer() {
               x={p.x}
               y={p.y}
               radius={isSelected ? 10 : 8}
-              fill={isSelected ? 'rgba(59, 130, 246, 0.95)' : 'rgba(59, 130, 246, 0.8)'}
-              stroke={resolvedTheme === 'dark' ? '#93c5fd' : '#1d4ed8'}
+              fill={
+                isSelected
+                  ? resolvedTheme === 'dark'
+                    ? 'rgba(159, 168, 218, 0.95)'
+                    : 'rgba(26, 35, 126, 0.92)'
+                  : resolvedTheme === 'dark'
+                    ? 'rgba(92, 107, 192, 0.88)'
+                    : 'rgba(26, 35, 126, 0.78)'
+              }
+              stroke={resolvedTheme === 'dark' ? domovoyCanvas.secondaryLight : domovoyCanvas.primaryMid}
               strokeWidth={2}
               draggable
               listening={mode === 'rooms' || mode === 'select'}
@@ -221,17 +222,17 @@ export function RegionLayer() {
                 moveRegionPoint(region.id, i, snapped, true);
                 e.target.position({ x: snapped.x, y: snapped.y });
               }}
-              onClick={(e: KonvaEventObject<MouseEvent>) => {
+              onClick={(e) => {
                 e.cancelBubble = true;
                 if (e.evt) e.evt.stopPropagation();
                 setSelectedRegionPointIndex(i);
               }}
-              onTap={(e: KonvaEventObject<PointerEvent>) => {
+              onTap={(e) => {
                 e.cancelBubble = true;
                 if (e.evt) e.evt.stopPropagation();
                 setSelectedRegionPointIndex(i);
               }}
-              onContextMenu={(e: KonvaEventObject<PointerEvent>) => {
+              onContextMenu={(e) => {
                 e.evt.preventDefault();
                 if (canDeleteVertex) removeRegionPoint(region.id, i);
               }}
@@ -245,7 +246,9 @@ export function RegionLayer() {
           <Line
             points={pendingRegionPoints.flatMap((p) => [p.x, p.y])}
             closed={false}
-            stroke="rgba(59, 130, 246, 0.8)"
+            stroke={
+              resolvedTheme === 'dark' ? 'rgba(159, 168, 218, 0.85)' : 'rgba(26, 35, 126, 0.78)'
+            }
             strokeWidth={2}
             dash={[8, 4]}
             listening={false}
@@ -256,8 +259,14 @@ export function RegionLayer() {
               x={p.x}
               y={p.y}
               radius={i === 0 && pendingRegionPoints.length >= 3 ? 10 : 6}
-              fill={i === 0 && pendingRegionPoints.length >= 3 ? 'rgba(34, 197, 94, 0.9)' : 'rgba(59, 130, 246, 0.9)'}
-              stroke={resolvedTheme === 'dark' ? '#fff' : '#333'}
+              fill={
+                i === 0 && pendingRegionPoints.length >= 3
+                  ? 'rgba(0, 150, 136, 0.9)'
+                  : resolvedTheme === 'dark'
+                    ? 'rgba(159, 168, 218, 0.92)'
+                    : 'rgba(26, 35, 126, 0.88)'
+              }
+              stroke={resolvedTheme === 'dark' ? domovoyCanvas.onAccent : domovoyCanvas.primary}
               strokeWidth={1}
               listening={false}
             />

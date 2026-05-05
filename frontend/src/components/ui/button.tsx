@@ -38,24 +38,52 @@ const buttonVariants = cva(
   }
 )
 
+type LegacyButtonVariant = NonNullable<VariantProps<typeof buttonVariants>["variant"]> | "primary" | "danger" | "solid"
+
 function Button({
   className,
   variant = "default",
   size = "default",
   asChild = false,
+  // HeroUI-compat props (so we can remove @heroui/react without rewriting all JSX)
+  onPress,
+  isDisabled,
+  isIconOnly,
+  fullWidth,
   ...props
 }: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
+  Omit<VariantProps<typeof buttonVariants>, "variant"> & {
     asChild?: boolean
+    onPress?: React.MouseEventHandler<HTMLButtonElement>
+    isDisabled?: boolean
+    isIconOnly?: boolean
+    fullWidth?: boolean
+    // Legacy variant aliases
+    // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+    variant?: LegacyButtonVariant
   }) {
   const Comp = asChild ? Slot.Root : "button"
+
+  const mappedVariant =
+    variant === "primary" || variant === "solid"
+      ? "default"
+      : variant === "danger"
+        ? "destructive"
+        : variant
+
+  const mappedSize = isIconOnly ? ("icon" as const) : size
 
   return (
     <Comp
       data-slot="button"
-      data-variant={variant}
-      data-size={size}
-      className={cn(buttonVariants({ variant, size, className }))}
+      data-variant={mappedVariant}
+      data-size={mappedSize}
+      className={cn(
+        buttonVariants({ variant: mappedVariant as never, size: mappedSize, className }),
+        fullWidth && "w-full",
+      )}
+      onClick={onPress ?? props.onClick}
+      disabled={isDisabled ?? props.disabled}
       {...props}
     />
   )

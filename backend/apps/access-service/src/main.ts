@@ -16,7 +16,14 @@ async function bootstrap() {
     origin: ['http://localhost:3000', 'http://localhost:8080'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-User-Id', 'Accept-Language'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'X-User-Id',
+      'X-User-Display-Name',
+      'Accept-Language',
+    ],
   });
   app.setGlobalPrefix('api/v1', { exclude: ['health', 'api/docs', 'api/docs/(.*)'] });
   app.useGlobalPipes(
@@ -35,6 +42,8 @@ async function bootstrap() {
         'Сервис контроля доступа к домам, комнатам, ресурсам и правам (RBAC/ABAC).',
         '',
         '**Аутентификация в UI:** операции от имени пользователя ожидают заголовок **X-User-Id** (внешний UUID пользователя). В Swagger UI нажмите **Authorize**, введите UUID — значение подставится в запросы.',
+        '',
+        'Опционально: **X-User-Display-Name** (URL-encoded имя из Keycloak) — сохраняется в профиле пользователя для списков участников.',
         '',
         'Тело ошибок соответствует схеме **ErrorResponse** (HTTP 4xx/5xx).',
       ].join('\n'),

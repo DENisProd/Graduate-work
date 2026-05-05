@@ -1,8 +1,10 @@
 'use client';
 
+import { useSession } from 'next-auth/react';
 import { AppButton } from '@/components/ui/app-button';
 import { useTranslation } from '@/hooks';
 import { useAccessControlStore } from '@/store/access-control-store';
+import type { HouseMemberResponse } from '@/types/api';
 import { Home, Lock, Mail, Shield, UserPlus } from 'lucide-react';
 import { InvitationsBlock } from './InvitationsBlock';
 
@@ -10,8 +12,24 @@ interface MembersTabProps {
   onAddMember: () => void;
   /** Открыть модалку приглашения по email (если не передано — вызывается setInvitationModalOpen из стора) */
   onInvite?: () => void;
-  onMemberClick: (member: import('@/types/api').HouseMemberResponse) => void;
-  onRemoveMember: (member: import('@/types/api').HouseMemberResponse) => void;
+  onMemberClick: (member: HouseMemberResponse) => void;
+  onRemoveMember: (member: HouseMemberResponse) => void;
+}
+
+function memberDisplayName(
+  member: HouseMemberResponse,
+  sessionUserId: string | undefined,
+  sessionName: string | undefined,
+  sessionEmail: string | undefined,
+): string {
+  const fromApi = member.userDisplayName?.trim();
+  if (fromApi) return fromApi;
+  if (sessionUserId && member.userId === sessionUserId) {
+    const n = sessionName?.trim();
+    const e = sessionEmail?.trim();
+    return n || e || member.userId;
+  }
+  return member.userId;
 }
 
 export function MembersTab({
@@ -21,6 +39,8 @@ export function MembersTab({
   onRemoveMember,
 }: MembersTabProps) {
   const { t } = useTranslation();
+  const { data: session } = useSession();
+  const sessionUser = session?.user;
   const members = useAccessControlStore((s) => s.members);
   const invitations = useAccessControlStore((s) => s.invitations);
   const setInvitationModalOpen = useAccessControlStore((s) => s.setInvitationModalOpen);
@@ -52,7 +72,14 @@ export function MembersTab({
               onClick={() => onMemberClick(member)}
             >
               <div className="min-w-0 flex-1">
-                <p className="font-medium text-foreground truncate">{member.userId}</p>
+                <p className="font-medium text-foreground truncate">
+                  {memberDisplayName(
+                    member,
+                    sessionUser?.id,
+                    sessionUser?.name ?? undefined,
+                    sessionUser?.email ?? undefined,
+                  )}
+                </p>
                 {member.roles.length > 0 && (
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
                     {member.roles.map((role) => (

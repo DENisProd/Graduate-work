@@ -8,6 +8,7 @@ import type { KonvaEventObject } from 'konva/lib/Node';
 import type { Group as KonvaGroup } from 'konva/lib/Group';
 import type { Shape as KonvaShape } from 'konva/lib/Shape';
 import { isValidOpeningPosition } from '@/domain/room-planner/snapping';
+import { domovoyCanvas } from '@/lib/domovoy-canvas-palette';
 
 interface DoorWindowLayerProps {
   walls: Wall[];
@@ -541,7 +542,7 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
             {/* Door opening (gap in wall) */}
             <Line
               points={[-doorHalfWidth, 0, doorHalfWidth, 0]}
-              stroke="#8B5CF6"
+              stroke={domovoyCanvas.primaryMid}
               strokeWidth={wall.thickness}
               lineCap="butt"
               visible={false} // Hide the background line to avoid "thick/thin" look
@@ -554,7 +555,7 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
               y={0}
               width={doorWidth}
               height={wall.thickness} // Fill wall thickness
-              fill="#8B5CF6"
+              fill={domovoyCanvas.primaryMid}
               opacity={0.7}
               rotation={(angle * 180) / Math.PI}
               offsetX={doorHalfWidth}
@@ -570,7 +571,7 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
                   width={doorWidth + 8}
                   height={wall.thickness + 8}
                   fill="transparent"
-                  stroke="#10B981"
+                  stroke={domovoyCanvas.selection}
                   strokeWidth={2}
                   rotation={(angle * 180) / Math.PI}
                   offsetX={doorHalfWidth + 4}
@@ -583,11 +584,11 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
                   x={-doorHalfWidth}
                   y={-15}
                   radius={8}
-                  fill="#10B981"
-                  stroke="#FFFFFF"
+                  fill={domovoyCanvas.handle}
+                  stroke={domovoyCanvas.onAccent}
                   strokeWidth={3}
                   shadowBlur={4}
-                  shadowColor="rgba(0, 0, 0, 0.3)"
+                  shadowColor={domovoyCanvas.shadow}
                   draggable={mode === 'select' || mode === 'doors'}
                   onDragStart={(e) => {
                     e.cancelBubble = true;
@@ -616,7 +617,7 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
                     }
                     // Highlight on hover
                     const shape = e.target as KonvaShape;
-                    shape.fill('#059669');
+                    shape.fill(domovoyCanvas.handleHover);
                     shape.scale({ x: 1.2, y: 1.2 });
                   }}
                   onMouseLeave={(e) => {
@@ -626,7 +627,7 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
                     }
                     // Reset on leave
                     const shape = e.target as KonvaShape;
-                    shape.fill('#10B981');
+                    shape.fill(domovoyCanvas.handle);
                     shape.scale({ x: 1, y: 1 });
                   }}
                 />
@@ -634,11 +635,11 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
                   x={doorHalfWidth}
                   y={-15}
                   radius={8}
-                  fill="#10B981"
-                  stroke="#FFFFFF"
+                  fill={domovoyCanvas.handle}
+                  stroke={domovoyCanvas.onAccent}
                   strokeWidth={3}
                   shadowBlur={4}
-                  shadowColor="rgba(0, 0, 0, 0.3)"
+                  shadowColor={domovoyCanvas.shadow}
                   draggable={mode === 'select' || mode === 'doors'}
                   onDragStart={(e) => {
                     e.cancelBubble = true;
@@ -667,7 +668,7 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
                     }
                     // Highlight on hover
                     const shape = e.target as KonvaShape;
-                    shape.fill('#059669');
+                    shape.fill(domovoyCanvas.handleHover);
                     shape.scale({ x: 1.2, y: 1.2 });
                   }}
                   onMouseLeave={(e) => {
@@ -677,7 +678,7 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
                     }
                     // Reset on leave
                     const shape = e.target as KonvaShape;
-                    shape.fill('#10B981');
+                    shape.fill(domovoyCanvas.handle);
                     shape.scale({ x: 1, y: 1 });
                   }}
                 />
@@ -798,7 +799,7 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
             {/* Window opening */}
             <Line
               points={[-windowHalfWidth, 0, windowHalfWidth, 0]}
-              stroke="#3B82F6"
+              stroke={domovoyCanvas.teal}
               strokeWidth={wall.thickness}
               lineCap="butt"
               visible={false}
@@ -811,7 +812,7 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
               y={0}
               width={windowWidth}
               height={wall.thickness}
-              fill="#3B82F6"
+              fill={domovoyCanvas.teal}
               opacity={0.5}
               rotation={(angle * 180) / Math.PI}
               offsetX={windowHalfWidth}
@@ -827,7 +828,7 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
                   width={windowWidth + 8}
                   height={wall.thickness + 8}
                   fill="transparent"
-                  stroke="#10B981"
+                  stroke={domovoyCanvas.selection}
                   strokeWidth={2}
                   rotation={(angle * 180) / Math.PI}
                   offsetX={windowHalfWidth + 4}
@@ -840,11 +841,11 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
                   x={-windowHalfWidth}
                   y={-15}
                   radius={8}
-                  fill="#10B981"
-                  stroke="#FFFFFF"
+                  fill={domovoyCanvas.handle}
+                  stroke={domovoyCanvas.onAccent}
                   strokeWidth={3}
                   shadowBlur={4}
-                  shadowColor="rgba(0, 0, 0, 0.3)"
+                  shadowColor={domovoyCanvas.shadow}
                   draggable={mode === 'select' || mode === 'windows'}
                   onDragStart={(e) => {
                     e.cancelBubble = true;
@@ -873,7 +874,7 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
                     }
                     // Highlight on hover
                     const shape = e.target as KonvaShape;
-                    shape.fill('#059669');
+                    shape.fill(domovoyCanvas.handleHover);
                     shape.scale({ x: 1.2, y: 1.2 });
                   }}
                   onMouseLeave={(e) => {
@@ -883,7 +884,7 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
                     }
                     // Reset on leave
                     const shape = e.target as KonvaShape;
-                    shape.fill('#10B981');
+                    shape.fill(domovoyCanvas.handle);
                     shape.scale({ x: 1, y: 1 });
                   }}
                 />
@@ -891,11 +892,11 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
                   x={windowHalfWidth}
                   y={-15}
                   radius={8}
-                  fill="#10B981"
-                  stroke="#FFFFFF"
+                  fill={domovoyCanvas.handle}
+                  stroke={domovoyCanvas.onAccent}
                   strokeWidth={3}
                   shadowBlur={4}
-                  shadowColor="rgba(0, 0, 0, 0.3)"
+                  shadowColor={domovoyCanvas.shadow}
                   draggable={mode === 'select' || mode === 'windows'}
                   onDragStart={(e) => {
                     e.cancelBubble = true;
@@ -924,7 +925,7 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
                     }
                     // Highlight on hover
                     const shape = e.target as KonvaShape;
-                    shape.fill('#059669');
+                    shape.fill(domovoyCanvas.handleHover);
                     shape.scale({ x: 1.2, y: 1.2 });
                   }}
                   onMouseLeave={(e) => {
@@ -934,7 +935,7 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
                     }
                     // Reset on leave
                     const shape = e.target as KonvaShape;
-                    shape.fill('#10B981');
+                    shape.fill(domovoyCanvas.handle);
                     shape.scale({ x: 1, y: 1 });
                   }}
                 />

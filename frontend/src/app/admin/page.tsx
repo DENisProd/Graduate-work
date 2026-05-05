@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslation } from '@/hooks';
-import { Card } from '@heroui/react';
+import { Card } from '@/components/ui/card';
 import Link from 'next/link';
 
 export default function AdminPage() {

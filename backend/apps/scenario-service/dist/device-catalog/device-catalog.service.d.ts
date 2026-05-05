@@ -7,9 +7,9 @@ export interface DeviceCatalogSyncResult {
 }
 export declare class DeviceCatalogService {
     private readonly client;
-    private readonly llm;
+    private readonly llm?;
     private readonly logger;
-    constructor(client: DeviceCatalogClient, llm: LlmService | null);
+    constructor(client: DeviceCatalogClient, llm?: LlmService | undefined);
     syncWithCatalog(input: {
         model?: string | null;
         manufacturerName?: string | null;

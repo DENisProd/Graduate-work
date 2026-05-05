@@ -3,15 +3,21 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
-import { Button } from '@heroui/react';
+import { Button } from '@/components/ui/button';
 import {
+  ArrowLeft,
   Building2,
   ChevronUp,
-  Home,
+  Cpu,
+  DoorOpen,
   LayoutDashboard,
+  LayoutGrid,
   LogOut,
   Map,
+  Shield,
   User,
+  Users,
+  Workflow,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -41,6 +47,72 @@ interface DashboardSidebarProps {
   expandedGroups: Record<string, boolean>;
   toggleGroup: (group: string) => void;
   t: (key: Parameters<typeof import('@/lib/i18n').getTranslation>[1]) => string;
+  selectedHouseId: string | null;
+  selectedHouseName: string | null;
+}
+
+function DashboardCurrentHouseBlock({
+  selectedHouseId,
+  selectedHouseName,
+  t,
+}: {
+  selectedHouseId: string;
+  selectedHouseName: string | null;
+  t: DashboardSidebarProps['t'];
+}) {
+  const { state } = useSidebar();
+  const isCollapsed = state === 'collapsed';
+  const name = selectedHouseName ?? `#${selectedHouseId}`;
+  const fullLabel = `${t('dashboard.currentHouse')}: ${name}`;
+  const housesListHref = '/dashboard/houses';
+  const backLabel = t('common.back');
+
+  const backLinkClass = cn(
+    'flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors',
+    'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+  );
+
+  if (isCollapsed) {
+    return (
+      <div className="border-b border-border/60 px-2 py-2">
+        <div className="flex flex-col items-center gap-2">
+          <Link
+            href={housesListHref}
+            className={backLinkClass}
+            aria-label={backLabel}
+            title={`${backLabel} — ${t('dashboard.myHouses')}`}
+          >
+            <ArrowLeft className="size-4" aria-hidden />
+          </Link>
+          <span title={fullLabel}>
+            <Building2 className="size-5 text-primary" aria-hidden />
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border-b border-border/60 px-3 py-3">
+      <div className="flex items-start gap-2">
+        <Link
+          href={housesListHref}
+          className={cn(backLinkClass, 'mt-0.5')}
+          aria-label={backLabel}
+          title={`${backLabel} — ${t('dashboard.myHouses')}`}
+        >
+          <ArrowLeft className="size-4" aria-hidden />
+        </Link>
+        <div className="min-w-0 flex-1 space-y-0.5">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">
+            {t('dashboard.currentHouse')}
+          </p>
+          <p className="truncate text-sm font-semibold text-foreground">{name}</p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function SidebarUserCard({ t }: { t: DashboardSidebarProps['t'] }) {
@@ -142,12 +214,24 @@ function SidebarUserCard({ t }: { t: DashboardSidebarProps['t'] }) {
   );
 }
 
+function sameHousePath(pathname: string, houseId: string): boolean {
+  const m = pathname.match(/^\/dashboard\/houses\/([^/]+)/);
+  if (!m) return false;
+  try {
+    return decodeURIComponent(m[1]) === decodeURIComponent(houseId);
+  } catch {
+    return m[1] === houseId;
+  }
+}
+
 export function DashboardSidebar({
   routes,
   isActive,
   expandedGroups,
   toggleGroup,
   t,
+  selectedHouseId,
+  selectedHouseName,
 }: DashboardSidebarProps) {
   const { state, setOpenMobile, isMobile } = useSidebar();
   const isCollapsed = state === 'collapsed';
@@ -192,6 +276,14 @@ export function DashboardSidebar({
         </div>
       </SidebarHeader>
 
+      {selectedHouseId ? (
+        <DashboardCurrentHouseBlock
+          selectedHouseId={selectedHouseId}
+          selectedHouseName={selectedHouseName}
+          t={t}
+        />
+      ) : null}
+
       <SidebarContent className="px-1 py-2">
         <DashboardNavigation
           routes={routes}
@@ -213,57 +305,86 @@ export function DashboardSidebar({
 export function buildDashboardRoutes(
   t: (key: Parameters<typeof import('@/lib/i18n').getTranslation>[1]) => string,
   selectedHouseId: string | null,
-  selectedHouseName: string | null,
+  _selectedHouseName: string | null,
   pathname: string,
 ): Route[] {
-  const houseSubs: NonNullable<Route['subs']> = [
-    {
-      title: t('dashboard.viewAll'),
-      link: '/dashboard/houses',
-      icon: <Home className="size-3.5" />,
-      isActive: pathname === '/dashboard/houses',
-    },
-  ];
+  const overviewSection = t('navigation.overview');
+  const propertiesSection = t('navigation.properties');
 
-  if (selectedHouseId) {
-    houseSubs.push(
-      {
-        title: selectedHouseName ?? `#${selectedHouseId}`,
-        link: `/dashboard/houses/${selectedHouseId}`,
-        icon: <Building2 className="size-3.5" />,
-        isActive:
-          pathname === `/dashboard/houses/${selectedHouseId}` &&
-          !pathname.includes('/room-planner'),
-      },
-      {
-        title: t('navigation.room_planner'),
-        link: `/dashboard/houses/${selectedHouseId}/room-planner`,
-        icon: <Map className="size-3.5" />,
-        isActive: pathname.startsWith(
-          `/dashboard/houses/${selectedHouseId}/room-planner`,
-        ),
-      },
-    );
-  }
-
-  const housesSectionActive = pathname.startsWith('/dashboard/houses');
-
-  return [
+  const routes: Route[] = [
     {
       id: 'home',
       title: t('navigation.dashboard'),
       link: '/dashboard',
       icon: <LayoutDashboard className="size-4" />,
-      section: t('navigation.overview'),
-    },
-    {
-      id: 'houses',
-      title: t('dashboard.myHouses'),
-      link: '/dashboard/houses',
-      icon: <Home className="size-4" />,
-      section: t('navigation.properties'),
-      subs: houseSubs,
-      isActive: housesSectionActive,
+      section: overviewSection,
     },
   ];
+
+  if (selectedHouseId) {
+    const hid = encodeURIComponent(selectedHouseId);
+    const base = `/dashboard/houses/${hid}`;
+    const sh = () => sameHousePath(pathname, selectedHouseId);
+
+    routes.push(
+      {
+        id: 'house-overview',
+        title: t('dashboard.sections.overview'),
+        link: base,
+        icon: <LayoutGrid className="size-4" />,
+        section: propertiesSection,
+        isActive: sh() && /^\/dashboard\/houses\/[^/]+$/.test(pathname),
+      },
+      {
+        id: 'house-rooms',
+        title: t('admin.accessControl.houseRooms'),
+        link: `${base}/rooms`,
+        icon: <DoorOpen className="size-4" />,
+        section: propertiesSection,
+        isActive: sh() && /\/rooms(?:\/|$)/.test(pathname),
+      },
+      {
+        id: 'house-members',
+        title: t('admin.accessControl.members'),
+        link: `${base}/members`,
+        icon: <Users className="size-4" />,
+        section: propertiesSection,
+        isActive: sh() && /\/members(?:\/|$)/.test(pathname),
+      },
+      {
+        id: 'house-roles',
+        title: t('admin.accessControl.roles'),
+        link: `${base}/roles`,
+        icon: <Shield className="size-4" />,
+        section: propertiesSection,
+        isActive: sh() && /\/roles(?:\/|$)/.test(pathname),
+      },
+      {
+        id: 'house-devices',
+        title: t('admin.tabs.devices'),
+        link: `${base}/devices`,
+        icon: <Cpu className="size-4" />,
+        section: propertiesSection,
+        isActive: sh() && pathname.includes(`${base}/devices`),
+      },
+      {
+        id: 'house-scenarios',
+        title: t('admin.accessControl.scenarios'),
+        link: `${base}/scenarios`,
+        icon: <Workflow className="size-4" />,
+        section: propertiesSection,
+        isActive: sh() && /\/scenarios(?:\/|$)/.test(pathname),
+      },
+      {
+        id: 'house-room-planner',
+        title: t('navigation.room_planner'),
+        link: `${base}/room-planner`,
+        icon: <Map className="size-4" />,
+        section: propertiesSection,
+        isActive: pathname.startsWith(`${base}/room-planner`),
+      },
+    );
+  }
+
+  return routes;
 }

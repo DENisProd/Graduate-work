@@ -1,12 +1,10 @@
-import { Card } from '@heroui/react'
 import React from 'react'
+import { Card } from '@/components/ui/card'
 
 const Dashboard = () => {
   return (
-    <main className='bg-white p-4 flex-1'>
-        <Card >
-
-        </Card>
+    <main className="flex-1 bg-background p-4">
+      <Card />
     </main>
   )
 }

@@ -1,0 +1,60 @@
+services:
+
+  # ── MQTT broker ─────────────────────────────────────────────────────────────
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config:ro
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_pub -h 127.0.0.1 -p 1883 -t healthcheck -m ping --quiet"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 3s
+
+  # ── Rust local-server ────────────────────────────────────────────────────────
+  local-server:
+    build:
+      context: ../local-server
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      ZIGBEE_MQTT_URL: mqtt://mosquitto:1883
+      RUST_LOG: info
+    volumes:
+      - local_server_data:/app/data
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/v1/system/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 5s
+
+  # ── Mock Zigbee device simulator ─────────────────────────────────────────────
+  mock-devices:
+    build:
+      context: ../mock-devices
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      MQTT_URL: mqtt://mosquitto:1883
+      ZIGBEE_MQTT_TOPIC_PREFIX: zigbee2mqtt
+      PUBLISH_INTERVAL_MS: "30000"
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+      local-server:
+        condition: service_healthy
+
+volumes:
+  local_server_data:

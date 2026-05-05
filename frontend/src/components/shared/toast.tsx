@@ -1,7 +1,8 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { Card, Button } from '@heroui/react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -66,15 +67,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                     : 'border-l-4 border-l-muted dark:border-l-muted/80'
             }`}
           >
-            <Card.Content className="relative p-3 pr-10">
+            <CardContent className="relative p-3 pr-10">
               <p className="text-sm leading-snug text-foreground/90">
                 {toast.message.replace(/\.$/, '')}
               </p>
               <Button
-                isIconOnly
                 size="sm"
                 variant="ghost"
-                onPress={() => removeToast(toast.id)}
+                onClick={() => removeToast(toast.id)}
                 className="absolute right-2 top-2 h-6 w-6 min-w-6 text-muted-foreground hover:text-foreground"
               >
                 <svg
@@ -91,7 +91,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   />
                 </svg>
               </Button>
-            </Card.Content>
+            </CardContent>
           </Card>
         ))}
       </div>

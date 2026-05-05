@@ -9,7 +9,7 @@
     "alreadyInHouse": "You are already in the house"
   },
   "header": {
-    "title": "Smart Home"
+    "title": "Domovoy"
   },
   "common": {
     "welcome": "Welcome",
@@ -126,7 +126,29 @@
       "open": "Open menu"
     },
     "devices": "Devices",
-    "activeScenarios": "Active scenarios"
+    "activeScenarios": "Active scenarios",
+    "currentHouse": "Current house",
+    "sections": {
+      "overview": "Overview",
+      "rooms": "Rooms",
+      "members": "Members",
+      "roles": "Access & roles",
+      "devices": "Devices",
+      "scenarios": "Scenarios"
+    },
+    "breadcrumb": {
+      "device": "Device"
+    },
+    "overview": {
+      "widgets": {
+        "weatherTitle": "Outside",
+        "weatherHint": "Weather for your area (coming soon)",
+        "automationTitle": "Automations today",
+        "automationHint": "Active scenarios snapshot (coming soon)",
+        "tipTitle": "Comfort tip",
+        "tipBody": "Dim warm lights in the evening — it helps you unwind before sleep."
+      }
+    }
   },
   "landing": {
     "hero": {

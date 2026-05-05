@@ -5,7 +5,7 @@ import { useTranslation, useCurrentUserId } from '@/hooks';
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Activity, Home, Zap } from 'lucide-react';
-import { Card } from '@heroui/react';
+import { Card } from '@/components/ui/card';
 import { accessApiClient, physicalDevicesApi, scenariosApi, zigbeeDevicesApi } from '@/lib/api-client';
 import type { HouseResponse, PhysicalDeviceResponse } from '@/types/api';
 import { toArray } from '@/features/access-control';

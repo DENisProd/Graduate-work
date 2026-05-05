@@ -9,7 +9,7 @@
     "alreadyInHouse": "Вы уже в доме"
   },
   "header": {
-    "title": "Умный Дом"
+    "title": "Домовой"
   },
   "common": {
     "welcome": "Добро пожаловать",
@@ -126,7 +126,29 @@
       "open": "Открыть меню"
     },
     "devices": "Устройства",
-    "activeScenarios": "Активные сценарии"
+    "activeScenarios": "Активные сценарии",
+    "currentHouse": "Текущий дом",
+    "sections": {
+      "overview": "Обзор",
+      "rooms": "Комнаты",
+      "members": "Участники",
+      "roles": "Доступ и роли",
+      "devices": "Устройства",
+      "scenarios": "Сценарии"
+    },
+    "breadcrumb": {
+      "device": "Устройство"
+    },
+    "overview": {
+      "widgets": {
+        "weatherTitle": "На улице",
+        "weatherHint": "Погода для вашего района (скоро)",
+        "automationTitle": "Автоматизации сегодня",
+        "automationHint": "Снимок активных сценариев (скоро)",
+        "tipTitle": "Совет по комфорту",
+        "tipBody": "Вечером приглушите тёплый свет — так проще расслабиться перед сном."
+      }
+    }
   },
   "landing": {
     "hero": {

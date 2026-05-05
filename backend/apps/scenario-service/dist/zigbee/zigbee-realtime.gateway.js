@@ -251,48 +251,48 @@ let ZigbeeRealtimeGateway = ZigbeeRealtimeGateway_1 = class ZigbeeRealtimeGatewa
 exports.ZigbeeRealtimeGateway = ZigbeeRealtimeGateway;
 __decorate([
     (0, websockets_1.WebSocketServer)(),
-    __metadata("design:type", Object)
+    __metadata("design:type", Function)
 ], ZigbeeRealtimeGateway.prototype, "server", void 0);
 __decorate([
     (0, websockets_1.SubscribeMessage)('zigbee:subscribe'),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:paramtypes", [Function, Object]),
     __metadata("design:returntype", Promise)
 ], ZigbeeRealtimeGateway.prototype, "onSubscribe", null);
 __decorate([
     (0, websockets_1.SubscribeMessage)('zigbee:command'),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:paramtypes", [Function, Object]),
     __metadata("design:returntype", Promise)
 ], ZigbeeRealtimeGateway.prototype, "onCommand", null);
 __decorate([
     (0, websockets_1.SubscribeMessage)('zigbee:pairing:watch'),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Function]),
     __metadata("design:returntype", Promise)
 ], ZigbeeRealtimeGateway.prototype, "onPairingWatch", null);
 __decorate([
     (0, websockets_1.SubscribeMessage)('zigbee:pairing:unwatch'),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Function]),
     __metadata("design:returntype", Promise)
 ], ZigbeeRealtimeGateway.prototype, "onPairingUnwatch", null);
 __decorate([
     (0, websockets_1.SubscribeMessage)('zigbee:pairing:start'),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:paramtypes", [Function, Object]),
     __metadata("design:returntype", Promise)
 ], ZigbeeRealtimeGateway.prototype, "onPairingStart", null);
 __decorate([
     (0, websockets_1.SubscribeMessage)('zigbee:pairing:stop'),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Function]),
     __metadata("design:returntype", Promise)
 ], ZigbeeRealtimeGateway.prototype, "onPairingStop", null);
 __decorate([
     (0, websockets_1.SubscribeMessage)('zigbee:unsubscribe'),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:paramtypes", [Function, Object]),
     __metadata("design:returntype", Promise)
 ], ZigbeeRealtimeGateway.prototype, "onUnsubscribe", null);
 exports.ZigbeeRealtimeGateway = ZigbeeRealtimeGateway = ZigbeeRealtimeGateway_1 = __decorate([
