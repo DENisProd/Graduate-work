@@ -14,6 +14,7 @@ const physical_device_service_1 = require("./physical-device.service");
 const physical_device_repository_1 = require("./physical-device.repository");
 const physical_device_mongo_1 = require("../mongo/schemas/physical-device.mongo");
 const device_catalog_module_1 = require("../device-catalog/device-catalog.module");
+const access_sync_module_1 = require("../access-sync/access-sync.module");
 let DevicesModule = class DevicesModule {
 };
 exports.DevicesModule = DevicesModule;
@@ -24,6 +25,7 @@ exports.DevicesModule = DevicesModule = __decorate([
                 { name: physical_device_mongo_1.PHYSICAL_DEVICE_MODEL, schema: physical_device_mongo_1.PhysicalDeviceSchema },
             ]),
             device_catalog_module_1.DeviceCatalogModule,
+            access_sync_module_1.AccessSyncModule,
         ],
         controllers: [physical_device_controller_1.PhysicalDeviceController],
         providers: [physical_device_service_1.PhysicalDeviceService, physical_device_repository_1.PhysicalDeviceRepository],

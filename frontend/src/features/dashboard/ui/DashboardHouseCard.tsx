@@ -51,11 +51,11 @@ export function DashboardHouseCard({ house, basePath = '/dashboard/houses' }: Da
         <div className="mt-auto space-y-2">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">{t('dashboard.devices')}</span>
-            <span className="font-medium">{deviceCount ?? '—'}</span>
+            <span className="font-medium">{deviceCount ?? '0'}</span>
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">{t('dashboard.activeScenarios')}</span>
-            <span className="font-medium">{scenarioCount ?? '—'}</span>
+            <span className="font-medium">{scenarioCount ?? '0'}</span>
           </div>
         </div>
       </Card>

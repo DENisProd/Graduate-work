@@ -7,6 +7,8 @@ import { widgetDashboardsApi, physicalDevicesApi, scenariosApi, zigbeeDevicesApi
 import { useCurrentUserId } from '@/hooks';
 import type { WidgetDashboard as WD } from '@/features/widget-dashboard/types/widget.types';
 import type { PhysicalDeviceResponse, ScenarioResponse, ZigbeeDeviceListItem } from '@/types/api';
+import { ApiError } from '@/lib/api-client';
+import { ServiceErrorCard } from '@/components/shared';
 
 export default function WidgetsPage() {
   const params = useParams();
@@ -18,12 +20,12 @@ export default function WidgetsPage() {
   const [zigbeeDevices, setZigbeeDevices] = useState<ZigbeeDeviceListItem[]>([]);
   const [scenarios, setScenarios] = useState<ScenarioResponse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<string[] | null>(null);
 
   const loadAll = useCallback(async () => {
     if (!houseId || !userId) return;
     setLoading(true);
-    setError(null);
+    setErrorDetails(null);
     try {
       const [dashboards, devRes, zigbeeRes, scRes] = await Promise.all([
         widgetDashboardsApi.getByHouse(houseId),
@@ -50,7 +52,14 @@ export default function WidgetsPage() {
         setDashboard(created);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка загрузки');
+      if (e instanceof ApiError && e.status === 0) {
+        setErrorDetails([
+          'Failed to load resource: net::ERR_CONNECTION_REFUSED',
+          `details: ${e.message || 'Network error'}`,
+        ]);
+      } else {
+        setErrorDetails([e instanceof Error ? e.message : 'Ошибка загрузки']);
+      }
     } finally {
       setLoading(false);
     }
@@ -68,16 +77,15 @@ export default function WidgetsPage() {
     );
   }
 
-  if (error) {
+  if (errorDetails) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-3 p-8">
-        <p className="text-red-500 text-sm">{error}</p>
-        <button
-          onClick={loadAll}
-          className="px-4 py-2 rounded-lg border border-border text-sm hover:bg-accent"
-        >
-          Повторить
-        </button>
+      <div className="p-6">
+        <ServiceErrorCard
+          title="Сервис сценариев недоступен"
+          description="Не удалось загрузить виджеты/устройства/сценарии."
+          details={errorDetails}
+          onRetry={loadAll}
+        />
       </div>
     );
   }

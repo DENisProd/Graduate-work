@@ -3,6 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { Resource, ResourceType } from '@prisma/client';
 import { ResourceNotFoundException } from '../common/exceptions';
 import { CreateResourceDto } from './dto/create-resource.dto';
+import { RegisterResourceDto } from './dto/register-resource.dto';
 import { ResourceTreeNodeDto } from './dto/resource-tree-node.dto';
 
 @Injectable()
@@ -87,6 +88,41 @@ export class ResourcesService {
     });
     if (byExternal) return byExternal;
     throw new ResourceNotFoundException('Функция устройства', 'deviceFunctionId', deviceFunctionId);
+  }
+
+  async registerResource(dto: RegisterResourceDto): Promise<{ id: string }> {
+    // Idempotent: return existing resource if already registered
+    const existing = await this.prisma.resource.findFirst({
+      where: { externalId: dto.externalId },
+    });
+    if (existing) return { id: existing.id };
+
+    let parentId: string;
+    if (dto.parentExternalId) {
+      const parent = await this.prisma.resource.findFirst({
+        where: { externalId: dto.parentExternalId, houseId: dto.houseId },
+      });
+      if (!parent) {
+        throw new ResourceNotFoundException('Родительский ресурс', 'externalId', dto.parentExternalId);
+      }
+      parentId = parent.id;
+    } else {
+      const houseRoot = await this.prisma.resource.findFirst({
+        where: { houseId: dto.houseId, type: ResourceType.HOUSE },
+      });
+      if (!houseRoot) {
+        throw new ResourceNotFoundException('Корневой ресурс дома', 'houseId', dto.houseId);
+      }
+      parentId = houseRoot.id;
+    }
+
+    const resource = await this.create({
+      parentId,
+      type: dto.type,
+      name: dto.name,
+      externalId: dto.externalId,
+    });
+    return { id: resource.id };
   }
 
   async getTreeByHouseId(houseId: string): Promise<ResourceTreeNodeDto[]> {

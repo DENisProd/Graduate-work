@@ -29,11 +29,11 @@ export declare const upsertZigbeeDeviceSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     ieeeAddr: string;
     type?: ZigbeeDeviceType | undefined;
+    deviceId?: number | undefined;
+    deviceCategoryId?: number | undefined;
     networkAddress?: number | undefined;
     manufacturerName?: string | undefined;
     modelId?: string | undefined;
-    deviceId?: number | undefined;
-    deviceCategoryId?: number | undefined;
     friendlyName?: string | undefined;
     lastSeen?: Date | undefined;
     definition?: Record<string, unknown> | undefined;
@@ -41,11 +41,11 @@ export declare const upsertZigbeeDeviceSchema: z.ZodObject<{
 }, {
     ieeeAddr: string;
     type?: ZigbeeDeviceType | undefined;
+    deviceId?: number | undefined;
+    deviceCategoryId?: number | undefined;
     networkAddress?: number | undefined;
     manufacturerName?: string | undefined;
     modelId?: string | undefined;
-    deviceId?: number | undefined;
-    deviceCategoryId?: number | undefined;
     friendlyName?: string | undefined;
     lastSeen?: Date | undefined;
     definition?: Record<string, unknown> | undefined;
@@ -152,14 +152,14 @@ export declare const listZigbeeDevicesQuerySchema: z.ZodObject<{
     page: number;
     limit: number;
     type?: ZigbeeDeviceType | undefined;
-    q?: string | undefined;
     houseId?: string | undefined;
+    q?: string | undefined;
 }, {
     type?: ZigbeeDeviceType | undefined;
     page?: unknown;
     limit?: unknown;
-    q?: string | undefined;
     houseId?: string | undefined;
+    q?: string | undefined;
 }>;
 export type ListZigbeeDevicesQuery = z.infer<typeof listZigbeeDevicesQuerySchema>;
 export declare const listZigbeeStatesQuerySchema: z.ZodObject<{

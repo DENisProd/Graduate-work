@@ -3,7 +3,7 @@ export declare class ZigbeeIngestService {
     private readonly zigbee;
     private readonly logger;
     constructor(zigbee: ZigbeeService);
-    processMqttMessage(topicBase: string, topic: string, payload: Buffer): Promise<void>;
+    processMqttMessage(houseId: string, topicBase: string, topic: string, payload: Buffer): Promise<void>;
     private onBridgeDevices;
     private onBridgeEvent;
     private onBridgeState;

@@ -18,7 +18,7 @@ exports.DeviceCatalogModule = DeviceCatalogModule = __decorate([
     (0, common_1.Module)({
         imports: [llm_module_1.LlmModule],
         providers: [device_catalog_client_1.DeviceCatalogClient, device_catalog_service_1.DeviceCatalogService],
-        exports: [device_catalog_service_1.DeviceCatalogService],
+        exports: [device_catalog_client_1.DeviceCatalogClient, device_catalog_service_1.DeviceCatalogService],
     })
 ], DeviceCatalogModule);
 //# sourceMappingURL=device-catalog.module.js.map

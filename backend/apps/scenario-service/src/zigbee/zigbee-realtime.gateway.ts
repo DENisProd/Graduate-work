@@ -279,30 +279,28 @@ export class ZigbeeRealtimeGateway
    */
   @SubscribeMessage('zigbee:pairing:start')
   async onPairingStart(client: Socket, body: unknown) {
+    const b = body !== null && typeof body === 'object' ? (body as Record<string, unknown>) : {};
+    const houseId = typeof b.houseId === 'string' ? b.houseId : '';
     const time =
-      body !== null &&
-      typeof body === 'object' &&
-      typeof (body as Record<string, unknown>).time === 'number'
-        ? Math.max(
-            1,
-            Math.min(
-              254,
-              Math.trunc((body as Record<string, unknown>).time as number),
-            ),
-          )
+      typeof b.time === 'number'
+        ? Math.max(1, Math.min(254, Math.trunc(b.time)))
         : 254;
+    if (!houseId) return { ok: false as const, error: 'houseId обязателен' };
     await client.join(PAIRING_ROOM);
     // Do NOT emit existing devices on "start pairing":
     // the UI should focus on devices that join during this session.
-    const result = this.zigbee.permitJoin(true, time);
+    const result = this.zigbee.permitJoin(houseId, true, time);
     if (!result.ok) return { ok: false as const, error: result.error };
     return { ok: true as const, time };
   }
 
   /** Выключить permit_join. Клиент остаётся в pairing-комнате (продолжает получать события). */
   @SubscribeMessage('zigbee:pairing:stop')
-  async onPairingStop(client: Socket) {
-    const result = this.zigbee.permitJoin(false);
+  async onPairingStop(client: Socket, body: unknown) {
+    const b = body !== null && typeof body === 'object' ? (body as Record<string, unknown>) : {};
+    const houseId = typeof b.houseId === 'string' ? b.houseId : '';
+    if (!houseId) return { ok: false as const, error: 'houseId обязателен' };
+    const result = this.zigbee.permitJoin(houseId, false);
     if (!result.ok) return { ok: false as const, error: result.error };
     return { ok: true as const };
   }

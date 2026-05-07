@@ -125,7 +125,7 @@ export declare const createScenarioSchema: z.ZodObject<{
             timeoutMs: z.ZodDefault<z.ZodNumber>;
         }, "strip", z.ZodTypeAny, {
             type: "HTTP_REQUEST";
-            method: "POST" | "GET" | "PUT" | "PATCH" | "DELETE";
+            method: "POST" | "DELETE" | "GET" | "PUT" | "PATCH";
             url: string;
             timeoutMs: number;
             headers?: Record<string, string> | undefined;
@@ -134,7 +134,7 @@ export declare const createScenarioSchema: z.ZodObject<{
             type: "HTTP_REQUEST";
             url: string;
             headers?: Record<string, string> | undefined;
-            method?: "POST" | "GET" | "PUT" | "PATCH" | "DELETE" | undefined;
+            method?: "POST" | "DELETE" | "GET" | "PUT" | "PATCH" | undefined;
             body?: unknown;
             timeoutMs?: number | undefined;
         }>]>, "many">;
@@ -192,7 +192,7 @@ export declare const createScenarioSchema: z.ZodObject<{
             data?: Record<string, unknown> | undefined;
         } | {
             type: "HTTP_REQUEST";
-            method: "POST" | "GET" | "PUT" | "PATCH" | "DELETE";
+            method: "POST" | "DELETE" | "GET" | "PUT" | "PATCH";
             url: string;
             timeoutMs: number;
             headers?: Record<string, string> | undefined;
@@ -247,7 +247,7 @@ export declare const createScenarioSchema: z.ZodObject<{
             type: "HTTP_REQUEST";
             url: string;
             headers?: Record<string, string> | undefined;
-            method?: "POST" | "GET" | "PUT" | "PATCH" | "DELETE" | undefined;
+            method?: "POST" | "DELETE" | "GET" | "PUT" | "PATCH" | undefined;
             body?: unknown;
             timeoutMs?: number | undefined;
         })[];
@@ -303,7 +303,7 @@ export declare const createScenarioSchema: z.ZodObject<{
             data?: Record<string, unknown> | undefined;
         } | {
             type: "HTTP_REQUEST";
-            method: "POST" | "GET" | "PUT" | "PATCH" | "DELETE";
+            method: "POST" | "DELETE" | "GET" | "PUT" | "PATCH";
             url: string;
             timeoutMs: number;
             headers?: Record<string, string> | undefined;
@@ -364,7 +364,7 @@ export declare const createScenarioSchema: z.ZodObject<{
             type: "HTTP_REQUEST";
             url: string;
             headers?: Record<string, string> | undefined;
-            method?: "POST" | "GET" | "PUT" | "PATCH" | "DELETE" | undefined;
+            method?: "POST" | "DELETE" | "GET" | "PUT" | "PATCH" | undefined;
             body?: unknown;
             timeoutMs?: number | undefined;
         })[];
@@ -503,7 +503,7 @@ export declare const updateScenarioSchema: z.ZodObject<{
             timeoutMs: z.ZodDefault<z.ZodNumber>;
         }, "strip", z.ZodTypeAny, {
             type: "HTTP_REQUEST";
-            method: "POST" | "GET" | "PUT" | "PATCH" | "DELETE";
+            method: "POST" | "DELETE" | "GET" | "PUT" | "PATCH";
             url: string;
             timeoutMs: number;
             headers?: Record<string, string> | undefined;
@@ -512,7 +512,7 @@ export declare const updateScenarioSchema: z.ZodObject<{
             type: "HTTP_REQUEST";
             url: string;
             headers?: Record<string, string> | undefined;
-            method?: "POST" | "GET" | "PUT" | "PATCH" | "DELETE" | undefined;
+            method?: "POST" | "DELETE" | "GET" | "PUT" | "PATCH" | undefined;
             body?: unknown;
             timeoutMs?: number | undefined;
         }>]>, "many">;
@@ -570,7 +570,7 @@ export declare const updateScenarioSchema: z.ZodObject<{
             data?: Record<string, unknown> | undefined;
         } | {
             type: "HTTP_REQUEST";
-            method: "POST" | "GET" | "PUT" | "PATCH" | "DELETE";
+            method: "POST" | "DELETE" | "GET" | "PUT" | "PATCH";
             url: string;
             timeoutMs: number;
             headers?: Record<string, string> | undefined;
@@ -625,7 +625,7 @@ export declare const updateScenarioSchema: z.ZodObject<{
             type: "HTTP_REQUEST";
             url: string;
             headers?: Record<string, string> | undefined;
-            method?: "POST" | "GET" | "PUT" | "PATCH" | "DELETE" | undefined;
+            method?: "POST" | "DELETE" | "GET" | "PUT" | "PATCH" | undefined;
             body?: unknown;
             timeoutMs?: number | undefined;
         })[];
@@ -681,7 +681,7 @@ export declare const updateScenarioSchema: z.ZodObject<{
             data?: Record<string, unknown> | undefined;
         } | {
             type: "HTTP_REQUEST";
-            method: "POST" | "GET" | "PUT" | "PATCH" | "DELETE";
+            method: "POST" | "DELETE" | "GET" | "PUT" | "PATCH";
             url: string;
             timeoutMs: number;
             headers?: Record<string, string> | undefined;
@@ -741,7 +741,7 @@ export declare const updateScenarioSchema: z.ZodObject<{
             type: "HTTP_REQUEST";
             url: string;
             headers?: Record<string, string> | undefined;
-            method?: "POST" | "GET" | "PUT" | "PATCH" | "DELETE" | undefined;
+            method?: "POST" | "DELETE" | "GET" | "PUT" | "PATCH" | undefined;
             body?: unknown;
             timeoutMs?: number | undefined;
         })[];

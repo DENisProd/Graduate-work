@@ -15,6 +15,7 @@ import {
 } from '@nestjs/swagger';
 import { ResourcesService } from './resources.service';
 import { CreateResourceDto } from './dto/create-resource.dto';
+import { RegisterResourceDto } from './dto/register-resource.dto';
 import { ResourceResponseDto } from './dto/resource-response.dto';
 import { ResourceTreeNodeDto } from './dto/resource-tree-node.dto';
 
@@ -53,6 +54,17 @@ export class ResourcesController {
   async create(@Body() dto: CreateResourceDto): Promise<ResourceResponseDto> {
     const resource = await this.resourcesService.create(dto);
     return toResponse(resource);
+  }
+
+  @Post('resources/register')
+  @ApiOperation({
+    summary: 'Зарегистрировать ресурс (идемпотентно)',
+    description: 'Создаёт ресурс под родителем найденным по parentExternalId. Если ресурс уже существует — возвращает его ID.',
+  })
+  @ApiBody({ type: RegisterResourceDto })
+  @ApiCreatedResponse({ schema: { properties: { id: { type: 'string' } } } })
+  async register(@Body() dto: RegisterResourceDto): Promise<{ id: string }> {
+    return this.resourcesService.registerResource(dto);
   }
 
   @Get('resources/:id')

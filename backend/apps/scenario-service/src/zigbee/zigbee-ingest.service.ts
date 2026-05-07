@@ -34,6 +34,7 @@ export class ZigbeeIngestService {
   ) {}
 
   async processMqttMessage(
+    houseId: string,
     topicBase: string,
     topic: string,
     payload: Buffer,

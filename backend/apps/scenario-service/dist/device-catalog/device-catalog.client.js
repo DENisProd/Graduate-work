@@ -96,6 +96,9 @@ let DeviceCatalogClient = DeviceCatalogClient_1 = class DeviceCatalogClient {
     ensureCatalog(payload) {
         return this.post('/api/v1/integration/catalog/ensure', payload);
     }
+    findFunctionsByDeviceId(deviceId) {
+        return this.get(`/api/v1/device-functions/by-device/${encodeURIComponent(String(deviceId))}/all`);
+    }
 };
 exports.DeviceCatalogClient = DeviceCatalogClient;
 exports.DeviceCatalogClient = DeviceCatalogClient = DeviceCatalogClient_1 = __decorate([

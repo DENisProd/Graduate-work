@@ -1,8 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { AccessServiceClient } from './access-service.client';
 
 @Injectable()
 export class AccessSyncService {
+  private readonly logger = new Logger(AccessSyncService.name);
+
   constructor(private readonly client: AccessServiceClient) {}
 
   async onPhysicalDeviceCreated(device: {
@@ -50,5 +52,32 @@ export class AccessSyncService {
 
   async onScenarioRemoved(accessResourceId: string): Promise<void> {
     await this.client.deleteResource(accessResourceId);
+  }
+
+  /**
+   * Registers matched device-functions as DEVICE_FUNCTION resources under the physical device.
+   * Called after capabilities are resolved against catalog functions.
+   */
+  async onDeviceFunctionsLinked(
+    physicalDeviceId: string,
+    houseId: string,
+    functions: Array<{ id: number; code: string; name: string }>,
+  ): Promise<void> {
+    for (const fn of functions) {
+      const externalId = `fn:${physicalDeviceId}:${fn.id}`;
+      const result = await this.client.registerResource({
+        houseId,
+        parentExternalId: physicalDeviceId,
+        externalId,
+        type: 'DEVICE_FUNCTION',
+        name: fn.name,
+        metadata: { deviceFunctionId: fn.id, capability: fn.code },
+      });
+      if (result) {
+        this.logger.log(
+          `Registered DEVICE_FUNCTION externalId=${externalId} resourceId=${result.id}`,
+        );
+      }
+    }
   }
 }

@@ -9,6 +9,13 @@ import { ZigbeeMqttService } from './zigbee-mqtt.service';
 import { ZigbeeRealtimeService } from './zigbee-realtime.service';
 import { ZigbeeStateRepository } from './zigbee-state.repository';
 import { type CreateZigbeeLinksBatchInput, type CreateZigbeeStateInput, type ListZigbeeDevicesQuery, type ListZigbeeLinksQuery, type ListZigbeeDeviceLogsQuery, type ListZigbeeStatesQuery, type UpsertZigbeeDeviceInput } from './schemas/zigbee.schemas';
+export interface DeviceStateEvent {
+    houseId: string | null;
+    friendlyName: string;
+    ieeeAddr: string;
+    payload: Record<string, unknown>;
+    timestamp: Date;
+}
 export interface ZigbeePairingEvent {
     type: 'joined' | 'interview_started' | 'interview_done' | 'interview_failed';
     ieeeAddr: string;
@@ -36,6 +43,7 @@ export declare class ZigbeeService {
     private readonly logger;
     readonly pairingEvents$: Subject<ZigbeePairingEvent>;
     readonly pairingStatus$: Subject<ZigbeePairingStatus>;
+    readonly deviceState$: Subject<DeviceStateEvent>;
     private readonly recentlyDeleted;
     constructor(devices: ZigbeeDeviceRepository, states: ZigbeeStateRepository, links: ZigbeeLinkRepository, deviceLogs: ZigbeeDeviceLogRepository, realtime: ZigbeeRealtimeService, deviceData: DeviceDataService, catalogService: DeviceCatalogService, mqtt: ZigbeeMqttService);
     private markDeleted;
@@ -66,7 +74,7 @@ export declare class ZigbeeService {
         items: import("./zigbee-link.repository").DeviceNetworkLink[];
         total: number;
     }>;
-    permitJoin(enable: boolean, time?: number): {
+    permitJoin(houseId: string, enable: boolean, time?: number): {
         ok: true;
     } | {
         ok: false;
@@ -82,12 +90,6 @@ export declare class ZigbeeService {
         ok: false;
         error: string;
     }>;
-    sendCommand(ieeeAddr: string, payload: Record<string, unknown>): Promise<{
-        ok: true;
-        topic: string;
-    } | {
-        ok: false;
-        error: string;
-    }>;
     ingestMqttDeviceState(topicSegment: string, payload: Record<string, unknown>): Promise<void>;
+    getLatestStateByFriendlyName(friendlyName: string): Promise<Record<string, unknown> | null>;
 }

@@ -28,7 +28,7 @@ RUN mkdir -p \
       src/infrastructure/src/lib.rs \
       src/interfaces/src/lib.rs >/dev/null && \
     echo 'fn main(){}' > src/gateway/src/main.rs && \
-    cargo build --release --bin gateway && \
+    cargo build --release --bin local-server && \
     rm -rf src/*/src
 
 # 3. Real source + migrations (embedded by sqlx::migrate!() at compile time).
@@ -37,7 +37,7 @@ COPY migrations ./migrations
 
 # Touch the gateway entry point so cargo detects the change.
 RUN touch src/gateway/src/main.rs && \
-    cargo build --release --bin gateway
+    cargo build --release --bin local-server
 
 # ── Runtime stage ─────────────────────────────────────────────────────────────
 FROM debian:bookworm-slim
@@ -47,9 +47,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsqlite3-0 ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /app/target/release/gateway ./
+COPY --from=builder /app/target/release/local-server ./
 COPY config ./config
 RUN mkdir -p data
 
 EXPOSE 8080
-CMD ["./gateway"]
+CMD ["./local-server"]

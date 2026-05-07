@@ -12,6 +12,7 @@ import { DeviceDataModule } from './device-data/device-data.module';
 import { ZigbeeModule } from './zigbee/zigbee.module';
 import { LlmModule } from './llm/llm.module';
 import { WidgetDashboardModule } from './widget-dashboard/widget-dashboard.module';
+import { ScenarioEngineModule } from './scenario-engine/scenario-engine.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { WidgetDashboardModule } from './widget-dashboard/widget-dashboard.modul
     DeviceDataModule,
     ZigbeeModule,
     WidgetDashboardModule,
+    ScenarioEngineModule,
   ],
   controllers: [AppController],
   providers: [AppService],

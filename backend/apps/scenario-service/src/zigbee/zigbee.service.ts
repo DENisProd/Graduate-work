@@ -25,6 +25,14 @@ import {
   type UpsertZigbeeDeviceInput,
 } from './schemas/zigbee.schemas';
 
+export interface DeviceStateEvent {
+  houseId: string | null;
+  friendlyName: string;
+  ieeeAddr: string;
+  payload: Record<string, unknown>;
+  timestamp: Date;
+}
+
 export interface ZigbeePairingEvent {
   type: 'joined' | 'interview_started' | 'interview_done' | 'interview_failed';
   ieeeAddr: string;
@@ -50,6 +58,7 @@ export class ZigbeeService {
   private readonly logger = new Logger(ZigbeeService.name);
   readonly pairingEvents$ = new Subject<ZigbeePairingEvent>();
   readonly pairingStatus$ = new Subject<ZigbeePairingStatus>();
+  readonly deviceState$ = new Subject<DeviceStateEvent>();
 
   /**
    * IEEE-адреса недавно удалённых устройств → время истечения запрета.
@@ -191,10 +200,11 @@ export class ZigbeeService {
   }
 
   permitJoin(
+    houseId: string,
     enable: boolean,
     time = 254,
   ): { ok: true } | { ok: false; error: string } {
-    return this.mqtt.permitJoin(enable, time);
+    return this.mqtt.permitJoin(houseId, enable, time);
   }
 
   emitPairingStatus(status: ZigbeePairingStatus): void {
@@ -445,7 +455,9 @@ export class ZigbeeService {
     // Best-effort: send remove command to Zigbee coordinator via MQTT.
     // force=true: мост удаляет запись из своей конфигурации немедленно,
     // не дожидаясь ответа устройства (важно для спящих battery-устройств).
-    this.mqtt.removeDevice(device.friendlyName ?? canonical, force);
+    if (device.houseId) {
+      this.mqtt.removeDevice(device.houseId, device.friendlyName ?? canonical, force);
+    }
 
     // Cascade delete from MongoDB
     await Promise.all([
@@ -469,8 +481,11 @@ export class ZigbeeService {
     if (!device) {
       return { ok: false, error: `Устройство ${ieeeAddr} не найдено` };
     }
+    if (!device.houseId) {
+      return { ok: false, error: 'Устройство не привязано к дому (houseId отсутствует)' };
+    }
     const topicName = device.friendlyName ?? device.ieeeAddr;
-    return this.mqtt.sendDeviceCommand(topicName, payload);
+    return this.mqtt.sendDeviceCommand(device.houseId, topicName, payload);
   }
 
   /**
@@ -551,6 +566,36 @@ export class ZigbeeService {
         created.timestamp,
       );
     }
+
+    this.deviceState$.next({
+      houseId: dev?.houseId ?? null,
+      friendlyName: topicSegment,
+      ieeeAddr,
+      payload,
+      timestamp: created.timestamp,
+    });
+  }
+
+  sendCommand(
+    houseId: string,
+    friendlyName: string,
+    args: Record<string, unknown>,
+  ): { ok: true; topic: string } | { ok: false; error: string } {
+    return this.mqtt.sendDeviceCommand(houseId, friendlyName, args);
+  }
+
+  async getLatestStateByFriendlyName(
+    friendlyName: string,
+  ): Promise<Record<string, unknown> | null> {
+    const device = await this.devices.findByFriendlyName(friendlyName);
+    if (!device) return null;
+    const stateMap = await this.states.findLatestByDeviceIeeeAddrs([
+      device.ieeeAddr,
+    ]);
+    return (
+      (stateMap.get(device.ieeeAddr)?.payload as Record<string, unknown>) ??
+      null
+    );
   }
 }
 

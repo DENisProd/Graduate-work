@@ -208,19 +208,25 @@ let ZigbeeRealtimeGateway = ZigbeeRealtimeGateway_1 = class ZigbeeRealtimeGatewa
         return { ok: true };
     }
     async onPairingStart(client, body) {
-        const time = body !== null &&
-            typeof body === 'object' &&
-            typeof body.time === 'number'
-            ? Math.max(1, Math.min(254, Math.trunc(body.time)))
+        const b = body !== null && typeof body === 'object' ? body : {};
+        const houseId = typeof b.houseId === 'string' ? b.houseId : '';
+        const time = typeof b.time === 'number'
+            ? Math.max(1, Math.min(254, Math.trunc(b.time)))
             : 254;
+        if (!houseId)
+            return { ok: false, error: 'houseId обязателен' };
         await client.join(PAIRING_ROOM);
-        const result = this.zigbee.permitJoin(true, time);
+        const result = this.zigbee.permitJoin(houseId, true, time);
         if (!result.ok)
             return { ok: false, error: result.error };
         return { ok: true, time };
     }
-    async onPairingStop(client) {
-        const result = this.zigbee.permitJoin(false);
+    async onPairingStop(client, body) {
+        const b = body !== null && typeof body === 'object' ? body : {};
+        const houseId = typeof b.houseId === 'string' ? b.houseId : '';
+        if (!houseId)
+            return { ok: false, error: 'houseId обязателен' };
+        const result = this.zigbee.permitJoin(houseId, false);
         if (!result.ok)
             return { ok: false, error: result.error };
         return { ok: true };
@@ -289,7 +295,7 @@ __decorate([
 __decorate([
     (0, websockets_1.SubscribeMessage)('zigbee:pairing:stop'),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Function]),
+    __metadata("design:paramtypes", [Function, Object]),
     __metadata("design:returntype", Promise)
 ], ZigbeeRealtimeGateway.prototype, "onPairingStop", null);
 __decorate([

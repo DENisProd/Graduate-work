@@ -48,157 +48,169 @@ var ZigbeeMqttService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ZigbeeMqttService = void 0;
 const common_1 = require("@nestjs/common");
-const config_1 = require("@nestjs/config");
 const mqtt = __importStar(require("mqtt"));
 const zigbee_ingest_service_1 = require("./zigbee-ingest.service");
+const house_mqtt_config_repository_1 = require("./house-mqtt-config.repository");
 let ZigbeeMqttService = ZigbeeMqttService_1 = class ZigbeeMqttService {
-    config;
+    configRepo;
     ingest;
     logger = new common_1.Logger(ZigbeeMqttService_1.name);
-    client = null;
-    topicPrefix = null;
-    constructor(config, ingest) {
-        this.config = config;
+    connections = new Map();
+    constructor(configRepo, ingest) {
+        this.configRepo = configRepo;
         this.ingest = ingest;
     }
-    onModuleInit() {
-        const url = this.config.get('ZIGBEE_MQTT_URL')?.trim() ??
-            process.env.ZIGBEE_MQTT_URL?.trim();
-        if (!url) {
-            this.logger.log('ZIGBEE_MQTT_URL не задан — MQTT (zigbee2mqtt) отключён');
-            return;
+    async onModuleInit() {
+        const configs = await this.configRepo.findAll();
+        for (const config of configs) {
+            if (config.enabled) {
+                this.connect(config);
+            }
         }
-        const topicBase = (this.config.get('ZIGBEE_MQTT_TOPIC_PREFIX')?.trim() ??
-            process.env.ZIGBEE_MQTT_TOPIC_PREFIX?.trim() ??
-            'zigbee2mqtt').replace(/\/+$/, '');
-        this.topicPrefix = topicBase;
-        const username = this.config.get('ZIGBEE_MQTT_USERNAME') ??
-            process.env.ZIGBEE_MQTT_USERNAME;
-        const password = this.config.get('ZIGBEE_MQTT_PASSWORD') ??
-            process.env.ZIGBEE_MQTT_PASSWORD;
+    }
+    onModuleDestroy() {
+        for (const entry of this.connections.values()) {
+            entry.client.removeAllListeners();
+            entry.client.end(true);
+        }
+        this.connections.clear();
+    }
+    connect(config) {
+        this.disconnectHouse(config.houseId);
+        const topicPrefix = config.topicPrefix.replace(/\/+$/, '');
         const opts = {
             reconnectPeriod: 5000,
             connectTimeout: 10_000,
-            clientId: `scenario-service-${process.pid}-${Math.random().toString(36).slice(2, 10)}`,
+            clientId: `scenario-${config.houseId.slice(0, 8)}-${Math.random().toString(36).slice(2, 8)}`,
         };
-        if (username !== undefined && username !== '')
-            opts.username = username;
-        if (password !== undefined && password !== '')
-            opts.password = password;
-        this.client = mqtt.connect(url, opts);
-        this.client.on('connect', () => {
-            this.logger.log(`MQTT подключён: ${url}`);
-            const pattern = `${topicBase}/#`;
-            this.client?.subscribe(pattern, { qos: 0 }, (err) => {
+        if (config.mqttUsername)
+            opts.username = config.mqttUsername;
+        if (config.mqttPassword)
+            opts.password = config.mqttPassword;
+        const client = mqtt.connect(config.mqttUrl, opts);
+        const entry = { client, topicPrefix, houseId: config.houseId };
+        this.connections.set(config.houseId, entry);
+        client.on('connect', () => {
+            this.logger.log(`[${config.houseId}] MQTT подключён: ${config.mqttUrl}`);
+            const pattern = `${topicPrefix}/#`;
+            client.subscribe(pattern, { qos: 0 }, (err) => {
                 if (err) {
-                    this.logger.error(`Подписка MQTT не удалась: ${pattern}`, err);
+                    this.logger.error(`[${config.houseId}] Подписка не удалась: ${pattern}`, err);
                     return;
                 }
-                this.logger.log(`Подписка: ${pattern}`);
-                this.maybeRequestBridgeDevicesAfterSubscribe();
+                this.logger.log(`[${config.houseId}] Подписка: ${pattern}`);
+                this.requestBridgeDeviceList(config.houseId);
             });
         });
-        this.client.on('message', (topic, payload) => {
-            this.logIncomingMqtt(topic, payload);
-            void this.ingest.processMqttMessage(topicBase, topic, payload);
+        client.on('message', (topic, payload) => {
+            this.logIncoming(config.houseId, topic, payload);
+            void this.ingest.processMqttMessage(config.houseId, topicPrefix, topic, payload);
         });
-        this.client.on('error', (err) => {
-            this.logger.error('MQTT ошибка', err);
+        client.on('error', (err) => {
+            this.logger.error(`[${config.houseId}] MQTT ошибка`, err);
         });
-        this.client.on('reconnect', () => {
-            this.logger.warn('MQTT переподключение…');
+        client.on('reconnect', () => {
+            this.logger.warn(`[${config.houseId}] MQTT переподключение…`);
         });
     }
-    onModuleDestroy() {
-        if (this.client) {
-            this.client.removeAllListeners();
-            this.client.end(true);
-            this.client = null;
+    disconnectHouse(houseId) {
+        const existing = this.connections.get(houseId);
+        if (existing) {
+            existing.client.removeAllListeners();
+            existing.client.end(true);
+            this.connections.delete(houseId);
         }
-        this.topicPrefix = null;
     }
-    requestBridgeDeviceList() {
-        if (!this.client?.connected || !this.topicPrefix) {
-            return { ok: false, error: 'MQTT не подключён' };
+    getConnectionStatus(houseId) {
+        const entry = this.connections.get(houseId);
+        if (!entry)
+            return { connected: false };
+        return { connected: entry.client.connected };
+    }
+    getAllStatuses() {
+        const result = {};
+        for (const [houseId, entry] of this.connections.entries()) {
+            result[houseId] = { connected: entry.client.connected };
         }
-        const topic = `${this.topicPrefix}/bridge/request/devices`;
-        this.client.publish(topic, '{}', { qos: 0 }, (err) => {
+        return result;
+    }
+    requestBridgeDeviceList(houseId) {
+        const entry = this.connections.get(houseId);
+        if (!entry?.client.connected) {
+            return { ok: false, error: `MQTT не подключён для дома ${houseId}` };
+        }
+        const topic = `${entry.topicPrefix}/bridge/request/devices`;
+        entry.client.publish(topic, '{}', { qos: 0 }, (err) => {
             if (err)
-                this.logger.error(`Ошибка publish ${topic}`, err);
+                this.logger.error(`[${houseId}] Ошибка publish ${topic}`, err);
         });
-        this.logger.log(`Запрос списка устройств у моста: ${topic}`);
+        this.logger.log(`[${houseId}] Запрос списка устройств: ${topic}`);
         return { ok: true };
     }
-    permitJoin(enable, time = 254) {
-        if (!this.client?.connected || !this.topicPrefix) {
-            return { ok: false, error: 'MQTT не подключён' };
+    permitJoin(houseId, enable, time = 254) {
+        const entry = this.connections.get(houseId);
+        if (!entry?.client.connected) {
+            return { ok: false, error: `MQTT не подключён для дома ${houseId}` };
         }
-        const topic = `${this.topicPrefix}/bridge/request/permit_join`;
+        const topic = `${entry.topicPrefix}/bridge/request/permit_join`;
         const t = Math.max(1, Math.min(254, Math.trunc(time)));
         const body = enable ? String(t) : 'false';
-        this.client.publish(topic, body, { qos: 0 }, (err) => {
+        entry.client.publish(topic, body, { qos: 0 }, (err) => {
             if (err)
-                this.logger.error(`Ошибка publish ${topic}`, err);
+                this.logger.error(`[${houseId}] Ошибка publish ${topic}`, err);
         });
-        this.logger.log(`MQTT → ${topic}\n${body}`);
+        this.logger.log(`[${houseId}] MQTT → ${topic}\n${body}`);
         return { ok: true };
     }
-    removeDevice(idOrName, force = false) {
-        if (!this.client?.connected || !this.topicPrefix) {
-            return { ok: false, error: 'MQTT не подключён' };
+    removeDevice(houseId, idOrName, force = false) {
+        const entry = this.connections.get(houseId);
+        if (!entry?.client.connected) {
+            return { ok: false, error: `MQTT не подключён для дома ${houseId}` };
         }
-        const topic = `${this.topicPrefix}/bridge/request/device/remove`;
+        const topic = `${entry.topicPrefix}/bridge/request/device/remove`;
         const body = JSON.stringify({ id: idOrName, force });
-        this.client.publish(topic, body, { qos: 0 }, (err) => {
+        entry.client.publish(topic, body, { qos: 0 }, (err) => {
             if (err)
-                this.logger.error(`Ошибка publish ${topic}`, err);
+                this.logger.error(`[${houseId}] Ошибка publish ${topic}`, err);
         });
-        this.logger.log(`MQTT → ${topic}\n${body}`);
+        this.logger.log(`[${houseId}] MQTT → ${topic}\n${body}`);
         return { ok: true };
     }
-    sendDeviceCommand(topicName, payload) {
-        if (!this.client?.connected || !this.topicPrefix) {
-            return { ok: false, error: 'MQTT не подключён' };
+    sendDeviceCommand(houseId, topicName, payload) {
+        const entry = this.connections.get(houseId);
+        if (!entry?.client.connected) {
+            return { ok: false, error: `MQTT не подключён для дома ${houseId}` };
         }
-        const topic = `${this.topicPrefix}/${topicName}/set`;
+        const topic = `${entry.topicPrefix}/${topicName}/set`;
         const body = JSON.stringify(payload);
-        this.client.publish(topic, body, { qos: 0 }, (err) => {
+        entry.client.publish(topic, body, { qos: 0 }, (err) => {
             if (err)
-                this.logger.error(`Ошибка publish ${topic}`, err);
+                this.logger.error(`[${houseId}] Ошибка publish ${topic}`, err);
         });
-        this.logger.log(`MQTT → ${topic}\n${body}`);
+        this.logger.log(`[${houseId}] MQTT → ${topic}\n${body}`);
         return { ok: true, topic };
     }
-    maybeRequestBridgeDevicesAfterSubscribe() {
-        const v = this.config.get('ZIGBEE_MQTT_REQUEST_DEVICES_ON_CONNECT') ??
-            process.env.ZIGBEE_MQTT_REQUEST_DEVICES_ON_CONNECT;
-        if (v === '0' || v === 'false' || v === 'off')
-            return;
-        this.requestBridgeDeviceList();
-    }
-    logIncomingMqtt(topic, payload) {
+    logIncoming(houseId, topic, payload) {
         const raw = payload.toString();
         let body;
         try {
-            const parsed = JSON.parse(raw);
-            body = JSON.stringify(parsed, null, 2);
+            body = JSON.stringify(JSON.parse(raw), null, 2);
         }
         catch {
             body = raw || '(пусто)';
         }
-        const max = Number(this.config.get('ZIGBEE_MQTT_LOG_MAX_CHARS') ??
-            process.env.ZIGBEE_MQTT_LOG_MAX_CHARS) || 16_000;
+        const max = 16_000;
         if (body.length > max) {
             body = `${body.slice(0, max)}\n… (обрезано, всего ${body.length} символов)`;
         }
-        this.logger.log(`MQTT ← ${topic}\n${body}`);
+        this.logger.log(`[${houseId}] MQTT ← ${topic}\n${body}`);
     }
 };
 exports.ZigbeeMqttService = ZigbeeMqttService;
 exports.ZigbeeMqttService = ZigbeeMqttService = ZigbeeMqttService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(1, (0, common_1.Inject)((0, common_1.forwardRef)(() => zigbee_ingest_service_1.ZigbeeIngestService))),
-    __metadata("design:paramtypes", [config_1.ConfigService,
+    __metadata("design:paramtypes", [house_mqtt_config_repository_1.HouseMqttConfigRepository,
         zigbee_ingest_service_1.ZigbeeIngestService])
 ], ZigbeeMqttService);
 //# sourceMappingURL=zigbee-mqtt.service.js.map

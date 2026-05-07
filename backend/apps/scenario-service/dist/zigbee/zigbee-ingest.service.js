@@ -42,7 +42,7 @@ let ZigbeeIngestService = ZigbeeIngestService_1 = class ZigbeeIngestService {
     constructor(zigbee) {
         this.zigbee = zigbee;
     }
-    async processMqttMessage(topicBase, topic, payload) {
+    async processMqttMessage(houseId, topicBase, topic, payload) {
         const prefix = `${topicBase}/`;
         if (topic !== topicBase && !topic.startsWith(prefix))
             return;

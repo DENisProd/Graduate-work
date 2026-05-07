@@ -43,6 +43,12 @@ export interface EnsureCatalogResult {
         device: boolean;
     };
 }
+export interface CatalogDeviceFunction {
+    id: number;
+    code: string;
+    name: string;
+    functionType: 'READ' | 'WRITE' | 'READ_WRITE';
+}
 export declare class DeviceCatalogClient {
     private readonly logger;
     private readonly baseUrl;
@@ -59,4 +65,5 @@ export declare class DeviceCatalogClient {
         id: number;
     } | null>;
     ensureCatalog(payload: EnsureCatalogPayload): Promise<EnsureCatalogResult | null>;
+    findFunctionsByDeviceId(deviceId: number): Promise<CatalogDeviceFunction[] | null>;
 }

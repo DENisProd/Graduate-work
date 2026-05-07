@@ -61,6 +61,25 @@
     "serverError": "Server error",
     "networkError": "Network error",
     "unauthorized": "Unauthorized",
+    "oops": {
+      "hint": "You look a little lost…",
+      "actions": {
+        "homeHint": "Back to home",
+        "dashboardHint": "Back to dashboard"
+      },
+      "404": {
+        "title": "Ooops! Page not found",
+        "subtitle": "404 — page does not exist",
+        "aria": "Smart home illustration for 404",
+        "engLine": "Page Not Found"
+      },
+      "503": {
+        "title": "Ooops! Service unavailable",
+        "subtitle": "503 — access service is unavailable",
+        "aria": "Smart home illustration for 503",
+        "engLine": "Service Unavailable"
+      }
+    },
     "invalidInvitationLink": "Invalid invitation link",
     "invitationExpired": "Invitation has expired",
     "invitationAlreadyProcessed": "Invitation was already accepted or revoked",
@@ -122,6 +141,11 @@
         "DENIED": "Denied",
         "ERROR": "Error"
       }
+    },
+    "widgets": {
+      "title": "Widgets",
+      "loadError": "Failed to load widgets",
+      "noHouses": "No houses to display widgets"
     },
     "sidebar": {
       "open": "Open menu"

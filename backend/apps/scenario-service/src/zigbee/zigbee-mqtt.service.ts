@@ -6,201 +6,192 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import * as mqtt from 'mqtt';
 import type { IClientOptions, MqttClient } from 'mqtt';
 import { ZigbeeIngestService } from './zigbee-ingest.service';
+import { HouseMqttConfigRepository, HouseMqttConfig } from './house-mqtt-config.repository';
+
+interface ConnectionEntry {
+  client: MqttClient;
+  topicPrefix: string;
+  houseId: string;
+}
 
 @Injectable()
 export class ZigbeeMqttService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(ZigbeeMqttService.name);
-  private client: MqttClient | null = null;
-  /** Префикс топиков (например zigbee2mqtt), без завершающего `/`. */
-  private topicPrefix: string | null = null;
+  private readonly connections = new Map<string, ConnectionEntry>();
 
   constructor(
-    private readonly config: ConfigService,
+    private readonly configRepo: HouseMqttConfigRepository,
     @Inject(forwardRef(() => ZigbeeIngestService))
     private readonly ingest: ZigbeeIngestService,
   ) {}
 
-  onModuleInit(): void {
-    const url =
-      this.config.get<string>('ZIGBEE_MQTT_URL')?.trim() ??
-      process.env.ZIGBEE_MQTT_URL?.trim();
-    if (!url) {
-      this.logger.log('ZIGBEE_MQTT_URL не задан — MQTT (zigbee2mqtt) отключён');
-      return;
+  async onModuleInit(): Promise<void> {
+    const configs = await this.configRepo.findAll();
+    for (const config of configs) {
+      if (config.enabled) {
+        this.connect(config);
+      }
     }
+  }
 
-    const topicBase = (
-      this.config.get<string>('ZIGBEE_MQTT_TOPIC_PREFIX')?.trim() ??
-      process.env.ZIGBEE_MQTT_TOPIC_PREFIX?.trim() ??
-      'zigbee2mqtt'
-    ).replace(/\/+$/, '');
+  onModuleDestroy(): void {
+    for (const entry of this.connections.values()) {
+      entry.client.removeAllListeners();
+      entry.client.end(true);
+    }
+    this.connections.clear();
+  }
 
-    this.topicPrefix = topicBase;
+  connect(config: HouseMqttConfig): void {
+    this.disconnectHouse(config.houseId);
 
-    const username =
-      this.config.get<string>('ZIGBEE_MQTT_USERNAME') ??
-      process.env.ZIGBEE_MQTT_USERNAME;
-    const password =
-      this.config.get<string>('ZIGBEE_MQTT_PASSWORD') ??
-      process.env.ZIGBEE_MQTT_PASSWORD;
+    const topicPrefix = config.topicPrefix.replace(/\/+$/, '');
 
     const opts: IClientOptions = {
       reconnectPeriod: 5000,
       connectTimeout: 10_000,
-      clientId: `scenario-service-${process.pid}-${Math.random().toString(36).slice(2, 10)}`,
+      clientId: `scenario-${config.houseId.slice(0, 8)}-${Math.random().toString(36).slice(2, 8)}`,
     };
-    if (username !== undefined && username !== '') opts.username = username;
-    if (password !== undefined && password !== '') opts.password = password;
+    if (config.mqttUsername) opts.username = config.mqttUsername;
+    if (config.mqttPassword) opts.password = config.mqttPassword;
 
-    this.client = mqtt.connect(url, opts);
+    const client = mqtt.connect(config.mqttUrl, opts);
+    const entry: ConnectionEntry = { client, topicPrefix, houseId: config.houseId };
+    this.connections.set(config.houseId, entry);
 
-    this.client.on('connect', () => {
-      this.logger.log(`MQTT подключён: ${url}`);
-      const pattern = `${topicBase}/#`;
-      this.client?.subscribe(pattern, { qos: 0 }, (err) => {
+    client.on('connect', () => {
+      this.logger.log(`[${config.houseId}] MQTT подключён: ${config.mqttUrl}`);
+      const pattern = `${topicPrefix}/#`;
+      client.subscribe(pattern, { qos: 0 }, (err) => {
         if (err) {
-          this.logger.error(`Подписка MQTT не удалась: ${pattern}`, err);
+          this.logger.error(`[${config.houseId}] Подписка не удалась: ${pattern}`, err);
           return;
         }
-        this.logger.log(`Подписка: ${pattern}`);
-        this.maybeRequestBridgeDevicesAfterSubscribe();
+        this.logger.log(`[${config.houseId}] Подписка: ${pattern}`);
+        this.requestBridgeDeviceList(config.houseId);
       });
     });
 
-    this.client.on('message', (topic, payload) => {
-      this.logIncomingMqtt(topic, payload);
-      void this.ingest.processMqttMessage(topicBase, topic, payload);
+    client.on('message', (topic, payload) => {
+      this.logIncoming(config.houseId, topic, payload);
+      void this.ingest.processMqttMessage(config.houseId, topicPrefix, topic, payload);
     });
 
-    this.client.on('error', (err) => {
-      this.logger.error('MQTT ошибка', err);
+    client.on('error', (err) => {
+      this.logger.error(`[${config.houseId}] MQTT ошибка`, err);
     });
 
-    this.client.on('reconnect', () => {
-      this.logger.warn('MQTT переподключение…');
+    client.on('reconnect', () => {
+      this.logger.warn(`[${config.houseId}] MQTT переподключение…`);
     });
   }
 
-  onModuleDestroy(): void {
-    if (this.client) {
-      this.client.removeAllListeners();
-      this.client.end(true);
-      this.client = null;
+  disconnectHouse(houseId: string): void {
+    const existing = this.connections.get(houseId);
+    if (existing) {
+      existing.client.removeAllListeners();
+      existing.client.end(true);
+      this.connections.delete(houseId);
     }
-    this.topicPrefix = null;
   }
 
-  /**
-   * Публикует запрос в zigbee2mqtt: ответ придёт в `…/bridge/devices` и будет разобран {@link ZigbeeIngestService}.
-   */
-  requestBridgeDeviceList(): { ok: true } | { ok: false; error: string } {
-    if (!this.client?.connected || !this.topicPrefix) {
-      return { ok: false, error: 'MQTT не подключён' };
+  getConnectionStatus(houseId: string): { connected: boolean; url?: string } {
+    const entry = this.connections.get(houseId);
+    if (!entry) return { connected: false };
+    return { connected: entry.client.connected };
+  }
+
+  getAllStatuses(): Record<string, { connected: boolean }> {
+    const result: Record<string, { connected: boolean }> = {};
+    for (const [houseId, entry] of this.connections.entries()) {
+      result[houseId] = { connected: entry.client.connected };
     }
-    const topic = `${this.topicPrefix}/bridge/request/devices`;
-    this.client.publish(topic, '{}', { qos: 0 }, (err) => {
-      if (err) this.logger.error(`Ошибка publish ${topic}`, err);
+    return result;
+  }
+
+  requestBridgeDeviceList(houseId: string): { ok: true } | { ok: false; error: string } {
+    const entry = this.connections.get(houseId);
+    if (!entry?.client.connected) {
+      return { ok: false, error: `MQTT не подключён для дома ${houseId}` };
+    }
+    const topic = `${entry.topicPrefix}/bridge/request/devices`;
+    entry.client.publish(topic, '{}', { qos: 0 }, (err) => {
+      if (err) this.logger.error(`[${houseId}] Ошибка publish ${topic}`, err);
     });
-    this.logger.log(`Запрос списка устройств у моста: ${topic}`);
+    this.logger.log(`[${houseId}] Запрос списка устройств: ${topic}`);
     return { ok: true };
   }
 
-  /**
-   * Включает / выключает режим сопряжения (permit_join) на мосту zigbee2mqtt.
-   * `time` — таймаут в секундах (1–254), используется только при включении.
-   */
   permitJoin(
+    houseId: string,
     enable: boolean,
     time = 254,
   ): { ok: true } | { ok: false; error: string } {
-    if (!this.client?.connected || !this.topicPrefix) {
-      return { ok: false, error: 'MQTT не подключён' };
+    const entry = this.connections.get(houseId);
+    if (!entry?.client.connected) {
+      return { ok: false, error: `MQTT не подключён для дома ${houseId}` };
     }
-    const topic = `${this.topicPrefix}/bridge/request/permit_join`;
-    // Zigbee2MQTT payload compatibility:
-    // - Some setups reject JSON objects with "Invalid payload".
-    // - Publishing a number (seconds) is widely accepted to enable permit_join for that duration.
-    // - Publishing `false` disables permit_join.
+    const topic = `${entry.topicPrefix}/bridge/request/permit_join`;
     const t = Math.max(1, Math.min(254, Math.trunc(time)));
     const body = enable ? String(t) : 'false';
-    this.client.publish(topic, body, { qos: 0 }, (err) => {
-      if (err) this.logger.error(`Ошибка publish ${topic}`, err);
+    entry.client.publish(topic, body, { qos: 0 }, (err) => {
+      if (err) this.logger.error(`[${houseId}] Ошибка publish ${topic}`, err);
     });
-    this.logger.log(`MQTT → ${topic}\n${body}`);
+    this.logger.log(`[${houseId}] MQTT → ${topic}\n${body}`);
     return { ok: true };
   }
 
-  /**
-   * Удаляет устройство с Zigbee-координатора через `…/bridge/request/device/remove`.
-   * `idOrName` — friendlyName или IEEE-адрес.
-   * `force` — принудительное удаление (для недоступных устройств).
-   */
   removeDevice(
+    houseId: string,
     idOrName: string,
     force = false,
   ): { ok: true } | { ok: false; error: string } {
-    if (!this.client?.connected || !this.topicPrefix) {
-      return { ok: false, error: 'MQTT не подключён' };
+    const entry = this.connections.get(houseId);
+    if (!entry?.client.connected) {
+      return { ok: false, error: `MQTT не подключён для дома ${houseId}` };
     }
-    const topic = `${this.topicPrefix}/bridge/request/device/remove`;
+    const topic = `${entry.topicPrefix}/bridge/request/device/remove`;
     const body = JSON.stringify({ id: idOrName, force });
-    this.client.publish(topic, body, { qos: 0 }, (err) => {
-      if (err) this.logger.error(`Ошибка publish ${topic}`, err);
+    entry.client.publish(topic, body, { qos: 0 }, (err) => {
+      if (err) this.logger.error(`[${houseId}] Ошибка publish ${topic}`, err);
     });
-    this.logger.log(`MQTT → ${topic}\n${body}`);
+    this.logger.log(`[${houseId}] MQTT → ${topic}\n${body}`);
     return { ok: true };
   }
 
-  /**
-   * Отправляет команду управления Zigbee-устройству через топик `…/<topicName>/set`.
-   * `topicName` — friendlyName или IEEE-адрес (zigbee2mqtt принимает оба варианта).
-   */
   sendDeviceCommand(
+    houseId: string,
     topicName: string,
     payload: Record<string, unknown>,
   ): { ok: true; topic: string } | { ok: false; error: string } {
-    if (!this.client?.connected || !this.topicPrefix) {
-      return { ok: false, error: 'MQTT не подключён' };
+    const entry = this.connections.get(houseId);
+    if (!entry?.client.connected) {
+      return { ok: false, error: `MQTT не подключён для дома ${houseId}` };
     }
-    const topic = `${this.topicPrefix}/${topicName}/set`;
+    const topic = `${entry.topicPrefix}/${topicName}/set`;
     const body = JSON.stringify(payload);
-    this.client.publish(topic, body, { qos: 0 }, (err) => {
-      if (err) this.logger.error(`Ошибка publish ${topic}`, err);
+    entry.client.publish(topic, body, { qos: 0 }, (err) => {
+      if (err) this.logger.error(`[${houseId}] Ошибка publish ${topic}`, err);
     });
-    this.logger.log(`MQTT → ${topic}\n${body}`);
+    this.logger.log(`[${houseId}] MQTT → ${topic}\n${body}`);
     return { ok: true, topic };
   }
 
-  private maybeRequestBridgeDevicesAfterSubscribe(): void {
-    const v =
-      this.config.get<string>('ZIGBEE_MQTT_REQUEST_DEVICES_ON_CONNECT') ??
-      process.env.ZIGBEE_MQTT_REQUEST_DEVICES_ON_CONNECT;
-    if (v === '0' || v === 'false' || v === 'off') return;
-    this.requestBridgeDeviceList();
-  }
-
-  /** Вывод входящих сообщений в консоль (как в примере с client.on('message')). */
-  private logIncomingMqtt(topic: string, payload: Buffer): void {
+  private logIncoming(houseId: string, topic: string, payload: Buffer): void {
     const raw = payload.toString();
     let body: string;
     try {
-      const parsed = JSON.parse(raw) as unknown;
-      body = JSON.stringify(parsed, null, 2);
+      body = JSON.stringify(JSON.parse(raw) as unknown, null, 2);
     } catch {
       body = raw || '(пусто)';
     }
-    const max =
-      Number(
-        this.config.get<string>('ZIGBEE_MQTT_LOG_MAX_CHARS') ??
-          process.env.ZIGBEE_MQTT_LOG_MAX_CHARS,
-      ) || 16_000;
+    const max = 16_000;
     if (body.length > max) {
       body = `${body.slice(0, max)}\n… (обрезано, всего ${body.length} символов)`;
     }
-    this.logger.log(`MQTT ← ${topic}\n${body}`);
+    this.logger.log(`[${houseId}] MQTT ← ${topic}\n${body}`);
   }
 }

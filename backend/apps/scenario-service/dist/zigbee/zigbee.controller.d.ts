@@ -1,9 +1,11 @@
 import { ZigbeeService } from './zigbee.service';
 import { ZigbeeMqttService } from './zigbee-mqtt.service';
+import { HouseMqttConfigRepository } from './house-mqtt-config.repository';
 export declare class ZigbeeController {
     private readonly service;
     private readonly zigbeeMqtt;
-    constructor(service: ZigbeeService, zigbeeMqtt: ZigbeeMqttService);
+    private readonly mqttConfigRepo;
+    constructor(service: ZigbeeService, zigbeeMqtt: ZigbeeMqttService, mqttConfigRepo: HouseMqttConfigRepository);
     listDevices(query: unknown): Promise<{
         items: import("./zigbee-device.repository").ZigbeeDevice[];
         total: number;
@@ -17,7 +19,7 @@ export declare class ZigbeeController {
         ok: boolean;
         topic: string;
     }>;
-    requestDevicesSyncFromBridge(): {
+    requestDevicesSyncFromBridge(houseId: string): {
         ok: boolean;
         message: string;
     };
@@ -43,5 +45,49 @@ export declare class ZigbeeController {
     listLinks(query: unknown): Promise<{
         items: import("./zigbee-link.repository").DeviceNetworkLink[];
         total: number;
+    }>;
+    listHouseMqttConfigs(): Promise<{
+        status: {
+            connected: boolean;
+            url?: string;
+        };
+        houseId: string;
+        mqttUrl: string;
+        mqttUsername?: string;
+        topicPrefix: string;
+        enabled: boolean;
+    }[]>;
+    getMqttStatuses(): Record<string, {
+        connected: boolean;
+    }>;
+    getHouseMqttConfig(houseId: string): Promise<{
+        status: {
+            connected: boolean;
+            url?: string;
+        };
+        houseId: string;
+        mqttUrl: string;
+        mqttUsername?: string;
+        topicPrefix: string;
+        enabled: boolean;
+    }>;
+    upsertHouseMqttConfig(houseId: string, body: unknown): Promise<{
+        status: {
+            connected: boolean;
+            url?: string;
+        };
+        houseId: string;
+        mqttUrl: string;
+        mqttUsername?: string;
+        topicPrefix: string;
+        enabled: boolean;
+    }>;
+    deleteHouseMqttConfig(houseId: string): Promise<{
+        ok: boolean;
+        houseId: string;
+    }>;
+    reconnectHouseMqtt(houseId: string): Promise<{
+        ok: boolean;
+        houseId: string;
     }>;
 }

@@ -6,6 +6,6 @@ import { LlmModule } from '../llm/llm.module';
 @Module({
   imports: [LlmModule],
   providers: [DeviceCatalogClient, DeviceCatalogService],
-  exports: [DeviceCatalogService],
+  exports: [DeviceCatalogClient, DeviceCatalogService],
 })
 export class DeviceCatalogModule {}

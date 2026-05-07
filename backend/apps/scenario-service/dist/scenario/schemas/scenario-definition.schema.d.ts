@@ -118,7 +118,7 @@ export declare const scenarioActionSchema: z.ZodDiscriminatedUnion<"type", [z.Zo
     timeoutMs: z.ZodDefault<z.ZodNumber>;
 }, "strip", z.ZodTypeAny, {
     type: "HTTP_REQUEST";
-    method: "POST" | "GET" | "PUT" | "PATCH" | "DELETE";
+    method: "POST" | "DELETE" | "GET" | "PUT" | "PATCH";
     url: string;
     timeoutMs: number;
     headers?: Record<string, string> | undefined;
@@ -127,7 +127,7 @@ export declare const scenarioActionSchema: z.ZodDiscriminatedUnion<"type", [z.Zo
     type: "HTTP_REQUEST";
     url: string;
     headers?: Record<string, string> | undefined;
-    method?: "POST" | "GET" | "PUT" | "PATCH" | "DELETE" | undefined;
+    method?: "POST" | "DELETE" | "GET" | "PUT" | "PATCH" | undefined;
     body?: unknown;
     timeoutMs?: number | undefined;
 }>]>;
@@ -251,7 +251,7 @@ export declare const scenarioDefinitionSchema: z.ZodObject<{
         timeoutMs: z.ZodDefault<z.ZodNumber>;
     }, "strip", z.ZodTypeAny, {
         type: "HTTP_REQUEST";
-        method: "POST" | "GET" | "PUT" | "PATCH" | "DELETE";
+        method: "POST" | "DELETE" | "GET" | "PUT" | "PATCH";
         url: string;
         timeoutMs: number;
         headers?: Record<string, string> | undefined;
@@ -260,7 +260,7 @@ export declare const scenarioDefinitionSchema: z.ZodObject<{
         type: "HTTP_REQUEST";
         url: string;
         headers?: Record<string, string> | undefined;
-        method?: "POST" | "GET" | "PUT" | "PATCH" | "DELETE" | undefined;
+        method?: "POST" | "DELETE" | "GET" | "PUT" | "PATCH" | undefined;
         body?: unknown;
         timeoutMs?: number | undefined;
     }>]>, "many">;
@@ -318,7 +318,7 @@ export declare const scenarioDefinitionSchema: z.ZodObject<{
         data?: Record<string, unknown> | undefined;
     } | {
         type: "HTTP_REQUEST";
-        method: "POST" | "GET" | "PUT" | "PATCH" | "DELETE";
+        method: "POST" | "DELETE" | "GET" | "PUT" | "PATCH";
         url: string;
         timeoutMs: number;
         headers?: Record<string, string> | undefined;
@@ -373,7 +373,7 @@ export declare const scenarioDefinitionSchema: z.ZodObject<{
         type: "HTTP_REQUEST";
         url: string;
         headers?: Record<string, string> | undefined;
-        method?: "POST" | "GET" | "PUT" | "PATCH" | "DELETE" | undefined;
+        method?: "POST" | "DELETE" | "GET" | "PUT" | "PATCH" | undefined;
         body?: unknown;
         timeoutMs?: number | undefined;
     })[];

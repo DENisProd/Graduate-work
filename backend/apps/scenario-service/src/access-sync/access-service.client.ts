@@ -5,7 +5,7 @@ export interface RegisterResourcePayload {
   houseId: string;
   parentExternalId?: string;
   externalId: string;
-  type: 'DEVICE' | 'AUTOMATION';
+  type: 'DEVICE' | 'AUTOMATION' | 'DEVICE_FUNCTION';
   name?: string;
   metadata?: Record<string, unknown>;
 }

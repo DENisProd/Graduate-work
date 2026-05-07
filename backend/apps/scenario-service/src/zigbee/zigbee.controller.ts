@@ -6,6 +6,7 @@ import {
   NotFoundException,
   Param,
   Post,
+  Put,
   Query,
   ServiceUnavailableException,
   UnprocessableEntityException,
@@ -20,6 +21,7 @@ import {
 } from '@nestjs/swagger';
 import { ZigbeeService } from './zigbee.service';
 import { ZigbeeMqttService } from './zigbee-mqtt.service';
+import { HouseMqttConfigRepository } from './house-mqtt-config.repository';
 import {
   createZigbeeLinksBatchSchema,
   createZigbeeStateSchema,
@@ -39,6 +41,7 @@ export class ZigbeeController {
   constructor(
     private readonly service: ZigbeeService,
     private readonly zigbeeMqtt: ZigbeeMqttService,
+    private readonly mqttConfigRepo: HouseMqttConfigRepository,
   ) {}
 
   @Get('devices')
@@ -148,19 +151,25 @@ export class ZigbeeController {
     summary:
       'Синхронизация списка устройств с zigbee2mqtt (MQTT request → bridge/devices → MongoDB)',
   })
+  @ApiQuery({
+    name: 'houseId',
+    required: true,
+    type: String,
+    description: 'ID дома, для которого выполняется синхронизация',
+  })
   @ApiResponse({
     status: 200,
     description:
       'Запрос отправлен; при ответе брокера записи обновятся в PhysicalDevice',
   })
   @ApiResponse({ status: 503, description: 'MQTT не подключён' })
-  requestDevicesSyncFromBridge() {
-    const r = this.zigbeeMqtt.requestBridgeDeviceList();
+  requestDevicesSyncFromBridge(@Query('houseId') houseId: string) {
+    if (!houseId) {
+      throw new ServiceUnavailableException('Параметр houseId обязателен');
+    }
+    const r = this.zigbeeMqtt.requestBridgeDeviceList(houseId);
     if (!r.ok) {
-      throw new ServiceUnavailableException(
-        r.error ??
-          'MQTT недоступен. Задайте ZIGBEE_MQTT_URL и дождитесь подключения.',
-      );
+      throw new ServiceUnavailableException(r.error);
     }
     return {
       ok: true,
@@ -204,8 +213,12 @@ export class ZigbeeController {
   @ApiBody({
     schema: {
       type: 'object',
-      required: ['enable'],
+      required: ['houseId', 'enable'],
       properties: {
+        houseId: {
+          type: 'string',
+          description: 'ID дома (UUID)',
+        },
         enable: {
           type: 'boolean',
           description: 'true — включить, false — выключить',
@@ -222,12 +235,16 @@ export class ZigbeeController {
   @ApiResponse({ status: 503, description: 'MQTT не подключён' })
   permitJoin(@Body() body: unknown) {
     const b = body as Record<string, unknown>;
+    const houseId = typeof b?.houseId === 'string' ? b.houseId : '';
+    if (!houseId) {
+      throw new ServiceUnavailableException('houseId обязателен');
+    }
     const enable = Boolean(b?.enable);
     const time =
       typeof b?.time === 'number'
         ? Math.max(1, Math.min(254, Math.trunc(b.time)))
         : 254;
-    const result = this.zigbeeMqtt.permitJoin(enable, time);
+    const result = this.zigbeeMqtt.permitJoin(houseId, enable, time);
     if (!result.ok) {
       throw new ServiceUnavailableException(
         (result as { ok: false; error: string }).error ?? 'MQTT недоступен',
@@ -348,5 +365,105 @@ export class ZigbeeController {
   listLinks(@Query() query: unknown) {
     const q = listZigbeeLinksQuerySchema.parse(query);
     return this.service.listLinks(q);
+  }
+
+  // ── House MQTT Connections ──────────────────────────────────────────────────
+
+  @Get('house-mqtt')
+  @ApiOperation({ summary: 'Список MQTT-конфигураций всех домов' })
+  @ApiResponse({ status: 200, description: 'Массив конфигураций (без паролей)' })
+  async listHouseMqttConfigs() {
+    const configs = await this.mqttConfigRepo.findAll();
+    return configs.map(({ mqttPassword: _pwd, ...rest }) => ({
+      ...rest,
+      status: this.zigbeeMqtt.getConnectionStatus(rest.houseId),
+    }));
+  }
+
+  @Get('house-mqtt/status')
+  @ApiOperation({ summary: 'Статус всех MQTT-соединений' })
+  @ApiResponse({ status: 200, description: 'Карта houseId → {connected}' })
+  getMqttStatuses() {
+    return this.zigbeeMqtt.getAllStatuses();
+  }
+
+  @Get('house-mqtt/:houseId')
+  @ApiOperation({ summary: 'MQTT-конфигурация конкретного дома' })
+  @ApiParam({ name: 'houseId', description: 'UUID дома' })
+  @ApiResponse({ status: 200, description: 'Конфигурация (без пароля)' })
+  @ApiResponse({ status: 404, description: 'Конфигурация не найдена' })
+  async getHouseMqttConfig(@Param('houseId') houseId: string) {
+    const config = await this.mqttConfigRepo.findByHouseId(houseId);
+    if (!config) throw new NotFoundException(`MQTT-конфигурация для дома ${houseId} не найдена`);
+    const { mqttPassword: _pwd, ...rest } = config;
+    return { ...rest, status: this.zigbeeMqtt.getConnectionStatus(houseId) };
+  }
+
+  @Put('house-mqtt/:houseId')
+  @ApiOperation({ summary: 'Создать / обновить MQTT-конфигурацию дома и переподключиться' })
+  @ApiParam({ name: 'houseId', description: 'UUID дома' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['mqttUrl'],
+      properties: {
+        mqttUrl: { type: 'string', example: 'mqtt://192.168.1.10:1883' },
+        mqttUsername: { type: 'string' },
+        mqttPassword: { type: 'string' },
+        topicPrefix: { type: 'string', default: 'zigbee2mqtt' },
+        enabled: { type: 'boolean', default: true },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Конфигурация сохранена, соединение установлено' })
+  async upsertHouseMqttConfig(
+    @Param('houseId') houseId: string,
+    @Body() body: unknown,
+  ) {
+    const b = body as Record<string, unknown>;
+    const mqttUrl = typeof b.mqttUrl === 'string' ? b.mqttUrl.trim() : '';
+    if (!mqttUrl) throw new UnprocessableEntityException('mqttUrl обязателен');
+
+    const config = await this.mqttConfigRepo.upsert({
+      houseId,
+      mqttUrl,
+      mqttUsername: typeof b.mqttUsername === 'string' ? b.mqttUsername : undefined,
+      mqttPassword: typeof b.mqttPassword === 'string' ? b.mqttPassword : undefined,
+      topicPrefix: typeof b.topicPrefix === 'string' ? b.topicPrefix : 'zigbee2mqtt',
+      enabled: b.enabled !== false,
+    });
+
+    if (config.enabled) {
+      this.zigbeeMqtt.connect(config);
+    } else {
+      this.zigbeeMqtt.disconnectHouse(houseId);
+    }
+
+    const { mqttPassword: _pwd, ...rest } = config;
+    return { ...rest, status: this.zigbeeMqtt.getConnectionStatus(houseId) };
+  }
+
+  @Delete('house-mqtt/:houseId')
+  @ApiOperation({ summary: 'Удалить MQTT-конфигурацию дома и отключиться' })
+  @ApiParam({ name: 'houseId', description: 'UUID дома' })
+  @ApiResponse({ status: 200, description: 'Конфигурация удалена' })
+  @ApiResponse({ status: 404, description: 'Конфигурация не найдена' })
+  async deleteHouseMqttConfig(@Param('houseId') houseId: string) {
+    const deleted = await this.mqttConfigRepo.deleteByHouseId(houseId);
+    if (!deleted) throw new NotFoundException(`MQTT-конфигурация для дома ${houseId} не найдена`);
+    this.zigbeeMqtt.disconnectHouse(houseId);
+    return { ok: true, houseId };
+  }
+
+  @Post('house-mqtt/:houseId/reconnect')
+  @ApiOperation({ summary: 'Принудительное переподключение к MQTT для дома' })
+  @ApiParam({ name: 'houseId', description: 'UUID дома' })
+  @ApiResponse({ status: 200, description: 'Переподключение инициировано' })
+  @ApiResponse({ status: 404, description: 'Конфигурация не найдена' })
+  async reconnectHouseMqtt(@Param('houseId') houseId: string) {
+    const config = await this.mqttConfigRepo.findByHouseId(houseId);
+    if (!config) throw new NotFoundException(`MQTT-конфигурация для дома ${houseId} не найдена`);
+    this.zigbeeMqtt.connect(config);
+    return { ok: true, houseId };
   }
 }

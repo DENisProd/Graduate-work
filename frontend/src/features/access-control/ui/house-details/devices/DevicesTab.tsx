@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AppButton } from '@/components/ui/app-button';
 import { Badge } from '@/components/ui/badge';
 import { useTranslation } from '@/hooks';
-import { useToast } from '@/components/shared';
+import { ServiceErrorCard, useToast } from '@/components/shared';
 import { useAddDeviceModalStore } from '@/store/add-device-modal-store';
 import type { HouseDetailsTab } from '@/store/access-control-store';
 import { ApiError, zigbeeDevicesApi } from '@/lib/api-client';
@@ -32,6 +32,7 @@ export function DevicesTab({ houseId, activeTab }: DevicesTabProps) {
   const devicesLimit = 12;
   const [devicesLoading, setDevicesLoading] = useState(false);
   const [devicesError, setDevicesError] = useState<'none' | 'forbidden' | 'error'>('none');
+  const [devicesErrorDetails, setDevicesErrorDetails] = useState<string[] | null>(null);
   const [isBridgeAvailable, setIsBridgeAvailable] = useState(true);
 
   const telemetryEnabled =
@@ -84,12 +85,21 @@ export function DevicesTab({ houseId, activeTab }: DevicesTabProps) {
           setError('forbidden');
           return;
         }
+        if (error.status === 0) {
+          setDevicesErrorDetails([
+            'Failed to load resource: net::ERR_CONNECTION_REFUSED',
+            `details: ${error.message || 'Network error'}`,
+          ]);
+          setError('error');
+          return;
+        }
         if (error.status >= 500) {
           showToast(t('common.error'), 'error');
           setError('error');
           return;
         }
       }
+      setDevicesErrorDetails(null);
       showToast(t('common.error'), 'error');
       setError('error');
     },
@@ -101,6 +111,7 @@ export function DevicesTab({ houseId, activeTab }: DevicesTabProps) {
       if (!houseId) return;
       setDevicesLoading(true);
       setDevicesError('none');
+      setDevicesErrorDetails(null);
       try {
         try {
           await zigbeeDevicesApi.requestSyncFromBridge({ signal });
@@ -227,12 +238,16 @@ export function DevicesTab({ houseId, activeTab }: DevicesTabProps) {
             {t('errors.unauthorized')}
           </div>
         ) : devicesError === 'error' ? (
-          <div className="space-y-3 rounded-xl border border-border bg-card p-8 text-center">
-            <span className="text-sm text-muted-foreground">{t('common.error')}</span>
-            <AppButton variant="secondary" size="sm" onClick={() => void loadDevices()}>
-              {t('admin.retry')}
-            </AppButton>
-          </div>
+          <ServiceErrorCard
+            title={locale === 'ru' ? 'Сервис устройств/сценариев недоступен' : 'Scenario/device service is unavailable'}
+            description={
+              locale === 'ru'
+                ? 'Не удалось загрузить список устройств и/или телеметрию.'
+                : 'Failed to load devices and/or telemetry.'
+            }
+            details={devicesErrorDetails ?? undefined}
+            onRetry={() => void loadDevices()}
+          />
         ) : devices.length === 0 ? (
           <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
             {t('admin.noData')}

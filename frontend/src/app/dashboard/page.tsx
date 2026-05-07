@@ -2,14 +2,18 @@
 
 import { ThemeInitializer } from '@/components/shared';
 import { useTranslation, useCurrentUserId } from '@/hooks';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { Activity, Home, Zap } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { accessApiClient, physicalDevicesApi, scenariosApi, zigbeeDevicesApi } from '@/lib/api-client';
-import type { HouseResponse, PhysicalDeviceResponse } from '@/types/api';
+import { ApiError, accessApiClient, physicalDevicesApi, scenariosApi, zigbeeDevicesApi } from '@/lib/api-client';
+import { widgetDashboardsApi } from '@/lib/api/scenario-service';
+import type { HouseResponse, PhysicalDeviceResponse, ZigbeeDeviceListItem, ScenarioResponse } from '@/types/api';
+import type { WidgetDashboard as WidgetDashboardType } from '@/features/widget-dashboard/types/widget.types';
 import { toArray } from '@/features/access-control';
 import { DashboardHouseCard } from '@/features/dashboard/ui/DashboardHouseCard';
+import { ServiceErrorCard } from '@/components/shared';
+import { WidgetDashboard } from '@/features/widget-dashboard/ui/WidgetDashboard';
 
 type EventResult = 'SUCCESS' | 'DENIED' | 'ERROR';
 
@@ -27,16 +31,69 @@ const PREVIEW_HOUSES_LIMIT = 6;
 export default function DashboardPage() {
   const { t, ready } = useTranslation();
   const currentUserId = useCurrentUserId();
+
+  // Main data
   const [houses, setHouses] = useState<HouseResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalDevices, setTotalDevices] = useState(0);
   const [totalActiveScenarios, setTotalActiveScenarios] = useState(0);
   const [recentEvents, setRecentEvents] = useState<DashboardEvent[]>([]);
   const [eventsCount, setEventsCount] = useState(0);
+  const [scenarioServiceError, setScenarioServiceError] = useState<string[] | null>(null);
+
+  const widgetAutoLoaded = useRef(false);
+
+  // Widget section
+  const [widgetHouseId, setWidgetHouseId] = useState<string | null>(null);
+  const [widgetDashboard, setWidgetDashboard] = useState<WidgetDashboardType | null>(null);
+  const [widgetDevices, setWidgetDevices] = useState<PhysicalDeviceResponse[]>([]);
+  const [widgetZigbee, setWidgetZigbee] = useState<ZigbeeDeviceListItem[]>([]);
+  const [widgetScenarios, setWidgetScenarios] = useState<ScenarioResponse[]>([]);
+  const [widgetLoading, setWidgetLoading] = useState(false);
+  const [widgetError, setWidgetError] = useState<string | null>(null);
+
+  const loadWidgetData = useCallback(
+    async (houseId: string) => {
+      if (!currentUserId) return;
+      setWidgetLoading(true);
+      setWidgetError(null);
+      setWidgetHouseId(houseId);
+      try {
+        const [dashboards, devRes, zigbeeRes, scRes] = await Promise.all([
+          widgetDashboardsApi.getByHouse(houseId),
+          physicalDevicesApi.getAll({ houseId, limit: 200 }),
+          zigbeeDevicesApi.list({ houseId, limit: 200 }),
+          scenariosApi.getAll({ houseId, limit: 100 }),
+        ]);
+
+        setWidgetDevices(devRes.items ?? []);
+        setWidgetZigbee(zigbeeRes.items ?? []);
+        setWidgetScenarios(scRes.items ?? []);
+
+        if (dashboards.length > 0) {
+          setWidgetDashboard(dashboards.find((d) => d.isDefault) ?? dashboards[0]);
+        } else {
+          const created = await widgetDashboardsApi.create({
+            houseId,
+            userId: currentUserId,
+            name: 'Главный',
+            isDefault: true,
+          });
+          setWidgetDashboard(created);
+        }
+      } catch (e) {
+        setWidgetError(e instanceof Error ? e.message : 'Ошибка загрузки');
+      } finally {
+        setWidgetLoading(false);
+      }
+    },
+    [currentUserId],
+  );
 
   const loadData = useCallback(async () => {
     if (currentUserId == null) return;
     setLoading(true);
+    setScenarioServiceError(null);
     try {
       const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
       const [housesData, devicesCountData, scenariosData, allDevicesData, logsData] = await Promise.all([
@@ -80,7 +137,14 @@ export default function DashboardPage() {
         }),
       );
     } catch (e) {
-      console.error(e);
+      if (e instanceof ApiError && e.status === 0) {
+        setScenarioServiceError([
+          'Failed to load resource: net::ERR_CONNECTION_REFUSED',
+          `details: ${e.message || 'Network error'}`,
+        ]);
+      } else {
+        console.error(e);
+      }
     } finally {
       setLoading(false);
     }
@@ -89,6 +153,13 @@ export default function DashboardPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Auto-select first house for widget section after houses load
+  useEffect(() => {
+    if (widgetAutoLoaded.current || houses.length === 0) return;
+    widgetAutoLoaded.current = true;
+    void loadWidgetData(String(houses[0].id));
+  }, [houses, loadWidgetData]);
 
   if (!ready) {
     return (
@@ -121,6 +192,20 @@ export default function DashboardPage() {
   return (
     <>
       <ThemeInitializer />
+
+      {scenarioServiceError ? (
+        <div className="mb-6">
+          <ServiceErrorCard
+            title={t('common.error')}
+            description={
+              t('dashboard.stats.activeScenarios') +
+              ': scenario-service недоступен — часть данных на дашборде не загрузилась.'
+            }
+            details={scenarioServiceError}
+            onRetry={loadData}
+          />
+        </div>
+      ) : null}
 
       {/* Stats */}
       <section className="mb-8">
@@ -188,6 +273,61 @@ export default function DashboardPage() {
           </div>
         )}
       </section>
+
+      {/* Widgets */}
+      {houses.length > 0 && (
+        <section className="mb-8">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-2xl font-semibold">{t('dashboard.widgets.title')}</h2>
+            {houses.length > 1 && (
+              <div className="flex flex-wrap gap-2">
+                {houses.map((house) => (
+                  <button
+                    key={house.id}
+                    type="button"
+                    onClick={() => void loadWidgetData(String(house.id))}
+                    className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                      widgetHouseId === String(house.id)
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : 'border-border text-muted-foreground hover:bg-accent'
+                    }`}
+                  >
+                    {house.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="h-[520px] overflow-hidden rounded-xl border border-border bg-card shadow">
+            {widgetLoading ? (
+              <div className="flex h-full items-center justify-center">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent" />
+              </div>
+            ) : widgetError ? (
+              <div className="p-6">
+                <ServiceErrorCard
+                  title={t('dashboard.widgets.loadError')}
+                  description={widgetError}
+                  details={[widgetError]}
+                  onRetry={() => widgetHouseId ? void loadWidgetData(widgetHouseId) : undefined}
+                />
+              </div>
+            ) : widgetDashboard ? (
+              <WidgetDashboard
+                dashboard={widgetDashboard}
+                devices={widgetDevices}
+                zigbeeDevices={widgetZigbee}
+                scenarios={widgetScenarios}
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center">
+                <p className="text-sm text-muted-foreground">{t('dashboard.widgets.noHouses')}</p>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Recent Events */}
       <section>

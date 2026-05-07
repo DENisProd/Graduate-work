@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useTranslation } from '@/hooks';
-import { useToast } from '@/components/shared';
+import { ServiceErrorCard, useToast } from '@/components/shared';
 import { ApiError, scenariosApi } from '@/lib/api-client';
 import { formatDateTime } from '@/lib/utils';
 import type { ScenarioResponse } from '@/types/api';
@@ -54,6 +54,7 @@ export function ScenariosTab({ houseId, activeTab }: ScenariosTabProps) {
   const scenariosLimit = 6;
   const [scenariosLoading, setScenariosLoading] = useState(false);
   const [scenariosError, setScenariosError] = useState<'none' | 'forbidden' | 'error'>('none');
+  const [scenariosErrorDetails, setScenariosErrorDetails] = useState<string[] | null>(null);
   const [statusFilter, setStatusFilter] = useState<ScenarioStatus | 'ALL'>('ALL');
   const [creatorIdFilter, setCreatorIdFilter] = useState<string>('');
 
@@ -96,12 +97,21 @@ export function ScenariosTab({ houseId, activeTab }: ScenariosTabProps) {
           setError('forbidden');
           return;
         }
+        if (error.status === 0) {
+          setScenariosErrorDetails([
+            'Failed to load resource: net::ERR_CONNECTION_REFUSED',
+            `details: ${error.message || 'Network error'}`,
+          ]);
+          setError('error');
+          return;
+        }
         if (error.status >= 500) {
           showToast(t('common.error'), 'error');
           setError('error');
           return;
         }
       }
+      setScenariosErrorDetails(null);
       showToast(t('common.error'), 'error');
       setError('error');
     },
@@ -113,6 +123,7 @@ export function ScenariosTab({ houseId, activeTab }: ScenariosTabProps) {
       if (!houseId) return;
       setScenariosLoading(true);
       setScenariosError('none');
+      setScenariosErrorDetails(null);
       try {
         const result = await scenariosApi.getAll({
           houseId,
@@ -226,12 +237,12 @@ export function ScenariosTab({ houseId, activeTab }: ScenariosTabProps) {
           {t('errors.unauthorized')}
         </div>
       ) : scenariosError === 'error' ? (
-        <div className="space-y-3 rounded-xl border border-border bg-card p-8 text-center">
-          <span className="text-sm text-muted-foreground">{t('common.error')}</span>
-          <Button variant="secondary" size="sm" onClick={() => loadScenarios()}>
-            {t('admin.retry')}
-          </Button>
-        </div>
+        <ServiceErrorCard
+          title={locale === 'ru' ? 'Сервис сценариев недоступен' : 'Scenario service is unavailable'}
+          description={locale === 'ru' ? 'Не удалось загрузить сценарии.' : 'Failed to load scenarios.'}
+          details={scenariosErrorDetails ?? undefined}
+          onRetry={() => loadScenarios()}
+        />
       ) : scenarios.length === 0 ? (
         <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
           {t('admin.noData')}

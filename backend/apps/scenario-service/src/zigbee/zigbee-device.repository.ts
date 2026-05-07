@@ -23,6 +23,7 @@ export function canonicalZigbeeIeeeAddr(ieee: string): string {
 export type ZigbeeDevice = {
   id: string;
   physicalDeviceId: string;
+  houseId?: string | null;
   deviceId?: number | null;
   deviceCategoryId?: number | null;
   ieeeAddr: string;
@@ -51,6 +52,7 @@ export class ZigbeeDeviceRepository {
     return {
       id: _id.toHexString(),
       physicalDeviceId: _id.toHexString(),
+      houseId: doc.houseId ?? null,
       deviceId: doc.deviceId ?? null,
       deviceCategoryId: doc.deviceCategoryId ?? null,
       ieeeAddr: protocolAddress,

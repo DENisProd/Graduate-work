@@ -21,11 +21,16 @@ import {
   ZIGBEE_DEVICE_LOG_MODEL,
   ZigbeeDeviceLogSchema,
 } from '../mongo/schemas/zigbee-device-log.mongo';
+import {
+  HOUSE_MQTT_CONFIG_MODEL,
+  HouseMqttConfigSchema,
+} from '../mongo/schemas/house-mqtt-config.mongo';
 import { ZigbeeMqttService } from './zigbee-mqtt.service';
 import { ZigbeeIngestService } from './zigbee-ingest.service';
 import { ZigbeeDeviceLogRepository } from './zigbee-device-log.repository';
 import { ZigbeeRealtimeService } from './zigbee-realtime.service';
 import { ZigbeeRealtimeGateway } from './zigbee-realtime.gateway';
+import { HouseMqttConfigRepository } from './house-mqtt-config.repository';
 import { DeviceDataModule } from '../device-data/device-data.module';
 import { DeviceCatalogModule } from '../device-catalog/device-catalog.module';
 
@@ -38,6 +43,7 @@ import { DeviceCatalogModule } from '../device-catalog/device-catalog.module';
       { name: DEVICE_NETWORK_LINK_MODEL, schema: DeviceNetworkLinkSchema },
       { name: ZIGBEE_STATE_MODEL, schema: ZigbeeStateSchema },
       { name: ZIGBEE_DEVICE_LOG_MODEL, schema: ZigbeeDeviceLogSchema },
+      { name: HOUSE_MQTT_CONFIG_MODEL, schema: HouseMqttConfigSchema },
     ]),
   ],
   controllers: [ZigbeeController],
@@ -51,6 +57,7 @@ import { DeviceCatalogModule } from '../device-catalog/device-catalog.module';
     ZigbeeDeviceLogRepository,
     ZigbeeRealtimeService,
     ZigbeeRealtimeGateway,
+    HouseMqttConfigRepository,
   ],
   exports: [ZigbeeService, ZigbeeIngestService],
 })

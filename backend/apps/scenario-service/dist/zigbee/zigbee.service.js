@@ -40,6 +40,7 @@ let ZigbeeService = ZigbeeService_1 = class ZigbeeService {
     logger = new common_1.Logger(ZigbeeService_1.name);
     pairingEvents$ = new rxjs_1.Subject();
     pairingStatus$ = new rxjs_1.Subject();
+    deviceState$ = new rxjs_1.Subject();
     recentlyDeleted = new Map();
     constructor(devices, states, links, deviceLogs, realtime, deviceData, catalogService, mqtt) {
         this.devices = devices;
@@ -147,8 +148,8 @@ let ZigbeeService = ZigbeeService_1 = class ZigbeeService {
     listLinks(query) {
         return this.links.findMany(query);
     }
-    permitJoin(enable, time = 254) {
-        return this.mqtt.permitJoin(enable, time);
+    permitJoin(houseId, enable, time = 254) {
+        return this.mqtt.permitJoin(houseId, enable, time);
     }
     emitPairingStatus(status) {
         this.pairingStatus$.next(status);
@@ -352,7 +353,9 @@ let ZigbeeService = ZigbeeService_1 = class ZigbeeService {
             return { ok: false, error: `Устройство ${ieeeAddr} не найдено` };
         }
         this.markDeleted(canonical);
-        this.mqtt.removeDevice(device.friendlyName ?? canonical, force);
+        if (device.houseId) {
+            this.mqtt.removeDevice(device.houseId, device.friendlyName ?? canonical, force);
+        }
         await Promise.all([
             this.devices.deleteByIeeeAddr(canonical),
             this.states.deleteManyByIeeeAddr(canonical),
@@ -365,8 +368,11 @@ let ZigbeeService = ZigbeeService_1 = class ZigbeeService {
         if (!device) {
             return { ok: false, error: `Устройство ${ieeeAddr} не найдено` };
         }
+        if (!device.houseId) {
+            return { ok: false, error: 'Устройство не привязано к дому (houseId отсутствует)' };
+        }
         const topicName = device.friendlyName ?? device.ieeeAddr;
-        return this.mqtt.sendDeviceCommand(topicName, payload);
+        return this.mqtt.sendDeviceCommand(device.houseId, topicName, payload);
     }
     async ingestMqttDeviceState(topicSegment, payload) {
         let ieeeAddr;
@@ -419,6 +425,26 @@ let ZigbeeService = ZigbeeService_1 = class ZigbeeService {
         if (dev) {
             await this.deviceData.ingestFromZigbeePayload(dev.id, payload, created.timestamp);
         }
+        this.deviceState$.next({
+            houseId: dev?.houseId ?? null,
+            friendlyName: topicSegment,
+            ieeeAddr,
+            payload,
+            timestamp: created.timestamp,
+        });
+    }
+    sendCommand(houseId, friendlyName, args) {
+        return this.mqtt.sendDeviceCommand(houseId, friendlyName, args);
+    }
+    async getLatestStateByFriendlyName(friendlyName) {
+        const device = await this.devices.findByFriendlyName(friendlyName);
+        if (!device)
+            return null;
+        const stateMap = await this.states.findLatestByDeviceIeeeAddrs([
+            device.ieeeAddr,
+        ]);
+        return (stateMap.get(device.ieeeAddr)?.payload ??
+            null);
     }
 };
 exports.ZigbeeService = ZigbeeService;

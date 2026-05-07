@@ -5,3 +5,6 @@ CLAUDE.md
 
 # Obsidian knowledge base (personal notes, not for repo)
 knowledge/
+
+# EMQX runtime credentials (never commit)
+infrastructure/emqx/credentials.env

@@ -44,6 +44,13 @@ export interface EnsureCatalogResult {
   };
 }
 
+export interface CatalogDeviceFunction {
+  id: number;
+  code: string;
+  name: string;
+  functionType: 'READ' | 'WRITE' | 'READ_WRITE';
+}
+
 @Injectable()
 export class DeviceCatalogClient {
   private readonly logger = new Logger(DeviceCatalogClient.name);
@@ -168,6 +175,14 @@ export class DeviceCatalogClient {
     return this.post<EnsureCatalogResult>(
       '/api/v1/integration/catalog/ensure',
       payload,
+    );
+  }
+
+  findFunctionsByDeviceId(
+    deviceId: number,
+  ): Promise<CatalogDeviceFunction[] | null> {
+    return this.get<CatalogDeviceFunction[]>(
+      `/api/v1/device-functions/by-device/${encodeURIComponent(String(deviceId))}/all`,
     );
   }
 }

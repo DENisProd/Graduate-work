@@ -39,6 +39,7 @@ let ZigbeeDeviceRepository = class ZigbeeDeviceRepository {
         return {
             id: _id.toHexString(),
             physicalDeviceId: _id.toHexString(),
+            houseId: doc.houseId ?? null,
             deviceId: doc.deviceId ?? null,
             deviceCategoryId: doc.deviceCategoryId ?? null,
             ieeeAddr: protocolAddress,

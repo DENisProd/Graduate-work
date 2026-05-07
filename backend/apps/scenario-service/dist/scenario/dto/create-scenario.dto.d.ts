@@ -43,7 +43,7 @@ declare const CreateScenarioDto_base: import("nestjs-zod").ZodDto<{
             data?: Record<string, unknown> | undefined;
         } | {
             type: "HTTP_REQUEST";
-            method: "POST" | "GET" | "PUT" | "PATCH" | "DELETE";
+            method: "POST" | "DELETE" | "GET" | "PUT" | "PATCH";
             url: string;
             timeoutMs: number;
             headers?: Record<string, string> | undefined;
@@ -183,7 +183,7 @@ declare const CreateScenarioDto_base: import("nestjs-zod").ZodDto<{
             timeoutMs: import("zod").ZodDefault<import("zod").ZodNumber>;
         }, "strip", import("zod").ZodTypeAny, {
             type: "HTTP_REQUEST";
-            method: "POST" | "GET" | "PUT" | "PATCH" | "DELETE";
+            method: "POST" | "DELETE" | "GET" | "PUT" | "PATCH";
             url: string;
             timeoutMs: number;
             headers?: Record<string, string> | undefined;
@@ -192,7 +192,7 @@ declare const CreateScenarioDto_base: import("nestjs-zod").ZodDto<{
             type: "HTTP_REQUEST";
             url: string;
             headers?: Record<string, string> | undefined;
-            method?: "POST" | "GET" | "PUT" | "PATCH" | "DELETE" | undefined;
+            method?: "POST" | "DELETE" | "GET" | "PUT" | "PATCH" | undefined;
             body?: unknown;
             timeoutMs?: number | undefined;
         }>]>, "many">;
@@ -250,7 +250,7 @@ declare const CreateScenarioDto_base: import("nestjs-zod").ZodDto<{
             data?: Record<string, unknown> | undefined;
         } | {
             type: "HTTP_REQUEST";
-            method: "POST" | "GET" | "PUT" | "PATCH" | "DELETE";
+            method: "POST" | "DELETE" | "GET" | "PUT" | "PATCH";
             url: string;
             timeoutMs: number;
             headers?: Record<string, string> | undefined;
@@ -305,7 +305,7 @@ declare const CreateScenarioDto_base: import("nestjs-zod").ZodDto<{
             type: "HTTP_REQUEST";
             url: string;
             headers?: Record<string, string> | undefined;
-            method?: "POST" | "GET" | "PUT" | "PATCH" | "DELETE" | undefined;
+            method?: "POST" | "DELETE" | "GET" | "PUT" | "PATCH" | undefined;
             body?: unknown;
             timeoutMs?: number | undefined;
         })[];
@@ -362,7 +362,7 @@ declare const CreateScenarioDto_base: import("nestjs-zod").ZodDto<{
             type: "HTTP_REQUEST";
             url: string;
             headers?: Record<string, string> | undefined;
-            method?: "POST" | "GET" | "PUT" | "PATCH" | "DELETE" | undefined;
+            method?: "POST" | "DELETE" | "GET" | "PUT" | "PATCH" | undefined;
             body?: unknown;
             timeoutMs?: number | undefined;
         })[];

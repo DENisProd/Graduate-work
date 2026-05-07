@@ -8,6 +8,7 @@ import {
   PhysicalDeviceSchema,
 } from '../mongo/schemas/physical-device.mongo';
 import { DeviceCatalogModule } from '../device-catalog/device-catalog.module';
+import { AccessSyncModule } from '../access-sync/access-sync.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { DeviceCatalogModule } from '../device-catalog/device-catalog.module';
       { name: PHYSICAL_DEVICE_MODEL, schema: PhysicalDeviceSchema },
     ]),
     DeviceCatalogModule,
+    AccessSyncModule,
   ],
   controllers: [PhysicalDeviceController],
   providers: [PhysicalDeviceService, PhysicalDeviceRepository],
