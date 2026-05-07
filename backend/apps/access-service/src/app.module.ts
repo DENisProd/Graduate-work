@@ -12,6 +12,7 @@ import { AccessControlModule } from './modules/access-control/access-control.mod
 import { HouseMembersModule } from './modules/house-members/house-members.module';
 import { HouseRoomsModule } from './modules/house-rooms/house-rooms.module';
 import { HouseInvitationsModule } from './modules/house-invitations/house-invitations.module';
+import { DeviceCatalogModule } from './modules/device-catalog/device-catalog.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { HouseInvitationsModule } from './modules/house-invitations/house-invita
     HouseInvitationsModule,
     AccessControlModule,
     ModulesModule,
+    DeviceCatalogModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

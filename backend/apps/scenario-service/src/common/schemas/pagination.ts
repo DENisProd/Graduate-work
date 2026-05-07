@@ -6,15 +6,23 @@ const coerceOptionalInt = (opts: {
   defaultValue: number;
 }) =>
   z
-    .preprocess(
-      (v) => (v === '' || v === null || v === undefined ? undefined : v),
-      z.coerce
-        .number()
-        .int()
-        .min(opts.min)
-        .max(opts.max ?? Number.POSITIVE_INFINITY)
-        .optional(),
-    )
+    .preprocess((v) => {
+      if (v === '' || v === null || v === undefined) return undefined;
+
+      const n =
+        typeof v === 'number'
+          ? v
+          : typeof v === 'string' && v.trim() !== ''
+            ? Number(v)
+            : NaN;
+
+      if (!Number.isFinite(n)) return v;
+
+      let int = Math.trunc(n);
+      int = Math.max(opts.min, int);
+      if (opts.max !== undefined) int = Math.min(opts.max, int);
+      return int;
+    }, z.number().int().min(opts.min).optional())
     .default(opts.defaultValue);
 
 export const paginationQuerySchema = z.object({

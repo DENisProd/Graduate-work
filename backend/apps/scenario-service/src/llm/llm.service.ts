@@ -15,7 +15,9 @@ export class LlmService {
   private readonly model: string;
 
   constructor(config: ConfigService) {
-    this.baseUrl = (config.get<string>('OLLAMA_URL') ?? 'http://localhost:11434').replace(/\/$/, '');
+    this.baseUrl = (
+      config.get<string>('OLLAMA_URL') ?? 'http://localhost:11434'
+    ).replace(/\/$/, '');
     this.model = config.get<string>('OLLAMA_MODEL') ?? 'qwen2.5:3b';
   }
 
@@ -32,7 +34,11 @@ export class LlmService {
     let lastValidationError = '';
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      const prompt = this.buildPrompt(systemPrompt, userPrompt, lastValidationError);
+      const prompt = this.buildPrompt(
+        systemPrompt,
+        userPrompt,
+        lastValidationError,
+      );
 
       const raw = await this.callOllama(prompt);
       if (raw === null) return null; // network/timeout — no point retrying
@@ -50,14 +56,20 @@ export class LlmService {
       lastValidationError = result.error.errors
         .map((e) => `${e.path.join('.')}: ${e.message}`)
         .join('; ');
-      this.logger.warn(`Attempt ${attempt + 1}: schema validation failed — ${lastValidationError}`);
+      this.logger.warn(
+        `Attempt ${attempt + 1}: schema validation failed — ${lastValidationError}`,
+      );
     }
 
     this.logger.error(`LLM failed after ${maxRetries + 1} attempts`);
     return null;
   }
 
-  private buildPrompt(system: string, user: string, validationError: string): string {
+  private buildPrompt(
+    system: string,
+    user: string,
+    validationError: string,
+  ): string {
     const errorHint = validationError
       ? `\n\nPrevious attempt failed validation: ${validationError}\nFix those issues in your response.`
       : '';
@@ -72,7 +84,12 @@ export class LlmService {
       const res = await fetch(`${this.baseUrl}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: this.model, prompt, format: 'json', stream: false }),
+        body: JSON.stringify({
+          model: this.model,
+          prompt,
+          format: 'json',
+          stream: false,
+        }),
         signal: controller.signal,
       });
 

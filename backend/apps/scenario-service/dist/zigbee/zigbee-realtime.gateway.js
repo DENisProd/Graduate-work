@@ -138,7 +138,10 @@ let ZigbeeRealtimeGateway = ZigbeeRealtimeGateway_1 = class ZigbeeRealtimeGatewa
         if (error)
             return { ok: false, error };
         if (ieees.length === 0) {
-            return { ok: false, error: 'Нет валидных устройств для подписки' };
+            return {
+                ok: false,
+                error: 'Нет валидных устройств для подписки',
+            };
         }
         const track = trackedIeees(client);
         for (const ieee of ieees) {

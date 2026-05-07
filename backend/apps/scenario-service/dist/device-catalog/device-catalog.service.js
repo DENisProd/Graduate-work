@@ -97,12 +97,24 @@ let DeviceCatalogService = DeviceCatalogService_1 = class DeviceCatalogService {
                         ru: { name: typeName },
                     },
                     deviceCategory: {
-                        en: { name: llmResult?.category.en.name ?? fallbackCategoryName, description: llmResult?.category.en.description },
-                        ru: { name: llmResult?.category.ru.name ?? fallbackCategoryName, description: llmResult?.category.ru.description },
+                        en: {
+                            name: llmResult?.category.en.name ?? fallbackCategoryName,
+                            description: llmResult?.category.en.description,
+                        },
+                        ru: {
+                            name: llmResult?.category.ru.name ?? fallbackCategoryName,
+                            description: llmResult?.category.ru.description,
+                        },
                     },
                     device: {
-                        en: { name: llmResult?.device.en.name ?? fallbackDeviceName, description: llmResult?.device.en.description },
-                        ru: { name: llmResult?.device.ru.name ?? fallbackDeviceName, description: llmResult?.device.ru.description },
+                        en: {
+                            name: llmResult?.device.en.name ?? fallbackDeviceName,
+                            description: llmResult?.device.en.description,
+                        },
+                        ru: {
+                            name: llmResult?.device.ru.name ?? fallbackDeviceName,
+                            description: llmResult?.device.ru.description,
+                        },
                     },
                 },
             });
@@ -112,7 +124,9 @@ let DeviceCatalogService = DeviceCatalogService_1 = class DeviceCatalogService {
             if (ensured.created.category || ensured.created.device) {
                 this.logger.log(`Catalog ensured for code=${deviceCode}: categoryCreated=${ensured.created.category}, deviceCreated=${ensured.created.device}`);
             }
-            if (ensured.created.device && llmResult && llmResult.functions.length > 0) {
+            if (ensured.created.device &&
+                llmResult &&
+                llmResult.functions.length > 0) {
                 await this.createFunctions(ensured.deviceId, llmResult.functions);
             }
             const zigbeeType = await this.client.findDeviceTypeByCode(ZIGBEE_TYPE_CODE);

@@ -20,9 +20,10 @@ export class AccessSyncService {
       externalId: device.id,
       type: 'DEVICE',
       name: device.name ?? undefined,
-      metadata: device.deviceCategoryId != null
-        ? { category: device.deviceCategoryId }
-        : undefined,
+      metadata:
+        device.deviceCategoryId != null
+          ? { category: device.deviceCategoryId }
+          : undefined,
     });
 
     return result?.id ?? null;

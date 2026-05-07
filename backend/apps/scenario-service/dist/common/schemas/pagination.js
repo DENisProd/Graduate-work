@@ -4,12 +4,22 @@ exports.paginationQuerySchema = void 0;
 exports.skipTake = skipTake;
 const zod_1 = require("zod");
 const coerceOptionalInt = (opts) => zod_1.z
-    .preprocess((v) => (v === '' || v === null || v === undefined ? undefined : v), zod_1.z.coerce
-    .number()
-    .int()
-    .min(opts.min)
-    .max(opts.max ?? Number.POSITIVE_INFINITY)
-    .optional())
+    .preprocess((v) => {
+    if (v === '' || v === null || v === undefined)
+        return undefined;
+    const n = typeof v === 'number'
+        ? v
+        : typeof v === 'string' && v.trim() !== ''
+            ? Number(v)
+            : NaN;
+    if (!Number.isFinite(n))
+        return v;
+    let int = Math.trunc(n);
+    int = Math.max(opts.min, int);
+    if (opts.max !== undefined)
+        int = Math.min(opts.max, int);
+    return int;
+}, zod_1.z.number().int().min(opts.min).optional())
     .default(opts.defaultValue);
 exports.paginationQuerySchema = zod_1.z.object({
     page: coerceOptionalInt({ min: 1, defaultValue: 1 }),

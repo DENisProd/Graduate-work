@@ -105,7 +105,8 @@ export class ZigbeeController {
 
   @Post('devices/:ieeeAddr/command')
   @ApiOperation({
-    summary: 'Отправить команду управления Zigbee-устройству через MQTT (…/set)',
+    summary:
+      'Отправить команду управления Zigbee-устройству через MQTT (…/set)',
     description:
       'Публикует payload в топик `zigbee2mqtt/<friendlyName>/set`. ' +
       'Примеры: `{"state":"ON"}`, `{"brightness":200}`, `{"color_temp":300}`.',
@@ -157,7 +158,8 @@ export class ZigbeeController {
     const r = this.zigbeeMqtt.requestBridgeDeviceList();
     if (!r.ok) {
       throw new ServiceUnavailableException(
-        r.error ?? 'MQTT недоступен. Задайте ZIGBEE_MQTT_URL и дождитесь подключения.',
+        r.error ??
+          'MQTT недоступен. Задайте ZIGBEE_MQTT_URL и дождитесь подключения.',
       );
     }
     return {
@@ -196,15 +198,23 @@ export class ZigbeeController {
 
   @Post('permit-join')
   @ApiOperation({
-    summary: 'Включить / выключить режим сопряжения (permit_join) на мосту zigbee2mqtt',
+    summary:
+      'Включить / выключить режим сопряжения (permit_join) на мосту zigbee2mqtt',
   })
   @ApiBody({
     schema: {
       type: 'object',
       required: ['enable'],
       properties: {
-        enable: { type: 'boolean', description: 'true — включить, false — выключить' },
-        time: { type: 'number', description: 'Таймаут в секундах (1–254), только при enable=true', default: 254 },
+        enable: {
+          type: 'boolean',
+          description: 'true — включить, false — выключить',
+        },
+        time: {
+          type: 'number',
+          description: 'Таймаут в секундах (1–254), только при enable=true',
+          default: 254,
+        },
       },
     },
   })
@@ -213,7 +223,10 @@ export class ZigbeeController {
   permitJoin(@Body() body: unknown) {
     const b = body as Record<string, unknown>;
     const enable = Boolean(b?.enable);
-    const time = typeof b?.time === 'number' ? Math.max(1, Math.min(254, Math.trunc(b.time))) : 254;
+    const time =
+      typeof b?.time === 'number'
+        ? Math.max(1, Math.min(254, Math.trunc(b.time)))
+        : 254;
     const result = this.zigbeeMqtt.permitJoin(enable, time);
     if (!result.ok) {
       throw new ServiceUnavailableException(

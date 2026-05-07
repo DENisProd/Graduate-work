@@ -1,8 +1,14 @@
 import { z } from 'zod';
 
 const translationPairSchema = z.object({
-  en: z.object({ name: z.string().min(1).max(100), description: z.string().max(500).optional() }),
-  ru: z.object({ name: z.string().min(1).max(100), description: z.string().max(500).optional() }),
+  en: z.object({
+    name: z.string().min(1).max(100),
+    description: z.string().max(500).optional(),
+  }),
+  ru: z.object({
+    name: z.string().min(1).max(100),
+    description: z.string().max(500).optional(),
+  }),
 });
 
 export const llmDeviceCatalogSchema = z.object({

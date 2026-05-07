@@ -1,7 +1,10 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import { DeviceCatalogClient } from './device-catalog.client';
 import { LlmService } from '../llm/llm.service';
-import { llmDeviceCatalogSchema, type LlmDeviceCatalogResult } from '../llm/llm.types';
+import {
+  llmDeviceCatalogSchema,
+  type LlmDeviceCatalogResult,
+} from '../llm/llm.types';
 
 export interface DeviceCatalogSyncResult {
   /** ID of DeviceType in device-service (for now always ZIGBEE). */
@@ -84,13 +87,17 @@ export class DeviceCatalogService {
 
     const typeName = titleFromCode(ZIGBEE_TYPE_CODE);
     const fallbackCategoryName = titleFromCode(categoryCode);
-    const fallbackDeviceName = this.pickDeviceName(input.friendlyName, model, deviceCode);
+    const fallbackDeviceName = this.pickDeviceName(
+      input.friendlyName,
+      model,
+      deviceCode,
+    );
 
     const llmResult = await this.enrichWithLlm({
       model,
       manufacturerName: input.manufacturerName,
       exposes: Array.isArray(input.definition?.exposes)
-        ? (input.definition!.exposes as unknown[])
+        ? (input.definition.exposes as unknown[])
         : [],
       friendlyName: input.friendlyName,
     });
@@ -106,12 +113,24 @@ export class DeviceCatalogService {
             ru: { name: typeName },
           },
           deviceCategory: {
-            en: { name: llmResult?.category.en.name ?? fallbackCategoryName, description: llmResult?.category.en.description },
-            ru: { name: llmResult?.category.ru.name ?? fallbackCategoryName, description: llmResult?.category.ru.description },
+            en: {
+              name: llmResult?.category.en.name ?? fallbackCategoryName,
+              description: llmResult?.category.en.description,
+            },
+            ru: {
+              name: llmResult?.category.ru.name ?? fallbackCategoryName,
+              description: llmResult?.category.ru.description,
+            },
           },
           device: {
-            en: { name: llmResult?.device.en.name ?? fallbackDeviceName, description: llmResult?.device.en.description },
-            ru: { name: llmResult?.device.ru.name ?? fallbackDeviceName, description: llmResult?.device.ru.description },
+            en: {
+              name: llmResult?.device.en.name ?? fallbackDeviceName,
+              description: llmResult?.device.en.description,
+            },
+            ru: {
+              name: llmResult?.device.ru.name ?? fallbackDeviceName,
+              description: llmResult?.device.ru.description,
+            },
           },
         },
       });
@@ -126,11 +145,16 @@ export class DeviceCatalogService {
         );
       }
 
-      if (ensured.created.device && llmResult && llmResult.functions.length > 0) {
+      if (
+        ensured.created.device &&
+        llmResult &&
+        llmResult.functions.length > 0
+      ) {
         await this.createFunctions(ensured.deviceId, llmResult.functions);
       }
 
-      const zigbeeType = await this.client.findDeviceTypeByCode(ZIGBEE_TYPE_CODE);
+      const zigbeeType =
+        await this.client.findDeviceTypeByCode(ZIGBEE_TYPE_CODE);
       return {
         deviceTypeId: zigbeeType?.id ?? null,
         deviceId: ensured.deviceId,
@@ -170,10 +194,17 @@ Manufacturer: ${input.manufacturerName ?? 'unknown'}
 Friendly name: ${input.friendlyName ?? 'unknown'}
 Zigbee exposes: ${JSON.stringify(input.exposes.slice(0, 30), null, 2)}`;
 
-    const result = await this.llm.generateJson(systemPrompt, userPrompt, llmDeviceCatalogSchema, 2);
+    const result = await this.llm.generateJson(
+      systemPrompt,
+      userPrompt,
+      llmDeviceCatalogSchema,
+      2,
+    );
 
     if (!result) {
-      this.logger.warn(`LLM enrichment skipped for model=${input.model ?? 'unknown'}, using fallback names`);
+      this.logger.warn(
+        `LLM enrichment skipped for model=${input.model ?? 'unknown'}, using fallback names`,
+      );
     }
 
     return result;
@@ -185,8 +216,15 @@ Zigbee exposes: ${JSON.stringify(input.exposes.slice(0, 30), null, 2)}`;
   ): Promise<void> {
     for (const fn of functions) {
       try {
-        await this.client.createDeviceFunction(fn.code, fn.en.name, deviceId, fn.type);
-        this.logger.log(`Created function code=${fn.code} for deviceId=${deviceId}`);
+        await this.client.createDeviceFunction(
+          fn.code,
+          fn.en.name,
+          deviceId,
+          fn.type,
+        );
+        this.logger.log(
+          `Created function code=${fn.code} for deviceId=${deviceId}`,
+        );
       } catch (e) {
         this.logger.warn(
           `Failed to create function code=${fn.code}: ${e instanceof Error ? e.message : String(e)}`,

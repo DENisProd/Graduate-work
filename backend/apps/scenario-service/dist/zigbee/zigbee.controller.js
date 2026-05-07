@@ -56,7 +56,8 @@ let ZigbeeController = class ZigbeeController {
     requestDevicesSyncFromBridge() {
         const r = this.zigbeeMqtt.requestBridgeDeviceList();
         if (!r.ok) {
-            throw new common_1.ServiceUnavailableException(r.error ?? 'MQTT недоступен. Задайте ZIGBEE_MQTT_URL и дождитесь подключения.');
+            throw new common_1.ServiceUnavailableException(r.error ??
+                'MQTT недоступен. Задайте ZIGBEE_MQTT_URL и дождитесь подключения.');
         }
         return {
             ok: true,
@@ -70,7 +71,9 @@ let ZigbeeController = class ZigbeeController {
     permitJoin(body) {
         const b = body;
         const enable = Boolean(b?.enable);
-        const time = typeof b?.time === 'number' ? Math.max(1, Math.min(254, Math.trunc(b.time))) : 254;
+        const time = typeof b?.time === 'number'
+            ? Math.max(1, Math.min(254, Math.trunc(b.time)))
+            : 254;
         const result = this.zigbeeMqtt.permitJoin(enable, time);
         if (!result.ok) {
             throw new common_1.ServiceUnavailableException(result.error ?? 'MQTT недоступен');
@@ -238,8 +241,15 @@ __decorate([
             type: 'object',
             required: ['enable'],
             properties: {
-                enable: { type: 'boolean', description: 'true — включить, false — выключить' },
-                time: { type: 'number', description: 'Таймаут в секундах (1–254), только при enable=true', default: 254 },
+                enable: {
+                    type: 'boolean',
+                    description: 'true — включить, false — выключить',
+                },
+                time: {
+                    type: 'number',
+                    description: 'Таймаут в секундах (1–254), только при enable=true',
+                    default: 254,
+                },
             },
         },
     }),

@@ -11,6 +11,7 @@ import { ScenarioExecutionModule } from './scenario-execution/scenario-execution
 import { DeviceDataModule } from './device-data/device-data.module';
 import { ZigbeeModule } from './zigbee/zigbee.module';
 import { LlmModule } from './llm/llm.module';
+import { WidgetDashboardModule } from './widget-dashboard/widget-dashboard.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { LlmModule } from './llm/llm.module';
     ScenarioExecutionModule,
     DeviceDataModule,
     ZigbeeModule,
+    WidgetDashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],

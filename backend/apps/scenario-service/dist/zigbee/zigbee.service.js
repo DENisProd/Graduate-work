@@ -67,7 +67,9 @@ let ZigbeeService = ZigbeeService_1 = class ZigbeeService {
     async upsertDevice(input) {
         const device = await this.devices.upsertByIeeeAddr(input);
         await this.enrichDeviceCatalogLinks(device, input);
-        return this.devices.findByIeeeAddr(device.ieeeAddr).then((v) => v ?? device);
+        return this.devices
+            .findByIeeeAddr(device.ieeeAddr)
+            .then((v) => v ?? device);
     }
     async enrichDeviceCatalogLinks(device, input) {
         try {
@@ -220,9 +222,9 @@ let ZigbeeService = ZigbeeService_1 = class ZigbeeService {
                     const capabilities = definition
                         ? capabilitiesFromBridgeDefinition(definition)
                         : undefined;
-                    const manufacturerRaw = d.manufacturer ?? (definition?.vendor);
+                    const manufacturerRaw = d.manufacturer ?? definition?.vendor;
                     const manufacturer = typeof manufacturerRaw === 'string' ? manufacturerRaw : null;
-                    const modelRaw = d.model_id ?? d.modelID ?? (definition?.model);
+                    const modelRaw = d.model_id ?? d.modelID ?? definition?.model;
                     const model = typeof modelRaw === 'string' ? modelRaw : null;
                     await this.upsertDevice({
                         ieeeAddr: ieeeRaw,

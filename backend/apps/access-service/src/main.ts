@@ -73,6 +73,17 @@ async function bootstrap() {
     .addTag('Audit', 'Журнал аудита')
     .addTag('Access Evaluation', 'Проверка доступа к ресурсу / функции устройства')
     .addTag('Access Control', 'Права дома и проверка доступа (legacy API)')
+    .addTag('Device types', 'Каталог: типы устройств')
+    .addTag('Device categories', 'Каталог: категории устройств')
+    .addTag('Devices', 'Каталог: устройства')
+    .addTag('Device functions', 'Каталог: функции устройств')
+    .addTag('Device function actions', 'Каталог: действия функций устройств')
+    .addTag('Admin — device types', 'Админ: типы устройств')
+    .addTag('Admin — device categories', 'Админ: категории устройств')
+    .addTag('Admin — devices', 'Админ: устройства')
+    .addTag('Admin — device functions', 'Админ: функции устройств')
+    .addTag('Admin — device function actions', 'Админ: действия функций')
+    .addTag('Integration', 'Межсервисная интеграция: ensure каталога')
     .build();
   const document = SwaggerModule.createDocument(app, config, {
     extraModels: [ErrorResponse],

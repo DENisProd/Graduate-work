@@ -21,7 +21,9 @@ export class AccessServiceClient {
     ).replace(/\/$/, '');
   }
 
-  async registerResource(payload: RegisterResourcePayload): Promise<{ id: string } | null> {
+  async registerResource(
+    payload: RegisterResourcePayload,
+  ): Promise<{ id: string } | null> {
     try {
       const res = await fetch(`${this.baseUrl}/api/v1/resources/register`, {
         method: 'POST',
@@ -43,9 +45,12 @@ export class AccessServiceClient {
 
   async deleteResource(id: string): Promise<void> {
     try {
-      const res = await fetch(`${this.baseUrl}/api/v1/resources/${encodeURIComponent(id)}`, {
-        method: 'DELETE',
-      });
+      const res = await fetch(
+        `${this.baseUrl}/api/v1/resources/${encodeURIComponent(id)}`,
+        {
+          method: 'DELETE',
+        },
+      );
       if (!res.ok && res.status !== 404) {
         throw new Error(`HTTP ${res.status}`);
       }

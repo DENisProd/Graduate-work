@@ -88,7 +88,10 @@ const zigbeeLinksPaginationSchema = pagination_1.paginationQuerySchema.extend({
         .default(200),
 });
 exports.listZigbeeLinksQuerySchema = listZigbeeLinksQuerySchemaBase.merge(zigbeeLinksPaginationSchema);
-exports.zigbeeDeviceLogKindSchema = zod_1.z.enum(['state_ingest', 'bridge_event']);
+exports.zigbeeDeviceLogKindSchema = zod_1.z.enum([
+    'state_ingest',
+    'bridge_event',
+]);
 exports.zigbeeDeviceLogSourceSchema = zod_1.z.enum(['mqtt', 'api']);
 const listZigbeeDeviceLogsQuerySchemaBase = zod_1.z.object({
     deviceIeeeAddr: zod_1.z.string().min(3).max(64).optional(),

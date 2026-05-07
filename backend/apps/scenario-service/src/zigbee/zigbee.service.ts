@@ -86,7 +86,9 @@ export class ZigbeeService {
   async upsertDevice(input: UpsertZigbeeDeviceInput) {
     const device = await this.devices.upsertByIeeeAddr(input);
     await this.enrichDeviceCatalogLinks(device, input);
-    return this.devices.findByIeeeAddr(device.ieeeAddr).then((v) => v ?? device);
+    return this.devices
+      .findByIeeeAddr(device.ieeeAddr)
+      .then((v) => v ?? device);
   }
 
   private async enrichDeviceCatalogLinks(
@@ -278,10 +280,10 @@ export class ZigbeeService {
           const capabilities = definition
             ? capabilitiesFromBridgeDefinition(definition)
             : undefined;
-          const manufacturerRaw = d.manufacturer ?? (definition?.vendor);
+          const manufacturerRaw = d.manufacturer ?? definition?.vendor;
           const manufacturer =
             typeof manufacturerRaw === 'string' ? manufacturerRaw : null;
-          const modelRaw = d.model_id ?? d.modelID ?? (definition?.model);
+          const modelRaw = d.model_id ?? d.modelID ?? definition?.model;
           const model = typeof modelRaw === 'string' ? modelRaw : null;
 
           await this.upsertDevice({
@@ -428,7 +430,9 @@ export class ZigbeeService {
   async removeDevice(
     ieeeAddr: string,
     force = true,
-  ): Promise<{ ok: true; device: ZigbeeDevice } | { ok: false; error: string }> {
+  ): Promise<
+    { ok: true; device: ZigbeeDevice } | { ok: false; error: string }
+  > {
     const canonical = canonicalZigbeeIeeeAddr(ieeeAddr);
     const device = await this.devices.findByIeeeAddr(canonical);
     if (!device) {
@@ -526,7 +530,8 @@ export class ZigbeeService {
           model: device.modelId ?? null,
           manufacturer: device.manufacturerName ?? null,
           capabilities: device.capabilities ?? [],
-          supported: Boolean(device.modelId) || (device.capabilities?.length ?? 0) > 0,
+          supported:
+            Boolean(device.modelId) || (device.capabilities?.length ?? 0) > 0,
         });
       }
     }

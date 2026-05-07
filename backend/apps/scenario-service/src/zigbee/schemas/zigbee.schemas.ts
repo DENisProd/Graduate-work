@@ -119,7 +119,10 @@ export const listZigbeeLinksQuerySchema = listZigbeeLinksQuerySchemaBase.merge(
 );
 export type ListZigbeeLinksQuery = z.infer<typeof listZigbeeLinksQuerySchema>;
 
-export const zigbeeDeviceLogKindSchema = z.enum(['state_ingest', 'bridge_event']);
+export const zigbeeDeviceLogKindSchema = z.enum([
+  'state_ingest',
+  'bridge_event',
+]);
 export const zigbeeDeviceLogSourceSchema = z.enum(['mqtt', 'api']);
 
 const listZigbeeDeviceLogsQuerySchemaBase = z.object({

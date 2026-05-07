@@ -114,7 +114,9 @@ let ZigbeeIngestService = ZigbeeIngestService_1 = class ZigbeeIngestService {
         if (!obj)
             return;
         const permitJoin = Boolean(obj.permit_join);
-        const timeout = typeof obj.permit_join_timeout === 'number' ? obj.permit_join_timeout : null;
+        const timeout = typeof obj.permit_join_timeout === 'number'
+            ? obj.permit_join_timeout
+            : null;
         this.zigbee.emitPairingStatus({ permitJoin, timeout });
         this.logger.debug(`bridge/state: permit_join=${String(permitJoin)}, timeout=${String(timeout)}`);
     }

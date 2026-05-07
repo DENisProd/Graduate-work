@@ -74,7 +74,9 @@ let ZigbeeDeviceRepository = class ZigbeeDeviceRepository {
                     ? { manufacturerName: input.manufacturerName ?? null }
                     : {}),
                 ...('modelId' in input ? { model: input.modelId ?? null } : {}),
-                ...('deviceId' in input ? { deviceId: input.deviceId ?? null } : {}),
+                ...('deviceId' in input
+                    ? { deviceId: input.deviceId ?? null }
+                    : {}),
                 ...('deviceCategoryId' in input
                     ? { deviceCategoryId: input.deviceCategoryId ?? null }
                     : {}),

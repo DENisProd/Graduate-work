@@ -35,8 +35,7 @@ export class PhysicalDeviceService {
 
     // When a houseId is being assigned for the first time (or forced re-sync),
     // resolve the abstract device from the catalog using the Zigbee model data.
-    const assigningToHouse =
-      data.houseId && data.houseId !== existing.houseId;
+    const assigningToHouse = data.houseId && data.houseId !== existing.houseId;
     const needsCatalogSync =
       assigningToHouse && !existing.deviceTypeId && !data.deviceTypeId;
 
@@ -48,7 +47,8 @@ export class PhysicalDeviceService {
         friendlyName: existing.friendlyName,
         ieeeAddr: existing.protocolAddress,
       });
-      if (sync.deviceTypeId) data = { ...data, deviceTypeId: sync.deviceTypeId };
+      if (sync.deviceTypeId)
+        data = { ...data, deviceTypeId: sync.deviceTypeId };
       if (sync.deviceId) data = { ...data, deviceId: sync.deviceId };
       if (sync.deviceCategoryId) {
         data = { ...data, deviceCategoryId: sync.deviceCategoryId };

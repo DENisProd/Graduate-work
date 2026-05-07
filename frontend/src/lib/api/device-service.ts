@@ -25,7 +25,7 @@ import {
   mockDeviceFunctions,
   mockDeviceFunctionActions,
 } from '../mocks';
-import { apiCall, safeApiCall, USE_MOCKS, buildPageQuery } from './core';
+import { apiCall, accessApiCall, safeApiCall, USE_MOCKS, buildPageQuery } from './core';
 
 // Rooms are served by device-service at /api/v1/rooms
 export const roomsApi = {
@@ -77,13 +77,13 @@ export const deviceTypesApi = {
   // Public read endpoints
   getAll: (): Promise<DeviceTypeResponse[]> =>
     safeApiCall(
-      () => apiCall<DeviceTypeResponse[]>('/api/v1/admin/device-types'),
+      () => accessApiCall<DeviceTypeResponse[]>('/api/v1/admin/device-types'),
       () => mockApi.deviceTypes.getAll(),
     ),
 
   getById: (id: number): Promise<DeviceTypeResponse> =>
     safeApiCall(
-      () => apiCall(`/api/v1/device-types/${id}`),
+      () => accessApiCall(`/api/v1/device-types/${id}`),
       () => mockApi.deviceTypes.getById(id),
     ),
 
@@ -94,7 +94,7 @@ export const deviceTypesApi = {
         .then((types) => types.find((t) => t.code === code) || Promise.reject(new Error('Not found')));
     return USE_MOCKS
       ? mock()
-      : safeApiCall(() => apiCall(`/api/v1/device-types/code/${code}`), mock);
+      : safeApiCall(() => accessApiCall(`/api/v1/device-types/code/${code}`), mock);
   },
 
   // Admin write endpoints
@@ -109,7 +109,7 @@ export const deviceTypesApi = {
     return USE_MOCKS
       ? mock()
       : safeApiCall(
-          () => apiCall('/api/v1/admin/device-types', { method: 'POST', body: JSON.stringify(data) }),
+          () => accessApiCall('/api/v1/admin/device-types', { method: 'POST', body: JSON.stringify(data) }),
           mock,
         );
   },
@@ -123,7 +123,7 @@ export const deviceTypesApi = {
       ? mock()
       : safeApiCall(
           () =>
-            apiCall(`/api/v1/admin/device-types/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+            accessApiCall(`/api/v1/admin/device-types/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
           mock,
         );
   },
@@ -132,7 +132,7 @@ export const deviceTypesApi = {
     USE_MOCKS
       ? Promise.resolve()
       : safeApiCall(
-          () => apiCall(`/api/v1/admin/device-types/${id}`, { method: 'DELETE' }),
+          () => accessApiCall(`/api/v1/admin/device-types/${id}`, { method: 'DELETE' }),
           () => Promise.resolve(),
         ),
 };
@@ -141,13 +141,13 @@ export const deviceCategoriesApi = {
   // Public read endpoints
   getAll: (): Promise<DeviceCategoryResponse[]> =>
     safeApiCall(
-      () => apiCall('/api/v1/device-categories/all'),
+      () => accessApiCall('/api/v1/device-categories/all'),
       () => mockApi.deviceCategories.getAll(),
     ),
 
   getById: (id: number): Promise<DeviceCategoryResponse> =>
     safeApiCall(
-      () => apiCall(`/api/v1/device-categories/${id}`),
+      () => accessApiCall(`/api/v1/device-categories/${id}`),
       () => mockApi.deviceCategories.getById(id),
     ),
 
@@ -158,7 +158,7 @@ export const deviceCategoriesApi = {
         .then((cats) => cats.find((c) => c.code === code) || Promise.reject(new Error('Not found')));
     return USE_MOCKS
       ? mock()
-      : safeApiCall(() => apiCall(`/api/v1/device-categories/code/${code}`), mock);
+      : safeApiCall(() => accessApiCall(`/api/v1/device-categories/code/${code}`), mock);
   },
 
   getByDeviceTypeId: (deviceTypeId: number): Promise<DeviceCategoryResponse[]> => {
@@ -168,7 +168,7 @@ export const deviceCategoriesApi = {
         .then((cats) => cats.filter((c) => c.deviceTypeId === deviceTypeId));
     return USE_MOCKS
       ? mock()
-      : safeApiCall(() => apiCall(`/api/v1/device-categories/by-type/${deviceTypeId}`), mock);
+      : safeApiCall(() => accessApiCall(`/api/v1/device-categories/by-type/${deviceTypeId}`), mock);
   },
 
   // Admin write endpoints
@@ -185,7 +185,7 @@ export const deviceCategoriesApi = {
       ? mock()
       : safeApiCall(
           () =>
-            apiCall('/api/v1/admin/device-categories', { method: 'POST', body: JSON.stringify(data) }),
+            accessApiCall('/api/v1/admin/device-categories', { method: 'POST', body: JSON.stringify(data) }),
           mock,
         );
   },
@@ -199,7 +199,7 @@ export const deviceCategoriesApi = {
       ? mock()
       : safeApiCall(
           () =>
-            apiCall(`/api/v1/admin/device-categories/${id}`, {
+            accessApiCall(`/api/v1/admin/device-categories/${id}`, {
               method: 'PUT',
               body: JSON.stringify(data),
             }),
@@ -211,7 +211,7 @@ export const deviceCategoriesApi = {
     USE_MOCKS
       ? Promise.resolve()
       : safeApiCall(
-          () => apiCall(`/api/v1/admin/device-categories/${id}`, { method: 'DELETE' }),
+          () => accessApiCall(`/api/v1/admin/device-categories/${id}`, { method: 'DELETE' }),
           () => Promise.resolve(),
         ),
 };
@@ -221,19 +221,19 @@ export const devicesApi = {
   getAll: (params?: PageRequest): Promise<PageResponse<DeviceResponse>> => {
     if (USE_MOCKS) return mockApi.devices.getAll(params);
     return safeApiCall(
-      () => apiCall(`/api/v1/devices${buildPageQuery(params)}`),
+      () => accessApiCall(`/api/v1/devices${buildPageQuery(params)}`),
       () => mockApi.devices.getAll(params),
     );
   },
 
   getById: (id: number): Promise<DeviceResponse> =>
-    safeApiCall(() => apiCall(`/api/v1/devices/${id}`), () => mockApi.devices.getById(id)),
+    safeApiCall(() => accessApiCall(`/api/v1/devices/${id}`), () => mockApi.devices.getById(id)),
 
   getDetailed: (id: number): Promise<DeviceResponse> =>
-    safeApiCall(() => apiCall(`/api/v1/devices/${id}/detailed`), () => mockApi.devices.getById(id)),
+    safeApiCall(() => accessApiCall(`/api/v1/devices/${id}/detailed`), () => mockApi.devices.getById(id)),
 
   getByCode: (code: string): Promise<DeviceResponse> =>
-    apiCall(`/api/v1/devices/code/${code}`),
+    accessApiCall(`/api/v1/devices/code/${code}`),
 
   getByCategory: (categoryId: number, params?: PageRequest): Promise<DeviceResponse[]> => {
     const mock = () =>
@@ -243,7 +243,7 @@ export const devicesApi = {
     return USE_MOCKS
       ? mock()
       : safeApiCall(async () => {
-          const res = await apiCall<PageResponse<DeviceResponse>>(
+          const res = await accessApiCall<PageResponse<DeviceResponse>>(
             `/api/v1/devices/by-category/${categoryId}${buildPageQuery(params)}`,
           );
           return res.content ?? [];
@@ -251,7 +251,7 @@ export const devicesApi = {
   },
 
   updateStatus: (id: number, status: string): Promise<DeviceResponse> =>
-    apiCall(`/api/v1/devices/${id}/status?status=${encodeURIComponent(status)}`, { method: 'PATCH' }),
+    accessApiCall(`/api/v1/devices/${id}/status?status=${encodeURIComponent(status)}`, { method: 'PATCH' }),
 
   // Admin write endpoints
   create: (data: DeviceRequest): Promise<DeviceResponse> => {
@@ -266,7 +266,7 @@ export const devicesApi = {
     return USE_MOCKS
       ? mock()
       : safeApiCall(
-          () => apiCall('/api/v1/admin/devices', { method: 'POST', body: JSON.stringify(data) }),
+          () => accessApiCall('/api/v1/admin/devices', { method: 'POST', body: JSON.stringify(data) }),
           mock,
         );
   },
@@ -277,7 +277,7 @@ export const devicesApi = {
       ? mock()
       : safeApiCall(
           () =>
-            apiCall(`/api/v1/admin/devices/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+            accessApiCall(`/api/v1/admin/devices/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
           mock,
         );
   },
@@ -287,39 +287,39 @@ export const devicesApi = {
     USE_MOCKS
       ? Promise.resolve()
       : safeApiCall(
-          () => apiCall(`/api/v1/admin/devices/${id}`, { method: 'DELETE' }),
+          () => accessApiCall(`/api/v1/admin/devices/${id}`, { method: 'DELETE' }),
           () => Promise.resolve(),
         ),
 
   /** Soft delete (deactivate) — public endpoint */
   deactivate: (id: number): Promise<void> =>
-    apiCall(`/api/v1/devices/${id}`, { method: 'PATCH' }),
+    accessApiCall(`/api/v1/devices/${id}`, { method: 'PATCH' }),
 };
 
 export const deviceFunctionsApi = {
   getById: (id: number): Promise<DeviceFunctionResponse> =>
     safeApiCall(
-      () => apiCall(`/api/v1/device-functions/${id}`),
+      () => accessApiCall(`/api/v1/device-functions/${id}`),
       () => mockApi.deviceFunctions.getById(id),
     ),
 
   getDetailed: (id: number): Promise<DeviceFunctionResponse> =>
     safeApiCall(
-      () => apiCall(`/api/v1/device-functions/${id}/detailed`),
+      () => accessApiCall(`/api/v1/device-functions/${id}/detailed`),
       () => mockApi.deviceFunctions.getById(id),
     ),
 
   getByDeviceId: (deviceId: number): Promise<DeviceFunctionResponse[]> =>
     safeApiCall(
-      () => apiCall(`/api/v1/device-functions/by-device/${deviceId}/all`),
+      () => accessApiCall(`/api/v1/device-functions/by-device/${deviceId}/all`),
       () => mockApi.deviceFunctions.getAll().then((funcs) => funcs.filter((f) => f.deviceId === deviceId)),
     ),
 
   getWritableByDeviceId: (deviceId: number): Promise<DeviceFunctionResponse[]> =>
-    apiCall(`/api/v1/device-functions/by-device/${deviceId}/writable`),
+    accessApiCall(`/api/v1/device-functions/by-device/${deviceId}/writable`),
 
   updateValue: (id: number, value: string): Promise<DeviceFunctionResponse> =>
-    apiCall(`/api/v1/device-functions/${id}/value?value=${encodeURIComponent(value)}`, {
+    accessApiCall(`/api/v1/device-functions/${id}/value?value=${encodeURIComponent(value)}`, {
       method: 'PATCH',
     }),
 
@@ -338,7 +338,7 @@ export const deviceFunctionsApi = {
       ? mock()
       : safeApiCall(
           () =>
-            apiCall('/api/v1/admin/device-functions', { method: 'POST', body: JSON.stringify(data) }),
+            accessApiCall('/api/v1/admin/device-functions', { method: 'POST', body: JSON.stringify(data) }),
           mock,
         );
   },
@@ -352,7 +352,7 @@ export const deviceFunctionsApi = {
       ? mock()
       : safeApiCall(
           () =>
-            apiCall(`/api/v1/admin/device-functions/${id}`, {
+            accessApiCall(`/api/v1/admin/device-functions/${id}`, {
               method: 'PUT',
               body: JSON.stringify(data),
             }),
@@ -364,7 +364,7 @@ export const deviceFunctionsApi = {
     USE_MOCKS
       ? Promise.resolve()
       : safeApiCall(
-          () => apiCall(`/api/v1/admin/device-functions/${id}`, { method: 'DELETE' }),
+          () => accessApiCall(`/api/v1/admin/device-functions/${id}`, { method: 'DELETE' }),
           () => Promise.resolve(),
         ),
 };
@@ -372,13 +372,13 @@ export const deviceFunctionsApi = {
 export const deviceFunctionActionsApi = {
   getById: (id: number): Promise<DeviceFunctionActionResponse> =>
     safeApiCall(
-      () => apiCall(`/api/v1/device-function-actions/${id}`),
+      () => accessApiCall(`/api/v1/device-function-actions/${id}`),
       () => mockApi.deviceFunctionActions.getById(id),
     ),
 
   getByDeviceFunctionId: (deviceFunctionId: number): Promise<DeviceFunctionActionResponse[]> =>
     safeApiCall(
-      () => apiCall(`/api/v1/device-function-actions/by-function/${deviceFunctionId}/all`),
+      () => accessApiCall(`/api/v1/device-function-actions/by-function/${deviceFunctionId}/all`),
       () =>
         mockApi.deviceFunctionActions
           .getAll()
@@ -387,12 +387,12 @@ export const deviceFunctionActionsApi = {
 
   getByDeviceId: (deviceId: number): Promise<DeviceFunctionActionResponse[]> =>
     safeApiCall(
-      () => apiCall(`/api/v1/device-function-actions/by-device/${deviceId}/all`),
+      () => accessApiCall(`/api/v1/device-function-actions/by-device/${deviceId}/all`),
       () => mockApi.deviceFunctionActions.getAll(),
     ),
 
   execute: (id: number): Promise<DeviceFunctionActionResponse> =>
-    apiCall(`/api/v1/device-function-actions/${id}/execute`, { method: 'POST' }),
+    accessApiCall(`/api/v1/device-function-actions/${id}/execute`, { method: 'POST' }),
 
   // Admin write endpoints
   create: (data: DeviceFunctionActionRequest): Promise<DeviceFunctionActionResponse> => {
@@ -409,7 +409,7 @@ export const deviceFunctionActionsApi = {
       ? mock()
       : safeApiCall(
           () =>
-            apiCall('/api/v1/admin/device-function-actions', {
+            accessApiCall('/api/v1/admin/device-function-actions', {
               method: 'POST',
               body: JSON.stringify(data),
             }),
@@ -426,7 +426,7 @@ export const deviceFunctionActionsApi = {
       ? mock()
       : safeApiCall(
           () =>
-            apiCall(`/api/v1/admin/device-function-actions/${id}`, {
+            accessApiCall(`/api/v1/admin/device-function-actions/${id}`, {
               method: 'PUT',
               body: JSON.stringify(data),
             }),
@@ -438,7 +438,7 @@ export const deviceFunctionActionsApi = {
     USE_MOCKS
       ? Promise.resolve()
       : safeApiCall(
-          () => apiCall(`/api/v1/admin/device-function-actions/${id}`, { method: 'DELETE' }),
+          () => accessApiCall(`/api/v1/admin/device-function-actions/${id}`, { method: 'DELETE' }),
           () => Promise.resolve(),
         ),
 };

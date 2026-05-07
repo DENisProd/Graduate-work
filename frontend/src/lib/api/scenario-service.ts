@@ -188,6 +188,45 @@ export const deviceDataApi = {
   },
 };
 
+export const widgetDashboardsApi = {
+  getByHouse: (houseId: string): Promise<import('@/features/widget-dashboard/types/widget.types').WidgetDashboard[]> =>
+    physicalDevicesApiCall(`/widget-dashboards?houseId=${encodeURIComponent(houseId)}`),
+
+  getById: (id: string): Promise<import('@/features/widget-dashboard/types/widget.types').WidgetDashboard> =>
+    physicalDevicesApiCall(`/widget-dashboards/${id}`),
+
+  create: (dto: {
+    houseId: string;
+    userId: string;
+    name: string;
+    isDefault?: boolean;
+  }): Promise<import('@/features/widget-dashboard/types/widget.types').WidgetDashboard> =>
+    physicalDevicesApiCall('/widget-dashboards', { method: 'POST', body: JSON.stringify(dto) }),
+
+  update: (
+    id: string,
+    dto: {
+      name?: string;
+      isDefault?: boolean;
+      layouts?: Record<string, unknown>;
+      widgets?: unknown[];
+    },
+  ): Promise<import('@/features/widget-dashboard/types/widget.types').WidgetDashboard> =>
+    physicalDevicesApiCall(`/widget-dashboards/${id}`, { method: 'PUT', body: JSON.stringify(dto) }),
+
+  updateLayout: (
+    id: string,
+    layouts: Record<string, unknown>,
+  ): Promise<import('@/features/widget-dashboard/types/widget.types').WidgetDashboard> =>
+    physicalDevicesApiCall(`/widget-dashboards/${id}/layout`, {
+      method: 'PATCH',
+      body: JSON.stringify({ layouts }),
+    }),
+
+  delete: (id: string): Promise<void> =>
+    physicalDevicesApiCall(`/widget-dashboards/${id}`, { method: 'DELETE' }),
+};
+
 export const scenariosApi = {
   getAll: (
     params?: ListParams & {

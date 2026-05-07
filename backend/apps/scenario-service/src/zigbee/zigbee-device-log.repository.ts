@@ -42,7 +42,9 @@ export class ZigbeeDeviceLogRepository {
     return { ...rest, id: _id.toHexString() };
   }
 
-  async create(input: CreateZigbeeDeviceLogInput): Promise<ZigbeeDeviceLogEntry> {
+  async create(
+    input: CreateZigbeeDeviceLogInput,
+  ): Promise<ZigbeeDeviceLogEntry> {
     const doc = await this.model.create({
       deviceIeeeAddr: input.deviceIeeeAddr,
       physicalDeviceId: input.physicalDeviceId ?? null,
@@ -86,7 +88,9 @@ export class ZigbeeDeviceLogRepository {
   }
 
   async deleteManyByIeeeAddr(ieeeAddr: string): Promise<number> {
-    const result = await this.model.deleteMany({ deviceIeeeAddr: ieeeAddr }).exec();
+    const result = await this.model
+      .deleteMany({ deviceIeeeAddr: ieeeAddr })
+      .exec();
     return result.deletedCount ?? 0;
   }
 
@@ -95,7 +99,8 @@ export class ZigbeeDeviceLogRepository {
   ): Promise<{ items: ZigbeeDeviceLogEntry[]; total: number }> {
     const filter: Record<string, unknown> = {};
     if (query.deviceIeeeAddr) filter.deviceIeeeAddr = query.deviceIeeeAddr;
-    if (query.physicalDeviceId) filter.physicalDeviceId = query.physicalDeviceId;
+    if (query.physicalDeviceId)
+      filter.physicalDeviceId = query.physicalDeviceId;
     if (query.from ?? query.to) {
       filter.timestamp = {};
       if (query.from)

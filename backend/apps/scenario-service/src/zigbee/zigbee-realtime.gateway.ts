@@ -149,11 +149,13 @@ export class ZigbeeRealtimeGateway
     if (!parsed.success) {
       return {
         ieees: [],
-        error: parsed.error.flatten().formErrors.join('; ') || 'Невалидное тело',
+        error:
+          parsed.error.flatten().formErrors.join('; ') || 'Невалидное тело',
       };
     }
     const { deviceIeeeAddrs = [], physicalDeviceIds = [] } = parsed.data;
-    const map = await this.devices.findIeeeAddrsByPhysicalIds(physicalDeviceIds);
+    const map =
+      await this.devices.findIeeeAddrsByPhysicalIds(physicalDeviceIds);
     const fromIds = physicalDeviceIds
       .map((id) => map.get(id))
       .filter((x): x is string => typeof x === 'string' && x.length >= 3);
@@ -170,7 +172,10 @@ export class ZigbeeRealtimeGateway
     const { ieees, error } = await this.resolveIeeeList(body);
     if (error) return { ok: false as const, error };
     if (ieees.length === 0) {
-      return { ok: false as const, error: 'Нет валидных устройств для подписки' };
+      return {
+        ok: false as const,
+        error: 'Нет валидных устройств для подписки',
+      };
     }
 
     const track = trackedIeees(client);
@@ -242,10 +247,7 @@ export class ZigbeeRealtimeGateway
       return { ok: false as const, error: 'Устройство не найдено' };
     }
 
-    const result = await this.zigbee.sendCommand(
-      ieeeAddr,
-      payload as Record<string, unknown>,
-    );
+    const result = await this.zigbee.sendCommand(ieeeAddr, payload);
     return result;
   }
 
@@ -281,7 +283,13 @@ export class ZigbeeRealtimeGateway
       body !== null &&
       typeof body === 'object' &&
       typeof (body as Record<string, unknown>).time === 'number'
-        ? Math.max(1, Math.min(254, Math.trunc((body as Record<string, unknown>).time as number)))
+        ? Math.max(
+            1,
+            Math.min(
+              254,
+              Math.trunc((body as Record<string, unknown>).time as number),
+            ),
+          )
         : 254;
     await client.join(PAIRING_ROOM);
     // Do NOT emit existing devices on "start pairing":
@@ -311,7 +319,7 @@ export class ZigbeeRealtimeGateway
       body === undefined ||
       (typeof body === 'object' &&
         body !== null &&
-        Object.keys(body as object).length === 0);
+        Object.keys(body).length === 0);
     if (empty) {
       for (const ieee of [...track]) {
         await client.leave(roomForIeee(ieee));

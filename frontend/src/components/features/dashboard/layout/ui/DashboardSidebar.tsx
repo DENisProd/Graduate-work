@@ -10,6 +10,7 @@ import {
   ChevronUp,
   Cpu,
   DoorOpen,
+  Gauge,
   LayoutDashboard,
   LayoutGrid,
   LogOut,
@@ -374,6 +375,14 @@ export function buildDashboardRoutes(
         icon: <Workflow className="size-4" />,
         section: propertiesSection,
         isActive: sh() && /\/scenarios(?:\/|$)/.test(pathname),
+      },
+      {
+        id: 'house-widgets',
+        title: t('navigation.widgets'),
+        link: `${base}/widgets`,
+        icon: <Gauge className="size-4" />,
+        section: propertiesSection,
+        isActive: pathname.startsWith(`${base}/widgets`),
       },
       {
         id: 'house-room-planner',

@@ -86,7 +86,9 @@ export class ZigbeeStateRepository {
   }
 
   async deleteManyByIeeeAddr(ieeeAddr: string): Promise<number> {
-    const result = await this.model.deleteMany({ deviceIeeeAddr: ieeeAddr }).exec();
+    const result = await this.model
+      .deleteMany({ deviceIeeeAddr: ieeeAddr })
+      .exec();
     return result.deletedCount ?? 0;
   }
 

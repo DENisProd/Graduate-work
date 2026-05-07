@@ -26,10 +26,7 @@ export interface EnsureCatalogPayload {
   deviceCategoryCode: string;
   deviceCode: string;
   translations?: {
-    deviceType?: Record<
-      string,
-      { name: string; description?: string | null }
-    >;
+    deviceType?: Record<string, { name: string; description?: string | null }>;
     deviceCategory?: Record<
       string,
       { name: string; description?: string | null }
@@ -104,13 +101,18 @@ export class DeviceCatalogClient {
     );
   }
 
-  findDeviceCategoryByCode(code: string): Promise<CatalogDeviceCategory | null> {
+  findDeviceCategoryByCode(
+    code: string,
+  ): Promise<CatalogDeviceCategory | null> {
     return this.get<CatalogDeviceCategory>(
       `/api/v1/device-categories/code/${encodeURIComponent(code)}`,
     );
   }
 
-  createDeviceType(code: string, name: string): Promise<CatalogDeviceType | null> {
+  createDeviceType(
+    code: string,
+    name: string,
+  ): Promise<CatalogDeviceType | null> {
     return this.post<CatalogDeviceType>('/api/v1/admin/device-types', {
       code,
       active: true,
