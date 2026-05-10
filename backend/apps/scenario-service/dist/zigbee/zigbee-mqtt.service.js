@@ -70,7 +70,12 @@ let ZigbeeMqttService = ZigbeeMqttService_1 = class ZigbeeMqttService {
     }
     onModuleDestroy() {
         for (const entry of this.connections.values()) {
-            entry.client.removeAllListeners();
+            entry.client.on('error', () => { });
+            entry.client.removeAllListeners('connect');
+            entry.client.removeAllListeners('message');
+            entry.client.removeAllListeners('reconnect');
+            entry.client.removeAllListeners('close');
+            entry.client.removeAllListeners('offline');
             entry.client.end(true);
         }
         this.connections.clear();
@@ -116,7 +121,12 @@ let ZigbeeMqttService = ZigbeeMqttService_1 = class ZigbeeMqttService {
     disconnectHouse(houseId) {
         const existing = this.connections.get(houseId);
         if (existing) {
-            existing.client.removeAllListeners();
+            existing.client.on('error', () => { });
+            existing.client.removeAllListeners('connect');
+            existing.client.removeAllListeners('message');
+            existing.client.removeAllListeners('reconnect');
+            existing.client.removeAllListeners('close');
+            existing.client.removeAllListeners('offline');
             existing.client.end(true);
             this.connections.delete(houseId);
         }

@@ -41,7 +41,7 @@ __decorate([
     __metadata("design:type", Object)
 ], ScenarioModel.prototype, "definition", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ required: true, enum: Object.values(enums_1.ScenarioStatus) }),
+    (0, mongoose_1.Prop)({ required: true, type: String, enum: Object.values(enums_1.ScenarioStatus) }),
     __metadata("design:type", String)
 ], ScenarioModel.prototype, "status", void 0);
 __decorate([

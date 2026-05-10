@@ -12,11 +12,12 @@ export class ScenarioExecutionModel {
   @Prop({ required: true })
   scenarioId: string;
 
-  @Prop({ required: true, enum: Object.values(ScenarioExecutionStatus) })
+  @Prop({ required: true, type: String, enum: Object.values(ScenarioExecutionStatus) })
   status: ScenarioExecutionStatus;
 
   @Prop({
     required: true,
+    type: String,
     enum: Object.values(TriggerSourceType),
   })
   triggeredBy: TriggerSourceType;

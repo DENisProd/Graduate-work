@@ -1,11 +1,15 @@
 use std::sync::Arc;
 
 use local_server_application::{
-    ports::{DeviceRepository, HealthChecker, PhysicalDeviceRepository, ZigbeeRepository},
+    ports::{
+        DeviceRepository, HealthChecker, PhysicalDeviceRepository, ScenarioExecutionRepository,
+        ScenarioRepository, ZigbeeRepository,
+    },
     services::ZigbeeRealtimeService,
 };
 use local_server_infrastructure::persistence::{
-    OutboxWriter, SqliteDeviceRepo, SqliteHealthChecker, SqlitePhysicalDeviceRepo, SqliteZigbeeRepo,
+    OutboxWriter, SqliteDeviceRepo, SqliteHealthChecker, SqlitePhysicalDeviceRepo,
+    SqliteScenarioExecutionRepo, SqliteScenarioRepo, SqliteZigbeeRepo,
 };
 use local_server_infrastructure::SqlitePool;
 use local_server_interfaces::HttpAppState;
@@ -19,6 +23,8 @@ pub struct AppState {
     pub phys_repo: Arc<dyn PhysicalDeviceRepository>,
     pub zigbee_repo: Arc<dyn ZigbeeRepository>,
     pub realtime_svc: Arc<ZigbeeRealtimeService>,
+    pub scenario_repo: Arc<dyn ScenarioRepository>,
+    pub scenario_exec_repo: Arc<dyn ScenarioExecutionRepository>,
 }
 
 impl AppState {
@@ -38,7 +44,22 @@ impl AppState {
 
         let realtime_svc = Arc::new(ZigbeeRealtimeService::new());
 
-        Self { pool, health, device_repo, phys_repo, zigbee_repo, realtime_svc }
+        let scenario_repo =
+            Arc::new(SqliteScenarioRepo::new(pool.clone())) as Arc<dyn ScenarioRepository>;
+
+        let scenario_exec_repo = Arc::new(SqliteScenarioExecutionRepo::new(pool.clone()))
+            as Arc<dyn ScenarioExecutionRepository>;
+
+        Self {
+            pool,
+            health,
+            device_repo,
+            phys_repo,
+            zigbee_repo,
+            realtime_svc,
+            scenario_repo,
+            scenario_exec_repo,
+        }
     }
 
     pub fn http_state(&self, version: &'static str) -> HttpAppState {

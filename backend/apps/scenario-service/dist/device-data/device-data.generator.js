@@ -20,11 +20,20 @@ let DeviceDataGeneratorService = DeviceDataGeneratorService_1 = class DeviceData
     deviceDataService;
     physicalDeviceService;
     logger = new common_1.Logger(DeviceDataGeneratorService_1.name);
+    enabled() {
+        const raw = process.env.DEVICE_DATA_GENERATOR_ENABLED;
+        if (!raw)
+            return false;
+        const v = raw.trim().toLowerCase();
+        return v === 'true' || v === '1' || v === 'yes' || v === 'on';
+    }
     constructor(deviceDataService, physicalDeviceService) {
         this.deviceDataService = deviceDataService;
         this.physicalDeviceService = physicalDeviceService;
     }
     async generateRandomDataForDevices() {
+        if (!this.enabled())
+            return;
         const devices = await this.getAllDevices();
         if (!devices.length)
             return;

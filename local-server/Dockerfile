@@ -35,8 +35,13 @@ RUN mkdir -p \
 COPY src        ./src
 COPY migrations ./migrations
 
-# Touch the gateway entry point so cargo detects the change.
-RUN touch src/gateway/src/main.rs && \
+# The stub build above compiles minimal `lib.rs` files for workspace members. After
+# swapping in real sources, Cargo can incorrectly reuse those rlibs; drop their
+# artifacts so the final link sees the full public API (ports, persistence, …).
+RUN cargo clean -p local-server-core \
+        -p local-server-application \
+        -p local-server-infrastructure \
+        -p local-server-interfaces && \
     cargo build --release --bin local-server
 
 # ── Runtime stage ─────────────────────────────────────────────────────────────

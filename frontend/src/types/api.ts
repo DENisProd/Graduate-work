@@ -402,8 +402,8 @@ export interface InvitationAccessRight {
 }
 
 export interface HouseInvitationRequest {
-  /** Email приглашаемого (для запроса создания — houseId передаётся в пути) */
-  email: string;
+  /** Пометка к приглашению (для UI). Не влияет на права. */
+  note?: string;
   /** Дата истечения приглашения (ISO 8601). По умолчанию бэкенд ставит 7 дней. */
   expiresAt?: string;
   /** ID роли дома для назначения при принятии. Не используйте вместе с permissions/accessRight. */
@@ -416,7 +416,7 @@ export interface HouseInvitationRequest {
 
 /** Тело запроса создания приглашения: только email, roleId?, permissions?, expiresAt? */
 export interface CreateInvitationBody {
-  email: string;
+  note?: string;
   roleId?: string;
   permissions?: InvitationPermission[];
   expiresAt?: string;
@@ -424,9 +424,9 @@ export interface CreateInvitationBody {
 
 export interface HouseInvitationResponse {
   id: number | string;
-  houseId: number | string;
+  houseId?: number | string;
   houseName?: string;
-  email: string;
+  note?: string;
   /** Приходит только в ответе создания приглашения (один раз). */
   token?: string;
   status: InvitationStatus;
@@ -565,6 +565,30 @@ export interface ZigbeeDeviceListItem {
   roomId?: string | null;
 }
 
+/** Scenario Service: Zigbee MQTT config per house (GET/PUT /zigbee/house-mqtt/:houseId). */
+export interface HouseMqttStatus {
+  connected: boolean;
+}
+
+export interface HouseMqttConfigResponse {
+  houseId: string;
+  mqttUrl: string;
+  mqttUsername?: string;
+  /** Password is not returned by backend. */
+  mqttPassword?: undefined;
+  topicPrefix: string;
+  enabled: boolean;
+  status?: HouseMqttStatus;
+}
+
+export interface HouseMqttConfigUpsertRequest {
+  mqttUrl: string;
+  mqttUsername?: string;
+  mqttPassword?: string;
+  topicPrefix?: string;
+  enabled?: boolean;
+}
+
 /** GET /physical-devices/:id — документ из Mongo (Zigbee + регистрация в доме) */
 export interface PhysicalDeviceResponse {
   id: string;
@@ -602,6 +626,27 @@ export interface DeviceDataResponse {
   unit?: string | null;
   quality?: number | null;
   timestamp: string;
+}
+
+export type DeviceDataSeriesRange = '1m' | '1h' | '6h' | '24h' | '7d';
+
+export interface DeviceDataSeriesPoint {
+  ts: string;
+  value: number;
+}
+
+export interface DeviceDataSeries {
+  key: string;
+  capability: string;
+  attribute?: string | null;
+  unit?: string | null;
+  points: DeviceDataSeriesPoint[];
+}
+
+export interface DeviceDataSeriesResponse {
+  from: string;
+  to: string;
+  series: DeviceDataSeries[];
 }
 
 export interface ScenarioResponse {

@@ -15,6 +15,7 @@ import {
   LayoutGrid,
   LogOut,
   Map,
+  Settings,
   Shield,
   User,
   Users,
@@ -312,15 +313,7 @@ export function buildDashboardRoutes(
   const overviewSection = t('navigation.overview');
   const propertiesSection = t('navigation.properties');
 
-  const routes: Route[] = [
-    {
-      id: 'home',
-      title: t('navigation.dashboard'),
-      link: '/dashboard',
-      icon: <LayoutDashboard className="size-4" />,
-      section: overviewSection,
-    },
-  ];
+  const routes: Route[] = [];
 
   if (selectedHouseId) {
     const hid = encodeURIComponent(selectedHouseId);
@@ -391,6 +384,14 @@ export function buildDashboardRoutes(
         icon: <Map className="size-4" />,
         section: propertiesSection,
         isActive: pathname.startsWith(`${base}/room-planner`),
+      },
+      {
+        id: 'house-settings',
+        title: t('common.settings'),
+        link: `${base}/settings`,
+        icon: <Settings className="size-4" />,
+        section: propertiesSection,
+        isActive: sh() && /\/settings(?:\/|$)/.test(pathname),
       },
     );
   }

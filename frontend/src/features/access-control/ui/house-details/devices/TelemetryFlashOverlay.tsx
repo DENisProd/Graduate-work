@@ -115,6 +115,13 @@ export function useTelemetryPulseKey(live: ZigbeeStateWire | undefined): number 
       return;
     }
 
+    // If we started with "no telemetry" (empty signature) and then received the first payload,
+    // treat it as initial load and do not pulse.
+    if (prevSigRef.current === '' && sig !== '') {
+      prevSigRef.current = sig;
+      return;
+    }
+
     if (sig !== prevSigRef.current && sig !== '') {
       prevSigRef.current = sig;
       if (debounceRef.current) clearTimeout(debounceRef.current);

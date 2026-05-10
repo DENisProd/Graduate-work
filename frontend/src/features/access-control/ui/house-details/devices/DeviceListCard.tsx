@@ -1,5 +1,6 @@
 'use client';
 
+import type { MouseEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +15,7 @@ import {
   isZigbeeDevice,
   zigbeeDisplayName,
 } from '@/features/access-control/lib/zigbee-device-utils';
+import { connectivityFromLastOnline, connectivityLabel } from '@/lib/device-connectivity';
 import { TelemetryFlashOverlay, useTelemetryPulseKey } from './TelemetryFlashOverlay';
 import { DeviceTelemetryBlock } from './DeviceTelemetryBlock';
 
@@ -51,7 +53,6 @@ export function DeviceListCard({
 }) {
   const router = useRouter();
   const { showToast } = useToast();
-  const telemetryPulseKey = useTelemetryPulseKey(live);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [removing, setRemoving] = useState(false);
 
@@ -60,6 +61,10 @@ export function DeviceListCard({
     definitionStringField(device.definition, 'vendor') ?? device.manufacturerName ?? null;
   const defDescription = definitionStringField(device.definition, 'description');
   const showTelemetry = isZigbeeDevice(device) || Boolean(live);
+  const lastOnline = live?.timestamp ?? (device as any)?.lastSeen ?? null;
+  const connectivity = connectivityFromLastOnline(lastOnline);
+  const isOffline = connectivity === 'OFFLINE';
+  const telemetryPulseKey = useTelemetryPulseKey(connectivity === 'ONLINE' ? live : undefined);
 
   const caps = new Set((device.capabilities ?? []).map((c) => c.toLowerCase()));
   const hasToggle =
@@ -80,9 +85,9 @@ export function DeviceListCard({
   const isPending = cmdState.status === 'pending';
   const displayIsOn = optimisticOn !== null ? optimisticOn : live?.metrics.state === 'ON';
 
-  const handleToggle = (e: React.MouseEvent) => {
+  const handleToggle = (e: MouseEvent) => {
     e.stopPropagation();
-    if (isPending || !isSocketConnected) return;
+    if (isPending || !isSocketConnected || isOffline) return;
     const newOn = !displayIsOn;
     setOptimisticOn(newOn);
     void sendCommand({ physicalDeviceId: device.id }, { state: newOn ? 'ON' : 'OFF' }).then(
@@ -92,12 +97,12 @@ export function DeviceListCard({
 
   const ieeeAddr = device.ieeeAddr ?? device.protocolAddress ?? null;
 
-  const handleRemoveClick = (e: React.MouseEvent) => {
+  const handleRemoveClick = (e: MouseEvent) => {
     e.stopPropagation();
     setConfirmOpen(true);
   };
 
-  const handleConfirmRemove = async (e: React.MouseEvent) => {
+  const handleConfirmRemove = async (e: MouseEvent) => {
     e.stopPropagation();
     if (!ieeeAddr) return;
     setRemoving(true);
@@ -113,7 +118,7 @@ export function DeviceListCard({
     }
   };
 
-  const handleCancelRemove = (e: React.MouseEvent) => {
+  const handleCancelRemove = (e: MouseEvent) => {
     e.stopPropagation();
     setConfirmOpen(false);
   };
@@ -121,11 +126,38 @@ export function DeviceListCard({
   return (
     <Card
       className={cn(
-        'relative cursor-pointer border border-border bg-card shadow-sm transition hover:border-accent'
+        'relative cursor-pointer border border-border bg-card shadow-sm transition hover:border-accent',
+        isOffline && 'hover:border-border'
       )}
       onClick={() => router.push(`/admin/access-control/houses/${houseId}/devices/${device.id}`)}
     >
       <TelemetryFlashOverlay pulseKey={telemetryPulseKey} />
+      {isOffline ? (
+        <div className="pointer-events-none absolute inset-0 z-10 rounded-xl">
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-background/80 text-muted-foreground ring-1 ring-border backdrop-blur-sm">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 20h.01" />
+                <path d="M8.5 16.429a5 5 0 0 1 7 0" />
+                <path d="M5 12.859a10 10 0 0 1 5.17-2.69" />
+                <path d="M19 12.859a10 10 0 0 0-2.007-1.523" />
+                <path d="m2 2 20 20" />
+              </svg>
+            </div>
+          </div>
+          <div className="absolute inset-0 rounded-xl bg-background/10" />
+        </div>
+      ) : null}
       {confirmOpen ? (
         <div
           className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-xl bg-background/95 p-4 text-center backdrop-blur-sm"
@@ -176,6 +208,19 @@ export function DeviceListCard({
           ) : null}
         </div>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+          <Badge
+            variant="outline"
+            className={cn(
+              'text-[10px]',
+              connectivity === 'ONLINE'
+                ? 'border-emerald-500/40 text-emerald-600'
+                : connectivity === 'UNKNOWN'
+                  ? 'border-yellow-500/40 text-yellow-600'
+                  : 'border-border text-muted-foreground'
+            )}
+          >
+            {connectivityLabel(connectivity, locale)}
+          </Badge>
           {isZigbeeDevice(device) ? (
             <Badge variant="secondary" className="text-xs">
               {t('admin.accessControl.connectedDevices.protocolZigbee')}
@@ -211,7 +256,12 @@ export function DeviceListCard({
           ) : null}
         </div>
       </CardHeader>
-      <CardContent className="relative z-[1] space-y-2 text-sm text-muted-foreground">
+      <CardContent
+        className={cn(
+          'relative z-[1] space-y-2 text-sm text-muted-foreground',
+          isOffline && 'opacity-50'
+        )}
+      >
         {hasToggle ? (
           <div
             className="flex items-center gap-2.5"
@@ -222,7 +272,7 @@ export function DeviceListCard({
               type="button"
               role="switch"
               aria-checked={displayIsOn}
-              disabled={isPending || !isSocketConnected}
+              disabled={isPending || !isSocketConnected || isOffline}
               onClick={handleToggle}
               className={cn(
                 'relative inline-flex h-[1.375rem] w-9 shrink-0 cursor-pointer items-center rounded-full',

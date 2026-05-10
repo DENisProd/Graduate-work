@@ -19,7 +19,8 @@ import {
 import { HouseInvitationsService } from './house-invitations.service';
 import { HouseInvitationRequestDto } from './dto/house-invitation-request.dto';
 import { HouseInvitationResponseDto } from './dto/house-invitation-response.dto';
-import { toHouseInvitationResponse, toHouseInvitationPageResponse } from './house-invitations.mapper';
+import { HouseInvitationListItemDto } from './dto/house-invitation-list-item.dto';
+import { toHouseInvitationListItem, toHouseInvitationResponse } from './house-invitations.mapper';
 import { UserId } from '../common/decorators/user-id.decorator';
 
 @ApiTags('House Invitations')
@@ -52,7 +53,7 @@ export class HouseInvitationsController {
     example: 'false',
     description: 'Если true — все приглашения по дому (включая принятые, отклонённые и т.д.)',
   })
-  @ApiOkResponse({ type: HouseInvitationResponseDto, isArray: true })
+  @ApiOkResponse({ type: HouseInvitationListItemDto, isArray: true })
   async findByHouseId(
     @Param('houseId') houseId: string,
     @Query('page') page?: string,
@@ -63,9 +64,8 @@ export class HouseInvitationsController {
     const p = Math.max(0, parseInt(page || '0', 10) || 0);
     const s = Math.max(1, parseInt(size || '20', 10) || 20);
     const all = includeAll === 'true' || includeAll === '1';
-    const { content, total } = await this.houseInvitationsService.findByHouseId(houseId, p, s, sort, all);
-    const pageResponse = toHouseInvitationPageResponse(content, p, s, total);
-    return pageResponse.content;
+    const { content } = await this.houseInvitationsService.findByHouseId(houseId, p, s, sort, all);
+    return content.map(toHouseInvitationListItem);
   }
 
   @Post()

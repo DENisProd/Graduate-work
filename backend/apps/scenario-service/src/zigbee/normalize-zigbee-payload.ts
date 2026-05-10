@@ -50,7 +50,9 @@ export function normalizeZigbeePayload(
   const occupancy = asBoolean(payload.occupancy ?? payload.motion);
   if (occupancy !== undefined) out.occupancy = occupancy;
 
-  const temperature = asNumber(payload.temperature);
+  const temperature = asNumber(
+    payload.temperature ?? payload.device_temperature ?? payload.local_temperature,
+  );
   if (temperature !== undefined) out.temperature = temperature;
 
   const humidity = asNumber(payload.humidity);

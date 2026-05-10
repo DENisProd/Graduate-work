@@ -39,7 +39,7 @@ function toArray<T>(data: unknown): T[] {
 }
 
 export function AccessControlAdmin() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
 
   const [status, setStatus] = useState<string>('');
 
@@ -71,8 +71,7 @@ export function AccessControlAdmin() {
   // Invitations
   const [invitationsHouseId, setInvitationsHouseId] = useState('');
   const [invitations, setInvitations] = useState<HouseInvitationResponse[]>([]);
-  const [invitationForm, setInvitationForm] = useState<{ email: string; roleId?: string; expiresAt?: string }>({
-    email: '',
+  const [invitationForm, setInvitationForm] = useState<{ roleId?: string; expiresAt?: string }>({
     expiresAt: '',
   });
   const [inviterId, setInviterId] = useState('');
@@ -294,7 +293,6 @@ export function AccessControlAdmin() {
       await houseInvitationsApi.create(
         Number(invitationsHouseId),
         {
-          email: invitationForm.email,
           ...(invitationForm.roleId ? { roleId: invitationForm.roleId } : {}),
           ...(invitationForm.expiresAt ? { expiresAt: invitationForm.expiresAt } : {}),
         },
@@ -633,11 +631,6 @@ export function AccessControlAdmin() {
 
           <div className="grid gap-3 md:grid-cols-3">
             <LabeledInput
-              label={t('admin.accessControl.email')}
-              value={invitationForm.email}
-              onChange={(e) => setInvitationForm((prev) => ({ ...prev, email: e.target.value }))}
-            />
-            <LabeledInput
               label={t('admin.accessControl.role')}
               value={invitationForm.roleId || ''}
               onChange={(e) => setInvitationForm((prev) => ({ ...prev, roleId: e.target.value || undefined }))}
@@ -700,10 +693,22 @@ export function AccessControlAdmin() {
                 <Card key={invitation.id}>
                   <Card.Header>
                     <div>
-                      <Card.Title>{invitation.email}</Card.Title>
-                      <Card.Description>{invitation.status}</Card.Description>
+                      <Card.Title>{invitation.note ?? (invitation.token ? `${invitation.token.slice(0, 12)}…` : 'Invitation')}</Card.Title>
+                      <Card.Description>
+                        {(() => {
+                          const ru = locale === 'ru';
+                          switch (invitation.status) {
+                            case 'PENDING': return ru ? 'Ожидает' : 'Pending';
+                            case 'ACCEPTED': return ru ? 'Принято' : 'Accepted';
+                            case 'DECLINED': return ru ? 'Отклонено' : 'Declined';
+                            case 'REVOKED': return ru ? 'Отозвано' : 'Revoked';
+                            case 'EXPIRED': return ru ? 'Истекло' : 'Expired';
+                            default: return invitation.status;
+                          }
+                        })()}
+                      </Card.Description>
                     </div>
-                    <Badge variant="outline">{String(invitation.houseId)}</Badge>
+                    <Badge variant="outline">{invitation.houseId != null ? String(invitation.houseId) : '—'}</Badge>
                   </Card.Header>
                   <Card.Content>
                     <p className="text-sm text-muted">{invitation.expiresAt ? new Date(invitation.expiresAt).toLocaleString() : '—'}</p>

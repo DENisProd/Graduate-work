@@ -6,5 +6,8 @@ pub mod mqtt;
 pub mod persistence;
 
 pub use mqtt::{run_ingestion, RumqttcClient};
-pub use persistence::{OutboxWriter, SqliteDeviceRepo, SqlitePhysicalDeviceRepo, SqliteZigbeeRepo};
+pub use persistence::{
+    OutboxWriter, SqliteDeviceRepo, SqlitePhysicalDeviceRepo, SqliteScenarioExecutionRepo,
+    SqliteScenarioRepo, SqliteZigbeeRepo,
+};
 pub use sqlx::SqlitePool;

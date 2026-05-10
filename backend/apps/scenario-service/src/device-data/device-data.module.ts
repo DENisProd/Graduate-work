@@ -4,7 +4,6 @@ import { DeviceDataController } from './device-data.controller';
 import { DeviceDataService } from './device-data.service';
 import { DeviceDataRepository } from './device-data.repository';
 import { DevicesModule } from '../devices/devices.module';
-import { DeviceDataGeneratorService } from './device-data.generator';
 import {
   DEVICE_DATA_MODEL,
   DeviceDataSchema,
@@ -21,7 +20,6 @@ import {
   providers: [
     DeviceDataService,
     DeviceDataRepository,
-    DeviceDataGeneratorService,
   ],
   exports: [DeviceDataService],
 })

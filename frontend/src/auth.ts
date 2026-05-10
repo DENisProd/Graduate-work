@@ -20,11 +20,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     session({ session, token }) {
       if (session.user) {
-        session.user.id = token.sub ?? "";
+        // Prefer stable Keycloak subject from the profile (if captured in jwt callback).
+        const kcSub = (token as unknown as { keycloakSub?: string }).keycloakSub;
+        session.user.id = kcSub ?? token.sub ?? "";
       }
       return session;
     },
-    jwt({ token }) {
+    jwt({ token, account, profile }) {
+      // NextAuth's token.sub can vary depending on configuration. Keycloak's OIDC `sub`
+      // is the stable external user id we rely on across services.
+      if (account?.provider === 'keycloak') {
+        const p = profile as unknown as { sub?: string } | undefined;
+        if (p?.sub) {
+          (token as unknown as { keycloakSub?: string }).keycloakSub = p.sub;
+          token.sub = p.sub;
+        }
+      }
       return token;
     },
   },

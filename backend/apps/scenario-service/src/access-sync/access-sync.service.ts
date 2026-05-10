@@ -1,11 +1,20 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { AccessServiceClient } from './access-service.client';
+import {
+  AccessServiceClient,
+  type DeviceFunctionActionDto,
+} from './access-service.client';
 
 @Injectable()
 export class AccessSyncService {
   private readonly logger = new Logger(AccessSyncService.name);
 
   constructor(private readonly client: AccessServiceClient) {}
+
+  async findDeviceFunctionActionsByDeviceId(
+    deviceId: number,
+  ): Promise<DeviceFunctionActionDto[] | null> {
+    return this.client.findDeviceFunctionActionsByDeviceId(deviceId);
+  }
 
   async onPhysicalDeviceCreated(device: {
     id: string;
@@ -61,7 +70,12 @@ export class AccessSyncService {
   async onDeviceFunctionsLinked(
     physicalDeviceId: string,
     houseId: string,
-    functions: Array<{ id: number; code: string; name: string }>,
+    functions: Array<{
+      id: number;
+      code: string;
+      name: string;
+      actionIds?: number[];
+    }>,
   ): Promise<void> {
     for (const fn of functions) {
       const externalId = `fn:${physicalDeviceId}:${fn.id}`;
@@ -71,7 +85,11 @@ export class AccessSyncService {
         externalId,
         type: 'DEVICE_FUNCTION',
         name: fn.name,
-        metadata: { deviceFunctionId: fn.id, capability: fn.code },
+        metadata: {
+          deviceFunctionId: fn.id,
+          capability: fn.code,
+          actionIds: fn.actionIds ?? [],
+        },
       });
       if (result) {
         this.logger.log(

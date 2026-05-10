@@ -11,7 +11,11 @@ import {
   DeviceDataListResponseDto,
   DeviceDataResponseDto,
 } from './dto/device-data-response.dto';
-import { listDeviceDataQuerySchema } from './schemas/device-data.schema';
+import { DeviceDataSeriesResponseDto } from './dto/device-data-series.dto';
+import {
+  deviceDataSeriesQuerySchema,
+  listDeviceDataQuerySchema,
+} from './schemas/device-data.schema';
 import { idParamSchema } from '../common/schemas/id-params';
 import { DeviceDataType } from '../common/schemas/enums';
 
@@ -19,6 +23,29 @@ import { DeviceDataType } from '../common/schemas/enums';
 @Controller('device-data')
 export class DeviceDataController {
   constructor(private readonly service: DeviceDataService) {}
+
+  @Get('series')
+  @ApiOperation({ summary: 'Серии для графиков (агрегация по времени)' })
+  @ApiQuery({ name: 'deviceId', required: true })
+  @ApiQuery({ name: 'range', required: true, enum: ['1m', '1h', '6h', '24h', '7d'] })
+  @ApiQuery({
+    name: 'capabilities',
+    required: false,
+    description: 'CSV capabilities, e.g. battery,occupancy,zigbee',
+  })
+  @ApiQuery({
+    name: 'to',
+    required: false,
+    description: 'Anchor end timestamp (ISO). Default: now.',
+  })
+  @ApiResponse({
+    status: 200,
+    type: DeviceDataSeriesResponseDto,
+  })
+  series(@Query() query: unknown) {
+    const q = deviceDataSeriesQuerySchema.parse(query);
+    return this.service.series(q);
+  }
 
   @Get()
   @ApiOperation({ summary: 'Список данных устройств с пагинацией и фильтрами' })

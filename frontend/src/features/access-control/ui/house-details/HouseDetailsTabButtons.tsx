@@ -25,6 +25,7 @@ export function HouseDetailsTabButtons({ activeTab, onTabChange }: HouseDetailsT
           key={id}
           size="sm"
           variant={activeTab === id ? 'default' : 'secondary'}
+          className={activeTab === id ? 'text-white' : undefined}
           onClick={() => onTabChange(id)}
         >
           {label}

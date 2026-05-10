@@ -3,6 +3,8 @@
 import type {
   HouseDeviceRegistrationRequest,
   HouseDeviceRegistrationResponse,
+  HouseMqttConfigResponse,
+  HouseMqttConfigUpsertRequest,
   PhysicalDeviceResponse,
   DeviceDataResponse,
   ZigbeeDeviceListItem,
@@ -45,8 +47,11 @@ export const zigbeeDevicesApi = {
     });
   },
 
-  requestSyncFromBridge: (options?: { signal?: AbortSignal }): Promise<{ ok: boolean; message?: string }> =>
-    physicalDevicesApiCall('/zigbee/devices:sync-from-bridge', {
+  requestSyncFromBridge: (
+    houseId: string,
+    options?: { signal?: AbortSignal },
+  ): Promise<{ ok: boolean; message?: string }> =>
+    physicalDevicesApiCall(`/zigbee/devices:sync-from-bridge?houseId=${encodeURIComponent(houseId)}`, {
       method: 'POST',
       signal: options?.signal,
     }),
@@ -73,7 +78,7 @@ export const zigbeeDevicesApi = {
     ieeeAddr: string,
     payload: Record<string, unknown>,
   ): Promise<{ ok: true; topic: string }> =>
-    physicalDevicesApiCall(`/api/v1/zigbee/devices/${encodeURIComponent(ieeeAddr)}/command`, {
+    physicalDevicesApiCall(`/zigbee/devices/${encodeURIComponent(ieeeAddr)}/command`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ payload }),
@@ -110,6 +115,67 @@ export const zigbeeDevicesApi = {
     return physicalDevicesApiCall(`/zigbee/device-logs${query ? `?${query}` : ''}`, {
       signal: params?.signal,
     });
+  },
+};
+
+export const houseMqttApi = {
+  /** Get MQTT config for a house (without password). */
+  get: (houseId: string, options?: { signal?: AbortSignal }): Promise<HouseMqttConfigResponse> =>
+    physicalDevicesApiCall(`/zigbee/house-mqtt/${encodeURIComponent(houseId)}`, {
+      signal: options?.signal,
+    }),
+
+  /** Upsert MQTT config and reconnect/disconnect accordingly. */
+  upsert: (
+    houseId: string,
+    dto: HouseMqttConfigUpsertRequest,
+    options?: { signal?: AbortSignal },
+  ): Promise<HouseMqttConfigResponse> =>
+    physicalDevicesApiCall(`/zigbee/house-mqtt/${encodeURIComponent(houseId)}`, {
+      method: 'PUT',
+      signal: options?.signal,
+      body: JSON.stringify(dto),
+    }),
+
+  delete: (houseId: string, options?: { signal?: AbortSignal }): Promise<{ ok: true; houseId: string }> =>
+    physicalDevicesApiCall(`/zigbee/house-mqtt/${encodeURIComponent(houseId)}`, {
+      method: 'DELETE',
+      signal: options?.signal,
+    }),
+
+  reconnect: (houseId: string, options?: { signal?: AbortSignal }): Promise<{ ok: true; houseId: string }> =>
+    physicalDevicesApiCall(`/zigbee/house-mqtt/${encodeURIComponent(houseId)}/reconnect`, {
+      method: 'POST',
+      signal: options?.signal,
+    }),
+};
+
+export const dashboardApi = {
+  getOverview: (params: {
+    houseIds: Array<string | number>;
+    from?: string | Date;
+    limit?: number;
+    signal?: AbortSignal;
+  }): Promise<{
+    totalDevices: number;
+    totalActiveScenarios: number;
+    eventsCount: number;
+    recentEvents: Array<{
+      id: string;
+      timestamp: string;
+      houseId: string;
+      deviceName: string;
+      action: string;
+      result: 'SUCCESS' | 'DENIED' | 'ERROR';
+    }>;
+  }> => {
+    const q = new URLSearchParams();
+    for (const id of params.houseIds) q.append('houseId', String(id));
+    if (params.from !== undefined) {
+      q.append('from', params.from instanceof Date ? params.from.toISOString() : String(params.from));
+    }
+    if (params.limit !== undefined) q.append('limit', String(params.limit));
+    return physicalDevicesApiCall(`/dashboard/overview?${q.toString()}`, { signal: params.signal });
   },
 };
 
@@ -185,6 +251,23 @@ export const deviceDataApi = {
     return physicalDevicesApiCall(`/device-data${query ? `?${query}` : ''}`, {
       signal: params?.signal,
     });
+  },
+
+  getSeries: (params: {
+    deviceId: string;
+    range: import('@/types/api').DeviceDataSeriesRange;
+    capabilities?: string[];
+    to?: string | Date;
+    signal?: AbortSignal;
+  }): Promise<import('@/types/api').DeviceDataSeriesResponse> => {
+    const q = new URLSearchParams();
+    q.append('deviceId', params.deviceId);
+    q.append('range', params.range);
+    if (params.capabilities && params.capabilities.length > 0) {
+      q.append('capabilities', params.capabilities.join(','));
+    }
+    if (params.to) q.append('to', params.to instanceof Date ? params.to.toISOString() : params.to);
+    return physicalDevicesApiCall(`/device-data/series?${q.toString()}`, { signal: params.signal });
   },
 };
 

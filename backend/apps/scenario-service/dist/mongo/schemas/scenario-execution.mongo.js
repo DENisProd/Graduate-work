@@ -28,12 +28,13 @@ __decorate([
     __metadata("design:type", String)
 ], ScenarioExecutionModel.prototype, "scenarioId", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ required: true, enum: Object.values(enums_1.ScenarioExecutionStatus) }),
+    (0, mongoose_1.Prop)({ required: true, type: String, enum: Object.values(enums_1.ScenarioExecutionStatus) }),
     __metadata("design:type", String)
 ], ScenarioExecutionModel.prototype, "status", void 0);
 __decorate([
     (0, mongoose_1.Prop)({
         required: true,
+        type: String,
         enum: Object.values(enums_1.TriggerSourceType),
     }),
     __metadata("design:type", String)

@@ -31,7 +31,7 @@ export class ActionExecutorService {
     switch (action.type) {
       case 'DEVICE_COMMAND': {
         const payload: Record<string, unknown> = { ...(action.args ?? {}) };
-        const result = this.zigbee.sendCommand(
+        const result = this.zigbee.sendCommandToFriendlyName(
           houseId,
           action.deviceId,
           payload,

@@ -53,10 +53,6 @@ export function MembersTab({
           {t('admin.accessControl.members')}
         </h3>
         <div className="flex items-center gap-2">
-          <AppButton onClick={onAddMember} variant="secondary">
-            <UserPlus className="size-4" />
-            {t('admin.accessControl.addMember')}
-          </AppButton>
           <AppButton onClick={openInviteModal} variant="secondary">
             <Mail className="size-4" />
             {t('admin.accessControl.inviteMember')}
@@ -90,7 +86,7 @@ export function MembersTab({
                         <Shield className="size-3 shrink-0" />
                         {role.name}
                         {role.permissions.length > 0 && (
-                          <span className="inline-flex items-center gap-0.5 rounded-full bg-primary/20 px-1.5 py-px text-[10px] font-semibold leading-none">
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-px text-[10px] font-semibold leading-none">
                             <Lock className="size-2.5" />
                             {role.permissions.length}
                           </span>

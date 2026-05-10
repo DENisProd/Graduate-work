@@ -4,7 +4,7 @@ export { RoomsTab } from './tabs/RoomsTab';
 export { MembersTab } from './tabs/MembersTab';
 export { RolesTab } from './tabs/RolesTab';
 export { InvitationsBlock } from './tabs/InvitationsBlock';
-export { RightsTab } from './tabs/RightsTab';
+export { RightsBlock } from './blocks/RightsBlock';
 export { CheckTab } from './tabs/CheckTab';
 export { LabeledInput } from './tabs/LabeledInput';
 export { DevicesTab } from './devices/DevicesTab';

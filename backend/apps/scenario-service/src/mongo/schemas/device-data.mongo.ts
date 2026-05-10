@@ -1,14 +1,17 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import type { HydratedDocument } from 'mongoose';
-import { Types } from 'mongoose';
 import { DeviceDataType } from '../../common/schemas/enums';
 
 export const DEVICE_DATA_MODEL = 'DeviceData';
 
 @Schema({ collection: 'DeviceData' })
 export class DeviceDataModel {
-  @Prop({ required: true, type: Types.ObjectId })
-  deviceId: Types.ObjectId;
+  /**
+   * Physical device id (Mongo ObjectId as string).
+   * Stored as string to avoid ObjectId/string mismatches in existing data and queries.
+   */
+  @Prop({ required: true, type: String })
+  deviceId: string;
 
   @Prop({ required: true, type: String })
   capability: string;

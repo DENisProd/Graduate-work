@@ -14,8 +14,20 @@ import Link from 'next/link';
 
 type InvitationStatus = 'idle' | 'loading' | 'success' | 'error';
 
+function formatInvitationStatus(status: string, locale?: string): string {
+  const ru = locale === 'ru';
+  switch (status) {
+    case 'PENDING': return ru ? 'Ожидает' : 'Pending';
+    case 'ACCEPTED': return ru ? 'Принято' : 'Accepted';
+    case 'DECLINED': return ru ? 'Отклонено' : 'Declined';
+    case 'REVOKED': return ru ? 'Отозвано' : 'Revoked';
+    case 'EXPIRED': return ru ? 'Истекло' : 'Expired';
+    default: return status;
+  }
+}
+
 function InviteContent() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams?.get('token') ?? undefined;
@@ -156,11 +168,10 @@ function InviteContent() {
           {!loading && invitation && (
             <>
               <div className="space-y-1">
-                <p className="text-sm text-foreground/80">{invitation.email}</p>
                 <p className="text-lg font-semibold">
                   {invitation.houseName ?? t('admin.accessControl.houses')}
                 </p>
-                {invitation.status && <Badge variant="secondary">{invitation.status}</Badge>}
+                {invitation.status && <Badge variant="secondary">{formatInvitationStatus(invitation.status, locale)}</Badge>}
               </div>
 
               {invitation.expiresAt && (

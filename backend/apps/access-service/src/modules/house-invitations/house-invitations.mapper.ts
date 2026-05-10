@@ -1,4 +1,5 @@
 import { HouseInvitationResponseDto } from './dto/house-invitation-response.dto';
+import { HouseInvitationListItemDto } from './dto/house-invitation-list-item.dto';
 import { PageResponseDto } from '../common/dto/page-response.dto';
 import { HouseInvitation, House, HouseMember, User, HouseRole, HousePermission } from '@prisma/client';
 
@@ -26,7 +27,23 @@ export function toHouseInvitationResponse(i: InvitationWithRelations): HouseInvi
     id: i.id,
     houseId: i.house.id,
     houseName: i.house.name,
-    email: i.email ?? '',
+    note: i.note ?? undefined,
+    token: i.tokenHash,
+    status: i.status,
+    createdAt: formatDate(i.createdAt),
+    acceptedAt: i.acceptedAt ? formatDate(i.acceptedAt) : undefined,
+    expiresAt: i.expiresAt ? formatDate(i.expiresAt) : undefined,
+    invitedById: i.invitedBy?.user?.externalUserId,
+    roleId: i.roleId ?? undefined,
+    roleName: i.role?.name,
+    permissions: invitationPermissionsForResponse(i),
+  };
+}
+
+export function toHouseInvitationListItem(i: InvitationWithRelations): HouseInvitationListItemDto {
+  return {
+    id: i.id,
+    note: i.note ?? undefined,
     token: i.tokenHash,
     status: i.status,
     createdAt: formatDate(i.createdAt),

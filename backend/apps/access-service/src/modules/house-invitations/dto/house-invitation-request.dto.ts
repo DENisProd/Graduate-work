@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
+import { IsArray, IsEnum, IsNotEmpty, IsOptional, IsUUID, IsString, MaxLength } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { HousePermission } from '@prisma/client';
@@ -12,10 +12,14 @@ export class HouseInvitationRequestDto {
   @IsUUID()
   houseId!: string;
 
-  @ApiPropertyOptional({ example: 'guest@example.com' })
+  @ApiPropertyOptional({
+    example: 'Для мамы / временный доступ / тест',
+    description: 'Пометка к приглашению (для UI). Не влияет на права.',
+  })
   @IsOptional()
-  @IsEmail({}, { message: 'Некорректный формат email' })
-  email?: string;
+  @IsString()
+  @MaxLength(255)
+  note?: string;
 
   @ApiPropertyOptional({
     format: 'uuid',

@@ -3,6 +3,7 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { DeviceFunctionActionResponse, TranslationResponse } from '../devices/dto/device-response.dto';
 import { PageResponse } from '../devices/dto/page-response.dto';
 import { DeviceFunctionActionRequest } from '../devices/dto/device-function-action-request.dto';
+import { ActionType, DeviceFunctionType } from '@prisma/client';
 
 @Injectable()
 export class DeviceFunctionActionsService {
@@ -76,6 +77,7 @@ export class DeviceFunctionActionsService {
   }
 
   async findByDeviceId(deviceId: number): Promise<DeviceFunctionActionResponse[]> {
+    await this.ensureDefaultsForDevice(deviceId);
     const items = await this.prisma.deviceFunctionAction.findMany({
       where: { active: true, deviceFunction: { deviceId } },
       include: { translations: true },
@@ -89,6 +91,7 @@ export class DeviceFunctionActionsService {
     page: number,
     size: number,
   ): Promise<PageResponse<DeviceFunctionActionResponse>> {
+    await this.ensureDefaultsForDevice(deviceId);
     const [items, totalElements] = await this.prisma.$transaction([
       this.prisma.deviceFunctionAction.findMany({
         skip: page * size,
@@ -217,5 +220,54 @@ export class DeviceFunctionActionsService {
     if (!exists) {
       throw new NotFoundException('Device function action not found');
     }
+  }
+
+  /**
+   * Idempotently creates at least one default action for each WRITE / READ_WRITE function
+   * when the device has no actions for that function yet.
+   *
+   * This keeps scenario-service "thin": it can just fetch actions and receive IDs.
+   */
+  private async ensureDefaultsForDevice(deviceId: number): Promise<void> {
+    const functions = await this.prisma.deviceFunction.findMany({
+      where: { deviceId, active: true },
+      select: {
+        id: true,
+        code: true,
+        functionType: true,
+        minValue: true,
+        maxValue: true,
+        actions: { where: { active: true }, select: { id: true } },
+      },
+    });
+    const toCreate = functions.filter(
+      (fn) =>
+        (fn.functionType === DeviceFunctionType.WRITE ||
+          fn.functionType === DeviceFunctionType.READ_WRITE) &&
+        (fn.actions?.length ?? 0) === 0,
+    );
+    if (toCreate.length === 0) return;
+
+    await this.prisma.$transaction(
+      toCreate.map((fn) => {
+        const isValue =
+          typeof fn.minValue === 'number' || typeof fn.maxValue === 'number';
+        return this.prisma.deviceFunctionAction.create({
+          data: {
+            code: fn.code,
+            deviceFunction: { connect: { id: fn.id } },
+            actionType: isValue ? ActionType.VALUE : ActionType.COMMAND,
+            payloadTemplate: null,
+            active: true,
+            translations: {
+              create: [
+                { locale: 'ru', name: fn.code, description: null },
+                { locale: 'en', name: fn.code, description: null },
+              ],
+            },
+          },
+        });
+      }),
+    );
   }
 }

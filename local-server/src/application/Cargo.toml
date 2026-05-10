@@ -19,3 +19,9 @@ thiserror   = { workspace = true }
 tracing     = { workspace = true }
 uuid        = { workspace = true }
 tokio       = { workspace = true }
+chrono      = { workspace = true }
+
+tokio-cron-scheduler = "0.11"
+dashmap              = "6"
+chrono-tz            = "0.10"
+reqwest              = { version = "0.12", features = ["json"] }

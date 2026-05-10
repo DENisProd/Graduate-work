@@ -576,7 +576,7 @@ export class ZigbeeService {
     });
   }
 
-  sendCommand(
+  sendCommandToFriendlyName(
     houseId: string,
     friendlyName: string,
     args: Record<string, unknown>,

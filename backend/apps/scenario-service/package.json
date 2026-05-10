@@ -30,6 +30,7 @@
     "@nestjs/schedule": "^6.1.1",
     "@nestjs/swagger": "^11.0.0",
     "@nestjs/websockets": "^11.1.18",
+    "cron": "^4.4.0",
     "dotenv": "^17.2.4",
     "mongoose": "^9.2.1",
     "mqtt": "^5.15.1",

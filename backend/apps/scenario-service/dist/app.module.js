@@ -22,6 +22,7 @@ const zigbee_module_1 = require("./zigbee/zigbee.module");
 const llm_module_1 = require("./llm/llm.module");
 const widget_dashboard_module_1 = require("./widget-dashboard/widget-dashboard.module");
 const scenario_engine_module_1 = require("./scenario-engine/scenario-engine.module");
+const dashboard_module_1 = require("./dashboard/dashboard.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -52,6 +53,7 @@ exports.AppModule = AppModule = __decorate([
             zigbee_module_1.ZigbeeModule,
             widget_dashboard_module_1.WidgetDashboardModule,
             scenario_engine_module_1.ScenarioEngineModule,
+            dashboard_module_1.DashboardModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

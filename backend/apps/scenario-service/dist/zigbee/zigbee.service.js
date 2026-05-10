@@ -433,7 +433,7 @@ let ZigbeeService = ZigbeeService_1 = class ZigbeeService {
             timestamp: created.timestamp,
         });
     }
-    sendCommand(houseId, friendlyName, args) {
+    sendCommandToFriendlyName(houseId, friendlyName, args) {
         return this.mqtt.sendDeviceCommand(houseId, friendlyName, args);
     }
     async getLatestStateByFriendlyName(friendlyName) {

@@ -1,32 +1,12 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { isValidObjectId } from 'mongoose';
-import { DeviceDataType } from '../common/schemas/enums';
+import { mapZigbeePayloadToDeviceDataInputs } from './ingestion/map-zigbee-payload-to-device-data';
 import { DeviceDataRepository } from './device-data.repository';
 import type {
   CreateDeviceDataInput,
   ListDeviceDataQuery,
+  DeviceDataSeriesQuery,
 } from './schemas/device-data.schema';
-
-function asNumber(v: unknown): number | undefined {
-  if (typeof v === 'number' && Number.isFinite(v)) return v;
-  if (typeof v === 'string' && v.trim() !== '') {
-    const n = Number(v);
-    if (Number.isFinite(n)) return n;
-  }
-  return undefined;
-}
-
-function asBoolean(v: unknown): boolean | undefined {
-  if (typeof v === 'boolean') return v;
-  if (typeof v === 'number')
-    return v === 1 ? true : v === 0 ? false : undefined;
-  if (typeof v === 'string') {
-    const s = v.trim().toLowerCase();
-    if (['true', '1', 'yes', 'on'].includes(s)) return true;
-    if (['false', '0', 'no', 'off'].includes(s)) return false;
-  }
-  return undefined;
-}
 
 @Injectable()
 export class DeviceDataService {
@@ -42,6 +22,20 @@ export class DeviceDataService {
     return this.repository.findMany(query);
   }
 
+  async series(query: DeviceDataSeriesQuery) {
+    const capabilities =
+      query.capabilities
+        ?.split(',')
+        .map((s) => s.trim())
+        .filter(Boolean) ?? undefined;
+    return this.repository.series({
+      deviceId: query.deviceId,
+      range: query.range,
+      capabilities,
+      to: query.to,
+    });
+  }
+
   async findById(id: string) {
     const row = await this.repository.findById(id);
     if (!row) throw new NotFoundException(`DeviceData ${id} not found`);
@@ -55,6 +49,7 @@ export class DeviceDataService {
 
   /**
    * Разложить payload zigbee2mqtt в строки DeviceData (для GET /device-data).
+   * Правила: `device-data/ingestion/zigbee-payload-device-data.rules.ts`.
    */
   async ingestFromZigbeePayload(
     physicalDeviceId: string,
@@ -62,68 +57,11 @@ export class DeviceDataService {
     at: Date,
   ): Promise<void> {
     if (!isValidObjectId(physicalDeviceId)) return;
-    const rows: CreateDeviceDataInput[] = [];
-
-    const addNum = (
-      capability: string,
-      attribute: string,
-      v: unknown,
-      unit?: string,
-    ) => {
-      const n = asNumber(v);
-      if (n === undefined) return;
-      const isFloat = !Number.isInteger(n);
-      rows.push({
-        deviceId: physicalDeviceId,
-        capability,
-        attribute,
-        type: isFloat ? DeviceDataType.FLOAT : DeviceDataType.NUMBER,
-        value: n,
-        ...(unit ? { unit } : {}),
-        timestamp: at,
-      });
-    };
-
-    const addBool = (capability: string, attribute: string, v: unknown) => {
-      const b = asBoolean(v);
-      if (b === undefined) return;
-      rows.push({
-        deviceId: physicalDeviceId,
-        capability,
-        attribute,
-        type: DeviceDataType.BOOLEAN,
-        value: b,
-        timestamp: at,
-      });
-    };
-
-    addNum('battery', 'level', payload.battery, '%');
-    addBool('battery', 'low', payload.battery_low);
-    addNum('zigbee', 'linkquality', payload.linkquality);
-    addBool('occupancy', 'motion', payload.occupancy);
-    addBool('tamper', 'active', payload.tamper);
-    addNum('power', 'voltage', payload.voltage, 'mV');
-    addNum('climate', 'temperature', payload.temperature, '°C');
-    addNum('climate', 'humidity', payload.humidity, '%');
-    addNum('light', 'brightness', payload.brightness);
-    addNum('climate', 'pressure', payload.pressure, 'hPa');
-    addNum('illuminance', 'value', payload.illuminance, 'lx');
-
-    const state = payload.state;
-    if (typeof state === 'string' && state.length > 0) {
-      rows.push({
-        deviceId: physicalDeviceId,
-        capability: 'switch',
-        attribute: 'state',
-        type: DeviceDataType.STRING,
-        value: state,
-        timestamp: at,
-      });
-    }
-
-    addBool('contact', 'open', payload.contact);
-    addBool('water_leak', 'detected', payload.water_leak);
-
+    const rows = mapZigbeePayloadToDeviceDataInputs(
+      physicalDeviceId,
+      payload,
+      at,
+    );
     if (rows.length === 0) return;
     try {
       await Promise.all(rows.map((r) => this.repository.create(r)));

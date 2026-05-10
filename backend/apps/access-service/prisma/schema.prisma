@@ -298,7 +298,7 @@ model EffectivePermission {
 
 model HouseInvitation {
   id                 String            @id @default(uuid())
-  email              String?           @db.VarChar(255)
+  note               String?           @db.VarChar(255)
   tokenHash          String            @unique @map("token_hash")
   /// Явный набор доменных прав (HousePermission); используется, если roleId не задан
   invitedPermissions HousePermission[] @default([]) @map("invited_permissions")

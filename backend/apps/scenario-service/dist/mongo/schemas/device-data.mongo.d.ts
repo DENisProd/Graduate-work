@@ -1,9 +1,8 @@
 import type { HydratedDocument } from 'mongoose';
-import { Types } from 'mongoose';
 import { DeviceDataType } from '../../common/schemas/enums';
 export declare const DEVICE_DATA_MODEL = "DeviceData";
 export declare class DeviceDataModel {
-    deviceId: Types.ObjectId;
+    deviceId: string;
     capability: string;
     attribute?: string | null;
     type: DeviceDataType;
@@ -16,16 +15,16 @@ export type DeviceDataDocument = HydratedDocument<DeviceDataModel>;
 export declare const DeviceDataSchema: import("mongoose").Schema<DeviceDataModel, import("mongoose").Model<DeviceDataModel, any, any, any, any, any, DeviceDataModel>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, DeviceDataModel, import("mongoose").Document<unknown, {}, DeviceDataModel, {
     id: string;
 }, import("mongoose").DefaultSchemaOptions> & Omit<DeviceDataModel & {
-    _id: Types.ObjectId;
+    _id: import("mongoose").Types.ObjectId;
 } & {
     __v: number;
 }, "id"> & {
     id: string;
 }, {
-    deviceId?: import("mongoose").SchemaDefinitionProperty<Types.ObjectId, DeviceDataModel, import("mongoose").Document<unknown, {}, DeviceDataModel, {
+    deviceId?: import("mongoose").SchemaDefinitionProperty<string, DeviceDataModel, import("mongoose").Document<unknown, {}, DeviceDataModel, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<DeviceDataModel & {
-        _id: Types.ObjectId;
+        _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
     }, "id"> & {
@@ -34,7 +33,7 @@ export declare const DeviceDataSchema: import("mongoose").Schema<DeviceDataModel
     capability?: import("mongoose").SchemaDefinitionProperty<string, DeviceDataModel, import("mongoose").Document<unknown, {}, DeviceDataModel, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<DeviceDataModel & {
-        _id: Types.ObjectId;
+        _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
     }, "id"> & {
@@ -43,7 +42,7 @@ export declare const DeviceDataSchema: import("mongoose").Schema<DeviceDataModel
     attribute?: import("mongoose").SchemaDefinitionProperty<string | null | undefined, DeviceDataModel, import("mongoose").Document<unknown, {}, DeviceDataModel, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<DeviceDataModel & {
-        _id: Types.ObjectId;
+        _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
     }, "id"> & {
@@ -52,7 +51,7 @@ export declare const DeviceDataSchema: import("mongoose").Schema<DeviceDataModel
     type?: import("mongoose").SchemaDefinitionProperty<DeviceDataType, DeviceDataModel, import("mongoose").Document<unknown, {}, DeviceDataModel, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<DeviceDataModel & {
-        _id: Types.ObjectId;
+        _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
     }, "id"> & {
@@ -61,7 +60,7 @@ export declare const DeviceDataSchema: import("mongoose").Schema<DeviceDataModel
     value?: import("mongoose").SchemaDefinitionProperty<unknown, DeviceDataModel, import("mongoose").Document<unknown, {}, DeviceDataModel, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<DeviceDataModel & {
-        _id: Types.ObjectId;
+        _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
     }, "id"> & {
@@ -70,7 +69,7 @@ export declare const DeviceDataSchema: import("mongoose").Schema<DeviceDataModel
     unit?: import("mongoose").SchemaDefinitionProperty<string | null | undefined, DeviceDataModel, import("mongoose").Document<unknown, {}, DeviceDataModel, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<DeviceDataModel & {
-        _id: Types.ObjectId;
+        _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
     }, "id"> & {
@@ -79,7 +78,7 @@ export declare const DeviceDataSchema: import("mongoose").Schema<DeviceDataModel
     quality?: import("mongoose").SchemaDefinitionProperty<number | null | undefined, DeviceDataModel, import("mongoose").Document<unknown, {}, DeviceDataModel, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<DeviceDataModel & {
-        _id: Types.ObjectId;
+        _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
     }, "id"> & {
@@ -88,7 +87,7 @@ export declare const DeviceDataSchema: import("mongoose").Schema<DeviceDataModel
     timestamp?: import("mongoose").SchemaDefinitionProperty<Date, DeviceDataModel, import("mongoose").Document<unknown, {}, DeviceDataModel, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<DeviceDataModel & {
-        _id: Types.ObjectId;
+        _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
     }, "id"> & {

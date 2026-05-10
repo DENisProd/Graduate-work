@@ -2,6 +2,11 @@ import { DeviceDataService } from './device-data.service';
 export declare class DeviceDataController {
     private readonly service;
     constructor(service: DeviceDataService);
+    series(query: unknown): Promise<{
+        from: Date;
+        to: Date;
+        series: import("./device-data.repository").DeviceDataSeries[];
+    }>;
     findMany(query: unknown): Promise<{
         items: (import("../mongo/schemas/device-data.mongo").DeviceDataModel & {
             id: string;

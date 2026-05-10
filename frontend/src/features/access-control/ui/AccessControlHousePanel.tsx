@@ -14,6 +14,7 @@ import {
 import type {
   CreateAccessRightDto,
   HouseAccessRightResponse,
+  HouseInvitationRequest,
   HouseInvitationResponse,
   HouseMemberResponse,
   HouseRoomRequest,
@@ -40,7 +41,7 @@ interface AccessControlHousePanelProps {
 }
 
 export function AccessControlHousePanel({ houseId, ownerId, onClose }: AccessControlHousePanelProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [house, setHouse] = useState<HouseResponse | null>(null);
   const [rooms, setRooms] = useState<HouseRoomResponse[]>([]);
   const [members, setMembers] = useState<HouseMemberResponse[]>([]);
@@ -111,9 +112,7 @@ export function AccessControlHousePanel({ houseId, ownerId, onClose }: AccessCon
     }
   }, [houseId, t]);
 
-  const createInvitation = async (
-    data: { email: string; roleId?: string; expiresAt?: string }
-  ) => {
+  const createInvitation = async (data: HouseInvitationRequest) => {
     if (!ownerId && !house?.ownerId) throw new Error('User not set');
     const userId = ownerId ?? house?.ownerId!;
     const invitation = await houseInvitationsApi.create(houseId, data, userId);
@@ -255,7 +254,11 @@ export function AccessControlHousePanel({ houseId, ownerId, onClose }: AccessCon
                     className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 shadow-md"
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-foreground">{inv.email}</p>
+                      {inv.note && (
+                        <p className="text-sm font-medium text-foreground">
+                          {inv.note}
+                        </p>
+                      )}
                       {inv.expiresAt && (
                         <p className="mt-0.5 text-sm text-muted-foreground">
                           {t('admin.accessControl.expiresAt')}: {new Date(inv.expiresAt).toLocaleString()}
@@ -264,11 +267,20 @@ export function AccessControlHousePanel({ houseId, ownerId, onClose }: AccessCon
                       {inv.token && (
                         <p className="mt-1 text-xs text-muted-foreground font-mono">{inv.token.slice(0, 12)}…</p>
                       )}
-                      <p className="mt-1 text-xs text-muted-foreground">ID: {inv.id}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                        {inv.status}
+                        {(() => {
+                          const ru = locale === 'ru';
+                          switch (inv.status) {
+                            case 'PENDING': return ru ? 'Ожидает' : 'Pending';
+                            case 'ACCEPTED': return ru ? 'Принято' : 'Accepted';
+                            case 'DECLINED': return ru ? 'Отклонено' : 'Declined';
+                            case 'REVOKED': return ru ? 'Отозвано' : 'Revoked';
+                            case 'EXPIRED': return ru ? 'Истекло' : 'Expired';
+                            default: return inv.status;
+                          }
+                        })()}
                       </span>
                       {(inv.status === 'PENDING') && (
                         <AppButton

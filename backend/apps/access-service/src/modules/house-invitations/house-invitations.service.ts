@@ -43,17 +43,6 @@ export class HouseInvitationsService {
     await this.houseMembersService.findByUserIdAndHouseId(invitedByUserId, dto.houseId);
 
     const now = new Date();
-    const activeSame = await this.prisma.houseInvitation.findMany({
-      where: {
-        email: dto.email,
-        status: InvitationStatus.PENDING,
-        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
-      },
-      include: { house: true },
-    });
-    if (activeSame.some((i: HouseInvitation) => i.houseId === dto.houseId)) {
-      throw new DuplicateResourceException('Приглашение', 'email и houseId', `${dto.email}, ${dto.houseId}`);
-    }
 
     const tokenHash = randomUUID();
     const expiresAt = dto.expiresAt ?? new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -82,7 +71,7 @@ export class HouseInvitationsService {
     return this.prisma.houseInvitation.create({
       data: {
         houseId: dto.houseId,
-        email: dto.email,
+        note: dto.note?.trim() || null,
         tokenHash,
         roleId: dto.roleId ?? null,
         invitedPermissions,

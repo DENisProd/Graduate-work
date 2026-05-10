@@ -14,6 +14,19 @@ interface RoomsTabProps {
 }
 
 export function RoomsTab({ houseIdParam, onRoomPlanner, isAdmin }: RoomsTabProps) {
+  if (isAdmin) {
+    return <AdminRoomsTab houseIdParam={houseIdParam} onRoomPlanner={onRoomPlanner} />;
+  }
+
+  return <RegularRoomsTab houseIdParam={houseIdParam} onRoomPlanner={onRoomPlanner} />;
+}
+
+interface RoomsTabVariantProps {
+  houseIdParam: string | undefined;
+  onRoomPlanner: () => void;
+}
+
+function AdminRoomsTab({ houseIdParam, onRoomPlanner }: RoomsTabVariantProps) {
   const { t } = useTranslation();
   const rooms = useAccessControlStore((s) => s.rooms);
   const setRoomModalOpen = useAccessControlStore((s) => s.setRoomModalOpen);
@@ -44,32 +57,48 @@ export function RoomsTab({ houseIdParam, onRoomPlanner, isAdmin }: RoomsTabProps
         )}
       </div>
 
-      {isAdmin ? (
-          <DataTable<HouseRoomResponse>
-            data={rooms}
-            columns={columns}
-          />
-      ) : rooms.length > 0 && (
+      <DataTable<HouseRoomResponse> data={rooms} columns={columns} />
+    </div>
+  );
+}
+
+function RegularRoomsTab({ houseIdParam, onRoomPlanner }: RoomsTabVariantProps) {
+  const { t } = useTranslation();
+  const rooms = useAccessControlStore((s) => s.rooms);
+  const setRoomModalOpen = useAccessControlStore((s) => s.setRoomModalOpen);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <AppButton onClick={() => setRoomModalOpen(true)}>
+          {t('admin.create')} — {t('admin.accessControl.houseRooms')}
+        </AppButton>
+        {houseIdParam && (
+          <AppButton variant="secondary" onClick={onRoomPlanner}>
+            {t('admin.roomPlanner.title')}
+          </AppButton>
+        )}
+      </div>
+
+      {rooms.length > 0 && (
         <div className="grid gap-3 md:grid-cols-2">
           {rooms.map((room) => (
             <div
               key={room.id}
-              className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-md"
+              className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 shadow-md"
             >
               <div
                 role="img"
                 aria-label={room.name ?? room.externalId ?? ''}
-                className="relative aspect-[16/9] w-full overflow-hidden rounded-lg border border-border bg-gradient-to-br from-muted to-muted/40"
+                className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-border bg-gradient-to-br from-muted to-muted/40"
               >
                 <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                  <DoorOpen className="h-7 w-7" />
+                  <DoorOpen className="h-5 w-5" />
                 </div>
               </div>
-              <h4 className="font-medium text-foreground">{room.name ?? room.externalId ?? '—'}</h4>
-              {room.houseName && (
-                <p className="mt-0.5 text-sm text-muted-foreground">{room.houseName}</p>
-              )}
-              <p className="mt-2 text-xs text-muted-foreground">ID: {room.id}</p>
+              <div className="min-w-0">
+                <h4 className="truncate font-medium text-foreground">{room.name ?? room.externalId ?? '—'}</h4>
+              </div>
             </div>
           ))}
         </div>

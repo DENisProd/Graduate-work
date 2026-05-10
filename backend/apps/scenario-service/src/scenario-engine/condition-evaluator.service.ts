@@ -141,5 +141,7 @@ export class ConditionEvaluatorService {
       case 'NOT':
         return !(await this.evaluate(condition.item, ctx));
     }
+
+    return false;
   }
 }

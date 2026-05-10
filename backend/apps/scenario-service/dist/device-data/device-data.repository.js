@@ -18,6 +18,7 @@ const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const pagination_1 = require("../common/schemas/pagination");
 const device_data_mongo_1 = require("../mongo/schemas/device-data.mongo");
+const enums_1 = require("../common/schemas/enums");
 let DeviceDataRepository = class DeviceDataRepository {
     model;
     constructor(model) {
@@ -39,9 +40,8 @@ let DeviceDataRepository = class DeviceDataRepository {
     }
     async findMany(params) {
         const filter = {};
-        if (params.deviceId && (0, mongoose_2.isValidObjectId)(params.deviceId)) {
-            filter.deviceId = new mongoose_2.Types.ObjectId(params.deviceId);
-        }
+        if (params.deviceId)
+            filter.deviceId = params.deviceId;
         if (params.capability)
             filter.capability = params.capability;
         if (params.attribute)
@@ -66,6 +66,216 @@ let DeviceDataRepository = class DeviceDataRepository {
             this.model.countDocuments(filter).exec(),
         ]);
         return { items: items.map((item) => this.map(item)), total };
+    }
+    bucketForRange(range) {
+        switch (range) {
+            case '1m':
+                return { unit: 'minute', binSize: 1 };
+            case '1h':
+                return { unit: 'minute', binSize: 1 };
+            case '6h':
+                return { unit: 'minute', binSize: 5 };
+            case '24h':
+                return { unit: 'minute', binSize: 15 };
+            case '7d':
+            default:
+                return { unit: 'hour', binSize: 1 };
+        }
+    }
+    booleanBucketForRange(range) {
+        switch (range) {
+            case '1m':
+            case '1h':
+            case '6h':
+            case '24h':
+                return { unit: 'minute', binSize: 1 };
+            case '7d':
+            default:
+                return { unit: 'minute', binSize: 15 };
+        }
+    }
+    msForRange(range) {
+        switch (range) {
+            case '1m':
+                return 60_000;
+            case '1h':
+                return 3_600_000;
+            case '6h':
+                return 21_600_000;
+            case '24h':
+                return 86_400_000;
+            case '7d':
+            default:
+                return 604_800_000;
+        }
+    }
+    async series(params) {
+        const to = params.to ?? new Date();
+        const from = new Date(to.getTime() - this.msForRange(params.range));
+        const numericBucket = this.bucketForRange(params.range);
+        const boolBucket = this.booleanBucketForRange(params.range);
+        const match = {
+            deviceId: params.deviceId,
+            timestamp: { $gte: from, $lte: to },
+        };
+        if (params.capabilities && params.capabilities.length > 0) {
+            match.capability = { $in: params.capabilities };
+        }
+        const numericValue = {
+            $switch: {
+                branches: [
+                    {
+                        case: { $eq: ['$type', enums_1.DeviceDataType.BOOLEAN] },
+                        then: { $cond: [{ $eq: ['$valueRaw', true] }, 1, 0] },
+                    },
+                    {
+                        case: { $in: ['$type', [enums_1.DeviceDataType.NUMBER, enums_1.DeviceDataType.FLOAT]] },
+                        then: {
+                            $let: {
+                                vars: {
+                                    v: '$valueRaw',
+                                    v2: '$valueRaw.value',
+                                },
+                                in: {
+                                    $cond: [
+                                        { $in: [{ $type: '$$v' }, ['int', 'long', 'double', 'decimal']] },
+                                        '$$v',
+                                        {
+                                            $cond: [
+                                                { $in: [{ $type: '$$v2' }, ['int', 'long', 'double', 'decimal']] },
+                                                '$$v2',
+                                                {
+                                                    $convert: {
+                                                        input: {
+                                                            $cond: [
+                                                                { $eq: [{ $type: '$$v2' }, 'string'] },
+                                                                '$$v2',
+                                                                { $toString: '$$v' },
+                                                            ],
+                                                        },
+                                                        to: 'double',
+                                                        onError: null,
+                                                        onNull: null,
+                                                    },
+                                                },
+                                            ],
+                                        },
+                                    ],
+                                },
+                            },
+                        },
+                    },
+                    {
+                        case: { $eq: ['$type', enums_1.DeviceDataType.STRING] },
+                        then: {
+                            $let: {
+                                vars: { s: { $toLower: { $toString: '$valueRaw' } } },
+                                in: {
+                                    $cond: [
+                                        { $in: ['$$s', ['on', 'true', '1', 'yes']] },
+                                        1,
+                                        {
+                                            $cond: [
+                                                { $in: ['$$s', ['off', 'false', '0', 'no']] },
+                                                0,
+                                                null,
+                                            ],
+                                        },
+                                    ],
+                                },
+                            },
+                        },
+                    },
+                ],
+                default: null,
+            },
+        };
+        const bucketTs = {
+            $cond: {
+                if: { $eq: ['$type', enums_1.DeviceDataType.BOOLEAN] },
+                then: {
+                    $dateTrunc: {
+                        date: '$timestamp',
+                        unit: boolBucket.unit,
+                        binSize: boolBucket.binSize,
+                    },
+                },
+                else: {
+                    $dateTrunc: {
+                        date: '$timestamp',
+                        unit: numericBucket.unit,
+                        binSize: numericBucket.binSize,
+                    },
+                },
+            },
+        };
+        const rows = await this.model
+            .aggregate([
+            { $match: match },
+            {
+                $project: {
+                    capability: 1,
+                    attribute: { $ifNull: ['$attribute', null] },
+                    unit: { $ifNull: ['$unit', null] },
+                    type: 1,
+                    valueRaw: '$value',
+                    timestamp: 1,
+                },
+            },
+            {
+                $addFields: {
+                    numeric: numericValue,
+                    bucket: bucketTs,
+                },
+            },
+            { $match: { numeric: { $ne: null } } },
+            { $sort: { timestamp: 1 } },
+            {
+                $group: {
+                    _id: {
+                        capability: '$capability',
+                        attribute: '$attribute',
+                        bucket: '$bucket',
+                    },
+                    unit: { $first: '$unit' },
+                    last: { $last: '$numeric' },
+                    avg: { $avg: '$numeric' },
+                    types: { $addToSet: '$type' },
+                },
+            },
+            {
+                $project: {
+                    capability: '$_id.capability',
+                    attribute: '$_id.attribute',
+                    ts: '$_id.bucket',
+                    unit: 1,
+                    value: {
+                        $cond: [
+                            { $in: [enums_1.DeviceDataType.BOOLEAN, '$types'] },
+                            '$last',
+                            '$avg',
+                        ],
+                    },
+                },
+            },
+            { $sort: { ts: 1 } },
+        ])
+            .exec();
+        const map = new Map();
+        for (const r of rows) {
+            const key = `${r.capability}:${r.attribute ?? ''}`;
+            const existing = map.get(key) ??
+                {
+                    key,
+                    capability: r.capability,
+                    attribute: r.attribute ?? null,
+                    unit: r.unit ?? null,
+                    points: [],
+                };
+            existing.points.push({ ts: r.ts, value: r.value });
+            map.set(key, existing);
+        }
+        return { from, to, series: [...map.values()] };
     }
     async delete(id) {
         if (!(0, mongoose_2.isValidObjectId)(id)) {

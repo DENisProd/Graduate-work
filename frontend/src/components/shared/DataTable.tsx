@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { AdminTableShell } from '@/components/shared/AdminTableShell';
 
 export interface Column<T> {
   key: string;
@@ -17,12 +18,16 @@ export interface Column<T> {
 interface DataTableProps<T> {
   data: T[];
   columns: Column<T>[];
+  title?: ReactNode;
+  subtitle?: ReactNode;
   searchPlaceholder?: string;
   searchValue?: string;
   onSearchChange?: (value: string) => void;
   filters?: ReactNode;
   actions?: (item: T) => ReactNode;
   onRowClick?: (item: T) => void;
+  getRowClassName?: (item: T) => string | undefined;
+  isRowSelected?: (item: T) => boolean;
   pagination?: {
     page: number;
     totalPages: number;
@@ -37,12 +42,16 @@ interface DataTableProps<T> {
 export function DataTable<T extends { id: number | string }>({
   data,
   columns,
+  title,
+  subtitle,
   searchPlaceholder,
   searchValue = '',
   onSearchChange,
   filters,
   actions,
   onRowClick,
+  getRowClassName,
+  isRowSelected,
   pagination,
   loading = false,
 }: DataTableProps<T>) {
@@ -58,10 +67,12 @@ export function DataTable<T extends { id: number | string }>({
 
   return (
     <div className="space-y-4">
-      {(onSearchChange || filters) && (
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          {onSearchChange && (
-            <div className="relative max-w-sm">
+      <AdminTableShell
+        title={title}
+        subtitle={subtitle}
+        leftSlot={
+          onSearchChange ? (
+            <div className="relative w-full md:max-w-sm">
               <svg
                 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                 fill="none"
@@ -77,32 +88,30 @@ export function DataTable<T extends { id: number | string }>({
               </svg>
               <Input
                 aria-label={defaultSearchPlaceholder}
-                className="pl-9"
+                className="h-9 bg-background/60 pl-9 shadow-none"
                 name="search"
                 placeholder={defaultSearchPlaceholder}
                 value={searchValue}
                 onChange={(e) => onSearchChange(e.target.value)}
               />
             </div>
-          )}
-          {filters && <div className="flex gap-2">{filters}</div>}
-        </div>
-      )}
-
-      <div className="overflow-x-auto rounded-lg border border-border">
+          ) : null
+        }
+        rightSlot={filters}
+      >
         <Table>
           <TableHeader>
             <TableRow>
               {columns.map((column) => (
                 <TableHead
                   key={column.key}
-                  className="px-4"
+                  className="px-5 py-3 text-xs font-medium text-muted-foreground"
                 >
                   {column.label}
                 </TableHead>
               ))}
               {actions && (
-                <TableHead className="px-4 text-right">
+                <TableHead className="px-5 py-3 text-right text-xs font-medium text-muted-foreground">
                   {t('admin.actions')}
                 </TableHead>
               )}
@@ -113,7 +122,7 @@ export function DataTable<T extends { id: number | string }>({
               <TableRow>
                 <TableCell
                   colSpan={columns.length + (actions ? 1 : 0)}
-                  className="px-4 py-12 text-center text-sm text-muted-foreground"
+                  className="px-5 py-14 text-center text-sm text-muted-foreground"
                 >
                   <div className="flex flex-col items-center justify-center gap-2">
                     <svg
@@ -139,16 +148,24 @@ export function DataTable<T extends { id: number | string }>({
                 <TableRow
                   key={item.id}
                   onClick={onRowClick ? () => onRowClick(item) : undefined}
-                  className={onRowClick ? 'cursor-pointer hover:bg-muted/50' : undefined}
+                  className={[
+                    onRowClick
+                      ? 'cursor-pointer transition-colors hover:bg-muted/35'
+                      : undefined,
+                    getRowClassName?.(item),
+                  ]
+                    .filter(Boolean)
+                    .join(' ') || undefined}
+                  data-state={isRowSelected?.(item) ? 'selected' : undefined}
                 >
                   {columns.map((column) => (
-                    <TableCell key={column.key} className="px-4">
+                    <TableCell key={column.key} className="px-5 py-3.5 align-middle">
                       {column.render ? column.render(item) : (item as Record<string, ReactNode>)[column.key]}
                     </TableCell>
                   ))}
                   {actions && (
                     <TableCell
-                      className="px-4 text-right"
+                      className="px-5 py-3.5 text-right align-middle"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="flex justify-end gap-2">{actions(item)}</div>
@@ -159,7 +176,7 @@ export function DataTable<T extends { id: number | string }>({
             )}
           </TableBody>
         </Table>
-      </div>
+      </AdminTableShell>
 
       {pagination && pagination.totalPages > 1 && (
         <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
@@ -175,18 +192,20 @@ export function DataTable<T extends { id: number | string }>({
               type="button"
               variant="outline"
               size="sm"
+              className="h-9 rounded-full"
               disabled={pagination.page === 0}
               onClick={() => pagination.onPageChange(pagination.page - 1)}
             >
               {t('admin.previous')}
             </Button>
-            <span className="px-4 text-sm">
+            <span className="rounded-full bg-muted/40 px-3 py-1 text-xs text-foreground">
               {t('admin.page')} {pagination.page + 1} / {pagination.totalPages}
             </span>
             <Button
               type="button"
               variant="outline"
               size="sm"
+              className="h-9 rounded-full"
               disabled={pagination.page >= pagination.totalPages - 1}
               onClick={() => pagination.onPageChange(pagination.page + 1)}
             >
@@ -197,7 +216,7 @@ export function DataTable<T extends { id: number | string }>({
                 value={pagination.itemsPerPage.toString()}
                 onValueChange={(value) => pagination.onItemsPerPageChange?.(parseInt(value))}
               >
-                <SelectTrigger size="sm" className="w-24">
+                <SelectTrigger size="sm" className="h-9 w-24 rounded-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

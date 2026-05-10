@@ -4,6 +4,7 @@ export declare class DeviceDataGeneratorService {
     private readonly deviceDataService;
     private readonly physicalDeviceService;
     private readonly logger;
+    private enabled;
     constructor(deviceDataService: DeviceDataService, physicalDeviceService: PhysicalDeviceService);
     generateRandomDataForDevices(): Promise<void>;
     private getAllDevices;

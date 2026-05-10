@@ -1,8 +1,17 @@
 use std::sync::Arc;
 
 use axum::Router;
-use local_server_application::ports::{DeviceRepository, MqttClient, PhysicalDeviceRepository, ZigbeeRepository};
+use axum::http::{header, HeaderName, HeaderValue, Method};
+use local_server_application::{
+    ports::{
+        DeviceRepository, MqttClient, PhysicalDeviceRepository, ZigbeeRepository,
+        scenario_repository::ScenarioExecutionRepository,
+    },
+    services::ScenarioEngine,
+};
+use local_server_application::ports::ScenarioRepository;
 use serde::Serialize;
+use tower_http::cors::{AllowOrigin, CorsLayer};
 use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -13,6 +22,8 @@ pub mod device_categories;
 pub mod devices;
 pub mod error;
 pub mod physical_devices;
+pub mod scenario_executions;
+pub mod scenarios;
 pub mod system;
 pub mod zigbee;
 
@@ -97,6 +108,7 @@ struct ApiDoc;
 ///
 /// To add the WebSocket layer, call `crate::websocket::apply_to_router` on
 /// the result.  Swagger UI: `GET /docs`.
+#[allow(clippy::too_many_arguments)]
 pub fn router(
     http_state: HttpAppState,
     device_repo: Arc<dyn DeviceRepository>,
@@ -104,7 +116,11 @@ pub fn router(
     zigbee_repo: Arc<dyn ZigbeeRepository>,
     mqtt_client: Option<Arc<dyn MqttClient>>,
     mqtt_prefix: String,
+    scenario_repo: Arc<dyn ScenarioRepository>,
+    scenario_exec_repo: Arc<dyn ScenarioExecutionRepository>,
+    scenario_engine: Arc<ScenarioEngine>,
 ) -> Router {
+    let cors = build_cors_layer();
     Router::new()
         .nest(
             "/api/v1",
@@ -113,8 +129,71 @@ pub fn router(
                 .merge(devices::router(device_repo.clone()))
                 .merge(device_categories::router(device_repo))
                 .merge(physical_devices::router(phys_repo))
-                .merge(zigbee::router(zigbee_repo, mqtt_client, mqtt_prefix)),
+                .merge(zigbee::router(zigbee_repo, mqtt_client, mqtt_prefix))
+                .merge(scenarios::router(
+                    scenario_repo,
+                    scenario_exec_repo.clone(),
+                    scenario_engine.clone(),
+                ))
+                .merge(scenario_executions::router(scenario_exec_repo, scenario_engine)),
         )
         .merge(SwaggerUi::new("/docs").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .layer(TraceLayer::new_for_http())
+        .layer(cors)
+}
+
+fn cors_origins_from_env() -> Vec<String> {
+    let raw = std::env::var("LOCAL_SERVER_CORS_ORIGINS")
+        .or_else(|_| std::env::var("FRONTEND_ORIGIN"))
+        .unwrap_or_default();
+
+    let parts: Vec<String> = raw
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+
+    if parts.is_empty() {
+        vec![
+            "http://localhost:5173".to_string(),
+            "http://127.0.0.1:5173".to_string(),
+            "http://localhost:3000".to_string(),
+            "http://127.0.0.1:3000".to_string(),
+        ]
+    } else {
+        parts
+    }
+}
+
+fn build_cors_layer() -> CorsLayer {
+    let origins = cors_origins_from_env();
+
+    let mut layer = CorsLayer::new()
+        .allow_methods([
+            Method::GET,
+            Method::POST,
+            Method::PUT,
+            Method::PATCH,
+            Method::DELETE,
+            Method::OPTIONS,
+        ])
+        .allow_headers([
+            header::CONTENT_TYPE,
+            header::ACCEPT,
+            header::AUTHORIZATION,
+            HeaderName::from_static("x-user-id"),
+            HeaderName::from_static("x-requested-with"),
+        ]);
+
+    if origins.iter().any(|o| o == "*") {
+        layer = layer.allow_origin(tower_http::cors::Any);
+    } else {
+        let values = origins
+            .into_iter()
+            .filter_map(|o| HeaderValue::from_str(&o).ok())
+            .collect::<Vec<_>>();
+        layer = layer.allow_origin(AllowOrigin::list(values));
+    }
+
+    layer
 }

@@ -1,20 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Plus, Pencil, Trash2, User } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { AppButton } from '@/components/ui/app-button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -32,18 +24,20 @@ import {
 } from '@/components/ui/select';
 import { useTranslation } from '@/hooks';
 import { useToast } from '@/components/shared';
-import { ApiError, houseRolesApi, housesApi } from '@/lib/api-client';
+import { ApiError, houseMembersApi, houseRolesApi, housesApi } from '@/lib/api-client';
 import type {
   CreatePolicyRequestDto,
   CreateResourceRequestDto,
   HousePolicyResponse,
   HouseRoleCreateRequest,
   HouseRoleResponse,
-  HouseResourceTreeNode,
   RoleMemberResponse,
 } from '@/types/api';
 import { CreateRoleModal } from '../../modals/CreateRoleModal';
 import { EditRoleModal } from '../../modals/EditRoleModal';
+import { flattenResources, type TreeNodeWithMeta } from './roles/roles-helpers';
+import { RolesTable } from './roles/RolesTable';
+import { RoleDetailsPanel } from './roles/RoleDetailsPanel';
 
 interface RolesTabProps {
   houseId: string | null;
@@ -52,7 +46,6 @@ interface RolesTabProps {
   canEditRoles?: boolean;
 }
 
-const SKELETON_ROWS = 5;
 const RESOURCE_TYPES: CreateResourceRequestDto['type'][] = [
   'ROOM',
   'DEVICE',
@@ -78,62 +71,16 @@ const SUBJECT_LABELS: Record<CreatePolicyRequestDto['subjectType'], string> = {
   USER: 'Для пользователя',
 };
 
-type TreeNodeWithMeta = HouseResourceTreeNode & {
-  name?: string;
-  externalId?: string;
-};
-
-function flattenResources(
-  nodes: TreeNodeWithMeta[],
-  parentPath = ''
-): Array<{ id: string; type: string; name?: string; path: string }> {
-  const result: Array<{ id: string; type: string; name?: string; path: string }> = [];
-  nodes.forEach((node) => {
-    const id = String(node.id);
-    const type = typeof node.type === 'string' ? node.type : 'RESOURCE';
-    const label = node.name ?? node.externalId ?? type;
-    const path = parentPath ? `${parentPath} / ${label}` : label;
-    result.push({ id, type, name: node.name, path });
-    if (Array.isArray(node.children) && node.children.length > 0) {
-      result.push(...flattenResources(node.children as TreeNodeWithMeta[], path));
-    }
-  });
-  return result;
-}
-
-function RolesTableSkeleton() {
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead />
-          <TableHead />
-          <TableHead />
-          <TableHead />
-          <TableHead />
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {Array.from({ length: SKELETON_ROWS }).map((_, i) => (
-          <TableRow key={i}>
-            <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-            <TableCell><Skeleton className="h-5 w-12" /></TableCell>
-            <TableCell><Skeleton className="h-5 w-10" /></TableCell>
-            <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-            <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  );
-}
-
 export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabProps) {
   const { t } = useTranslation();
   const { showToast } = useToast();
   const [roles, setRoles] = useState<HouseRoleResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [roleMemberCounts, setRoleMemberCounts] = useState<Record<string, number>>({});
+  const [roleMemberPreviews, setRoleMemberPreviews] = useState<
+    Record<string, Array<{ id: string; name?: string; avatarUrl?: string }>>
+  >({});
   const [createRoleModalOpen, setCreateRoleModalOpen] = useState(false);
   const [editRole, setEditRole] = useState<HouseRoleResponse | null>(null);
   const [deleteRole, setDeleteRole] = useState<HouseRoleResponse | null>(null);
@@ -186,12 +133,68 @@ export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabPr
     return () => controller.abort();
   }, [activeTab, loadRoles]);
 
+  const loadRoleMemberCounts = useCallback(
+    async (signal?: AbortSignal) => {
+      if (!houseId) return;
+      try {
+        const members = await houseMembersApi.getByHouseId(houseId);
+        if (signal?.aborted) return;
+        const counts: Record<string, number> = {};
+        const previews: Record<string, Array<{ id: string; name?: string; avatarUrl?: string }>> = {};
+        const data = members as unknown;
+        const items =
+          Array.isArray(data)
+            ? data
+            : typeof data === 'object' && data !== null && 'content' in data
+              ? (data as { content?: unknown }).content
+              : undefined;
+        if (!Array.isArray(items)) {
+          setRoleMemberCounts({});
+          setRoleMemberPreviews({});
+          return;
+        }
+        for (const m of items as Array<Record<string, unknown>>) {
+          const rolesArr = m.roles;
+          if (!Array.isArray(rolesArr)) continue;
+          const memberId = typeof m.id === 'string' ? m.id : String(m.id ?? '');
+          const name = typeof m.userDisplayName === 'string' ? m.userDisplayName : undefined;
+          const avatarUrl = typeof m.userAvatarUrl === 'string' ? m.userAvatarUrl : undefined;
+          for (const mr of rolesArr as Array<Record<string, unknown>>) {
+            const roleId = typeof mr.roleId === 'string' ? mr.roleId : String(mr.roleId ?? '');
+            if (!roleId) continue;
+            counts[roleId] = (counts[roleId] ?? 0) + 1;
+            const list = (previews[roleId] ??= []);
+            if (list.length < 5) {
+              list.push({ id: memberId || `${roleId}:${list.length}`, name, avatarUrl });
+            }
+          }
+        }
+        setRoleMemberCounts(counts);
+        setRoleMemberPreviews(previews);
+      } catch {
+        if (!signal?.aborted) {
+          setRoleMemberCounts({});
+          setRoleMemberPreviews({});
+        }
+      }
+    },
+    [houseId],
+  );
+
+  useEffect(() => {
+    if (activeTab !== 'roles') return;
+    const controller = new AbortController();
+    void loadRoleMemberCounts(controller.signal);
+    return () => controller.abort();
+  }, [activeTab, loadRoleMemberCounts]);
+
   const loadRoleMembers = useCallback(
     async (roleId: string, signal?: AbortSignal) => {
+      if (!houseId) return;
       setRoleMembersLoading(true);
       setRoleMembers([]);
       try {
-        const data = await houseRolesApi.getRoleMembers(roleId);
+        const data = await houseRolesApi.getRoleMembers(houseId, roleId);
         if (signal?.aborted) return;
         setRoleMembers(Array.isArray(data) ? data : []);
       } catch {
@@ -200,7 +203,7 @@ export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabPr
         if (!signal?.aborted) setRoleMembersLoading(false);
       }
     },
-    []
+    [houseId]
   );
 
   useEffect(() => {
@@ -398,8 +401,10 @@ export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabPr
           </AppButton>
         )}
       </div>
-      {loading ? (
-        <RolesTableSkeleton />
+      {loading && roles.length === 0 ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent" />
+        </div>
       ) : error ? (
         <div className="space-y-3 rounded-xl border border-border bg-card p-8 text-center">
           <p className="text-sm text-muted-foreground">{error}</p>
@@ -429,197 +434,36 @@ export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabPr
         </div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-[1fr,minmax(280px,360px)]">
-          <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t('admin.accessControl.rolesTableRole')}</TableHead>
-              <TableHead>{t('admin.accessControl.rolesTablePriority')}</TableHead>
-              <TableHead>{t('admin.accessControl.rolesTableUsers')}</TableHead>
-              <TableHead>{t('admin.accessControl.rolesTableSystem')}</TableHead>
-              <TableHead>{t('admin.accessControl.rolesTableActions')}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedRoles.map((role) => (
-              <TableRow
-                key={role.id}
-                className="cursor-pointer"
-                onClick={() => setSelectedRole(role)}
-                data-state={selectedRole?.id === role.id ? 'selected' : undefined}
-              >
-                <TableCell>
-                  {role.name ?? role.code ?? role.id}
-                </TableCell>
-                <TableCell>
-                  {role.priority !== undefined ? role.priority : '—'}
-                </TableCell>
-                <TableCell>
-                  {role.memberCount !== undefined ? role.memberCount : '—'}
-                </TableCell>
-                <TableCell>
-                  {role.system ? t('admin.accessControl.rolesTableSystem') : '—'}
-                </TableCell>
-                <TableCell onClick={(e) => e.stopPropagation()}>
-                  {canEditRoles && !role.system && (
-                    <div className="flex items-center gap-1">
-                      <AppButton
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => setEditRole(role)}
-                        aria-label={t('admin.edit')}
-                      >
-                        <Pencil className="size-4" />
-                      </AppButton>
-                      <AppButton
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => setDeleteRole(role)}
-                        aria-label={t('admin.delete')}
-                      >
-                        <Trash2 className="size-4" />
-                      </AppButton>
-                    </div>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        {selectedRole && (
-          <div className="rounded-xl border border-border bg-card p-4">
-            <h4 className="text-sm font-semibold text-foreground">
-              {t('admin.accessControl.roleDetails')}
-            </h4>
-            <dl className="mt-3 space-y-1.5 text-sm">
-              <div>
-                <dt className="text-muted-foreground">{t('admin.accessControl.rolesTableRole')}</dt>
-                <dd className="font-medium">{selectedRole.name ?? selectedRole.code ?? selectedRole.id}</dd>
+          <div>
+            <RolesTable
+              roles={sortedRoles}
+              selectedRoleId={selectedRole?.id ?? null}
+              canEditRoles={canEditRoles}
+              roleMemberCounts={roleMemberCounts}
+              roleMemberPreviews={roleMemberPreviews}
+              onSelectRole={setSelectedRole}
+              onEditRole={setEditRole}
+              onDeleteRole={setDeleteRole}
+            />
+            {loading && (
+              <div className="mt-3 flex items-center justify-center">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent" />
               </div>
-              <div>
-                <dt className="text-muted-foreground">{t('admin.accessControl.rolesTablePriority')}</dt>
-                <dd className="font-medium">{selectedRole.priority ?? '—'}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">{t('admin.accessControl.rolesTableSystem')}</dt>
-                <dd className="font-medium">
-                  {selectedRole.system ? t('admin.accessControl.rolesTableSystem') : '—'}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">{t('admin.accessControl.rolesTableUsers')}</dt>
-                <dd className="font-medium">{selectedRole.memberCount ?? 0}</dd>
-              </div>
-            </dl>
-            <div className="mt-4 border-t border-border pt-3">
-              <p className="text-xs font-medium text-muted-foreground">Права роли</p>
-              {selectedRole.permissions?.length ? (
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {selectedRole.permissions.map((permission) => (
-                    <Badge key={permission} variant="secondary">
-                      {permission}
-                    </Badge>
-                  ))}
-                </div>
-              ) : (
-                <p className="mt-2 text-xs text-muted-foreground">{t('admin.noData')}</p>
-              )}
-            </div>
-            <div className="mt-4 border-t border-border pt-3">
-              <p className="text-xs font-medium text-muted-foreground">Политики для этой роли</p>
-              {policiesLoading ? (
-                <div className="mt-2 space-y-2">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-4/5" />
-                </div>
-              ) : relatedPolicies.length === 0 ? (
-                <p className="mt-2 text-xs text-muted-foreground">{t('admin.noData')}</p>
-              ) : (
-                <div className="mt-2 space-y-2">
-                  {relatedPolicies.map((policy) => (
-                    <div key={policy.id} className="rounded-md border border-border p-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs font-medium text-foreground">{policy.name ?? policy.id}</span>
-                        <Badge variant="outline">{policy.effect ?? 'UNKNOWN'}</Badge>
-                        <Badge variant="secondary">priority: {policy.priority ?? '—'}</Badge>
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        resourceId: {policy.resourceId ?? '—'}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="mt-4 border-t border-border pt-3">
-              <p className="text-xs font-medium text-muted-foreground">Ресурсы этой роли</p>
-              {resourcesLoading ? (
-                <div className="mt-2 space-y-2">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                </div>
-              ) : relatedResources.length === 0 ? (
-                <p className="mt-2 text-xs text-muted-foreground">{t('admin.noData')}</p>
-              ) : (
-                <div className="mt-2 space-y-2">
-                  {relatedResources.map((resource) => (
-                    <div key={resource.id} className="rounded-md border border-border p-2">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">{resource.type ?? 'RESOURCE'}</Badge>
-                        <span className="text-xs text-foreground">{resource.path ?? resource.id}</span>
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground">id: {resource.id}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="mt-4 border-t border-border pt-3">
-              <p className="text-xs font-medium text-muted-foreground">
-                {t('admin.accessControl.rolesTableUsers')}
-              </p>
-              {roleMembersLoading ? (
-                <div className="mt-2 flex items-center gap-2">
-                  <Skeleton className="h-8 w-8 rounded-full" />
-                  <Skeleton className="h-4 flex-1" />
-                </div>
-              ) : roleMembers.length === 0 ? (
-                <p className="mt-2 text-xs text-muted-foreground">{t('admin.noData')}</p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-9" />
-                      <TableHead>{t('admin.accessControl.members')}</TableHead>
-                      <TableHead>{t('admin.accessControl.email')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {roleMembers.map((member) => (
-                      <TableRow key={member.id}>
-                        <TableCell className="w-9">
-                          {member.avatarUrl ? (
-                            <img
-                              src={member.avatarUrl}
-                              alt=""
-                              className="h-8 w-8 rounded-full object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-                              <User className="size-4 text-muted-foreground" />
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>{member.name ?? member.userId ?? member.id}</TableCell>
-                        <TableCell className="text-muted-foreground">{member.email ?? '—'}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </div>
+            )}
           </div>
-        )}
-      </div>
+
+          {selectedRole && (
+            <RoleDetailsPanel
+              selectedRole={selectedRole}
+              policiesLoading={policiesLoading}
+              resourcesLoading={resourcesLoading}
+              roleMembersLoading={roleMembersLoading}
+              roleMembers={roleMembers}
+              relatedPolicies={relatedPolicies}
+              relatedResources={relatedResources}
+            />
+          )}
+        </div>
       )}
       <div className="grid gap-4 xl:grid-cols-2">
         <div className="rounded-xl border border-border bg-card p-4">

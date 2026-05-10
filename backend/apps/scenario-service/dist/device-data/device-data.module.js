@@ -13,7 +13,6 @@ const device_data_controller_1 = require("./device-data.controller");
 const device_data_service_1 = require("./device-data.service");
 const device_data_repository_1 = require("./device-data.repository");
 const devices_module_1 = require("../devices/devices.module");
-const device_data_generator_1 = require("./device-data.generator");
 const device_data_mongo_1 = require("../mongo/schemas/device-data.mongo");
 let DeviceDataModule = class DeviceDataModule {
 };
@@ -30,7 +29,6 @@ exports.DeviceDataModule = DeviceDataModule = __decorate([
         providers: [
             device_data_service_1.DeviceDataService,
             device_data_repository_1.DeviceDataRepository,
-            device_data_generator_1.DeviceDataGeneratorService,
         ],
         exports: [device_data_service_1.DeviceDataService],
     })

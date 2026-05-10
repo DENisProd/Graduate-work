@@ -9,7 +9,7 @@ import type {
   WidgetLayout,
   WidgetType,
 } from '../types/widget.types';
-import { WIDGET_META_MAP } from '../lib/widget-registry';
+import { WIDGET_META_MAP, WIDGET_TEMPLATE_MAP } from '../lib/widget-registry';
 import { useWidgetTelemetry } from '../lib/useWidgetTelemetry';
 import { WidgetContainer } from './WidgetContainer';
 import { WidgetPicker } from './WidgetPicker';
@@ -21,6 +21,11 @@ import { ControlButtonWidget } from './widgets/ControlButtonWidget';
 import { ControlToggleWidget } from './widgets/ControlToggleWidget';
 import { ScenarioTriggerWidget } from './widgets/ScenarioTriggerWidget';
 import { TextLabelWidget } from './widgets/TextLabelWidget';
+import { GaugeDialWidget } from './widgets/GaugeDialWidget';
+import { CircularProgressWidget } from './widgets/CircularProgressWidget';
+import { SliderControlWidget } from './widgets/SliderControlWidget';
+import { DeviceHeroWidget } from './widgets/DeviceHeroWidget';
+import { MiniLineChartWidget } from './widgets/MiniLineChartWidget';
 import type { PhysicalDeviceResponse, ScenarioResponse, ZigbeeDeviceListItem } from '@/types/api';
 import type {
   TelemetryValueConfig,
@@ -29,8 +34,14 @@ import type {
   ControlToggleConfig,
   ScenarioTriggerConfig,
   TextLabelConfig,
+  GaugeDialConfig,
+  CircularProgressConfig,
+  SliderControlConfig,
+  DeviceHeroConfig,
+  MiniLineChartConfig,
 } from '../types/widget.types';
 import { widgetDashboardsApi } from '@/lib/api/scenario-service';
+import { useToast } from '@/components/shared';
 
 
 function nanoid(): string {
@@ -45,6 +56,7 @@ interface Props {
 }
 
 export function WidgetDashboard({ dashboard, devices, zigbeeDevices, scenarios }: Props) {
+  const { showToast } = useToast();
   const [editMode, setEditMode] = useState(false);
   const [widgets, setWidgets] = useState<WidgetInstance[]>(dashboard.widgets ?? []);
   const [layouts, setLayouts] = useState<ResponsiveLayouts>(
@@ -54,6 +66,7 @@ export function WidgetDashboard({ dashboard, devices, zigbeeDevices, scenarios }
   const [editingWidget, setEditingWidget] = useState<WidgetInstance | null>(null);
   const [saving, setSaving] = useState(false);
   const layoutDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autosaveErrorToastTsRef = useRef<number>(0);
 
   const { states, connected, sendCommand } = useWidgetTelemetry(zigbeeDevices);
   const { width: containerWidth, containerRef, mounted: widthMounted } = useContainerWidth();
@@ -72,22 +85,41 @@ export function WidgetDashboard({ dashboard, devices, zigbeeDevices, scenarios }
     return states.get(physicalDeviceId) ?? undefined;
   }
 
-  function addWidget(type: WidgetType) {
-    const meta = WIDGET_META_MAP[type];
+  function addWidget(typeOrTemplateId: WidgetType | string) {
     const id = nanoid();
-    const newWidget: WidgetInstance = {
-      id,
-      type,
-      config: { type, ...meta.defaultConfig } as WidgetInstance['config'],
-    };
+    const template = WIDGET_TEMPLATE_MAP[typeOrTemplateId as string];
+
+    let newWidget: WidgetInstance;
+    let size: { w: number; h: number };
+    let minSize: { w: number; h: number };
+
+    if (template) {
+      newWidget = {
+        id,
+        type: template.type,
+        config: { type: template.type, ...template.config } as WidgetInstance['config'],
+      };
+      size = template.defaultSize;
+      minSize = template.minSize;
+    } else {
+      const meta = WIDGET_META_MAP[typeOrTemplateId as WidgetType];
+      newWidget = {
+        id,
+        type: typeOrTemplateId as WidgetType,
+        config: { type: typeOrTemplateId as WidgetType, ...meta.defaultConfig } as WidgetInstance['config'],
+      };
+      size = meta.defaultSize;
+      minSize = meta.minSize;
+    }
+
     const newLayout: WidgetLayout = {
       i: id,
       x: 0,
       y: Infinity,
-      w: meta.defaultSize.w,
-      h: meta.defaultSize.h,
-      minW: meta.minSize.w,
-      minH: meta.minSize.h,
+      w: size.w,
+      h: size.h,
+      minW: minSize.w,
+      minH: minSize.h,
     };
     setWidgets((prev) => [...prev, newWidget]);
     setLayouts((prev) => ({
@@ -145,16 +177,26 @@ export function WidgetDashboard({ dashboard, devices, zigbeeDevices, scenarios }
       layoutDebounceRef.current = setTimeout(() => {
         widgetDashboardsApi
           .updateLayout(dashboard.id, allLayouts as Record<string, unknown>)
-          .catch(() => {});
+          .catch(() => {
+            // Avoid spamming errors while dragging.
+            const now = Date.now();
+            if (now - autosaveErrorToastTsRef.current > 6000) {
+              autosaveErrorToastTsRef.current = now;
+              showToast('Не удалось автосохранить расположение виджетов', 'warning', 4000);
+            }
+          });
       }, 800);
     },
-    [dashboard.id],
+    [dashboard.id, showToast],
   );
 
   async function handleSave() {
     setSaving(true);
     try {
       await widgetDashboardsApi.update(dashboard.id, { widgets, layouts: layouts as unknown as Record<string, unknown> });
+      showToast('Сохранено', 'success', 2000);
+    } catch (e) {
+      showToast('Ошибка сохранения', 'error', 4000);
     } finally {
       setSaving(false);
     }
@@ -209,6 +251,46 @@ export function WidgetDashboard({ dashboard, devices, zigbeeDevices, scenarios }
         );
       case 'TEXT_LABEL':
         return <TextLabelWidget config={widget.config as TextLabelConfig} />;
+      case 'GAUGE_DIAL': {
+        const cfg = widget.config as GaugeDialConfig;
+        return (
+          <GaugeDialWidget config={cfg} state={getDeviceState(cfg.physicalDeviceId)} />
+        );
+      }
+      case 'CIRCULAR_PROGRESS': {
+        const cfg = widget.config as CircularProgressConfig;
+        return (
+          <CircularProgressWidget
+            config={cfg}
+            state={cfg.physicalDeviceId ? getDeviceState(cfg.physicalDeviceId) : undefined}
+          />
+        );
+      }
+      case 'SLIDER_CONTROL': {
+        const cfg = widget.config as SliderControlConfig;
+        return (
+          <SliderControlWidget
+            config={cfg}
+            state={getDeviceState(cfg.physicalDeviceId)}
+            onCommand={sendCommand}
+          />
+        );
+      }
+      case 'DEVICE_HERO': {
+        const cfg = widget.config as DeviceHeroConfig;
+        return (
+          <DeviceHeroWidget
+            config={cfg}
+            device={deviceMap[cfg.physicalDeviceId]}
+            state={getDeviceState(cfg.physicalDeviceId)}
+            onCommand={sendCommand}
+          />
+        );
+      }
+      case 'MINI_LINE_CHART': {
+        const cfg = widget.config as MiniLineChartConfig;
+        return <MiniLineChartWidget config={cfg} state={getDeviceState(cfg.physicalDeviceId)} />;
+      }
       default:
         return <div className="p-3 text-sm text-muted-foreground">Неизвестный виджет</div>;
     }

@@ -11,6 +11,21 @@ function payloadBool(payload: Record<string, unknown>, key: string): boolean | n
   return typeof v === 'boolean' ? v : null;
 }
 
+function payloadNumberFirst(
+  payload: Record<string, unknown>,
+  keys: string[],
+): number | undefined {
+  for (const key of keys) {
+    const v = payload[key];
+    if (typeof v === 'number' && Number.isFinite(v)) return v;
+    if (typeof v === 'string' && v.trim() !== '') {
+      const n = Number(v);
+      if (Number.isFinite(n)) return n;
+    }
+  }
+  return undefined;
+}
+
 function BatteryIcon({ level }: { level: number }) {
   const color = level > 50 ? 'var(--color-emerald-500, #22c55e)' : level > 20 ? 'var(--color-yellow-500, #eab308)' : 'var(--color-red-500, #ef4444)';
   const fillW = Math.max(0, Math.min(100, level));
@@ -48,7 +63,14 @@ export function DeviceTelemetryBlock({
   const occupancy = m?.occupancy;
   const hasOccupancy = typeof occupancy === 'boolean';
 
-  const temperature = m?.temperature;
+  const temperature =
+    typeof m?.temperature === 'number' && !Number.isNaN(m.temperature)
+      ? m.temperature
+      : payloadNumberFirst(payload, [
+          'temperature',
+          'device_temperature',
+          'local_temperature',
+        ]);
   const hasTemperature = typeof temperature === 'number' && !Number.isNaN(temperature);
 
   const humidity = m?.humidity;
@@ -141,6 +163,10 @@ export function DeviceTelemetryBlock({
               </span>
             </>
           ) : null}
+        </div>
+      ) : socketConnected ? (
+        <div className="text-[11px] text-muted-foreground">
+          {t('admin.noData')}
         </div>
       ) : null}
       {live?.timestamp ? (

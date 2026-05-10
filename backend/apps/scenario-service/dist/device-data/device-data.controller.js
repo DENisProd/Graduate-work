@@ -17,6 +17,7 @@ const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
 const device_data_service_1 = require("./device-data.service");
 const device_data_response_dto_1 = require("./dto/device-data-response.dto");
+const device_data_series_dto_1 = require("./dto/device-data-series.dto");
 const device_data_schema_1 = require("./schemas/device-data.schema");
 const id_params_1 = require("../common/schemas/id-params");
 const enums_1 = require("../common/schemas/enums");
@@ -24,6 +25,10 @@ let DeviceDataController = class DeviceDataController {
     service;
     constructor(service) {
         this.service = service;
+    }
+    series(query) {
+        const q = device_data_schema_1.deviceDataSeriesQuerySchema.parse(query);
+        return this.service.series(q);
     }
     findMany(query) {
         const q = device_data_schema_1.listDeviceDataQuerySchema.parse(query);
@@ -39,6 +44,30 @@ let DeviceDataController = class DeviceDataController {
     }
 };
 exports.DeviceDataController = DeviceDataController;
+__decorate([
+    (0, common_1.Get)('series'),
+    (0, swagger_1.ApiOperation)({ summary: 'Серии для графиков (агрегация по времени)' }),
+    (0, swagger_1.ApiQuery)({ name: 'deviceId', required: true }),
+    (0, swagger_1.ApiQuery)({ name: 'range', required: true, enum: ['1m', '1h', '6h', '24h', '7d'] }),
+    (0, swagger_1.ApiQuery)({
+        name: 'capabilities',
+        required: false,
+        description: 'CSV capabilities, e.g. battery,occupancy,zigbee',
+    }),
+    (0, swagger_1.ApiQuery)({
+        name: 'to',
+        required: false,
+        description: 'Anchor end timestamp (ISO). Default: now.',
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        type: device_data_series_dto_1.DeviceDataSeriesResponseDto,
+    }),
+    __param(0, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], DeviceDataController.prototype, "series", null);
 __decorate([
     (0, common_1.Get)(),
     (0, swagger_1.ApiOperation)({ summary: 'Список данных устройств с пагинацией и фильтрами' }),

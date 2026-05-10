@@ -39,7 +39,13 @@ export class ZigbeeMqttService implements OnModuleInit, OnModuleDestroy {
 
   onModuleDestroy(): void {
     for (const entry of this.connections.values()) {
-      entry.client.removeAllListeners();
+      // Avoid crashing the process if the client emits 'error' while shutting down.
+      entry.client.on('error', () => {});
+      entry.client.removeAllListeners('connect');
+      entry.client.removeAllListeners('message');
+      entry.client.removeAllListeners('reconnect');
+      entry.client.removeAllListeners('close');
+      entry.client.removeAllListeners('offline');
       entry.client.end(true);
     }
     this.connections.clear();
@@ -92,7 +98,14 @@ export class ZigbeeMqttService implements OnModuleInit, OnModuleDestroy {
   disconnectHouse(houseId: string): void {
     const existing = this.connections.get(houseId);
     if (existing) {
-      existing.client.removeAllListeners();
+      // mqtt.js can still emit late 'error' (e.g. connack timeout) after end().
+      // Keep a noop error handler to prevent Node "Unhandled 'error' event".
+      existing.client.on('error', () => {});
+      existing.client.removeAllListeners('connect');
+      existing.client.removeAllListeners('message');
+      existing.client.removeAllListeners('reconnect');
+      existing.client.removeAllListeners('close');
+      existing.client.removeAllListeners('offline');
       existing.client.end(true);
       this.connections.delete(houseId);
     }

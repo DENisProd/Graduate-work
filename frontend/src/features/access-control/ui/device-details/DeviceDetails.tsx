@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/hooks';
 import { useToast } from '@/components/shared';
 import { ApiError, physicalDevicesApi, deviceDataApi } from '@/lib/api-client';
-import type { PhysicalDeviceResponse, DeviceDataResponse } from '@/types/api';
+import type { PhysicalDeviceResponse, DeviceDataResponse, DeviceDataSeriesResponse } from '@/types/api';
 import { Badge } from '@/components/ui/badge';
 import { AppButton } from '@/components/ui/app-button';
+import { connectivityFromLastOnline, connectivityLabel, type ConnectivityStatus } from '@/lib/device-connectivity';
+import { Chart, type AxisOptions } from 'react-charts';
 
 interface DeviceDetailsProps {
   houseId: string;
@@ -64,6 +66,9 @@ function StatusDot({ status }: { status?: string }) {
         <span className="relative inline-flex size-3 rounded-full bg-emerald-500" />
       </span>
     );
+  }
+  if (status === 'UNKNOWN') {
+    return <span className="inline-flex size-3 rounded-full bg-yellow-400" />;
   }
   if (status === 'ERROR') {
     return <span className="inline-flex size-3 rounded-full bg-red-500" />;
@@ -258,12 +263,14 @@ function CollapsibleJson({
 
 // ─── Telemetry History ───────────────────────────────────────────────────────
 
-type TimeRange = '1h' | '6h' | '24h' | '7d' | 'all';
+type TimeRange = '1m' | '1h' | '6h' | '24h' | '7d' | 'all';
 
 const HISTORY_LIMIT = 25;
 
 const CAP_BADGE: Record<string, string> = {
   climate:    'bg-cyan-500/15 text-cyan-400 border-cyan-500/25',
+  temperature:'bg-cyan-500/15 text-cyan-400 border-cyan-500/25',
+  light:      'bg-amber-500/15 text-amber-300 border-amber-500/25',
   battery:    'bg-amber-500/15 text-amber-400 border-amber-500/25',
   switch:     'bg-violet-500/15 text-violet-400 border-violet-500/25',
   occupancy:  'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
@@ -277,6 +284,8 @@ const CAP_BADGE: Record<string, string> = {
 
 const CAP_BAR: Record<string, string> = {
   climate:    'bg-cyan-500/50',
+  temperature:'bg-cyan-500/50',
+  light:      'bg-amber-500/50',
   battery:    'bg-amber-500/50',
   switch:     'bg-violet-500/50',
   occupancy:  'bg-emerald-500/50',
@@ -289,6 +298,7 @@ const CAP_BAR: Record<string, string> = {
 };
 
 const TIME_RANGES: Array<{ value: TimeRange; label: string }> = [
+  { value: '1m', label: '1m' },
   { value: '1h', label: '1h' },
   { value: '6h', label: '6h' },
   { value: '24h', label: '24h' },
@@ -296,10 +306,28 @@ const TIME_RANGES: Array<{ value: TimeRange; label: string }> = [
   { value: 'all', label: '∞' },
 ];
 
+/** Matches backend DeviceData series `key` / list rows. */
+function deviceDataSeriesKey(capability: string, attribute?: string | null): string {
+  return `${capability}:${attribute ?? ''}`;
+}
+
+function seriesKeyLabel(key: string): string {
+  const i = key.indexOf(':');
+  if (i < 0) return key;
+  const cap = key.slice(0, i);
+  const attr = key.slice(i + 1).trimEnd();
+  return attr.length > 0 ? `${cap}.${attr}` : cap;
+}
+
+function seriesKeyCapabilityPart(key: string): string {
+  const i = key.indexOf(':');
+  return i >= 0 ? key.slice(0, i) : key;
+}
+
 function getFromDate(range: TimeRange): Date | undefined {
   if (range === 'all') return undefined;
   const MS: Record<Exclude<TimeRange, 'all'>, number> = {
-    '1h': 3_600_000, '6h': 21_600_000, '24h': 86_400_000, '7d': 604_800_000,
+    '1m': 60_000, '1h': 3_600_000, '6h': 21_600_000, '24h': 86_400_000, '7d': 604_800_000,
   };
   return new Date(Date.now() - MS[range]);
 }
@@ -323,6 +351,27 @@ function formatHistoryValue(value: unknown, unit?: string | null, type?: string)
   if (typeof value === 'number') {
     return `${type === 'FLOAT' ? value.toFixed(2) : String(value)}${u}`;
   }
+  // Common shapes from backend/generators:
+  // - { value: number|string|boolean, unit?: string }
+  // - { on: boolean }
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    const o = value as Record<string, unknown>;
+    if ('on' in o && typeof o.on === 'boolean') return o.on ? `ON${u}` : `OFF${u}`;
+    if ('value' in o) {
+      const v = o.value;
+      const unitFromValue = typeof o.unit === 'string' && o.unit ? ` ${o.unit}` : '';
+      if (typeof v === 'number') {
+        return `${type === 'FLOAT' ? v.toFixed(2) : String(v)}${unitFromValue || u}`;
+      }
+      if (typeof v === 'boolean') return v ? `ON${unitFromValue || u}` : `OFF${unitFromValue || u}`;
+      if (typeof v === 'string') return `${v}${unitFromValue || u}`;
+    }
+    try {
+      return `${JSON.stringify(o)}${u}`;
+    } catch {
+      return `${String(o)}${u}`;
+    }
+  }
   return `${String(value)}${u}`;
 }
 
@@ -331,6 +380,198 @@ function capBadgeCls(cap: string) {
 }
 function capBarCls(cap: string) {
   return CAP_BAR[cap] ?? 'bg-muted-foreground/30';
+}
+
+type HistoryPoint = { ts: number; value: number };
+
+function historyNumber(value: unknown): number | null {
+  if (typeof value === 'boolean') return value ? 1 : 0;
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const s = value.trim().toLowerCase();
+    if (['on', 'true', 'yes'].includes(s)) return 1;
+    if (['off', 'false', 'no'].includes(s)) return 0;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const o = value as Record<string, unknown>;
+    if (typeof o.on === 'boolean') return o.on ? 1 : 0;
+    if (typeof o.value === 'number' && Number.isFinite(o.value)) return o.value;
+    if (typeof o.value === 'string' && o.value.trim() !== '') {
+      const sv = o.value.trim().toLowerCase();
+      if (['on', 'true', 'yes'].includes(sv)) return 1;
+      if (['off', 'false', 'no'].includes(sv)) return 0;
+      const n = Number(o.value);
+      return Number.isFinite(n) ? n : null;
+    }
+  }
+  return null;
+}
+
+function isBinarySeries(points: HistoryPoint[]): boolean {
+  if (points.length === 0) return false;
+  for (const p of points) {
+    if (p.value !== 0 && p.value !== 1) return false;
+  }
+  return true;
+}
+
+function downsampleUniform(points: HistoryPoint[], maxPoints: number): HistoryPoint[] {
+  if (points.length <= maxPoints) return points;
+  if (maxPoints <= 2) return [points[0], points[points.length - 1]];
+  const out: HistoryPoint[] = [];
+  const n = points.length;
+  for (let i = 0; i < maxPoints; i += 1) {
+    const idx = Math.round((i * (n - 1)) / (maxPoints - 1));
+    const p = points[Math.min(n - 1, Math.max(0, idx))];
+    if (out.length === 0 || out[out.length - 1].ts !== p.ts) out.push(p);
+  }
+  // Ensure last point is included
+  const last = points[n - 1];
+  if (out[out.length - 1]?.ts !== last.ts) out.push(last);
+  return out;
+}
+
+function compactBinaryTransitions(points: HistoryPoint[]): HistoryPoint[] {
+  if (points.length <= 2) return points;
+  const out: HistoryPoint[] = [points[0]];
+  for (let i = 1; i < points.length; i += 1) {
+    const prev = out[out.length - 1];
+    const cur = points[i];
+    if (cur.value !== prev.value) out.push(cur);
+  }
+  const last = points[points.length - 1];
+  if (out[out.length - 1].ts !== last.ts) out.push(last);
+  return out;
+}
+
+/**
+ * Convert a series of points into a step-like series by duplicating each value
+ * until the next timestamp. This approximates a step curve without extra deps.
+ */
+function toStepPoints(points: HistoryPoint[]): HistoryPoint[] {
+  if (points.length < 2) return points;
+  const out: HistoryPoint[] = [];
+  for (let i = 0; i < points.length; i += 1) {
+    const cur = points[i];
+    const next = points[i + 1];
+    out.push(cur);
+    if (next) {
+      // Hold current value until just before next sample.
+      out.push({ ts: next.ts, value: cur.value });
+    }
+  }
+  return out;
+}
+
+type ChartDatum = { ts: Date; value: number };
+
+function HistoryLineChart({
+  title,
+  unit,
+  series,
+}: {
+  title: string;
+  unit?: string | null;
+  series: Array<{ label: string; points: HistoryPoint[] }>;
+}) {
+  const flat = useMemo(() => series.flatMap((s) => s.points), [series]);
+  const last = flat[flat.length - 1];
+
+  const yDomain = useMemo(() => {
+    if (flat.length === 0) return { hardMin: undefined as number | undefined, hardMax: undefined as number | undefined };
+    const values = flat.map((p) => p.value);
+    const lo = Math.min(...values);
+    const hi = Math.max(...values);
+    const isBinary = values.every((v) => v === 0 || v === 1);
+    if (isBinary) return { hardMin: 0, hardMax: 1 };
+    if (lo === hi) {
+      const pad = lo === 0 ? 1 : Math.abs(lo) * 0.1 || 1;
+      return { hardMin: lo - pad, hardMax: hi + pad };
+    }
+    return { hardMin: undefined, hardMax: undefined };
+  }, [flat]);
+
+  const data = useMemo(() => {
+    return series.map((s) => ({
+      label: s.label,
+      data: s.points.map((p) => ({ ts: new Date(p.ts), value: p.value })),
+    }));
+  }, [series]);
+
+  const primaryAxis = useMemo((): AxisOptions<ChartDatum> => {
+    return {
+      getValue: (d) => d.ts,
+      scaleType: 'time',
+    };
+  }, []);
+
+  const secondaryAxes = useMemo((): AxisOptions<ChartDatum>[] => {
+    return [
+      {
+        getValue: (d) => d.value,
+        elementType: 'line',
+        ...(yDomain.hardMin !== undefined ? { hardMin: yDomain.hardMin } : {}),
+        ...(yDomain.hardMax !== undefined ? { hardMax: yDomain.hardMax } : {}),
+        tickCount: 4,
+      },
+    ];
+  }, [yDomain]);
+
+  const { min, max } = useMemo(() => {
+    if (flat.length === 0) return { min: 0, max: 0 };
+    const values = flat.map((p) => p.value);
+    return { min: Math.min(...values), max: Math.max(...values) };
+  }, [flat]);
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-border bg-card">
+      <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-foreground truncate">{title}</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            {flat.length} {flat.length === 1 ? 'точка' : 'точек'}
+          </p>
+        </div>
+        <div className="flex items-baseline gap-1 shrink-0">
+          <span className="text-2xl font-bold tabular-nums text-foreground">
+            {last ? last.value.toFixed(1) : '—'}
+          </span>
+          {unit ? <span className="text-xs text-muted-foreground">{unit}</span> : null}
+        </div>
+      </div>
+
+      <div className="relative h-28 px-5 py-3">
+        {flat.length < 2 ? (
+          <div className="absolute inset-0 flex items-center justify-center text-[11px] text-muted-foreground">
+            Недостаточно данных для графика
+          </div>
+        ) : (
+          <Chart
+            options={{
+              data,
+              primaryAxis,
+              secondaryAxes,
+            }}
+          />
+        )}
+      </div>
+
+      {flat.length >= 2 ? (
+        <div className="flex justify-between px-5 pb-3 text-[10px] text-muted-foreground">
+          <span>
+            min {min.toFixed(1)}
+            {unit ?? ''}
+          </span>
+          <span>
+            max {max.toFixed(1)}
+            {unit ?? ''}
+          </span>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function DeviceHistorySection({ deviceId }: { deviceId: string }) {
@@ -346,13 +587,59 @@ function DeviceHistorySection({ deviceId }: { deviceId: string }) {
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [timeRange, setTimeRange] = useState<TimeRange>('24h');
-  const [capability, setCapability] = useState<string>('all');
+  /** Selected metric keys (`capability:attribute`); legacy name `selectedCaps` kept for clarity in UI code. */
+  const [selectedCaps, setSelectedCaps] = useState<string[]>(['all']);
 
-  const capabilities = useMemo(() => {
+  const [chartSeries, setChartSeries] = useState<DeviceDataSeriesResponse | null>(null);
+  const [chartLoading, setChartLoading] = useState(false);
+  const [chartLoadingMore, setChartLoadingMore] = useState(false);
+
+  /** API still filters by capability only; derive union from selected metric keys. */
+  const capabilitiesForSeriesApi = useMemo(() => {
+    if (selectedCaps.includes('all')) return undefined;
+    const caps = new Set<string>();
+    for (const key of selectedCaps) caps.add(seriesKeyCapabilityPart(key));
+    return Array.from(caps);
+  }, [selectedCaps]);
+
+  const chartRange = timeRange === 'all' ? ('7d' as const) : (timeRange as Exclude<TimeRange, 'all'>);
+
+  const chartSeriesFiltered = useMemo(() => {
+    const raw = chartSeries?.series ?? [];
+    if (selectedCaps.includes('all')) return raw;
+    const sel = new Set(selectedCaps);
+    return raw.filter((s) => sel.has(s.key));
+  }, [chartSeries, selectedCaps]);
+
+  const chart = useMemo(() => {
+    const resp = chartSeries;
+    const rawSeries = chartSeriesFiltered;
+    const series = rawSeries.map((s) => ({
+      label: s.attribute ? `${s.capability}.${s.attribute}` : s.capability,
+      points: s.points.map((p) => ({ ts: Date.parse(p.ts), value: p.value })).filter((p) => Number.isFinite(p.ts)),
+    }));
+    const unit =
+      !selectedCaps.includes('all') && selectedCaps.length === 1
+        ? rawSeries.find((s) => s.key === selectedCaps[0])?.unit ?? null
+        : null;
+    const title = tx('admin.accessControl.connectedDevices.deviceDetails.history.title');
+    return { series, unit, title, from: resp?.from ?? null, to: resp?.to ?? null };
+  }, [chartSeries, chartSeriesFiltered, selectedCaps, tx]);
+
+  // Chart data is fetched from backend (/device-data/series) so ranges are formed server-side.
+
+  const seriesKeys = useMemo(() => {
     const seen = new Set<string>();
-    items.forEach((i) => seen.add(i.capability));
-    return Array.from(seen);
-  }, [items]);
+    items.forEach((i) => seen.add(deviceDataSeriesKey(i.capability, i.attribute)));
+    (chartSeries?.series ?? []).forEach((s) => seen.add(s.key));
+    return Array.from(seen).sort((a, b) => a.localeCompare(b));
+  }, [items, chartSeries]);
+
+  const visibleItems = useMemo(() => {
+    if (selectedCaps.includes('all')) return items;
+    const set = new Set(selectedCaps);
+    return items.filter((i) => set.has(deviceDataSeriesKey(i.capability, i.attribute)));
+  }, [items, selectedCaps]);
 
   const doFetch = useCallback(
     async (p: number, reset: boolean, signal?: AbortSignal) => {
@@ -361,7 +648,6 @@ function DeviceHistorySection({ deviceId }: { deviceId: string }) {
         const from = getFromDate(timeRange);
         const res = await deviceDataApi.getAll({
           deviceId,
-          ...(capability !== 'all' ? { capability } : {}),
           ...(from ? { from } : {}),
           page: p,
           limit: HISTORY_LIMIT,
@@ -377,16 +663,65 @@ function DeviceHistorySection({ deviceId }: { deviceId: string }) {
         if (!signal?.aborted) { setLoading(false); setLoadingMore(false); }
       }
     },
-    [deviceId, timeRange, capability],
+    [deviceId, timeRange],
+  );
+
+  const fetchChart = useCallback(
+    async (opts: { reset: boolean; to?: string; signal?: AbortSignal }) => {
+      const { reset, to, signal } = opts;
+      if (reset) setChartLoading(true);
+      else setChartLoadingMore(true);
+      try {
+        const resp = await deviceDataApi.getSeries({
+          deviceId,
+          range: chartRange,
+          ...(capabilitiesForSeriesApi ? { capabilities: capabilitiesForSeriesApi } : {}),
+          ...(to ? { to } : {}),
+          signal,
+        });
+        if (signal?.aborted) return;
+        setChartSeries((prev) => {
+          if (reset || !prev) return resp;
+          // Merge: prepend older points, keep uniqueness by ts per series key
+          const byKey = new Map(prev.series.map((s) => [s.key, s]));
+          for (const inc of resp.series) {
+            const existing = byKey.get(inc.key);
+            if (!existing) {
+              byKey.set(inc.key, inc);
+              continue;
+            }
+            const seen = new Set(existing.points.map((p) => p.ts));
+            const merged = [...inc.points.filter((p) => !seen.has(p.ts)), ...existing.points];
+            byKey.set(inc.key, { ...existing, points: merged });
+          }
+          const mergedFrom = resp.from;
+          return { from: mergedFrom, to: prev.to, series: [...byKey.values()] };
+        });
+      } catch {
+        // ignore
+      } finally {
+        if (!signal?.aborted) {
+          setChartLoading(false);
+          setChartLoadingMore(false);
+        }
+      }
+    },
+    [deviceId, chartRange, capabilitiesForSeriesApi],
   );
 
   useEffect(() => {
     const ctrl = new AbortController();
     void doFetch(1, true, ctrl.signal);
+    // Reset chart immediately when range/capabilities change to avoid mixing windows.
+    setChartSeries(null);
+    void fetchChart({ reset: true, signal: ctrl.signal });
     return () => ctrl.abort();
-  }, [doFetch]);
+  }, [doFetch, fetchChart]);
 
-  const handleLoadMore = () => void doFetch(page + 1, false);
+  const handleLoadMore = () => {
+    void doFetch(page + 1, false);
+    if (chart.from) void fetchChart({ reset: false, to: chart.from });
+  };
   const hasMore = items.length < total;
 
   const histKey = 'admin.accessControl.connectedDevices.deviceDetails.history';
@@ -445,32 +780,42 @@ function DeviceHistorySection({ deviceId }: { deviceId: string }) {
           ))}
         </div>
 
-        {/* Capability filter — shown once data provides ≥2 capabilities */}
-        {capabilities.length >= 2 && (
+        {/* One tab per metric (capability:attribute); show even для одной метрики (раньше пропадало при единственном capability). */}
+        {seriesKeys.length > 0 && (
           <>
             <span className="h-3 w-px shrink-0 bg-border" />
             <div className="flex flex-wrap gap-1">
               <button
                 type="button"
-                onClick={() => setCapability('all')}
+                onClick={() => setSelectedCaps(['all'])}
                 className={`rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors ${
-                  capability === 'all'
+                  selectedCaps.includes('all')
                     ? 'border-border bg-muted/60 text-foreground/80'
                     : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {tx(`${histKey}.allCapabilities`)}
               </button>
-              {capabilities.map((cap) => (
+              {seriesKeys.map((seriesKey) => (
                 <button
-                  key={cap}
+                  key={seriesKey}
                   type="button"
-                  onClick={() => setCapability(cap)}
+                  onClick={() =>
+                    setSelectedCaps((prev) => {
+                      const next = new Set(prev.includes('all') ? [] : prev);
+                      if (next.has(seriesKey)) next.delete(seriesKey);
+                      else next.add(seriesKey);
+                      const arr = [...next];
+                      return arr.length === 0 ? ['all'] : arr;
+                    })
+                  }
                   className={`rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors ${
-                    capability === cap ? capBadgeCls(cap) : 'border-transparent text-muted-foreground hover:text-foreground'
+                    !selectedCaps.includes('all') && selectedCaps.includes(seriesKey)
+                      ? capBadgeCls(seriesKeyCapabilityPart(seriesKey))
+                      : 'border-transparent text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  {cap}
+                  {seriesKeyLabel(seriesKey)}
                 </button>
               ))}
             </div>
@@ -486,20 +831,29 @@ function DeviceHistorySection({ deviceId }: { deviceId: string }) {
             <span className="text-[11px] text-muted-foreground">{tx(`${histKey}.loading`)}</span>
           </div>
         </div>
-      ) : items.length === 0 ? (
+      ) : visibleItems.length === 0 ? (
         <div className="flex flex-col items-center gap-2.5 py-12">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1} className="size-10 text-muted-foreground/40">
             <circle cx="12" cy="12" r="10" />
             <path d="M12 6v6l4 2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           <p className="text-xs text-muted-foreground">
-            {capability !== 'all' ? tx(`${histKey}.emptyFilter`) : tx(`${histKey}.empty`)}
+            {!selectedCaps.includes('all')
+              ? tx(`${histKey}.emptyFilter`)
+              : tx(`${histKey}.empty`)}
           </p>
         </div>
       ) : (
         <>
+          {chartLoading ? (
+            <div className="px-5 pt-4 text-[11px] text-muted-foreground">Загрузка графика…</div>
+          ) : chart.series.some((s) => s.points.length >= 2) ? (
+            <div className="px-5 pt-4">
+              <HistoryLineChart title={chart.title} unit={chart.unit} series={chart.series} />
+            </div>
+          ) : null}
           <div className="divide-y divide-border">
-            {items.map((item) => (
+            {visibleItems.map((item) => (
               <div
                 key={item.id}
                 className="group flex items-center gap-3 py-2.5 pl-3 pr-5 transition-colors hover:bg-muted/30"
@@ -635,7 +989,12 @@ export function DeviceDetails({ houseId, deviceId, backHref, backLabel }: Device
     }
   }, [device]);
 
-  const status = device?.status;
+  const baseStatus = device?.status;
+  const derivedConnectivity: ConnectivityStatus | null = device?.lastSeen
+    ? connectivityFromLastOnline(device.lastSeen)
+    : null;
+  const status: string | undefined =
+    baseStatus === 'ERROR' ? 'ERROR' : (derivedConnectivity ?? (baseStatus ?? undefined));
   const defaultBackHref = `/admin/access-control/houses/${houseId}`;
   const resolvedBackHref = backHref ?? defaultBackHref;
   const resolvedBackLabel = backLabel ?? t('admin.accessControl.connectedDevices.backToDevices');
@@ -647,13 +1006,17 @@ export function DeviceDetails({ houseId, deviceId, backHref, backLabel }: Device
         ? 'ERROR'
         : status === 'OFFLINE'
           ? t('admin.status.offline')
-          : null;
+          : status === 'UNKNOWN'
+            ? connectivityLabel('UNKNOWN', 'ru')
+            : null;
 
   const statusColorClass =
     status === 'ONLINE'
       ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10'
       : status === 'ERROR'
         ? 'text-red-400 border-red-500/30 bg-red-500/10'
+        : status === 'UNKNOWN'
+          ? 'text-yellow-500 border-yellow-500/30 bg-yellow-500/10'
         : 'text-muted-foreground border-border bg-muted/30';
 
   return (

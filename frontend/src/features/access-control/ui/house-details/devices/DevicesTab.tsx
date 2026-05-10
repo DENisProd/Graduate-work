@@ -114,7 +114,7 @@ export function DevicesTab({ houseId, activeTab }: DevicesTabProps) {
       setDevicesErrorDetails(null);
       try {
         try {
-          await zigbeeDevicesApi.requestSyncFromBridge({ signal });
+          await zigbeeDevicesApi.requestSyncFromBridge(houseId, { signal });
           if (!signal?.aborted) setIsBridgeAvailable(true);
         } catch (error) {
           if (signal?.aborted) return;
@@ -187,23 +187,10 @@ export function DevicesTab({ houseId, activeTab }: DevicesTabProps) {
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-sm font-semibold text-foreground">
-            {t('admin.accessControl.connectedDevices.sectionTitle')}
-          </h3>
-          {showLiveBadge ? (
-            isSocketConnected && isBridgeAvailable ? (
-              <Badge variant="outline" className="border-emerald-500/50 text-[10px] text-emerald-600">
-                {t('admin.accessControl.connectedDevices.telemetryLive')}
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="text-[10px] text-muted-foreground">
-                {t('admin.accessControl.connectedDevices.telemetryDisconnected')}
-              </Badge>
-            )
-          ) : null}
-        </div>
         <div className="flex flex-wrap items-center justify-between gap-2">
+          <h1 className="text-sm font-semibold text-foreground">
+            {t('admin.accessControl.connectedDevices.sectionTitle')}
+          </h1>
           <div className="flex flex-wrap items-center gap-2">
             <AppButton
               size="sm"
@@ -212,18 +199,7 @@ export function DevicesTab({ houseId, activeTab }: DevicesTabProps) {
             >
               {t('admin.accessControl.addDevice.button')}
             </AppButton>
-            <AppButton
-              variant="secondary"
-              size="sm"
-              onClick={() => void loadDevices()}
-              disabled={!houseId}
-            >
-              {t('admin.retry')}
-            </AppButton>
           </div>
-          <span className="text-xs text-muted-foreground">
-            {t('admin.page')} {devicesPage} / {devicesPages}
-          </span>
         </div>
         {!houseId ? (
           <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">

@@ -8,6 +8,7 @@ import {
   Body,
   Param,
   Query,
+  Logger,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { WidgetDashboardService } from './widget-dashboard.service';
@@ -15,6 +16,7 @@ import { WidgetDashboardService } from './widget-dashboard.service';
 @ApiTags('Widget Dashboards')
 @Controller('widget-dashboards')
 export class WidgetDashboardController {
+  private readonly logger = new Logger(WidgetDashboardController.name);
   constructor(private readonly service: WidgetDashboardService) {}
 
   @Post()
@@ -30,6 +32,9 @@ export class WidgetDashboardController {
       widgets?: unknown[];
     },
   ) {
+    this.logger.log(
+      `POST /widget-dashboards houseId=${body.houseId} userId=${body.userId} widgets=${body.widgets?.length ?? 0}`,
+    );
     return this.service.create(body);
   }
 
@@ -60,6 +65,9 @@ export class WidgetDashboardController {
       widgets?: unknown[];
     },
   ) {
+    this.logger.log(
+      `PUT /widget-dashboards/${id} widgets=${body.widgets?.length ?? 0} layouts=${body.layouts ? 'yes' : 'no'}`,
+    );
     return this.service.update(id, body);
   }
 
@@ -70,6 +78,7 @@ export class WidgetDashboardController {
     @Param('id') id: string,
     @Body() body: { layouts: Record<string, unknown> },
   ) {
+    this.logger.log(`PATCH /widget-dashboards/${id}/layout`);
     return this.service.updateLayout(id, body.layouts);
   }
 

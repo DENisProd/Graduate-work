@@ -3,6 +3,7 @@ use std::time::Duration;
 
 use anyhow::Context;
 use local_server_application::ports::MqttClient;
+use local_server_application::services::ScenarioEngine;
 use local_server_infrastructure::persistence::{init_pool, SqlitePoolConfig};
 use local_server_infrastructure::{run_ingestion, RumqttcClient};
 use local_server_interfaces::{http, websocket};
@@ -20,6 +21,10 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     init_tracing();
+
+    // Load `.env` for local development. This is a no-op in environments where
+    // the file is absent (e.g. Docker/prod), and env vars still take precedence.
+    let _ = dotenvy::dotenv();
 
     let cfg = Config::from_env().context("loading configuration")?;
     tracing::info!(
@@ -66,6 +71,26 @@ async fn main() -> anyhow::Result<()> {
         }
     };
 
+    // Scenario engine
+    let scenario_engine = Arc::new(
+        ScenarioEngine::new(
+            state.scenario_repo.clone(),
+            state.scenario_exec_repo.clone(),
+            mqtt_client.clone(),
+            state.realtime_svc.clone(),
+            state.zigbee_repo.clone(),
+            state.phys_repo.clone(),
+            cfg.mqtt_topic_prefix.clone(),
+        )
+        .await
+        .context("initialising scenario engine")?,
+    );
+
+    scenario_engine
+        .load_and_start()
+        .await
+        .context("loading scenarios")?;
+
     // Build HTTP router then wrap with Socket.IO layer
     let http_router = http::router(
         state.http_state(VERSION),
@@ -74,6 +99,9 @@ async fn main() -> anyhow::Result<()> {
         state.zigbee_repo.clone(),
         mqtt_client.clone(),
         cfg.mqtt_topic_prefix.clone(),
+        state.scenario_repo.clone(),
+        state.scenario_exec_repo.clone(),
+        scenario_engine,
     );
 
     let app = websocket::apply_to_router(

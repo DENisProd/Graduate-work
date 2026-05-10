@@ -7,7 +7,8 @@ export class HouseInvitationResponseDto {
   @ApiProperty({ format: 'uuid', example: UUID_EX }) id!: string;
   @ApiProperty({ format: 'uuid', example: UUID_EX }) houseId!: string;
   @ApiProperty({ example: 'Мой дом' }) houseName!: string;
-  @ApiProperty({ example: 'guest@example.com' }) email!: string;
+  @ApiPropertyOptional({ example: 'Для мамы / временный доступ / тест' })
+  note?: string;
   @ApiProperty({ example: 'a1b2c3d4-token' }) token!: string;
   @ApiProperty({ enum: ['PENDING', 'ACCEPTED', 'DECLINED', 'REVOKED', 'EXPIRED'] }) status!: string;
   @ApiProperty({ example: '2024-01-01 12:00:00' }) createdAt!: string;

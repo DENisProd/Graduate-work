@@ -20,6 +20,7 @@ export interface PairingDevice {
 interface UsePairingOptions {
   /** Whether the socket is connected (pairing only works when connected) */
   enabled: boolean;
+  houseId: string | null;
 }
 
 export interface UsePairingResult {
@@ -32,7 +33,7 @@ export interface UsePairingResult {
   clearDevices: () => void;
 }
 
-export function usePairing({ enabled }: UsePairingOptions): UsePairingResult {
+export function usePairing({ enabled, houseId }: UsePairingOptions): UsePairingResult {
   const [isActive, setIsActive] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const [devices, setDevices] = useState<PairingDevice[]>([]);
@@ -136,7 +137,8 @@ export function usePairing({ enabled }: UsePairingOptions): UsePairingResult {
   const start = useCallback(
     async (time = 254) => {
       if (!isConnected) return { ok: false, error: 'Socket not connected' };
-      const result = await zigbeeTelemetryManager.startPairing(time);
+      if (!houseId) return { ok: false, error: 'houseId required' };
+      const result = await zigbeeTelemetryManager.startPairing(houseId, time);
       if (result.ok) {
         setDevices([]);
         setIsActive(true);
@@ -146,16 +148,16 @@ export function usePairing({ enabled }: UsePairingOptions): UsePairingResult {
       }
       return result;
     },
-    [isConnected, startCountdown],
+    [houseId, isConnected, startCountdown],
   );
 
   const stop = useCallback(async () => {
-    await zigbeeTelemetryManager.stopPairing();
+    if (houseId) await zigbeeTelemetryManager.stopPairing(houseId);
     if (timerRef.current) clearInterval(timerRef.current);
     setIsActive(false);
     activeRef.current = false;
     setTimeLeft(0);
-  }, []);
+  }, [houseId]);
 
   const clearDevices = useCallback(() => setDevices([]), []);
 

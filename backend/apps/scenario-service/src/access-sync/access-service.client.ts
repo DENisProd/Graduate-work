@@ -10,6 +10,15 @@ export interface RegisterResourcePayload {
   metadata?: Record<string, unknown>;
 }
 
+export interface DeviceFunctionActionDto {
+  id: number;
+  code: string;
+  deviceFunctionId: number;
+  actionType: string;
+  payloadTemplate?: string | null;
+  active: boolean;
+}
+
 @Injectable()
 export class AccessServiceClient {
   private readonly logger = new Logger(AccessServiceClient.name);
@@ -58,6 +67,26 @@ export class AccessServiceClient {
       this.logger.error(
         `deleteResource(${id}) failed: ${e instanceof Error ? e.message : String(e)}`,
       );
+    }
+  }
+
+  async findDeviceFunctionActionsByDeviceId(
+    deviceId: number,
+  ): Promise<DeviceFunctionActionDto[] | null> {
+    try {
+      const res = await fetch(
+        `${this.baseUrl}/api/v1/device-function-actions/by-device/${encodeURIComponent(String(deviceId))}/all`,
+      );
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
+      }
+      return res.json() as Promise<DeviceFunctionActionDto[]>;
+    } catch (e) {
+      this.logger.error(
+        `findDeviceFunctionActionsByDeviceId(deviceId=${deviceId}) failed: ${e instanceof Error ? e.message : String(e)}`,
+      );
+      return null;
     }
   }
 }

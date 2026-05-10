@@ -186,25 +186,39 @@ export const houseRolesApi = {
   deleteRole: (roleId: number | string): Promise<void> =>
     accessApiCall(`/api/v1/house-roles/${roleId}`, { method: 'DELETE' }),
 
-  getRoleMembers: (roleId: number | string): Promise<RoleMemberResponse[]> =>
-    accessApiCall(`/api/v1/house-roles/${roleId}/members`).then((data: unknown) => {
-      if (!Array.isArray(data)) return [];
-      return data.map((item: unknown) => {
-        const o = item as Record<string, unknown>;
+  /**
+   * List role members.
+   * The old endpoint `/api/v1/house-roles/:roleId/members` was removed on backend.
+   * We derive members via `/api/v1/house-members/house/:houseId` and filter by roleId.
+   */
+  getRoleMembers: async (
+    houseId: number | string,
+    roleId: number | string,
+  ): Promise<RoleMemberResponse[]> => {
+    const members = await accessApiCall<unknown>(
+      `/api/v1/house-members/house/${encodeURIComponent(String(houseId))}`,
+    );
+    if (!Array.isArray(members)) return [];
+
+    const roleIdStr = String(roleId);
+
+    return members
+      .map((item: unknown) => item as Record<string, unknown>)
+      .filter((m) => {
+        const roles = m.roles;
+        if (!Array.isArray(roles)) return false;
+        return roles.some((r) => String((r as Record<string, unknown>).roleId ?? '') === roleIdStr);
+      })
+      .map((m) => {
         return {
-          id: o.id ?? o.userId ?? '',
-          userId: typeof o.userId === 'string' ? o.userId : undefined,
-          name: typeof o.name === 'string' ? o.name : undefined,
-          email: typeof o.email === 'string' ? o.email : undefined,
-          avatarUrl:
-            typeof o.avatarUrl === 'string'
-              ? o.avatarUrl
-              : typeof o.userAvatarUrl === 'string'
-                ? o.userAvatarUrl
-                : undefined,
+          id: typeof m.id === 'string' ? m.id : String(m.id ?? ''),
+          userId: typeof m.userId === 'string' ? m.userId : undefined,
+          name: typeof m.userDisplayName === 'string' ? m.userDisplayName : undefined,
+          email: undefined,
+          avatarUrl: typeof m.userAvatarUrl === 'string' ? m.userAvatarUrl : undefined,
         } as RoleMemberResponse;
       });
-    }),
+  },
 
   getHousePolicies: (houseId: number | string): Promise<HousePolicyResponse[]> =>
     accessApiCall(`/api/v1/houses/${encodeURIComponent(String(houseId))}/policies`).then(
@@ -302,7 +316,7 @@ export const houseInvitationsApi = {
       headers: { 'X-User-Id': userId },
       body: JSON.stringify({
         houseId: typeof houseId === 'string' && /^\d+$/.test(houseId) ? Number(houseId) : houseId,
-        email: data.email,
+        ...(data.note ? { note: data.note } : {}),
         ...(data.roleId ? { roleId: data.roleId } : {}),
         ...(data.permissions?.length ? { permissions: data.permissions } : {}),
         ...(data.accessRight ? { accessRight: data.accessRight } : {}),

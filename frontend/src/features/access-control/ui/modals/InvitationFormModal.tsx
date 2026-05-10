@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { AppButton } from '@/components/ui/app-button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -22,6 +22,7 @@ import { useTranslation } from '@/hooks';
 import { AdminSelect } from '@/components/shared/AdminSelect';
 import { toDateTimeLocal, getDisplayName, toArray } from '../../lib/utils';
 import { houseRolesApi, devicesApi, deviceFunctionsApi, houseRoomsApi } from '@/lib/api-client';
+import QRCode from 'react-qr-code';
 
 const ALL_PERMISSIONS: InvitationPermission[] = [
   'INVITE_MEMBERS',
@@ -47,10 +48,11 @@ export function InvitationFormModal({
 }: InvitationFormModalProps) {
   const { t, locale } = useTranslation();
 
-  const [email, setEmail] = useState('');
+  const [note, setNote] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
   const [mode, setMode] = useState<Mode>('role');
   const [loading, setLoading] = useState(false);
+  const [createdToken, setCreatedToken] = useState<string | null>(null);
 
   // ── Role mode ──────────────────────────────────────────────────────────────
   const [roleId, setRoleId] = useState('');
@@ -73,6 +75,12 @@ export function InvitationFormModal({
   const [deviceFunctions, setDeviceFunctions] = useState<DeviceFunctionResponse[]>([]);
   const [rooms, setRooms] = useState<HouseRoomResponse[]>([]);
   const [resourcesLoading, setResourcesLoading] = useState(false);
+
+  const createdInviteUrl = useMemo(() => {
+    if (!createdToken) return null;
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    return `${origin}/invite?token=${encodeURIComponent(createdToken)}`;
+  }, [createdToken]);
 
   // Load roles on open
   useEffect(() => {
@@ -109,16 +117,17 @@ export function InvitationFormModal({
   }, [deviceId]);
 
   const reset = () => {
-    setEmail(''); setExpiresAt(''); setMode('role');
+    setNote('');
+    setExpiresAt(''); setMode('role');
     setRoleId('');
     setPermissions([]);
     setAccessRightType('ALLOW'); setDeviceId(null); setDeviceFunctionId(null);
     setHouseRoomId(null); setParametersJson(''); setHasRightExpiry(false); setRightExpiresAt('');
     setDevices([]); setDeviceFunctions([]); setRooms([]);
+    setCreatedToken(null);
   };
 
   const handleSubmit = async () => {
-    if (!email.trim()) return;
     setLoading(true);
     try {
       let accessRight: InvitationAccessRight | undefined;
@@ -136,15 +145,14 @@ export function InvitationFormModal({
         };
       }
 
-      await onSubmit({
-        email: email.trim(),
+      const res = await onSubmit({
+        ...(note.trim() ? { note: note.trim() } : {}),
         ...(mode === 'role' && roleId ? { roleId } : {}),
         ...(mode === 'permissions' && permissions.length > 0 ? { permissions } : {}),
         ...(mode === 'rights' && accessRight ? { accessRight } : {}),
         ...(expiresAt ? { expiresAt: new Date(expiresAt).toISOString() } : {}),
       });
-      reset();
-      onOpenChange(false);
+      setCreatedToken(res?.token ?? null);
     } catch (e) {
       console.error(e);
     } finally {
@@ -208,30 +216,45 @@ export function InvitationFormModal({
         </DialogHeader>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
-          {/* Email */}
-          <div className="space-y-1">
-            <label htmlFor="invite-email" className="text-sm font-medium text-foreground">
-              {t('admin.accessControl.email')}
-            </label>
-            <Input
-              id="invite-email"
-              placeholder={t('admin.accessControl.placeholders.email')}
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
+          {createdInviteUrl && (
+            <div className="space-y-3 rounded-xl border border-border bg-card p-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">{t('admin.accessControl.copyLink')}</p>
+                <p className="font-mono text-xs text-muted-foreground break-all">{createdInviteUrl}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <AppButton
+                  size="sm"
+                  onClick={() => {
+                    try {
+                      void navigator.clipboard.writeText(createdInviteUrl);
+                    } catch (e) {
+                      console.error(e);
+                    }
+                  }}
+                >
+                  {t('admin.accessControl.copyLink')}
+                </AppButton>
+                <AppButton size="sm" variant="secondary" onClick={() => setCreatedToken(null)}>
+                  {t('common.cancel')}
+                </AppButton>
+              </div>
+              <div className="flex items-center justify-center rounded-lg border border-border bg-background p-4">
+                <QRCode value={createdInviteUrl} size={180} />
+              </div>
+            </div>
+          )}
 
           {/* Mode tabs */}
           <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)}>
             <TabsList className="w-full">
-              <TabsTrigger value="role" className="flex-1">
+              <TabsTrigger value="role" className="flex-1 data-[state=active]:text-white">
                 {t('admin.accessControl.invitationModeRole')}
               </TabsTrigger>
-              <TabsTrigger value="permissions" className="flex-1">
+              <TabsTrigger value="permissions" className="flex-1 data-[state=active]:text-white">
                 {t('admin.accessControl.invitationModePermissions')}
               </TabsTrigger>
-              <TabsTrigger value="rights" className="flex-1">
+              <TabsTrigger value="rights" className="flex-1 data-[state=active]:text-white">
                 {t('admin.accessControl.rights')}
               </TabsTrigger>
             </TabsList>
@@ -259,7 +282,7 @@ export function InvitationFormModal({
                   id="invite-role"
                   placeholder={t('admin.accessControl.placeholders.roleId')}
                   value={roleId}
-                  onChange={(e) => setRoleId(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRoleId(e.target.value)}
                 />
               )}
               {rolesLoading && (
@@ -358,6 +381,18 @@ export function InvitationFormModal({
 
           {/* Invitation expiry */}
           <div className="space-y-1">
+            <label htmlFor="invite-note" className="text-sm font-medium text-foreground">
+              Пометка <span className="font-normal text-muted-foreground">({t('common.optional')})</span>
+            </label>
+            <Input
+              id="invite-note"
+              placeholder="Например: Для мамы / временный доступ"
+              value={note}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNote(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-1">
             <label htmlFor="invite-expire" className="text-sm font-medium text-foreground">
               {t('admin.accessControl.expiresAt')}{' '}
               <span className="font-normal text-muted-foreground">({t('common.optional')})</span>
@@ -378,9 +413,11 @@ export function InvitationFormModal({
           <AppButton variant="secondary" onClick={() => handleClose(false)}>
             {t('common.cancel')}
           </AppButton>
-          <AppButton onClick={handleSubmit} disabled={!email.trim() || loading}>
-            {t('admin.create')}
-          </AppButton>
+          {!createdToken && (
+            <AppButton onClick={handleSubmit} disabled={loading}>
+              {t('admin.create')}
+            </AppButton>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

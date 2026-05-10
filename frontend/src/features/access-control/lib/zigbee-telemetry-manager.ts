@@ -39,6 +39,14 @@ export interface ZigbeePairingStatus {
 type PairingEventListener = (event: ZigbeePairingEvent) => void;
 type PairingStatusListener = (status: ZigbeePairingStatus) => void;
 
+function socketBaseFromPhysicalDevicesApiBase(baseUrl: string): string {
+  // REST can be configured with `/api/v1`, but Socket.IO namespace is mounted at server root.
+  // Example: `http://localhost:3001/api/v1` -> `http://localhost:3001`
+  return baseUrl
+    .replace(/\/+$/, '')
+    .replace(/\/api\/v\d+$/i, '');
+}
+
 function readAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
   const keys = ['keycloak-token', 'access_token', 'token', 'smart-home-token'];
@@ -88,6 +96,7 @@ class ZigbeeTelemetryManager {
   /** Tracks whether pairing mode is active so it can be restored after reconnect. */
   private pairingActive = false;
   private pairingTime = 254;
+  private pairingHouseId: string | null = null;
   /** Tracks passive pairing-room subscription (modal open, permit_join not yet started). */
   private watchingPairing = false;
 
@@ -161,7 +170,7 @@ class ZigbeeTelemetryManager {
 
   private openSocket() {
     if (this.socket) return;
-    const base = env.PHYSICAL_DEVICES_API_BASE_URL.replace(/\/+$/, '');
+    const base = socketBaseFromPhysicalDevicesApiBase(env.PHYSICAL_DEVICES_API_BASE_URL);
     const socket = io(`${base}/zigbee`, {
       path: '/socket.io/',
       withCredentials: true,
@@ -184,11 +193,14 @@ class ZigbeeTelemetryManager {
       this.enqueueApplySubscription();
       // Restore pairing room membership after reconnect.
       // watchPairing rejoins the room; if pairing was active, also re-enable permit_join.
-      if (this.pairingActive) {
+      if (this.pairingActive && this.pairingHouseId) {
         void this.emitAck<{ ok: boolean; error?: string }>(
           'zigbee:pairing:start',
-          { time: this.pairingTime },
+          { houseId: this.pairingHouseId, time: this.pairingTime },
         );
+      } else if (this.pairingActive) {
+        // pairingActive without houseId is not actionable; reset to avoid server errors.
+        this.pairingActive = false;
       } else if (this.watchingPairing) {
         void this.emitAck<{ ok: boolean }>('zigbee:pairing:watch', {});
       }
@@ -218,6 +230,7 @@ class ZigbeeTelemetryManager {
 
   private closeSocket() {
     this.pairingActive = false;
+    this.pairingHouseId = null;
     this.watchingPairing = false;
     if (this.socket) {
       this.socket.removeAllListeners();
@@ -265,23 +278,28 @@ class ZigbeeTelemetryManager {
     await this.emitAck<{ ok: boolean }>('zigbee:pairing:unwatch', {});
   }
 
-  async startPairing(time = 254): Promise<{ ok: boolean; error?: string }> {
+  async startPairing(
+    houseId: string,
+    time = 254
+  ): Promise<{ ok: boolean; error?: string }> {
     const result = await this.emitAck<{ ok: boolean; error?: string }>(
       'zigbee:pairing:start',
-      { time },
+      { houseId, time },
     );
     if (result?.ok) {
       this.pairingActive = true;
       this.pairingTime = time;
+      this.pairingHouseId = houseId;
     }
     return result ?? { ok: false, error: 'No response from server (timeout)' };
   }
 
-  async stopPairing(): Promise<{ ok: boolean; error?: string }> {
+  async stopPairing(houseId: string): Promise<{ ok: boolean; error?: string }> {
     this.pairingActive = false;
+    this.pairingHouseId = null;
     const result = await this.emitAck<{ ok: boolean; error?: string }>(
       'zigbee:pairing:stop',
-      {},
+      { houseId },
     );
     return result ?? { ok: false, error: 'No response from server (timeout)' };
   }

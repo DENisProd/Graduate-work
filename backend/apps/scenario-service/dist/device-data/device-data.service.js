@@ -13,32 +13,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.DeviceDataService = void 0;
 const common_1 = require("@nestjs/common");
 const mongoose_1 = require("mongoose");
-const enums_1 = require("../common/schemas/enums");
+const map_zigbee_payload_to_device_data_1 = require("./ingestion/map-zigbee-payload-to-device-data");
 const device_data_repository_1 = require("./device-data.repository");
-function asNumber(v) {
-    if (typeof v === 'number' && Number.isFinite(v))
-        return v;
-    if (typeof v === 'string' && v.trim() !== '') {
-        const n = Number(v);
-        if (Number.isFinite(n))
-            return n;
-    }
-    return undefined;
-}
-function asBoolean(v) {
-    if (typeof v === 'boolean')
-        return v;
-    if (typeof v === 'number')
-        return v === 1 ? true : v === 0 ? false : undefined;
-    if (typeof v === 'string') {
-        const s = v.trim().toLowerCase();
-        if (['true', '1', 'yes', 'on'].includes(s))
-            return true;
-        if (['false', '0', 'no', 'off'].includes(s))
-            return false;
-    }
-    return undefined;
-}
 let DeviceDataService = DeviceDataService_1 = class DeviceDataService {
     repository;
     logger = new common_1.Logger(DeviceDataService_1.name);
@@ -50,6 +26,18 @@ let DeviceDataService = DeviceDataService_1 = class DeviceDataService {
     }
     async findMany(query) {
         return this.repository.findMany(query);
+    }
+    async series(query) {
+        const capabilities = query.capabilities
+            ?.split(',')
+            .map((s) => s.trim())
+            .filter(Boolean) ?? undefined;
+        return this.repository.series({
+            deviceId: query.deviceId,
+            range: query.range,
+            capabilities,
+            to: query.to,
+        });
     }
     async findById(id) {
         const row = await this.repository.findById(id);
@@ -64,59 +52,7 @@ let DeviceDataService = DeviceDataService_1 = class DeviceDataService {
     async ingestFromZigbeePayload(physicalDeviceId, payload, at) {
         if (!(0, mongoose_1.isValidObjectId)(physicalDeviceId))
             return;
-        const rows = [];
-        const addNum = (capability, attribute, v, unit) => {
-            const n = asNumber(v);
-            if (n === undefined)
-                return;
-            const isFloat = !Number.isInteger(n);
-            rows.push({
-                deviceId: physicalDeviceId,
-                capability,
-                attribute,
-                type: isFloat ? enums_1.DeviceDataType.FLOAT : enums_1.DeviceDataType.NUMBER,
-                value: n,
-                ...(unit ? { unit } : {}),
-                timestamp: at,
-            });
-        };
-        const addBool = (capability, attribute, v) => {
-            const b = asBoolean(v);
-            if (b === undefined)
-                return;
-            rows.push({
-                deviceId: physicalDeviceId,
-                capability,
-                attribute,
-                type: enums_1.DeviceDataType.BOOLEAN,
-                value: b,
-                timestamp: at,
-            });
-        };
-        addNum('battery', 'level', payload.battery, '%');
-        addBool('battery', 'low', payload.battery_low);
-        addNum('zigbee', 'linkquality', payload.linkquality);
-        addBool('occupancy', 'motion', payload.occupancy);
-        addBool('tamper', 'active', payload.tamper);
-        addNum('power', 'voltage', payload.voltage, 'mV');
-        addNum('climate', 'temperature', payload.temperature, '°C');
-        addNum('climate', 'humidity', payload.humidity, '%');
-        addNum('light', 'brightness', payload.brightness);
-        addNum('climate', 'pressure', payload.pressure, 'hPa');
-        addNum('illuminance', 'value', payload.illuminance, 'lx');
-        const state = payload.state;
-        if (typeof state === 'string' && state.length > 0) {
-            rows.push({
-                deviceId: physicalDeviceId,
-                capability: 'switch',
-                attribute: 'state',
-                type: enums_1.DeviceDataType.STRING,
-                value: state,
-                timestamp: at,
-            });
-        }
-        addBool('contact', 'open', payload.contact);
-        addBool('water_leak', 'detected', payload.water_leak);
+        const rows = (0, map_zigbee_payload_to_device_data_1.mapZigbeePayloadToDeviceDataInputs)(physicalDeviceId, payload, at);
         if (rows.length === 0)
             return;
         try {

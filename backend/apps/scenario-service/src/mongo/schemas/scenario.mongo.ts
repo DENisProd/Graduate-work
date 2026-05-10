@@ -16,7 +16,7 @@ export class ScenarioModel {
   @Prop({ required: true, type: Object })
   definition: Record<string, unknown>;
 
-  @Prop({ required: true, enum: Object.values(ScenarioStatus) })
+  @Prop({ required: true, type: String, enum: Object.values(ScenarioStatus) })
   status: ScenarioStatus;
   @Prop({ required: true })
   creatorId: string;

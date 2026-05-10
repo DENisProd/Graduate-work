@@ -63,7 +63,7 @@ export class ZigbeeDeviceRepository {
       friendlyName: doc.friendlyName ?? null,
       lastSeen: doc.lastSeen ?? null,
       definition: (doc.definition as Record<string, unknown> | null) ?? null,
-      capabilities: doc.capabilities ?? [],
+      capabilities: (doc.capabilities as ZigbeeDevice['capabilities']) ?? [],
     };
   }
 

@@ -79,6 +79,7 @@ export function AddDeviceModal({
 
   const { isActive, isSocketConnected, timeLeft, devices, start, stop, clearDevices } = usePairing({
     enabled: isOpen,
+    houseId,
   });
 
   // Load devices already connected to this house to hide them from pairing list.
@@ -302,11 +303,16 @@ export function AddDeviceModal({
 
               <AppButton
                 onClick={handleStart}
-                disabled={!isSocketConnected}
+                disabled={!isSocketConnected || !houseId}
                 className="w-full"
               >
                 {t('admin.accessControl.pairing.start')}
               </AppButton>
+              {!houseId && (
+                <p className="text-[11px] text-muted-foreground">
+                  Сначала выберите дом, чтобы начать сопряжение.
+                </p>
+              )}
             </div>
           )}
 

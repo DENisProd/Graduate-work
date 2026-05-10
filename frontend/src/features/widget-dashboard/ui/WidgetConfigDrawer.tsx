@@ -9,6 +9,12 @@ import type {
   ControlToggleConfig,
   ScenarioTriggerConfig,
   TextLabelConfig,
+  GaugeDialConfig,
+  CircularProgressConfig,
+  SliderControlConfig,
+  DeviceHeroConfig,
+  DeviceHeroStat,
+  MiniLineChartConfig,
 } from '../types/widget.types';
 import type { PhysicalDeviceResponse, ScenarioResponse, ZigbeeStateWire } from '@/types/api';
 
@@ -38,6 +44,177 @@ function Input({ value, onChange, placeholder }: { value: string; onChange: (v: 
       placeholder={placeholder}
       className="w-full px-3 py-1.5 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
     />
+  );
+}
+
+function NumberInput({
+  value,
+  onChange,
+  placeholder,
+  step,
+}: {
+  value: number | undefined;
+  onChange: (v: number | undefined) => void;
+  placeholder?: string;
+  step?: number;
+}) {
+  return (
+    <input
+      type="number"
+      value={value ?? ''}
+      step={step}
+      onChange={(e) => {
+        const raw = e.target.value;
+        if (raw === '') return onChange(undefined);
+        const n = Number(raw);
+        onChange(Number.isNaN(n) ? undefined : n);
+      }}
+      placeholder={placeholder}
+      className="w-full px-3 py-1.5 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
+    />
+  );
+}
+
+function ChipsEditor({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string[];
+  onChange: (v: string[]) => void;
+  placeholder?: string;
+}) {
+  const [draft, setDraft] = useState('');
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap gap-1.5">
+        {value.map((c, i) => (
+          <span
+            key={c + i}
+            className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-accent text-foreground"
+          >
+            {c}
+            <button
+              onClick={() => onChange(value.filter((_, idx) => idx !== i))}
+              className="text-muted-foreground hover:text-foreground"
+              aria-label="Удалить"
+            >
+              ×
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && draft.trim()) {
+              e.preventDefault();
+              if (value.length < 3) onChange([...value, draft.trim()]);
+              setDraft('');
+            }
+          }}
+          placeholder={placeholder ?? 'Добавить тег + Enter'}
+          className="flex-1 px-3 py-1.5 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+        <button
+          onClick={() => {
+            if (draft.trim() && value.length < 3) {
+              onChange([...value, draft.trim()]);
+              setDraft('');
+            }
+          }}
+          className="px-3 py-1.5 text-xs rounded-lg border border-border hover:bg-accent"
+        >
+          +
+        </button>
+      </div>
+      <p className="text-[10px] text-muted-foreground">До 3 тегов</p>
+    </div>
+  );
+}
+
+function StatsEditor({
+  value,
+  onChange,
+  payloadOptions,
+}: {
+  value: DeviceHeroStat[];
+  onChange: (v: DeviceHeroStat[]) => void;
+  payloadOptions: { value: string; label: string }[];
+}) {
+  const ICON_OPTS: { value: DeviceHeroStat['icon']; label: string }[] = [
+    { value: 'cube', label: 'Куб (площадь)' },
+    { value: 'bolt', label: 'Молния (батарея/энергия)' },
+    { value: 'clock', label: 'Часы (время)' },
+    { value: 'droplet', label: 'Капля (влажность)' },
+    { value: 'flame', label: 'Огонь (нагрев)' },
+    { value: 'leaf', label: 'Лист (эко)' },
+  ];
+
+  function update(i: number, patch: Partial<DeviceHeroStat>) {
+    onChange(value.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      {value.map((stat, i) => (
+        <div key={i} className="border border-border rounded-lg p-2 flex flex-col gap-2">
+          <div className="grid grid-cols-2 gap-2">
+            <PayloadKeySelect
+              value={stat.key}
+              onChange={(v) => update(i, { key: v })}
+              options={payloadOptions}
+              placeholder="payload-ключ"
+            />
+            <select
+              value={stat.icon}
+              onChange={(e) => update(i, { icon: e.target.value as DeviceHeroStat['icon'] })}
+              className="w-full px-2 py-1.5 text-xs bg-background border border-border rounded-lg"
+            >
+              {ICON_OPTS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-cols-[1fr_80px_auto] gap-2">
+            <input
+              value={stat.caption}
+              onChange={(e) => update(i, { caption: e.target.value })}
+              placeholder="Подпись"
+              className="px-2 py-1 text-xs bg-background border border-border rounded-lg"
+            />
+            <input
+              value={stat.unit ?? ''}
+              onChange={(e) => update(i, { unit: e.target.value })}
+              placeholder="ед."
+              className="px-2 py-1 text-xs bg-background border border-border rounded-lg"
+            />
+            <button
+              onClick={() => onChange(value.filter((_, idx) => idx !== i))}
+              className="px-2 py-1 text-xs rounded-lg text-rose-600 hover:bg-rose-50"
+            >
+              Удалить
+            </button>
+          </div>
+        </div>
+      ))}
+      {value.length < 3 && (
+        <button
+          onClick={() =>
+            onChange([
+              ...value,
+              { key: '', icon: 'bolt', caption: 'Новая метрика', unit: '' },
+            ])
+          }
+          className="text-xs px-2 py-1 rounded-lg border border-dashed border-border hover:bg-accent"
+        >
+          + Добавить метрику
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -354,6 +531,355 @@ export function WidgetConfigDrawer({ widget, devices, scenarios, states, onClose
                   { value: 'subtitle', label: 'Подзаголовок' },
                   { value: 'body', label: 'Текст' },
                   { value: 'divider', label: 'Разделитель' },
+                ]}
+              />
+            </Field>
+          </>
+        );
+      }
+      case 'GAUGE_DIAL': {
+        const c = config as GaugeDialConfig;
+        const opts = getPayloadKeyOptions(states.get(c.physicalDeviceId));
+        return (
+          <>
+            <Field label="Устройство">
+              <Select
+                value={c.physicalDeviceId}
+                onChange={(v) => {
+                  const dev = devices.find((d) => d.id === v);
+                  patch({ physicalDeviceId: v, ieeeAddr: dev?.protocolAddress ?? '' });
+                }}
+                options={deviceOptions}
+              />
+            </Field>
+            <Field label="Ключ payload">
+              <PayloadKeySelect
+                value={c.payloadKey}
+                onChange={(v) => patch({ payloadKey: v })}
+                options={opts}
+                placeholder="temperature"
+              />
+            </Field>
+            <Field label="Подпись">
+              <Input value={c.label ?? ''} onChange={(v) => patch({ label: v })} placeholder="Климат-контроль" />
+            </Field>
+            <Field label="Единица измерения">
+              <Input value={c.unit ?? ''} onChange={(v) => patch({ unit: v })} placeholder="°C" />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Минимум">
+                <NumberInput value={c.min} onChange={(v) => patch({ min: v ?? 0 })} placeholder="0" />
+              </Field>
+              <Field label="Максимум">
+                <NumberInput value={c.max} onChange={(v) => patch({ max: v ?? 100 })} placeholder="100" />
+              </Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Жёлтый порог">
+                <NumberInput value={c.warnAt} onChange={(v) => patch({ warnAt: v })} />
+              </Field>
+              <Field label="Красный порог">
+                <NumberInput value={c.criticalAt} onChange={(v) => patch({ criticalAt: v })} />
+              </Field>
+            </div>
+            <Field label="Теги-режимы">
+              <ChipsEditor value={c.chips ?? []} onChange={(v) => patch({ chips: v })} />
+            </Field>
+            <Field label="Цвет акцента">
+              <Select
+                value={c.accent}
+                onChange={(v) => patch({ accent: v })}
+                options={[
+                  { value: 'green', label: 'Зелёный' },
+                  { value: 'blue', label: 'Синий' },
+                  { value: 'amber', label: 'Жёлтый' },
+                  { value: 'red', label: 'Красный' },
+                ]}
+              />
+            </Field>
+          </>
+        );
+      }
+      case 'CIRCULAR_PROGRESS': {
+        const c = config as CircularProgressConfig;
+        const opts = getPayloadKeyOptions(states.get(c.physicalDeviceId ?? ''));
+        return (
+          <>
+            <Field label="Заголовок">
+              <Input value={c.title} onChange={(v) => patch({ title: v })} placeholder="Дом под контролем" />
+            </Field>
+            <Field label="Подзаголовок">
+              <Input
+                value={c.subtitle ?? ''}
+                onChange={(v) => patch({ subtitle: v })}
+                placeholder=""
+              />
+            </Field>
+            <Field label="Устройство (необязательно)">
+              <Select
+                value={c.physicalDeviceId ?? ''}
+                onChange={(v) => patch({ physicalDeviceId: v || undefined, payloadKey: v ? c.payloadKey : undefined })}
+                options={deviceOptions}
+              />
+            </Field>
+            {c.physicalDeviceId && (
+              <Field label="Ключ payload">
+                <PayloadKeySelect
+                  value={c.payloadKey ?? ''}
+                  onChange={(v) => patch({ payloadKey: v })}
+                  options={opts}
+                  placeholder="battery"
+                />
+              </Field>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Статичное значение">
+                <NumberInput
+                  value={c.staticValue}
+                  onChange={(v) => patch({ staticValue: v })}
+                  placeholder="78"
+                />
+              </Field>
+              <Field label="Максимум">
+                <NumberInput value={c.max} onChange={(v) => patch({ max: v ?? 100 })} placeholder="100" />
+              </Field>
+            </div>
+            <Field label="Единица">
+              <Input value={c.unit ?? ''} onChange={(v) => patch({ unit: v })} placeholder="%" />
+            </Field>
+            <Field label="Бейдж">
+              <Input value={c.badge ?? ''} onChange={(v) => patch({ badge: v })} placeholder="Защищено" />
+            </Field>
+            <Field label="Цвет акцента">
+              <Select
+                value={c.accent}
+                onChange={(v) => patch({ accent: v })}
+                options={[
+                  { value: 'green', label: 'Зелёный' },
+                  { value: 'blue', label: 'Синий' },
+                  { value: 'amber', label: 'Жёлтый' },
+                  { value: 'red', label: 'Красный' },
+                ]}
+              />
+            </Field>
+          </>
+        );
+      }
+      case 'SLIDER_CONTROL': {
+        const c = config as SliderControlConfig;
+        const opts = getPayloadKeyOptions(states.get(c.physicalDeviceId));
+        return (
+          <>
+            <Field label="Устройство">
+              <Select
+                value={c.physicalDeviceId}
+                onChange={(v) => {
+                  const dev = devices.find((d) => d.id === v);
+                  patch({ physicalDeviceId: v, ieeeAddr: dev?.protocolAddress ?? '' });
+                }}
+                options={deviceOptions}
+              />
+            </Field>
+            <Field label="Подпись">
+              <Input value={c.label} onChange={(v) => patch({ label: v })} placeholder="Освещение" />
+            </Field>
+            <Field label="Подзаголовок">
+              <Input value={c.subtitle ?? ''} onChange={(v) => patch({ subtitle: v })} />
+            </Field>
+            <Field label="Ключ чтения значения">
+              <PayloadKeySelect
+                value={c.payloadKey}
+                onChange={(v) => patch({ payloadKey: v, commandKey: c.commandKey || v })}
+                options={opts}
+                placeholder="brightness"
+              />
+            </Field>
+            <Field label="Ключ команды (если отличается)">
+              <Input
+                value={c.commandKey ?? ''}
+                onChange={(v) => patch({ commandKey: v })}
+                placeholder="brightness"
+              />
+            </Field>
+            <div className="grid grid-cols-3 gap-3">
+              <Field label="Min">
+                <NumberInput value={c.min} onChange={(v) => patch({ min: v ?? 0 })} placeholder="0" />
+              </Field>
+              <Field label="Max">
+                <NumberInput value={c.max} onChange={(v) => patch({ max: v ?? 254 })} placeholder="254" />
+              </Field>
+              <Field label="Шаг">
+                <NumberInput value={c.step} onChange={(v) => patch({ step: v })} placeholder="1" />
+              </Field>
+            </div>
+            <Field label="Единица">
+              <Input value={c.unit ?? ''} onChange={(v) => patch({ unit: v })} />
+            </Field>
+            <Field label="Цвет">
+              <Select
+                value={c.accent}
+                onChange={(v) => patch({ accent: v })}
+                options={[
+                  { value: 'green', label: 'Зелёный' },
+                  { value: 'blue', label: 'Синий' },
+                  { value: 'amber', label: 'Жёлтый' },
+                ]}
+              />
+            </Field>
+          </>
+        );
+      }
+      case 'DEVICE_HERO': {
+        const c = config as DeviceHeroConfig;
+        const opts = getPayloadKeyOptions(states.get(c.physicalDeviceId));
+        return (
+          <>
+            <Field label="Устройство">
+              <Select
+                value={c.physicalDeviceId}
+                onChange={(v) => {
+                  const dev = devices.find((d) => d.id === v);
+                  patch({ physicalDeviceId: v, ieeeAddr: dev?.protocolAddress ?? '' });
+                }}
+                options={deviceOptions}
+              />
+            </Field>
+            <Field label="Заголовок">
+              <Input value={c.title} onChange={(v) => patch({ title: v })} placeholder="Передняя камера" />
+            </Field>
+            <Field label="Подзаголовок (модель)">
+              <Input
+                value={c.subtitle ?? ''}
+                onChange={(v) => patch({ subtitle: v })}
+                placeholder={selectedDevice?.model ?? ''}
+              />
+            </Field>
+            <Field label="Иконка">
+              <Select
+                value={c.icon}
+                onChange={(v) => patch({ icon: v as DeviceHeroConfig['icon'] })}
+                options={[
+                  { value: 'camera', label: 'Камера' },
+                  { value: 'lightbulb', label: 'Лампочка' },
+                  { value: 'fan', label: 'Вентилятор' },
+                  { value: 'lock', label: 'Замок' },
+                  { value: 'speaker', label: 'Колонка' },
+                  { value: 'sparkles', label: 'Уборка/освежитель' },
+                  { value: 'thermometer', label: 'Термометр' },
+                  { value: 'broom', label: 'Метла (пылесос)' },
+                ]}
+              />
+            </Field>
+            <Field label="">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={c.showToggle}
+                  onChange={(e) => patch({ showToggle: e.target.checked })}
+                  className="rounded"
+                />
+                Показывать переключатель ON/OFF
+              </label>
+            </Field>
+            {c.showToggle && (
+              <>
+                <Field label="Ключ состояния">
+                  <PayloadKeySelect
+                    value={c.togglePayloadKey ?? ''}
+                    onChange={(v) => patch({ togglePayloadKey: v })}
+                    options={opts}
+                    placeholder="state"
+                  />
+                </Field>
+                <Field label="Команда ON (JSON)">
+                  <textarea
+                    value={JSON.stringify(c.onPayload ?? {}, null, 2)}
+                    onChange={(e) => {
+                      try { patch({ onPayload: JSON.parse(e.target.value) }); } catch {}
+                    }}
+                    rows={2}
+                    className="w-full px-3 py-1.5 text-xs font-mono bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+                  />
+                </Field>
+                <Field label="Команда OFF (JSON)">
+                  <textarea
+                    value={JSON.stringify(c.offPayload ?? {}, null, 2)}
+                    onChange={(e) => {
+                      try { patch({ offPayload: JSON.parse(e.target.value) }); } catch {}
+                    }}
+                    rows={2}
+                    className="w-full px-3 py-1.5 text-xs font-mono bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+                  />
+                </Field>
+              </>
+            )}
+            <Field label="Теги (до 3)">
+              <ChipsEditor value={c.chips ?? []} onChange={(v) => patch({ chips: v })} />
+            </Field>
+            <Field label="Метрики (до 3)">
+              <StatsEditor
+                value={c.stats ?? []}
+                onChange={(v) => patch({ stats: v })}
+                payloadOptions={opts}
+              />
+            </Field>
+            <Field label="Цвет">
+              <Select
+                value={c.accent}
+                onChange={(v) => patch({ accent: v })}
+                options={[
+                  { value: 'green', label: 'Зелёный' },
+                  { value: 'blue', label: 'Синий' },
+                  { value: 'amber', label: 'Жёлтый' },
+                  { value: 'slate', label: 'Серый (нейтральный)' },
+                ]}
+              />
+            </Field>
+          </>
+        );
+      }
+      case 'MINI_LINE_CHART': {
+        const c = config as MiniLineChartConfig;
+        const opts = getPayloadKeyOptions(states.get(c.physicalDeviceId));
+        return (
+          <>
+            <Field label="Устройство">
+              <Select
+                value={c.physicalDeviceId}
+                onChange={(v) => patch({ physicalDeviceId: v })}
+                options={deviceOptions}
+              />
+            </Field>
+            <Field label="Ключ payload">
+              <PayloadKeySelect
+                value={c.payloadKey}
+                onChange={(v) => patch({ payloadKey: v })}
+                options={opts}
+                placeholder="energy"
+              />
+            </Field>
+            <Field label="Заголовок">
+              <Input value={c.title} onChange={(v) => patch({ title: v })} placeholder="Потребление" />
+            </Field>
+            <Field label="Единица">
+              <Input value={c.unit ?? ''} onChange={(v) => patch({ unit: v })} placeholder="кВт·ч" />
+            </Field>
+            <Field label="Размер буфера">
+              <NumberInput
+                value={c.bufferSize}
+                onChange={(v) => patch({ bufferSize: v })}
+                placeholder="60"
+              />
+            </Field>
+            <Field label="Цвет">
+              <Select
+                value={c.accent}
+                onChange={(v) => patch({ accent: v })}
+                options={[
+                  { value: 'green', label: 'Зелёный' },
+                  { value: 'blue', label: 'Синий' },
+                  { value: 'amber', label: 'Жёлтый' },
+                  { value: 'red', label: 'Красный' },
                 ]}
               />
             </Field>

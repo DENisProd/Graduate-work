@@ -90,6 +90,20 @@ export declare class ZigbeeService {
         ok: false;
         error: string;
     }>;
+    sendCommand(ieeeAddr: string, payload: Record<string, unknown>): Promise<{
+        ok: true;
+        topic: string;
+    } | {
+        ok: false;
+        error: string;
+    }>;
     ingestMqttDeviceState(topicSegment: string, payload: Record<string, unknown>): Promise<void>;
+    sendCommandToFriendlyName(houseId: string, friendlyName: string, args: Record<string, unknown>): {
+        ok: true;
+        topic: string;
+    } | {
+        ok: false;
+        error: string;
+    };
     getLatestStateByFriendlyName(friendlyName: string): Promise<Record<string, unknown> | null>;
 }

@@ -88,7 +88,19 @@ let PhysicalDeviceService = PhysicalDeviceService_1 = class PhysicalDeviceServic
             return;
         }
         this.logger.log(`Linking ${matched.length}/${functions.length} functions for device ${device.id}`);
-        await this.accessSync.onDeviceFunctionsLinked(device.id, houseId, matched);
+        const actions = await this.accessSync.findDeviceFunctionActionsByDeviceId(deviceId);
+        const actionIdsByFunctionId = new Map();
+        for (const a of actions ?? []) {
+            const list = actionIdsByFunctionId.get(a.deviceFunctionId) ?? [];
+            list.push(a.id);
+            actionIdsByFunctionId.set(a.deviceFunctionId, list);
+        }
+        await this.accessSync.onDeviceFunctionsLinked(device.id, houseId, matched.map((fn) => ({
+            id: fn.id,
+            code: fn.code,
+            name: fn.name,
+            actionIds: actionIdsByFunctionId.get(fn.id) ?? [],
+        })));
     }
     async remove(id) {
         await this.findById(id);
