@@ -18,7 +18,7 @@ export interface PhysicalDevice {
 }
 
 export interface ZigbeeState {
-  id: string
+  id?: string
   deviceIeeeAddr: string
   timestamp: string
   payload: Record<string, unknown>
@@ -27,13 +27,13 @@ export interface ZigbeeState {
   temperature?: number
   humidity?: number
   battery?: number
-  occupancy?: 0 | 1
+  occupancy?: boolean
   linkquality?: number
   colorMode?: string
 }
 
 export interface PairingEvent {
-  type: 'device_found' | 'device_joined' | 'interview_started' | 'interview_successful' | 'interview_failed'
+  type: 'device_found' | 'device_joined' | 'device_leave' | 'interview_started' | 'interview_successful' | 'interview_failed'
   ieeeAddr?: string
   model?: string
   manufacturerName?: string
@@ -135,6 +135,38 @@ export interface ScenarioExecution {
   triggerType: string
   logs?: string[]
   error?: string
+}
+
+export interface ModbusDevice {
+  id: string
+  name: string
+  slaveId: number
+  description?: string
+  enabled: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ModbusRegister {
+  id: string
+  deviceId: string
+  name: string
+  registerType: 'holding' | 'input' | 'coil' | 'discrete'
+  address: number
+  count: number
+  unit?: string
+  scaleFactor: number
+  offset: number
+  writable: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ModbusRegisterState {
+  registerId: string
+  rawValues: number[]
+  scaledValues: number[]
+  timestamp: string
 }
 
 export interface House {

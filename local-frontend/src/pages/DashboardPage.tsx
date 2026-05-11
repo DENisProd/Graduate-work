@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
+import type { Locale } from 'date-fns/locale'
+import { useI18n } from '@/hooks/useI18n'
 import {
   CheckCircle,
   XCircle,
@@ -118,14 +120,18 @@ function SyncRow({
   label,
   value,
   loading,
+  neverLabel,
+  dateLocale,
 }: {
   label: string
   value: string | null | undefined
   loading: boolean
+  neverLabel: string
+  dateLocale: Locale
 }) {
   const formatted = value
-    ? formatDistanceToNow(new Date(value), { addSuffix: true })
-    : 'Never'
+    ? formatDistanceToNow(new Date(value), { addSuffix: true, locale: dateLocale })
+    : neverLabel
 
   return (
     <div className="flex items-center justify-between py-2">
@@ -142,6 +148,8 @@ function SyncRow({
 }
 
 export function DashboardPage() {
+  const { t, dateLocale } = useI18n()
+
   const health = useQuery({
     queryKey: ['system', 'health'],
     queryFn: getHealth,
@@ -192,30 +200,30 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Dashboard</h1>
+      <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{t('dashboard.title')}</h1>
 
       <section className="space-y-2">
         <h2 className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-          System
+          {t('dashboard.system')}
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <StatCard
-            title="Status"
-            value={health.isError ? 'Offline' : (health.data?.status ?? 'Checking')}
+            title={t('dashboard.status')}
+            value={health.isError ? t('dashboard.offline') : (health.data?.status ?? t('dashboard.checking'))}
             icon={<CheckCircle className="h-4 w-4" />}
             variant={systemVariant}
             loading={health.isPending}
-            sub={health.isError ? 'Cannot reach server' : undefined}
+            sub={health.isError ? t('dashboard.cannotReachServer') : undefined}
           />
           <StatCard
-            title="Database"
+            title={t('dashboard.database')}
             value={health.isError ? '—' : (health.data?.db ?? '—')}
             icon={<Database className="h-4 w-4" />}
             variant={dbVariant}
             loading={health.isPending}
           />
           <StatCard
-            title="Version"
+            title={t('dashboard.version')}
             value={health.isError ? '—' : (health.data?.version ?? '—')}
             icon={<Tag className="h-4 w-4" />}
             variant={health.data ? 'ok' : 'neutral'}
@@ -226,25 +234,25 @@ export function DashboardPage() {
 
       <section className="space-y-2">
         <h2 className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-          Devices
+          {t('dashboard.devices')}
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <CountCard
-            title="Physical Devices"
+            title={t('dashboard.physicalDevices')}
             count={physDevices.data}
             icon={<Cpu className="h-4 w-4" />}
             loading={physDevices.isPending}
             error={physDevices.isError}
           />
           <CountCard
-            title="Zigbee Devices"
+            title={t('dashboard.zigbeeDevices')}
             count={zigbeeDevices.data}
             icon={<Radio className="h-4 w-4" />}
             loading={zigbeeDevices.isPending}
             error={zigbeeDevices.isError}
           />
           <CountCard
-            title="Scenarios"
+            title={t('dashboard.scenarios')}
             count={scenarios.data}
             icon={<Workflow className="h-4 w-4" />}
             loading={scenarios.isPending}
@@ -255,30 +263,34 @@ export function DashboardPage() {
 
       <section className="space-y-2">
         <h2 className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-          Cloud Sync
+          {t('dashboard.cloudSync')}
         </h2>
         <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
           {sync.isError ? (
             <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
               <CloudOff className="h-4 w-4" />
-              Sync status unavailable
+              {t('dashboard.syncUnavailable')}
             </div>
           ) : (
             <div className="divide-y divide-slate-100 dark:divide-slate-800">
               <SyncRow
-                label="Last Pull"
+                label={t('dashboard.lastPull')}
                 value={sync.data?.lastPulledAt}
                 loading={sync.isPending}
+                neverLabel={t('common.never')}
+                dateLocale={dateLocale}
               />
               <SyncRow
-                label="Last Push"
+                label={t('dashboard.lastPush')}
                 value={sync.data?.lastPushedAt}
                 loading={sync.isPending}
+                neverLabel={t('common.never')}
+                dateLocale={dateLocale}
               />
               <div className="flex items-center justify-between py-2">
                 <span className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
                   <ArrowUpDown className="h-4 w-4" />
-                  Pending Outbox
+                  {t('dashboard.pendingOutbox')}
                 </span>
                 {sync.isPending ? (
                   <Skeleton className="h-4 w-8" />
@@ -304,7 +316,7 @@ export function DashboardPage() {
                 Date.now() - new Date(sync.data.lastPulledAt).getTime() > 10 * 60 * 1000 && (
                   <div className="flex items-center gap-2 py-2 text-sm text-amber-600 dark:text-amber-400">
                     <Clock className="h-4 w-4" />
-                    Sync delayed — last pull over 10 minutes ago
+                    {t('dashboard.syncDelayed')}
                   </div>
                 )}
             </div>

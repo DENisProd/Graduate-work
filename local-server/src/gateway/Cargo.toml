@@ -27,6 +27,7 @@ tracing  = { workspace = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 anyhow   = { workspace = true }
 dotenvy  = "0.15"
+async-trait = { workspace = true }
 
 [dev-dependencies]
 serde_json     = { workspace = true }

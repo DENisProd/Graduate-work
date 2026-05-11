@@ -4,12 +4,52 @@ export interface HealthResponse {
   status: 'ok' | 'degraded' | 'error'
   version: string
   db: string
+  mqttConnected?: boolean
 }
 
 export interface SyncStatus {
   pendingOutbox: number
   lastPulledAt: string | null
   lastPushedAt: string | null
+}
+
+export interface RuntimeSettingsResponse {
+  mqttGatewayUrl: string | null
+  accessServiceUrl: string
+  mqttConnected: boolean
+  authSessionId: string | null
+  authStatus: string | null
+  authCode: string | null
+  authExternalUserId: string | null
+  authDisplayName: string | null
+  authExpiresAt: string | null
+}
+
+export interface UpdateRuntimeSettingsRequest {
+  mqttGatewayUrl?: string | null
+  accessServiceUrl?: string | null
+}
+
+export interface StartAuthResponse {
+  authSessionId: string
+  userCode: string
+  verificationUrl: string
+  expiresIn: number
+  pollInterval: number
+}
+
+export interface AuthStatusResponse {
+  authSessionId: string
+  status: 'pending' | 'authorized' | 'expired' | 'denied' | 'logged_out'
+  authCode: string | null
+  externalUserId?: string | null
+  displayName?: string | null
+}
+
+export interface CompleteAuthRequest {
+  userCode: string
+  externalUserId: string
+  displayName?: string
 }
 
 export interface PaginatedResponse<T> {
@@ -26,8 +66,48 @@ export async function getHealth(): Promise<HealthResponse> {
 }
 
 export async function getSyncStatus(): Promise<SyncStatus> {
-  const { data } = await api.get<SyncStatus>('/system/sync/status')
+  const { data } = await api.get<SyncStatus>('/api/v1/system/sync/status')
   return data
+}
+
+export interface SyncReport {
+  housesUpserted: number
+  roomsUpserted: number
+}
+
+export async function triggerSync(): Promise<SyncReport> {
+  const { data } = await api.post<SyncReport>('/api/v1/system/sync')
+  return data
+}
+
+export async function getRuntimeSettings(): Promise<RuntimeSettingsResponse> {
+  const { data } = await api.get<RuntimeSettingsResponse>('/api/v1/system/settings')
+  return data
+}
+
+export async function updateRuntimeSettings(
+  body: UpdateRuntimeSettingsRequest,
+): Promise<RuntimeSettingsResponse> {
+  const { data } = await api.patch<RuntimeSettingsResponse>('/api/v1/system/settings', body)
+  return data
+}
+
+export async function startDeviceAuthorization(): Promise<StartAuthResponse> {
+  const { data } = await api.post<StartAuthResponse>('/api/v1/system/auth/start')
+  return data
+}
+
+export async function getDeviceAuthorizationStatus(): Promise<AuthStatusResponse> {
+  const { data } = await api.get<AuthStatusResponse>('/api/v1/system/auth/status')
+  return data
+}
+
+export async function completeDeviceAuthorization(body: CompleteAuthRequest): Promise<void> {
+  await api.post('/api/v1/system/auth/complete', body)
+}
+
+export async function logoutDeviceAuthorization(): Promise<void> {
+  await api.post('/api/v1/system/auth/logout')
 }
 
 export interface UpdateCheckResult {
@@ -47,10 +127,12 @@ export async function applyUpdate(): Promise<void> {
 }
 
 export async function getPhysicalDevicesCount(): Promise<number> {
-  const { data } = await api.get<PaginatedResponse<unknown>>('/api/v1/physical-devices', {
-    params: { page: 0, size: 1 },
-  })
-  return data.totalElements
+  const { data } = await api.get<PaginatedResponse<unknown> | unknown[]>(
+    '/api/v1/physical-devices',
+    { params: { page: 0, size: 1 } },
+  )
+  if (Array.isArray(data)) return data.length
+  return data?.totalElements ?? 0
 }
 
 export async function getZigbeeDevicesCount(): Promise<number> {
@@ -59,8 +141,10 @@ export async function getZigbeeDevicesCount(): Promise<number> {
 }
 
 export async function getScenariosCount(): Promise<number> {
-  const { data } = await api.get<PaginatedResponse<unknown>>('/api/v1/scenarios', {
-    params: { page: 0, size: 1 },
-  })
-  return data.totalElements
+  const { data } = await api.get<PaginatedResponse<unknown> | unknown[]>(
+    '/api/v1/scenarios',
+    { params: { page: 0, size: 1 } },
+  )
+  if (Array.isArray(data)) return data.length
+  return data?.totalElements ?? 0
 }

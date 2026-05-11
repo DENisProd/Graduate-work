@@ -6,6 +6,7 @@ use local_server_application::{
     DomainError,
     ports::scenario_repository::{
         CreateScenarioCmd, ScenarioExecutionRepository, ScenarioRepository, UpdateScenarioCmd,
+        UpsertFromCloudCmd,
     },
 };
 use local_server_core::entities::scenario::{
@@ -61,13 +62,14 @@ fn row_to_scenario(row: &sqlx::sqlite::SqliteRow) -> Result<Scenario, DomainErro
         creator_id: row.try_get("creator_id").map_err(db_err)?,
         definition,
         status,
+        cloud_id: row.try_get("scenario_cloud_id").map_err(db_err)?,
         created_at,
         updated_at,
     })
 }
 
 const SCENARIO_COLS: &str =
-    "id, name, description, house_id, creator_id, definition, status, created_at, updated_at";
+    "id, name, description, house_id, creator_id, definition, status, scenario_cloud_id, created_at, updated_at";
 
 #[async_trait]
 impl ScenarioRepository for SqliteScenarioRepo {
@@ -209,6 +211,93 @@ impl ScenarioRepository for SqliteScenarioRepo {
         let id_str = id.to_string();
         sqlx::query("DELETE FROM scenarios WHERE id = ?")
             .bind(&id_str)
+            .execute(&self.pool)
+            .await
+            .map_err(db_err)?;
+        Ok(())
+    }
+
+    async fn upsert_from_cloud(
+        &self,
+        cloud_id: &str,
+        cmd: UpsertFromCloudCmd,
+    ) -> Result<Scenario, DomainError> {
+        let existing_id: Option<String> =
+            sqlx::query_scalar("SELECT id FROM scenarios WHERE scenario_cloud_id = ?")
+                .bind(cloud_id)
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(db_err)?;
+
+        let def_str = serde_json::to_string(&cmd.definition)
+            .map_err(|e| DomainError::Internal(e.to_string()))?;
+        let cloud_ts = cmd.cloud_updated_at.to_rfc3339();
+
+        if let Some(id_str) = existing_id {
+            let id = Uuid::parse_str(&id_str)
+                .map_err(|e| DomainError::Internal(format!("invalid uuid: {e}")))?;
+
+            // Only overwrite if cloud data is newer or equal (last-write-wins).
+            sqlx::query(
+                "UPDATE scenarios \
+                 SET name=?, description=?, definition=?, status=?, updated_at=? \
+                 WHERE id=? AND updated_at <= ?",
+            )
+            .bind(&cmd.name)
+            .bind(&cmd.description)
+            .bind(&def_str)
+            .bind(cmd.status.as_str())
+            .bind(&cloud_ts)
+            .bind(&id_str)
+            .bind(&cloud_ts)
+            .execute(&self.pool)
+            .await
+            .map_err(db_err)?;
+
+            self.find_by_id(&id).await?.ok_or_else(|| DomainError::not_found("scenario", id_str))
+        } else {
+            let id = Uuid::new_v4();
+            let id_str = id.to_string();
+
+            sqlx::query(
+                "INSERT INTO scenarios \
+                 (id, name, description, house_id, creator_id, definition, status, \
+                  scenario_cloud_id, created_at, updated_at) \
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            )
+            .bind(&id_str)
+            .bind(&cmd.name)
+            .bind(&cmd.description)
+            .bind(&cmd.house_id)
+            .bind(&cmd.creator_id)
+            .bind(&def_str)
+            .bind(cmd.status.as_str())
+            .bind(cloud_id)
+            .bind(&cloud_ts)
+            .bind(&cloud_ts)
+            .execute(&self.pool)
+            .await
+            .map_err(db_err)?;
+
+            self.find_by_id(&id).await?.ok_or_else(|| DomainError::not_found("scenario", id_str))
+        }
+    }
+
+    async fn list_without_cloud_id(&self) -> Result<Vec<Scenario>, DomainError> {
+        let rows = sqlx::query(&format!(
+            "SELECT {SCENARIO_COLS} FROM scenarios \
+             WHERE scenario_cloud_id IS NULL ORDER BY created_at ASC"
+        ))
+        .fetch_all(&self.pool)
+        .await
+        .map_err(db_err)?;
+        rows.iter().map(row_to_scenario).collect()
+    }
+
+    async fn set_cloud_id(&self, id: &Uuid, cloud_id: &str) -> Result<(), DomainError> {
+        sqlx::query("UPDATE scenarios SET scenario_cloud_id = ? WHERE id = ?")
+            .bind(cloud_id)
+            .bind(id.to_string())
             .execute(&self.pool)
             .await
             .map_err(db_err)?;

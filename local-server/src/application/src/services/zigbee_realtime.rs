@@ -1,20 +1,22 @@
 use tokio::sync::broadcast;
 use local_server_core::entities::zigbee::{PairingEvent, ZigbeeDeviceState};
 
-/// In-process pub/sub bus for Zigbee state changes and pairing events.
+/// In-process pub/sub bus for Zigbee state changes, pairing events, and permit_join status.
 ///
 /// The MQTT ingestion task calls `publish_*` methods; the Socket.IO gateway
 /// subscribes and forwards events to connected WebSocket clients.
 pub struct ZigbeeRealtimeService {
     state_tx: broadcast::Sender<ZigbeeDeviceState>,
     pairing_tx: broadcast::Sender<PairingEvent>,
+    permit_join_tx: broadcast::Sender<bool>,
 }
 
 impl ZigbeeRealtimeService {
     pub fn new() -> Self {
         let (state_tx, _) = broadcast::channel(256);
         let (pairing_tx, _) = broadcast::channel(64);
-        Self { state_tx, pairing_tx }
+        let (permit_join_tx, _) = broadcast::channel(8);
+        Self { state_tx, pairing_tx, permit_join_tx }
     }
 
     pub fn publish_state(&self, event: ZigbeeDeviceState) {
@@ -25,12 +27,21 @@ impl ZigbeeRealtimeService {
         self.pairing_tx.send(event).ok();
     }
 
+    /// Broadcast a permit_join enable/disable change from the bridge.
+    pub fn publish_permit_join(&self, enabled: bool) {
+        self.permit_join_tx.send(enabled).ok();
+    }
+
     pub fn subscribe_state(&self) -> broadcast::Receiver<ZigbeeDeviceState> {
         self.state_tx.subscribe()
     }
 
     pub fn subscribe_pairing(&self) -> broadcast::Receiver<PairingEvent> {
         self.pairing_tx.subscribe()
+    }
+
+    pub fn subscribe_permit_join(&self) -> broadcast::Receiver<bool> {
+        self.permit_join_tx.subscribe()
     }
 }
 

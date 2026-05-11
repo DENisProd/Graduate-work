@@ -20,7 +20,7 @@ use local_server_application::{
 /// and WebSocket connections.
 pub fn apply_to_router(
     router: Router,
-    mqtt: Option<Arc<dyn MqttClient>>,
+    mqtt: Arc<dyn MqttClient>,
     repo: Arc<dyn ZigbeeRepository>,
     realtime_svc: Arc<ZigbeeRealtimeService>,
     prefix: String,

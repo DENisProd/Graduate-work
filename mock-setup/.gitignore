@@ -1,0 +1,16 @@
+# Mosquitto runtime data (persistent broker state & logs)
+mosquitto/data/
+mosquitto/log/
+
+# Environment files
+.env
+.env.local
+
+# IDE / editors
+.idea/
+.vscode/
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db

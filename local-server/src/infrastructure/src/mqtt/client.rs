@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use rumqttc::{AsyncClient, Event, EventLoop, MqttOptions, Packet, QoS};
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, watch};
 
 use local_server_application::ports::MqttClient;
 use local_server_core::DomainError;
@@ -17,7 +17,9 @@ pub struct MqttMessage {
 pub struct RumqttcClient {
     inner: AsyncClient,
     prefix: String,
+    broker_url: String,
     msg_tx: broadcast::Sender<MqttMessage>,
+    shutdown_tx: watch::Sender<bool>,
 }
 
 impl RumqttcClient {
@@ -33,24 +35,43 @@ impl RumqttcClient {
         let mut opts = MqttOptions::new(&client_id, &host, port);
         opts.set_keep_alive(Duration::from_secs(30));
         opts.set_clean_session(true);
+        opts.set_max_packet_size(256 * 1024, 256 * 1024);
 
         let (inner, eventloop) = AsyncClient::new(opts, 128);
         let (msg_tx, _) = broadcast::channel::<MqttMessage>(256);
+        let (shutdown_tx, shutdown_rx) = watch::channel(false);
 
-        let client = Arc::new(Self { inner, prefix: topic_prefix.to_owned(), msg_tx });
+        let client = Arc::new(Self {
+            inner,
+            prefix: topic_prefix.to_owned(),
+            broker_url: mqtt_url.to_string(),
+            msg_tx,
+            shutdown_tx,
+        });
 
-        // Subscribe to all topics under the prefix
+        // Subscribe to all topics under the prefix and to modbus responses.
         let subscribe_topic = format!("{}/#", topic_prefix);
         client
             .inner
             .subscribe(&subscribe_topic, QoS::AtLeastOnce)
             .await
             .map_err(|e| anyhow::anyhow!("MQTT subscribe: {e}"))?;
+        client
+            .inner
+            .subscribe("modbus/response", QoS::AtLeastOnce)
+            .await
+            .map_err(|e| anyhow::anyhow!("MQTT subscribe modbus/response: {e}"))?;
 
         // Spawn the event loop driver in the background
         let tx = client.msg_tx.clone();
         let inner2 = client.inner.clone();
-        tokio::spawn(run_eventloop(eventloop, tx, inner2, subscribe_topic));
+        tokio::spawn(run_eventloop(
+            eventloop,
+            tx,
+            inner2,
+            subscribe_topic,
+            shutdown_rx,
+        ));
 
         tracing::info!(host = %host, port, prefix = topic_prefix, "MQTT connected");
         Ok(client)
@@ -63,6 +84,10 @@ impl RumqttcClient {
     pub fn topic_prefix(&self) -> &str {
         &self.prefix
     }
+
+    pub fn shutdown(&self) {
+        let _ = self.shutdown_tx.send(true);
+    }
 }
 
 async fn run_eventloop(
@@ -70,14 +95,23 @@ async fn run_eventloop(
     tx: broadcast::Sender<MqttMessage>,
     client: AsyncClient,
     subscribe_topic: String,
+    mut shutdown_rx: watch::Receiver<bool>,
 ) {
     let mut backoff = 1u64;
     loop {
-        match eventloop.poll().await {
+        tokio::select! {
+            _ = shutdown_rx.changed() => {
+                if *shutdown_rx.borrow() {
+                    tracing::info!("MQTT event loop shutdown requested");
+                    break;
+                }
+            }
+            ev = eventloop.poll() => match ev {
             Ok(Event::Incoming(Packet::ConnAck(_))) => {
                 backoff = 1;
                 tracing::info!("MQTT reconnected, re-subscribing");
                 client.subscribe(&subscribe_topic, QoS::AtLeastOnce).await.ok();
+                client.subscribe("modbus/response", QoS::AtLeastOnce).await.ok();
             }
             Ok(Event::Incoming(Packet::Publish(p))) => {
                 let msg = MqttMessage { topic: p.topic.clone(), payload: p.payload.to_vec() };
@@ -88,6 +122,7 @@ async fn run_eventloop(
                 tracing::warn!(error = %e, backoff_secs = backoff, "MQTT error, will retry");
                 tokio::time::sleep(Duration::from_secs(backoff)).await;
                 backoff = (backoff * 2).min(60);
+            }
             }
         }
     }
@@ -100,6 +135,20 @@ impl MqttClient for RumqttcClient {
             .publish(topic, QoS::AtLeastOnce, false, payload)
             .await
             .map_err(|e| DomainError::DependencyUnavailable(format!("MQTT publish: {e}")))
+    }
+
+    async fn is_connected(&self) -> bool {
+        true
+    }
+
+    async fn current_url(&self) -> Option<String> {
+        Some(self.broker_url.clone())
+    }
+
+    async fn reconfigure(&self, _mqtt_url: Option<&str>) -> Result<(), DomainError> {
+        Err(DomainError::Validation(
+            "static MQTT client does not support runtime reconfiguration".into(),
+        ))
     }
 }
 

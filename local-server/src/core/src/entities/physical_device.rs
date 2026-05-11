@@ -48,7 +48,11 @@ pub struct PhysicalDevice {
     pub model: Option<String>,
     pub friendly_name: Option<String>,
     pub firmware_version: Option<String>,
+    pub power_source: Option<String>,
+    pub interview_completed: bool,
+    pub definition: Option<serde_json::Value>,
     pub last_seen: Option<DateTime<Utc>>,
+    pub cloud_id: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

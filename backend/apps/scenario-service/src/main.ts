@@ -6,13 +6,26 @@ import { ZodValidationPipe } from 'nestjs-zod';
 import { AppModule } from './app.module';
 import { SafeLogger } from './common/logging/safe-logger';
 
+function parseCorsOrigins(raw: string | undefined, fallback: string[]): string[] {
+  const parts = (raw ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return parts.length > 0 ? parts : fallback;
+}
+
 async function bootstrap() {
   console.log('join', __dirname);
   loadEnv({ path: join(__dirname, '../../../.env') });
   const app = await NestFactory.create(AppModule, { logger: new SafeLogger() });
 
+  const corsOrigins = parseCorsOrigins(
+    process.env.SCENARIO_CORS_ORIGINS ?? process.env.FRONTEND_ORIGIN,
+    ['http://localhost:3000', 'http://localhost:5173'],
+  );
+
   app.enableCors({
-    origin: ['http://localhost:3000'],
+    origin: corsOrigins,
     credentials: true,
   });
 

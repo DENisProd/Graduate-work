@@ -107,6 +107,8 @@ pub struct Scenario {
     pub creator_id: String,
     pub definition: ScenarioDefinitionJson,
     pub status: ScenarioStatus,
+    /// MongoDB ObjectId from scenario-service; None for locally-created scenarios.
+    pub cloud_id: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

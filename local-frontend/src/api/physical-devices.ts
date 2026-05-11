@@ -12,9 +12,20 @@ interface ListFilters {
 export async function listPhysicalDevices(
   filters: ListFilters = {},
 ): Promise<PaginatedResponse<PhysicalDevice>> {
-  const { data } = await api.get<PaginatedResponse<PhysicalDevice>>('/api/v1/physical-devices', {
-    params: { page: 0, size: 20, ...filters },
-  })
+  const { page = 0, size = 20 } = filters
+  const { data } = await api.get<PaginatedResponse<PhysicalDevice> | PhysicalDevice[]>(
+    '/api/v1/physical-devices',
+    { params: { page, size, ...filters } },
+  )
+  if (Array.isArray(data)) {
+    return {
+      content: data,
+      totalElements: data.length,
+      totalPages: data.length === 0 ? 0 : 1,
+      page,
+      size,
+    }
+  }
   return data
 }
 

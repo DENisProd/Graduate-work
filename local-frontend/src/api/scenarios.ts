@@ -1,9 +1,15 @@
 import { api } from './client'
 import type { Scenario, ScenarioDefinition, ScenarioExecution } from '@/types'
 
-export async function listScenarios(): Promise<Scenario[]> {
-  const { data } = await api.get<Scenario[]>('/api/v1/scenarios')
-  return data
+export async function listScenarios(params: { houseId?: string; page?: number; size?: number } = {}): Promise<Scenario[]> {
+  const query: Record<string, string | number> = {}
+  if (params.houseId) query.house_id = params.houseId
+  if (params.page !== undefined) query.page = params.page
+  if (params.size !== undefined) query.size = params.size
+
+  const { data } = await api.get<Scenario[] | { content?: Scenario[] }>('/api/v1/scenarios', { params: query })
+  if (Array.isArray(data)) return data
+  return data?.content ?? []
 }
 
 export async function getScenario(id: string): Promise<Scenario> {

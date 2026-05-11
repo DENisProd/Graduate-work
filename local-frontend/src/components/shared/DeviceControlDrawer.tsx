@@ -1,8 +1,12 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { X, Power, Sun, Thermometer, Droplets, BatteryMedium, Wifi, ChevronDown, ChevronUp, Send } from 'lucide-react'
+import {
+  X, Power, Sun, Thermometer, Droplets, Eye, Palette,
+  BatteryMedium, Wifi, ChevronDown, ChevronUp, Send, Activity,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/hooks/useI18n'
 import { useDeviceStatesStore } from '@/stores/device-states.store'
 import { sendCommand } from '@/api/zigbee'
 import type { PhysicalDevice } from '@/types'
@@ -17,7 +21,13 @@ interface Props {
   onClose: () => void
 }
 
+const KNOWN_STATE_KEYS = new Set([
+  'state', 'brightness', 'temperature', 'humidity', 'occupancy',
+  'battery', 'linkquality', 'colorMode', 'deviceIeeeAddr', 'timestamp', 'id', 'payload',
+])
+
 export function DeviceControlDrawer({ device, open, onClose }: Props) {
+  const { t } = useI18n()
   const state = useDeviceStatesStore((s) =>
     device ? s.states.get(device.protocolAddress) : undefined,
   )
@@ -28,7 +38,7 @@ export function DeviceControlDrawer({ device, open, onClose }: Props) {
   const mutation = useMutation({
     mutationFn: (payload: Record<string, unknown>) =>
       sendCommand(device!.protocolAddress, payload),
-    onError: () => toast.error('Command failed'),
+    onError: () => toast.error(t('deviceDrawer.toastCommandFailed')),
   })
 
   const send = (payload: Record<string, unknown>) => {
@@ -51,14 +61,61 @@ export function DeviceControlDrawer({ device, open, onClose }: Props) {
       send(parsed)
       setRawJson('')
     } catch {
-      toast.error('Invalid JSON')
+      toast.error(t('deviceDrawer.toastInvalidJson'))
     }
   }
 
   const brightness = state?.brightness ?? 0
   const brightnessPercent = Math.round((brightness / 254) * 100)
-  const temp = state?.temperature !== undefined ? (state.temperature / 100).toFixed(1) : null
-  const hum = state?.humidity !== undefined ? (state.humidity / 100).toFixed(0) : null
+
+  // Universal sensor readings - show every defined field as a card
+  type Reading = { key: string; label: string; value: string; icon: React.ReactNode; accent?: string }
+  const readings: Reading[] = []
+
+  if (state?.temperature !== undefined) {
+    readings.push({
+      key: 'temp',
+      label: t('deviceDrawer.temperature'),
+      value: `${state.temperature.toFixed(1)}°C`,
+      icon: <Thermometer className="h-3.5 w-3.5 text-orange-400" />,
+    })
+  }
+  if (state?.humidity !== undefined) {
+    readings.push({
+      key: 'hum',
+      label: t('deviceDrawer.humidity'),
+      value: `${state.humidity.toFixed(0)}%`,
+      icon: <Droplets className="h-3.5 w-3.5 text-blue-400" />,
+    })
+  }
+  if (state?.occupancy !== undefined) {
+    readings.push({
+      key: 'occ',
+      label: t('deviceDrawer.occupancy'),
+      value: state.occupancy ? t('deviceDrawer.motionDetected') : t('deviceDrawer.motionClear'),
+      icon: <Eye className={cn('h-3.5 w-3.5', state.occupancy ? 'text-amber-500' : 'text-slate-400')} />,
+      accent: state.occupancy ? 'amber' : undefined,
+    })
+  }
+  if (state?.colorMode !== undefined) {
+    readings.push({
+      key: 'colorMode',
+      label: t('deviceDrawer.colorMode'),
+      value: state.colorMode,
+      icon: <Palette className="h-3.5 w-3.5 text-purple-400" />,
+    })
+  }
+  // Any extra fields from the raw payload not already shown
+  for (const [k, v] of Object.entries(state?.payload ?? {})) {
+    if (!KNOWN_STATE_KEYS.has(k) && v !== null && v !== undefined) {
+      readings.push({
+        key: k,
+        label: k,
+        value: typeof v === 'object' ? JSON.stringify(v) : String(v),
+        icon: <Activity className="h-3.5 w-3.5 text-slate-400" />,
+      })
+    }
+  }
 
   return (
     <>
@@ -98,7 +155,7 @@ export function DeviceControlDrawer({ device, open, onClose }: Props) {
               {hasCap(device.capabilities, 'state') && (
                 <div className="space-y-2">
                   <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-                    <Power className="h-3.5 w-3.5" /> Power
+                    <Power className="h-3.5 w-3.5" /> {t('deviceDrawer.power')}
                   </p>
                   <div className="flex gap-2">
                     {(['ON', 'OFF'] as const).map((val) => (
@@ -125,7 +182,7 @@ export function DeviceControlDrawer({ device, open, onClose }: Props) {
                 <div className="space-y-2">
                   <p className="flex items-center justify-between text-xs font-medium uppercase tracking-wide text-slate-500">
                     <span className="flex items-center gap-2">
-                      <Sun className="h-3.5 w-3.5" /> Brightness
+                      <Sun className="h-3.5 w-3.5" /> {t('deviceDrawer.brightness')}
                     </span>
                     <span>{brightnessPercent}%</span>
                   </p>
@@ -151,35 +208,33 @@ export function DeviceControlDrawer({ device, open, onClose }: Props) {
                 </div>
               )}
 
-              {(temp !== null || hum !== null) && (
+              {readings.length > 0 && (
                 <div className="grid grid-cols-2 gap-3">
-                  {temp !== null && (
-                    <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
-                      <p className="flex items-center gap-1 text-xs text-slate-500">
-                        <Thermometer className="h-3.5 w-3.5 text-orange-400" /> Temperature
+                  {readings.map((r) => (
+                    <div
+                      key={r.key}
+                      className={cn(
+                        'rounded-lg border p-3',
+                        r.accent === 'amber'
+                          ? 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20'
+                          : 'border-slate-200 dark:border-slate-800',
+                      )}
+                    >
+                      <p className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+                        {r.icon} {r.label}
                       </p>
-                      <p className="mt-1 text-2xl font-semibold text-slate-800 dark:text-slate-200">
-                        {temp}°C
-                      </p>
-                    </div>
-                  )}
-                  {hum !== null && (
-                    <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
-                      <p className="flex items-center gap-1 text-xs text-slate-500">
-                        <Droplets className="h-3.5 w-3.5 text-blue-400" /> Humidity
-                      </p>
-                      <p className="mt-1 text-2xl font-semibold text-slate-800 dark:text-slate-200">
-                        {hum}%
+                      <p className="mt-1 text-xl font-semibold text-slate-800 dark:text-slate-200 truncate">
+                        {r.value}
                       </p>
                     </div>
-                  )}
+                  ))}
                 </div>
               )}
 
               {state?.battery !== undefined && (
                 <div className="space-y-1">
                   <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-                    <BatteryMedium className="h-3.5 w-3.5" /> Battery
+                    <BatteryMedium className="h-3.5 w-3.5" /> {t('deviceDrawer.battery')}
                   </p>
                   <div className="flex items-center gap-3">
                     <div className="flex-1 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
@@ -205,7 +260,7 @@ export function DeviceControlDrawer({ device, open, onClose }: Props) {
               {state?.linkquality !== undefined && (
                 <div className="flex items-center justify-between text-sm">
                   <span className="flex items-center gap-2 text-slate-500">
-                    <Wifi className="h-4 w-4" /> Link quality
+                    <Wifi className="h-4 w-4" /> {t('deviceDrawer.linkQuality')}
                   </span>
                   <span className="font-medium text-slate-700 dark:text-slate-300">
                     {state.linkquality} / 255
@@ -218,7 +273,7 @@ export function DeviceControlDrawer({ device, open, onClose }: Props) {
                   onClick={() => setShowRaw((v) => !v)}
                   className="flex w-full items-center justify-between text-xs font-medium uppercase tracking-wide text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                 >
-                  <span>Custom Command</span>
+                  <span>{t('deviceDrawer.customCommand')}</span>
                   {showRaw ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                 </button>
 
@@ -226,9 +281,9 @@ export function DeviceControlDrawer({ device, open, onClose }: Props) {
                   <div className="mt-3 space-y-2">
                     {state && (
                       <details className="text-xs">
-                        <summary className="cursor-pointer text-slate-500">Last payload</summary>
+                        <summary className="cursor-pointer text-slate-500">{t('scenarioDef.lastPayload')}</summary>
                         <pre className="mt-1 overflow-auto rounded bg-slate-100 p-2 text-slate-700 dark:bg-slate-900 dark:text-slate-300">
-                          {JSON.stringify(state.payload, null, 2)}
+                          {JSON.stringify(state, null, 2)}
                         </pre>
                       </details>
                     )}
@@ -243,7 +298,7 @@ export function DeviceControlDrawer({ device, open, onClose }: Props) {
                       onClick={handleSendRaw}
                       className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700"
                     >
-                      <Send className="h-4 w-4" /> Send
+                      <Send className="h-4 w-4" /> {t('common.send')}
                     </button>
                   </div>
                 )}

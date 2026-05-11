@@ -3,11 +3,12 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'sonner'
-import { initTheme } from '@/stores/settings.store'
+import { initTheme, initLocale } from '@/stores/settings.store'
 import { App } from './App'
 import './index.css'
 
 initTheme()
+initLocale()
 
 const queryClient = new QueryClient({
   defaultOptions: {

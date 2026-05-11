@@ -9,12 +9,12 @@ use local_server_application::{
     services::ZigbeeRealtimeService,
 };
 
-use super::protocol::{CommandPayload, PairingStatusDto, SubscribePayload, ZigbeeStateDto};
+use super::protocol::{CommandPayload, PairingEventDto, PermitJoinStatusDto, SubscribePayload, ZigbeeStateDto};
 
 /// Register all event handlers for the `/zigbee` namespace.
 pub fn setup_namespace(
     io: &SocketIo,
-    mqtt: Option<Arc<dyn MqttClient>>,
+    mqtt: Arc<dyn MqttClient>,
     repo: Arc<dyn ZigbeeRepository>,
     prefix: String,
 ) {
@@ -28,7 +28,6 @@ pub fn setup_namespace(
         let prefix = prefix2.clone();
 
         // zigbee:subscribe { deviceIeeeAddrs: ["0x...", ...] }
-        // → join room "zigbee:{ieee}" and emit last-known state as snapshot
         socket.on("zigbee:subscribe", {
             let repo = repo.clone();
             move |socket: SocketRef, Data(data): Data<SubscribePayload>| {
@@ -63,10 +62,9 @@ pub fn setup_namespace(
                 let mqtt = mqtt.clone();
                 let prefix = prefix.clone();
                 async move {
-                    let Some(client) = mqtt else { return };
                     let topic = format!("{}/{}/set", prefix, data.friendly_name);
                     if let Ok(p) = serde_json::to_vec(&data.payload) {
-                        client.publish(&topic, &p).await.ok();
+                        mqtt.publish(&topic, &p).await.ok();
                     }
                 }
             }
@@ -80,9 +78,8 @@ pub fn setup_namespace(
                 let mqtt = mqtt.clone();
                 let prefix = prefix.clone();
                 async move {
-                    let Some(client) = mqtt else { return };
                     let topic = format!("{}/bridge/request/permit_join", prefix);
-                    client.publish(&topic, br#"{"value":true,"time":300}"#).await.ok();
+                    mqtt.publish(&topic, br#"{"value":true,"time":300}"#).await.ok();
                 }
             }
         });
@@ -95,9 +92,8 @@ pub fn setup_namespace(
                 let mqtt = mqtt.clone();
                 let prefix = prefix.clone();
                 async move {
-                    let Some(client) = mqtt else { return };
                     let topic = format!("{}/bridge/request/permit_join", prefix);
-                    client.publish(&topic, br#"{"value":false}"#).await.ok();
+                    mqtt.publish(&topic, br#"{"value":false}"#).await.ok();
                 }
             }
         });
@@ -114,11 +110,9 @@ pub fn setup_namespace(
     });
 }
 
-/// Spawn background tasks that bridge the in-process broadcast channels to
-/// Socket.IO rooms. Must be called AFTER `setup_namespace` so the namespace
-/// is already registered.
+/// Spawn background tasks bridging in-process broadcast channels to Socket.IO rooms.
 pub fn spawn_broadcasters(io: SocketIo, svc: Arc<ZigbeeRealtimeService>) {
-    // State broadcast: ZigbeeDeviceState → "zigbee:state" in room "zigbee:{ieee}"
+    // State broadcast → "zigbee:state" in room "zigbee:{ieee}"
     let io1 = io.clone();
     let mut state_rx = svc.subscribe_state();
     tokio::spawn(async move {
@@ -138,18 +132,37 @@ pub fn spawn_broadcasters(io: SocketIo, svc: Arc<ZigbeeRealtimeService>) {
         }
     });
 
-    // Pairing broadcast: PairingEvent → "zigbee:pairing:status" in "pairing" room
+    // Pairing events (device joined / interview) → "zigbee:pairing:event" in "pairing" room
+    let io2 = io.clone();
     let mut pairing_rx = svc.subscribe_pairing();
     tokio::spawn(async move {
         loop {
             match pairing_rx.recv().await {
                 Ok(event) => {
-                    let dto = PairingStatusDto::from(&event);
+                    let dto = PairingEventDto::from(&event);
+                    io2.of("/zigbee")
+                        .map(|ns| ns.to("pairing").emit("zigbee:pairing:event", &dto));
+                }
+                Err(broadcast::error::RecvError::Lagged(n)) => {
+                    tracing::warn!(dropped = n, "pairing broadcast lagged");
+                }
+                Err(broadcast::error::RecvError::Closed) => break,
+            }
+        }
+    });
+
+    // Permit_join status → "zigbee:pairing:status" in "pairing" room
+    let mut permit_rx = svc.subscribe_permit_join();
+    tokio::spawn(async move {
+        loop {
+            match permit_rx.recv().await {
+                Ok(enabled) => {
+                    let dto = PermitJoinStatusDto { permit_join_enabled: enabled };
                     io.of("/zigbee")
                         .map(|ns| ns.to("pairing").emit("zigbee:pairing:status", &dto));
                 }
                 Err(broadcast::error::RecvError::Lagged(n)) => {
-                    tracing::warn!(dropped = n, "pairing broadcast lagged");
+                    tracing::warn!(dropped = n, "permit_join broadcast lagged");
                 }
                 Err(broadcast::error::RecvError::Closed) => break,
             }

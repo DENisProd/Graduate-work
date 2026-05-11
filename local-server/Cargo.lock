@@ -1169,6 +1169,7 @@ name = "local-server"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "axum",
  "config",
  "dotenvy",
@@ -1222,8 +1223,10 @@ dependencies = [
  "anyhow",
  "async-trait",
  "chrono",
+ "dashmap",
  "local-server-application",
  "local-server-core",
+ "reqwest",
  "rumqttc",
  "serde",
  "serde_json",

@@ -17,6 +17,7 @@ export {
   houseMembersApi,
   houseRolesApi,
   houseInvitationsApi,
+  deviceAuthApi,
   accessControlRightsApi,
   accessRightsApi,
   accessApiClient,

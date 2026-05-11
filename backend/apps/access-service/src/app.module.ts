@@ -13,6 +13,7 @@ import { HouseMembersModule } from './modules/house-members/house-members.module
 import { HouseRoomsModule } from './modules/house-rooms/house-rooms.module';
 import { HouseInvitationsModule } from './modules/house-invitations/house-invitations.module';
 import { DeviceCatalogModule } from './modules/device-catalog/device-catalog.module';
+import { DeviceAuthModule } from './modules/device-auth/device-auth.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { DeviceCatalogModule } from './modules/device-catalog/device-catalog.mod
     HouseMembersModule,
     HouseRoomsModule,
     HouseInvitationsModule,
+    DeviceAuthModule,
     AccessControlModule,
     ModulesModule,
     DeviceCatalogModule,

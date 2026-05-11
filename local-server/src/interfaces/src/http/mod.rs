@@ -4,10 +4,11 @@ use axum::Router;
 use axum::http::{header, HeaderName, HeaderValue, Method};
 use local_server_application::{
     ports::{
-        DeviceRepository, MqttClient, PhysicalDeviceRepository, ZigbeeRepository,
+        AccessRepository, DeviceRepository, ModbusBridgePort, ModbusRepository, MqttClient,
+        PhysicalDeviceRepository, WidgetDashboardRepository, ZigbeeRepository,
         scenario_repository::ScenarioExecutionRepository,
     },
-    services::ScenarioEngine,
+    services::{AccessEvaluator, ScenarioEngine},
 };
 use local_server_application::ports::ScenarioRepository;
 use serde::Serialize;
@@ -18,6 +19,7 @@ use utoipa_swagger_ui::SwaggerUi;
 
 use crate::HttpAppState;
 
+pub mod access;
 pub mod device_categories;
 pub mod devices;
 pub mod error;
@@ -25,6 +27,8 @@ pub mod physical_devices;
 pub mod scenario_executions;
 pub mod scenarios;
 pub mod system;
+pub mod modbus;
+pub mod widget_dashboards;
 pub mod zigbee;
 
 // ─── Shared pagination wrapper ────────────────────────────────────────────────
@@ -114,11 +118,16 @@ pub fn router(
     device_repo: Arc<dyn DeviceRepository>,
     phys_repo: Arc<dyn PhysicalDeviceRepository>,
     zigbee_repo: Arc<dyn ZigbeeRepository>,
-    mqtt_client: Option<Arc<dyn MqttClient>>,
+    mqtt_client: Arc<dyn MqttClient>,
     mqtt_prefix: String,
     scenario_repo: Arc<dyn ScenarioRepository>,
     scenario_exec_repo: Arc<dyn ScenarioExecutionRepository>,
     scenario_engine: Arc<ScenarioEngine>,
+    access_repo: Arc<dyn AccessRepository>,
+    evaluator: Arc<AccessEvaluator>,
+    widget_dashboard_repo: Arc<dyn WidgetDashboardRepository>,
+    modbus_repo: Arc<dyn ModbusRepository>,
+    modbus_gateway: Arc<dyn ModbusBridgePort>,
 ) -> Router {
     let cors = build_cors_layer();
     Router::new()
@@ -128,14 +137,17 @@ pub fn router(
                 .merge(system::router(http_state))
                 .merge(devices::router(device_repo.clone()))
                 .merge(device_categories::router(device_repo))
-                .merge(physical_devices::router(phys_repo))
-                .merge(zigbee::router(zigbee_repo, mqtt_client, mqtt_prefix))
+                .merge(physical_devices::router(phys_repo.clone()))
+                .merge(zigbee::router(zigbee_repo, phys_repo, mqtt_client.clone(), mqtt_prefix))
                 .merge(scenarios::router(
                     scenario_repo,
                     scenario_exec_repo.clone(),
                     scenario_engine.clone(),
                 ))
-                .merge(scenario_executions::router(scenario_exec_repo, scenario_engine)),
+                .merge(scenario_executions::router(scenario_exec_repo, scenario_engine))
+                .merge(access::router(access_repo, evaluator))
+                .merge(widget_dashboards::router(widget_dashboard_repo))
+                .merge(modbus::router(modbus_repo, modbus_gateway, mqtt_client)),
         )
         .merge(SwaggerUi::new("/docs").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .layer(TraceLayer::new_for_http())

@@ -1,0 +1,20 @@
+# Git
+.git/
+.gitignore
+
+# Mosquitto runtime state
+mosquitto/data/
+mosquitto/log/
+
+# Environment
+.env
+.env.local
+
+# IDE / editors
+.idea/
+.vscode/
+.claude/
+
+# Docs
+*.md
+README*

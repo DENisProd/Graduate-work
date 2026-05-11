@@ -55,8 +55,10 @@ export function usePairing() {
     const offEvent = on('zigbee:pairing:event', (e) => {
       const event = e as PairingEvent
       setEvents((prev) => [...prev, event])
-      if (event.type === 'device_joined') {
-        toast.success(`Device joined: ${event.friendlyName ?? event.ieeeAddr}`)
+      if (event.type === 'interview_successful') {
+        toast.success(`Paired: ${event.friendlyName ?? event.model ?? event.ieeeAddr}`)
+        queryClient.invalidateQueries({ queryKey: ['physical-devices'] })
+        queryClient.invalidateQueries({ queryKey: ['zigbee-devices'] })
       }
     })
     const offStatus = on('zigbee:pairing:status', (s) => {

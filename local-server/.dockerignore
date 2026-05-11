@@ -1,4 +1,33 @@
+# Rust build artifacts
 target/
+
+# SQLite runtime data
 data/
-.claude/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Git
 .git/
+.gitignore
+
+# Environment & local config
+.env
+.env.local
+config/local.toml
+
+# IDE / editors
+.idea/
+.vscode/
+.claude/
+
+# Docker (avoid recursive context)
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker-compose.*.yml
+
+# Docs
+*.md
+README*

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Plus, ChevronLeft, ChevronRight, Wifi, WifiOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/hooks/useI18n'
 import { listPhysicalDevices } from '@/api/physical-devices'
 import { DeviceCard } from '@/components/shared/DeviceCard'
 import { DeviceControlDrawer } from '@/components/shared/DeviceControlDrawer'
@@ -27,6 +28,7 @@ function Skeleton() {
 const PAGE_SIZE = 12
 
 export function PhysicalDevicesPage() {
+  const { t } = useI18n()
   const [page, setPage] = useState(0)
   const [houseId, setHouseId] = useState('')
   const [roomId, setRoomId] = useState('')
@@ -56,7 +58,7 @@ export function PhysicalDevicesPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
-            Physical Devices
+            {t('physicalDevices.title')}
           </h1>
           <span
             className={cn(
@@ -71,7 +73,7 @@ export function PhysicalDevicesPage() {
             ) : (
               <WifiOff className="h-3 w-3" />
             )}
-            {connected ? 'Live' : 'Offline'}
+            {connected ? t('physicalDevices.live') : t('physicalDevices.offline')}
           </span>
         </div>
         <button
@@ -79,7 +81,7 @@ export function PhysicalDevicesPage() {
           className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
         >
           <Plus className="h-4 w-4" />
-          Add Device
+          {t('physicalDevices.addDevice')}
         </button>
       </div>
 
@@ -87,20 +89,20 @@ export function PhysicalDevicesPage() {
         <input
           value={houseId}
           onChange={(e) => { setHouseId(e.target.value); setPage(0) }}
-          placeholder="Filter by House ID"
+          placeholder={t('physicalDevices.filterHouse')}
           className="w-48 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
         />
         <input
           value={roomId}
           onChange={(e) => { setRoomId(e.target.value); setPage(0) }}
-          placeholder="Filter by Room ID"
+          placeholder={t('physicalDevices.filterRoom')}
           className="w-48 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
         />
       </div>
 
       {isError && (
         <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
-          Failed to load devices. Check that the local server is running.
+          {t('physicalDevices.loadError')}
         </div>
       )}
 
@@ -111,17 +113,18 @@ export function PhysicalDevicesPage() {
       ) : devices.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="mb-3 text-4xl">📡</div>
-          <p className="font-medium text-slate-700 dark:text-slate-300">No devices found</p>
+          <p className="font-medium text-slate-700 dark:text-slate-300">{t('physicalDevices.emptyTitle')}</p>
           <p className="mt-1 text-sm text-slate-400">
-            {houseId || roomId
-              ? 'Try clearing the filters'
-              : 'Click "Add Device" to pair a Zigbee device'}
+            {houseId || roomId ? t('physicalDevices.emptyFiltered') : t('physicalDevices.emptyHint')}
           </p>
         </div>
       ) : (
         <>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            {totalElements} device{totalElements !== 1 ? 's' : ''}
+            {t(
+              totalElements === 1 ? 'physicalDevices.deviceOne' : 'physicalDevices.deviceMany',
+              { count: totalElements },
+            )}
           </p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {devices.map((device) => (
@@ -136,7 +139,7 @@ export function PhysicalDevicesPage() {
           {totalPages > 1 && (
             <div className="flex items-center justify-end gap-2">
               <span className="text-xs text-slate-500">
-                Page {page + 1} of {totalPages}
+                {t('common.pageOf', { current: page + 1, total: totalPages })}
               </span>
               <button
                 onClick={() => setPage((p) => Math.max(0, p - 1))}

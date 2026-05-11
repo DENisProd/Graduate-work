@@ -7,13 +7,27 @@ import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './modules/common/filters/http-exception.filter';
 import { ErrorResponse } from './modules/common/dto/error-response.dto';
 
+function parseCorsOrigins(raw: string | undefined, fallback: string[]): string[] {
+  const parts = (raw ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return parts.length > 0 ? parts : fallback;
+}
+
 async function bootstrap() {
   loadEnv({ path: join(process.cwd(), '../../.env') });
   const port = Number(process.env.ACCESS_CONTROL_SERVICE_PORT ?? 8085);
 
+  const corsOrigins = parseCorsOrigins(process.env.ACCESS_CORS_ORIGINS, [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://localhost:8080',
+  ]);
+
   const app = await NestFactory.create(AppModule);
   app.enableCors({
-    origin: ['http://localhost:3000', 'http://localhost:8080'],
+    origin: corsOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     credentials: true,
     allowedHeaders: [
@@ -99,6 +113,7 @@ async function bootstrap() {
 
   await app.listen(port);
   console.log(`Application is running on: http://localhost:${port}/api/v1`);
+  console.log(`CORS origins: ${corsOrigins.join(', ')}`);
 }
 
 bootstrap();

@@ -29,12 +29,15 @@ pub struct ZigbeeMetrics {
     pub color_mode: Option<String>,
 }
 
-/// Pairing event emitted from the Zigbee2MQTT bridge when a device joins or leaves.
+/// Pairing event emitted from the Zigbee2MQTT bridge when a device joins, leaves, or is interviewed.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PairingEvent {
     pub event_type: String,
     pub ieee_address: Option<String>,
     pub friendly_name: Option<String>,
+    pub model: Option<String>,
+    pub manufacturer_name: Option<String>,
+    pub message: Option<String>,
     pub timestamp: DateTime<Utc>,
 }

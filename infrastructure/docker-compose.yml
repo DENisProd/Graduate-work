@@ -102,10 +102,10 @@ services:
     container_name: smart-home-mqtt-gateway
     restart: unless-stopped
     ports:
-      - "1883:1883"    # MQTT (TCP)
-      - "8883:8883"    # MQTT over TLS
-      - "18083:18083"  # Dashboard / REST API
-      - "8083:8083"    # MQTT over WebSocket
+      - "${MQTT_GATEWAY_TCP_PORT:-1883}:1883"          # MQTT (TCP)
+      - "${MQTT_GATEWAY_TLS_PORT:-8883}:8883"          # MQTT over TLS
+      - "${MQTT_GATEWAY_DASHBOARD_PORT:-18083}:18083"  # Dashboard / REST API
+      - "${MQTT_GATEWAY_WS_PORT:-8083}:8083"           # MQTT over WebSocket
     volumes:
       - emqx_data:/opt/emqx/data
       - emqx_log:/opt/emqx/log

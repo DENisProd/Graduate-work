@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, X, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/hooks/useI18n'
 import {
   listDeviceTypes,
   listDeviceCategories,
@@ -56,16 +57,30 @@ function StatusDot({ status }: { status: CatalogDevice['status'] }) {
   )
 }
 
-function FunctionsTable({ functions }: { functions: DeviceFunction[] }) {
+function FunctionsTable({
+  functions,
+  t,
+}: {
+  functions: DeviceFunction[]
+  t: (key: string) => string
+}) {
   if (functions.length === 0) {
-    return <p className="text-sm text-slate-400">No functions defined.</p>
+    return <p className="text-sm text-slate-400">{t('catalog.noFunctions')}</p>
   }
+  const headers = [
+    t('catalog.cols.code'),
+    t('catalog.cols.type'),
+    t('catalog.cols.writable'),
+    t('catalog.cols.value'),
+    t('catalog.cols.range'),
+    t('catalog.cols.unit'),
+  ]
   return (
     <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
       <table className="w-full text-xs">
         <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900">
           <tr>
-            {['Code', 'Type', 'Writable', 'Value', 'Range', 'Unit'].map((h) => (
+            {headers.map((h) => (
               <th
                 key={h}
                 className="px-3 py-2 text-left font-medium text-slate-500 dark:text-slate-400"
@@ -83,10 +98,10 @@ function FunctionsTable({ functions }: { functions: DeviceFunction[] }) {
               <td className="px-3 py-2">
                 {fn.writable ? (
                   <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                    <Pencil className="h-3 w-3" /> Yes
+                    <Pencil className="h-3 w-3" /> {t('common.yes')}
                   </span>
                 ) : (
-                  <span className="text-slate-400">Read-only</span>
+                  <span className="text-slate-400">{t('common.readOnly')}</span>
                 )}
               </td>
               <td className="px-3 py-2 font-mono text-slate-600 dark:text-slate-400">
@@ -109,9 +124,11 @@ function FunctionsTable({ functions }: { functions: DeviceFunction[] }) {
 function DeviceDrawer({
   device,
   onClose,
+  t,
 }: {
   device: CatalogDevice
   onClose: () => void
+  t: (key: string) => string
 }) {
   const [detailTab, setDetailTab] = useState<DetailTab>('info')
 
@@ -150,19 +167,19 @@ function DeviceDrawer({
         </div>
 
         <div className="flex gap-0 border-b border-slate-200 dark:border-slate-800">
-          {(['info', 'functions', 'actions'] as DetailTab[]).map((t) => (
+          {(['info', 'functions', 'actions'] as DetailTab[]).map((tab) => (
             <button
-              key={t}
-              onClick={() => setDetailTab(t)}
+              key={tab}
+              onClick={() => setDetailTab(tab)}
               className={cn(
                 'px-5 py-2.5 text-sm font-medium capitalize transition-colors',
-                detailTab === t
+                detailTab === tab
                   ? 'border-b-2 border-blue-600 text-blue-700 dark:text-blue-400'
                   : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200',
               )}
             >
-              {t}
-              {t === 'functions' && functions.length > 0 && (
+              {tab === 'info' ? t('catalog.drawerTabs.info') : tab === 'functions' ? t('catalog.drawerTabs.functions') : t('catalog.drawerTabs.actions')}
+              {tab === 'functions' && functions.length > 0 && (
                 <span className="ml-1.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-400">
                   {functions.length}
                 </span>
@@ -175,12 +192,12 @@ function DeviceDrawer({
           {detailTab === 'info' && (
             <dl className="space-y-3 text-sm">
               {[
-                ['Status', device.status],
-                ['Code', device.code],
-                ['Serial Number', device.serialNumber ?? '—'],
-                ['Firmware', device.firmwareVersion ?? '—'],
-                ['Last Seen', device.lastSeenAt ?? '—'],
-                ['Description', device.translations.en.description ?? '—'],
+                [t('catalog.labels.status'), device.status],
+                [t('catalog.labels.code'), device.code],
+                [t('catalog.labels.serialNumber'), device.serialNumber ?? '—'],
+                [t('catalog.labels.firmware'), device.firmwareVersion ?? '—'],
+                [t('catalog.labels.lastSeen'), device.lastSeenAt ?? '—'],
+                [t('catalog.labels.description'), device.translations.en.description ?? '—'],
               ].map(([label, value]) => (
                 <div key={label} className="flex gap-3">
                   <dt className="w-28 shrink-0 text-slate-500 dark:text-slate-400">{label}</dt>
@@ -198,13 +215,13 @@ function DeviceDrawer({
                 ))}
               </div>
             ) : (
-              <FunctionsTable functions={functions} />
+              <FunctionsTable functions={functions} t={t} />
             )
           )}
 
           {detailTab === 'actions' && (
             writableFunctions.length === 0 ? (
-              <p className="text-sm text-slate-400">No writable functions available.</p>
+              <p className="text-sm text-slate-400">{t('catalog.noWritable')}</p>
             ) : (
               <ul className="space-y-2">
                 {writableFunctions.map((fn) => (
@@ -235,6 +252,7 @@ function DeviceDrawer({
 }
 
 export function CatalogPage() {
+  const { t } = useI18n()
   const [selectedTypeId, setSelectedTypeId] = useState<number | null>(null)
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null)
   const [selectedDevice, setSelectedDevice] = useState<CatalogDevice | null>(null)
@@ -266,15 +284,15 @@ export function CatalogPage() {
 
   return (
     <div className="flex h-full flex-col gap-4">
-      <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Device Catalog</h1>
+      <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{t('catalog.title')}</h1>
 
       <div className="grid flex-1 grid-cols-3 gap-4 overflow-hidden">
         {/* Column 1: Device Types */}
-        <Column title="Device Types" count={types.length}>
+        <Column title={t('catalog.types')} count={types.length}>
           {typesLoading ? (
             <ColumnSkeleton />
           ) : types.length === 0 ? (
-            <ColumnEmpty>No types</ColumnEmpty>
+            <ColumnEmpty>{t('catalog.noTypes')}</ColumnEmpty>
           ) : (
             <CategoryList
               categories={types.map((t) => ({ id: t.id, name: t.translations.en.name }))}
@@ -290,14 +308,14 @@ export function CatalogPage() {
 
         {/* Column 2: Categories */}
         <Column
-          title="Categories"
+          title={t('catalog.categories')}
           count={categories.length}
-          empty={selectedTypeId === null ? 'Select a type' : undefined}
+          empty={selectedTypeId === null ? t('catalog.selectType') : undefined}
         >
           {selectedTypeId === null ? (
-            <ColumnEmpty>← Select a device type</ColumnEmpty>
+            <ColumnEmpty>{t('catalog.selectTypeHint')}</ColumnEmpty>
           ) : categories.length === 0 ? (
-            <ColumnEmpty>No categories</ColumnEmpty>
+            <ColumnEmpty>{t('catalog.noCategories')}</ColumnEmpty>
           ) : (
             <CategoryList
               categories={categories.map((c) => ({ id: c.id, name: c.translations.en.name }))}
@@ -311,13 +329,13 @@ export function CatalogPage() {
         </Column>
 
         {/* Column 3: Devices */}
-        <Column title="Devices" count={devicesPage?.totalElements}>
+        <Column title={t('catalog.devices')} count={devicesPage?.totalElements}>
           {selectedCategoryId === null ? (
-            <ColumnEmpty>← Select a category</ColumnEmpty>
+            <ColumnEmpty>{t('catalog.selectCategory')}</ColumnEmpty>
           ) : devicesLoading ? (
             <ColumnSkeleton />
           ) : devices.length === 0 ? (
-            <ColumnEmpty>No devices</ColumnEmpty>
+            <ColumnEmpty>{t('catalog.noDevices')}</ColumnEmpty>
           ) : (
             <div className="space-y-1">
               {devices.map((device) => (
@@ -364,7 +382,7 @@ export function CatalogPage() {
       </div>
 
       {selectedDevice && (
-        <DeviceDrawer device={selectedDevice} onClose={() => setSelectedDevice(null)} />
+        <DeviceDrawer device={selectedDevice} onClose={() => setSelectedDevice(null)} t={t} />
       )}
     </div>
   )

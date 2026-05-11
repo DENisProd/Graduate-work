@@ -7,12 +7,20 @@ const swagger_1 = require("@nestjs/swagger");
 const nestjs_zod_1 = require("nestjs-zod");
 const app_module_1 = require("./app.module");
 const safe_logger_1 = require("./common/logging/safe-logger");
+function parseCorsOrigins(raw, fallback) {
+    const parts = (raw ?? '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+    return parts.length > 0 ? parts : fallback;
+}
 async function bootstrap() {
     console.log('join', __dirname);
     (0, dotenv_1.config)({ path: (0, path_1.join)(__dirname, '../../../.env') });
     const app = await core_1.NestFactory.create(app_module_1.AppModule, { logger: new safe_logger_1.SafeLogger() });
+    const corsOrigins = parseCorsOrigins(process.env.SCENARIO_CORS_ORIGINS ?? process.env.FRONTEND_ORIGIN, ['http://localhost:3000', 'http://localhost:5173']);
     app.enableCors({
-        origin: ['http://localhost:3000'],
+        origin: corsOrigins,
         credentials: true,
     });
     app.useGlobalPipes(new nestjs_zod_1.ZodValidationPipe());

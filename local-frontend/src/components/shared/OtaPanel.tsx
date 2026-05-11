@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { CheckCircle, AlertTriangle, Loader2, Download, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
+import { useI18n } from '@/hooks/useI18n'
 import { getHealth, checkUpdate, applyUpdate } from '@/api/system'
 import type { UpdateCheckResult } from '@/api/system'
 
 type Phase = 'idle' | 'checking' | 'up-to-date' | 'has-update' | 'applying' | 'done' | 'error'
 
 export function OtaPanel() {
+  const { t } = useI18n()
   const [phase, setPhase] = useState<Phase>('idle')
   const [checkResult, setCheckResult] = useState<UpdateCheckResult | null>(null)
   const [preApplyVersion, setPreApplyVersion] = useState<string | null>(null)
@@ -23,7 +25,7 @@ export function OtaPanel() {
     if (phase !== 'applying' || !preApplyVersion || !health) return
     if (health.version !== preApplyVersion) {
       setPhase('done')
-      toast.success(`Updated to ${health.version}`)
+      toast.success(t('ota.toastUpdated', { version: health.version }))
     }
   }, [phase, health, preApplyVersion])
 
@@ -36,7 +38,7 @@ export function OtaPanel() {
     },
     onError: () => {
       setPhase('error')
-      toast.error('Failed to check for updates')
+      toast.error(t('ota.toastCheckFailed'))
     },
   })
 
@@ -48,7 +50,7 @@ export function OtaPanel() {
     },
     onError: () => {
       setPhase('error')
-      toast.error('Update failed')
+      toast.error(t('ota.toastApplyFailed'))
     },
   })
 
@@ -56,7 +58,7 @@ export function OtaPanel() {
     <div className="space-y-4">
       {/* Current version */}
       <div className="flex items-center justify-between text-sm">
-        <span className="text-slate-500 dark:text-slate-400">Current version</span>
+        <span className="text-slate-500 dark:text-slate-400">{t('ota.currentVersion')}</span>
         <span className="font-mono font-medium text-slate-800 dark:text-slate-200">
           {health?.version ?? '—'}
         </span>
@@ -69,21 +71,21 @@ export function OtaPanel() {
           className="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
         >
           <RefreshCw className="h-4 w-4" />
-          Check for Updates
+          {t('ota.checkUpdates')}
         </button>
       )}
 
       {phase === 'checking' && (
         <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Checking for updates…
+          {t('ota.checking')}
         </div>
       )}
 
       {phase === 'up-to-date' && (
         <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
           <CheckCircle className="h-4 w-4" />
-          Already up to date
+          {t('ota.upToDate')}
         </div>
       )}
 
@@ -91,7 +93,7 @@ export function OtaPanel() {
         <div className="space-y-3 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
-              Update available
+              {t('ota.updateAvailable')}
             </span>
             <span className="font-mono text-sm font-semibold text-blue-700 dark:text-blue-400">
               v{checkResult.latestVersion}
@@ -104,7 +106,7 @@ export function OtaPanel() {
 
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
             <AlertTriangle className="mr-1 inline h-3.5 w-3.5" />
-            Server will restart — you may lose connection for ~30 seconds
+            {t('ota.restartWarn')}
           </div>
 
           <button
@@ -112,7 +114,7 @@ export function OtaPanel() {
             className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
           >
             <Download className="h-4 w-4" />
-            Apply Update
+            {t('ota.apply')}
           </button>
         </div>
       )}
@@ -121,22 +123,22 @@ export function OtaPanel() {
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Updating… do not close this page
+            {t('ota.updating')}
           </div>
-          <p className="text-xs text-slate-400">Polling server health every 5 seconds…</p>
+          <p className="text-xs text-slate-400">{t('ota.polling')}</p>
         </div>
       )}
 
       {phase === 'done' && (
         <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
           <CheckCircle className="h-4 w-4" />
-          Updated to {health?.version} — server restarted successfully
+          {t('ota.done', { version: health?.version ?? '—' })}
         </div>
       )}
 
       {phase === 'error' && (
         <p className="text-xs text-red-600 dark:text-red-400">
-          Something went wrong. Check server logs.
+          {t('ota.errorGeneric')}
         </p>
       )}
     </div>

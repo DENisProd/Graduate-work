@@ -28,6 +28,31 @@ import type {
 } from '@/types/api';
 import { accessApiCall, buildPageQuery } from './core';
 
+export interface DeviceAuthSessionStartResponse {
+  authSessionId: string;
+  userCode: string;
+  verificationUrl: string;
+  expiresIn: number;
+  pollInterval: number;
+}
+
+export interface DeviceAuthPollResponse {
+  status: 'pending' | 'authorized' | 'denied' | 'expired';
+  authCode?: string;
+  externalUserId?: string;
+  displayName?: string;
+}
+
+export interface ConnectedLocalServerItem {
+  id: string;
+  status: 'pending' | 'authorized' | 'denied' | 'expired';
+  userCode: string;
+  displayName?: string;
+  externalUserId?: string;
+  authorizedAt?: string | null;
+  lastSeenAt?: string | null;
+}
+
 export const housesApi = {
   getById: (id: number | string): Promise<HouseResponse> =>
     accessApiCall(`/api/v1/houses/${id}`),
@@ -335,6 +360,39 @@ export const houseInvitationsApi = {
     accessApiCall(`/api/v1/house-invitations/${id}/revoke`, {
       method: 'POST',
       headers: { 'X-User-Id': userId },
+    }),
+};
+
+export const deviceAuthApi = {
+  startSession: (callbackUrl?: string): Promise<DeviceAuthSessionStartResponse> =>
+    accessApiCall('/api/v1/device-auth/sessions', {
+      method: 'POST',
+      body: JSON.stringify(callbackUrl ? { callbackUrl } : {}),
+    }),
+
+  pollSession: (sessionId: string): Promise<DeviceAuthPollResponse> =>
+    accessApiCall(`/api/v1/device-auth/sessions/${encodeURIComponent(sessionId)}/poll`),
+
+  listConnectedServers: (): Promise<ConnectedLocalServerItem[]> =>
+    accessApiCall('/api/v1/device-auth/connected-servers'),
+
+  confirm: (
+    userCode: string,
+    externalUserId: string,
+    displayName?: string,
+  ): Promise<{ status: string }> =>
+    accessApiCall('/api/v1/device-auth/confirm', {
+      method: 'POST',
+      body: JSON.stringify({
+        userCode,
+        externalUserId,
+        ...(displayName && displayName.trim().length > 0 ? { displayName: displayName.trim() } : {}),
+      }),
+    }),
+
+  logoutSession: (sessionId: string): Promise<{ status: string }> =>
+    accessApiCall(`/api/v1/device-auth/sessions/${encodeURIComponent(sessionId)}/logout`, {
+      method: 'POST',
     }),
 };
 

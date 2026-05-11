@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Plus, Trash2, Code, Sliders } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/hooks/useI18n'
 import { listPhysicalDevices } from '@/api/physical-devices'
 import type { ScenarioDefinition, ScenarioTrigger, ScenarioAction } from '@/types'
 
@@ -87,6 +88,7 @@ function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
 }
 
 export function ScenarioDefinitionEditor({ value, onChange }: Props) {
+  const { t } = useI18n()
   const [mode, setMode] = useState<'simple' | 'raw'>('simple')
   const [rawJson, setRawJson] = useState('')
   const [jsonError, setJsonError] = useState('')
@@ -130,7 +132,7 @@ export function ScenarioDefinitionEditor({ value, onChange }: Props) {
       setMode('simple')
       onChange(parsed)
     } catch {
-      setJsonError('Fix JSON errors before switching')
+      setJsonError(t('scenarioDef.jsonFixBefore'))
     }
   }
 
@@ -142,13 +144,13 @@ export function ScenarioDefinitionEditor({ value, onChange }: Props) {
       setJsonError('')
       onChange(parsed)
     } catch {
-      setJsonError('Invalid JSON')
+      setJsonError(t('scenarioDef.jsonInvalid'))
     }
   }
 
   // ── Trigger helpers ───────────────────────────────────────────────
   const updateTrigger = (i: number, patch: Partial<ScenarioTrigger>) => {
-    setTriggers((prev) => prev.map((t, idx) => (idx === i ? { ...t, ...patch } : t)))
+    setTriggers((prev) => prev.map((tr, idx) => (idx === i ? { ...tr, ...patch } : tr)))
   }
   const addTrigger = () => setTriggers((prev) => [...prev, { ...EMPTY_TRIGGER }])
   const removeTrigger = (i: number) => setTriggers((prev) => prev.filter((_, idx) => idx !== i))
@@ -165,16 +167,16 @@ export function ScenarioDefinitionEditor({ value, onChange }: Props) {
   return (
     <div className="space-y-5 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Definition</p>
+        <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{t('scenarioDef.title')}</p>
         <button
           type="button"
           onClick={mode === 'simple' ? switchToRaw : switchToSimple}
           className="flex items-center gap-1.5 rounded-lg border border-slate-300 px-2.5 py-1 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
         >
           {mode === 'simple' ? (
-            <><Code className="h-3.5 w-3.5" /> Raw JSON</>
+            <><Code className="h-3.5 w-3.5" /> {t('scenarioDef.rawJson')}</>
           ) : (
-            <><Sliders className="h-3.5 w-3.5" /> Simple</>
+            <><Sliders className="h-3.5 w-3.5" /> {t('scenarioDef.simple')}</>
           )}
         </button>
       </div>
@@ -195,10 +197,10 @@ export function ScenarioDefinitionEditor({ value, onChange }: Props) {
         <>
           {/* ── Triggers ──────────────────────────────── */}
           <div className="space-y-3">
-            <SectionHeader>Triggers</SectionHeader>
+            <SectionHeader>{t('scenarioDef.triggers')}</SectionHeader>
 
             {triggers.length === 0 && (
-              <p className="text-xs text-slate-400">No triggers — scenario can only be run manually.</p>
+              <p className="text-xs text-slate-400">{t('scenarioDef.noTriggers')}</p>
             )}
 
             {triggers.map((trigger, i) => (
@@ -213,9 +215,9 @@ export function ScenarioDefinitionEditor({ value, onChange }: Props) {
                       updateTrigger(i, { type: e.target.value as ScenarioTrigger['type'] })
                     }
                   >
-                    <option value="manual">Manual</option>
-                    <option value="device_state">Device state change</option>
-                    <option value="schedule">Schedule (cron)</option>
+                    <option value="manual">{t('scenarioDef.triggerManual')}</option>
+                    <option value="device_state">{t('scenarioDef.triggerDevice')}</option>
+                    <option value="schedule">{t('scenarioDef.triggerSchedule')}</option>
                   </Select>
                   <button
                     type="button"
@@ -229,13 +231,13 @@ export function ScenarioDefinitionEditor({ value, onChange }: Props) {
                 {trigger.type === 'device_state' && (
                   <div className="space-y-2">
                     <div className="flex flex-col gap-1">
-                      <FieldLabel>Device</FieldLabel>
+                      <FieldLabel>{t('scenarioDef.device')}</FieldLabel>
                       <Select
                         value={trigger.deviceId ?? ''}
                         onChange={(e) => updateTrigger(i, { deviceId: e.target.value })}
                         className="w-full"
                       >
-                        <option value="">— select device —</option>
+                        <option value="">{t('scenarioDef.selectDevice')}</option>
                         {devices.map((d) => (
                           <option key={d.id} value={d.id}>
                             {d.friendlyName ?? d.name} ({d.protocolAddress})
@@ -244,7 +246,7 @@ export function ScenarioDefinitionEditor({ value, onChange }: Props) {
                       </Select>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <FieldLabel>Condition (e.g. state === "ON")</FieldLabel>
+                      <FieldLabel>{t('scenarioDef.condition')}</FieldLabel>
                       <Input
                         value={trigger.condition ?? ''}
                         onChange={(e) => updateTrigger(i, { condition: e.target.value })}
@@ -256,7 +258,7 @@ export function ScenarioDefinitionEditor({ value, onChange }: Props) {
 
                 {trigger.type === 'schedule' && (
                   <div className="flex flex-col gap-1">
-                    <FieldLabel>Cron expression</FieldLabel>
+                    <FieldLabel>{t('scenarioDef.cron')}</FieldLabel>
                     <Input
                       value={trigger.cron ?? ''}
                       onChange={(e) => updateTrigger(i, { cron: e.target.value })}
@@ -273,16 +275,16 @@ export function ScenarioDefinitionEditor({ value, onChange }: Props) {
               onClick={addTrigger}
               className="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
             >
-              <Plus className="h-3.5 w-3.5" /> Add Trigger
+              <Plus className="h-3.5 w-3.5" /> {t('scenarioDef.addTrigger')}
             </button>
           </div>
 
           {/* ── Actions ───────────────────────────────── */}
           <div className="space-y-3">
-            <SectionHeader>Actions</SectionHeader>
+            <SectionHeader>{t('scenarioDef.actions')}</SectionHeader>
 
             {localActions.length === 0 && (
-              <p className="text-xs text-slate-400">No actions defined.</p>
+              <p className="text-xs text-slate-400">{t('scenarioDef.noActions')}</p>
             )}
 
             {localActions.map((action, i) => (
@@ -297,8 +299,8 @@ export function ScenarioDefinitionEditor({ value, onChange }: Props) {
                       updateAction(i, { type: e.target.value as ScenarioAction['type'] })
                     }
                   >
-                    <option value="log_message">Log message</option>
-                    <option value="zigbee_command">Send Zigbee command</option>
+                    <option value="log_message">{t('scenarioDef.actionLog')}</option>
+                    <option value="zigbee_command">{t('scenarioDef.actionZigbee')}</option>
                   </Select>
                   <button
                     type="button"
@@ -311,7 +313,7 @@ export function ScenarioDefinitionEditor({ value, onChange }: Props) {
 
                 {action.type === 'log_message' && (
                   <div className="flex flex-col gap-1">
-                    <FieldLabel>Message</FieldLabel>
+                    <FieldLabel>{t('scenarioDef.message')}</FieldLabel>
                     <Input
                       value={action.message}
                       onChange={(e) => updateAction(i, { message: e.target.value })}
@@ -323,13 +325,13 @@ export function ScenarioDefinitionEditor({ value, onChange }: Props) {
                 {action.type === 'zigbee_command' && (
                   <div className="space-y-2">
                     <div className="flex flex-col gap-1">
-                      <FieldLabel>Device</FieldLabel>
+                      <FieldLabel>{t('scenarioDef.device')}</FieldLabel>
                       <Select
                         value={action.deviceId}
                         onChange={(e) => updateAction(i, { deviceId: e.target.value })}
                         className="w-full"
                       >
-                        <option value="">— select device —</option>
+                        <option value="">{t('scenarioDef.selectDevice')}</option>
                         {devices.map((d) => (
                           <option key={d.id} value={d.protocolAddress}>
                             {d.friendlyName ?? d.name} ({d.protocolAddress})
@@ -338,7 +340,7 @@ export function ScenarioDefinitionEditor({ value, onChange }: Props) {
                       </Select>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <FieldLabel>Payload JSON</FieldLabel>
+                      <FieldLabel>{t('scenarioDef.payloadJson')}</FieldLabel>
                       <textarea
                         value={action.payloadStr}
                         onChange={(e) => updateAction(i, { payloadStr: e.target.value })}
@@ -357,7 +359,7 @@ export function ScenarioDefinitionEditor({ value, onChange }: Props) {
               onClick={addAction}
               className="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
             >
-              <Plus className="h-3.5 w-3.5" /> Add Action
+              <Plus className="h-3.5 w-3.5" /> {t('scenarioDef.addAction')}
             </button>
           </div>
         </>

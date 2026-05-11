@@ -2,13 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 import { AppButton } from '@/components/ui/app-button';
 import { Badge } from '@/components/ui/badge';
 import { useTranslation } from '@/hooks';
 import { ServiceErrorCard, useToast } from '@/components/shared';
 import { useAddDeviceModalStore } from '@/store/add-device-modal-store';
 import type { HouseDetailsTab } from '@/store/access-control-store';
-import { ApiError, zigbeeDevicesApi } from '@/lib/api-client';
+import { ApiError, deviceAuthApi, zigbeeDevicesApi } from '@/lib/api-client';
+import type { ConnectedLocalServerItem } from '@/lib/api/access-service';
 import type { ZigbeeDeviceListItem } from '@/types/api';
 import { useZigbeeTelemetry } from '@/features/access-control/hooks/useZigbeeTelemetry';
 import { DeviceListCard } from './DeviceListCard';
@@ -34,6 +36,8 @@ export function DevicesTab({ houseId, activeTab }: DevicesTabProps) {
   const [devicesError, setDevicesError] = useState<'none' | 'forbidden' | 'error'>('none');
   const [devicesErrorDetails, setDevicesErrorDetails] = useState<string[] | null>(null);
   const [isBridgeAvailable, setIsBridgeAvailable] = useState(true);
+  const [connectedServers, setConnectedServers] = useState<ConnectedLocalServerItem[]>([]);
+  const [connectedServersLoading, setConnectedServersLoading] = useState(false);
 
   const telemetryEnabled =
     activeTab === 'devices' && Boolean(houseId) && !devicesLoading && devices.length > 0;
@@ -160,12 +164,45 @@ export function DevicesTab({ houseId, activeTab }: DevicesTabProps) {
     [devicesLimit, devicesPage, handleError, houseId, normalizeList, router, showToast, t]
   );
 
+  const loadConnectedServers = useCallback(async () => {
+    setConnectedServersLoading(true);
+    try {
+      const data = await deviceAuthApi.listConnectedServers();
+      setConnectedServers(Array.isArray(data) ? data : []);
+    } catch (error) {
+      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+        return;
+      }
+      setConnectedServers([]);
+    } finally {
+      setConnectedServersLoading(false);
+    }
+  }, []);
+
+  const handleLogoutLocalServer = useCallback(
+    async (sessionId: string) => {
+      try {
+        await deviceAuthApi.logoutSession(sessionId);
+        showToast('Local-server session logged out', 'success');
+        await loadConnectedServers();
+      } catch {
+        showToast('Failed to logout local-server session', 'error');
+      }
+    },
+    [loadConnectedServers, showToast]
+  );
+
+  const handleLogoutFrontend = useCallback(async () => {
+    await signOut({ callbackUrl: '/device-auth' });
+  }, []);
+
   useEffect(() => {
     if (activeTab !== 'devices') return;
     const controller = new AbortController();
     void loadDevices(controller.signal);
+    void loadConnectedServers();
     return () => controller.abort();
-  }, [activeTab, loadDevices]);
+  }, [activeTab, loadConnectedServers, loadDevices]);
 
   // Refresh list after closing "Add device" modal, since it can update houseId on a device.
   useEffect(() => {
@@ -174,8 +211,9 @@ export function DevicesTab({ houseId, activeTab }: DevicesTabProps) {
     if (activeTab !== 'devices') return;
     if (prev && !addDeviceModalOpen) {
       void loadDevices();
+      void loadConnectedServers();
     }
-  }, [addDeviceModalOpen, activeTab, loadDevices]);
+  }, [addDeviceModalOpen, activeTab, loadConnectedServers, loadDevices]);
 
   const devicesPages = Math.max(1, Math.ceil(devicesTotal / devicesLimit));
 
@@ -187,6 +225,54 @@ export function DevicesTab({ houseId, activeTab }: DevicesTabProps) {
   return (
     <div className="space-y-6">
       <div className="space-y-4">
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Connected local-server
+            </h2>
+            <div className="flex items-center gap-2">
+              {connectedServersLoading ? (
+                <span className="text-xs text-muted-foreground">Loading...</span>
+              ) : null}
+              <AppButton size="sm" variant="secondary" onClick={() => void handleLogoutFrontend()}>
+                Logout frontend
+              </AppButton>
+            </div>
+          </div>
+          {connectedServers.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No authorized local-server instances yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {connectedServers.map((server) => (
+                <div key={server.id} className="rounded-md border border-border px-3 py-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-foreground">
+                        {server.displayName?.trim() || 'Local user'}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        session {server.id.slice(0, 8)} · code {server.userCode}
+                      </p>
+                    </div>
+                    <Badge variant="secondary" className="text-xs">
+                      {server.status}
+                    </Badge>
+                  </div>
+                  <div className="mt-2 flex justify-end">
+                    <AppButton
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => void handleLogoutLocalServer(server.id)}
+                    >
+                      Logout local-server
+                    </AppButton>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h1 className="text-sm font-semibold text-foreground">
             {t('admin.accessControl.connectedDevices.sectionTitle')}

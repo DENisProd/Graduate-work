@@ -126,6 +126,84 @@ impl ZigbeeRepository for SqliteZigbeeRepo {
 
         rows.iter().map(|r| row_to_state(r)).collect()
     }
+
+    async fn list_states_filtered(
+        &self,
+        ieee: Option<&str>,
+        limit: i64,
+    ) -> Result<Vec<ZigbeeDeviceState>, DomainError> {
+        let rows = match ieee {
+            Some(addr) => sqlx::query(
+                "SELECT device_ieee_addr, timestamp, payload, state, brightness, linkquality,
+                         color_mode, occupancy, temperature, humidity, battery
+                  FROM zigbee_device_states
+                  WHERE device_ieee_addr = ?
+                  ORDER BY timestamp DESC LIMIT ?",
+            )
+            .bind(addr)
+            .bind(limit)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(db_err)?,
+            None => sqlx::query(
+                "SELECT device_ieee_addr, timestamp, payload, state, brightness, linkquality,
+                         color_mode, occupancy, temperature, humidity, battery
+                  FROM zigbee_device_states
+                  ORDER BY timestamp DESC LIMIT ?",
+            )
+            .bind(limit)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(db_err)?,
+        };
+        rows.iter().map(|r| row_to_state(r)).collect()
+    }
+
+    async fn list_logs(
+        &self,
+        ieee: Option<&str>,
+        from: Option<&str>,
+        to: Option<&str>,
+        limit: i64,
+    ) -> Result<Vec<serde_json::Value>, DomainError> {
+        use sqlx::QueryBuilder;
+
+        let mut qb: QueryBuilder<sqlx::Sqlite> = QueryBuilder::new(
+            "SELECT id, device_ieee_addr, timestamp, source, kind, message, metrics, payload_keys \
+             FROM zigbee_device_logs WHERE 1=1",
+        );
+        if let Some(addr) = ieee {
+            qb.push(" AND device_ieee_addr = ").push_bind(addr);
+        }
+        if let Some(f) = from {
+            qb.push(" AND timestamp >= ").push_bind(f);
+        }
+        if let Some(t) = to {
+            qb.push(" AND timestamp <= ").push_bind(t);
+        }
+        qb.push(" ORDER BY timestamp DESC LIMIT ").push_bind(limit);
+
+        let rows = qb.build().fetch_all(&self.pool).await.map_err(db_err)?;
+
+        rows.iter()
+            .map(|r| {
+                let metrics: Option<String> = r.try_get("metrics").map_err(db_err)?;
+                let metrics_val: serde_json::Value = metrics
+                    .as_deref()
+                    .and_then(|s| serde_json::from_str(s).ok())
+                    .unwrap_or(serde_json::Value::Null);
+                Ok(serde_json::json!({
+                    "id": r.try_get::<String, _>("id").map_err(db_err)?,
+                    "deviceIeeeAddr": r.try_get::<String, _>("device_ieee_addr").map_err(db_err)?,
+                    "timestamp": r.try_get::<String, _>("timestamp").map_err(db_err)?,
+                    "source": r.try_get::<String, _>("source").map_err(db_err)?,
+                    "kind": r.try_get::<String, _>("kind").map_err(db_err)?,
+                    "message": r.try_get::<Option<String>, _>("message").map_err(db_err)?,
+                    "metrics": metrics_val,
+                }))
+            })
+            .collect()
+    }
 }
 
 fn row_to_state(row: &sqlx::sqlite::SqliteRow) -> Result<ZigbeeDeviceState, DomainError> {

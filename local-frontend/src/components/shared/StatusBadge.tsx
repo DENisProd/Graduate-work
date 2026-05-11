@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/hooks/useI18n'
 
 type Variant = 'online' | 'offline' | 'unknown' | 'error' | 'on' | 'off'
 
@@ -27,8 +28,18 @@ interface StatusBadgeProps {
   className?: string
 }
 
+const VARIANT_KEY: Record<Variant, 'statusBadge.online' | 'statusBadge.offline' | 'statusBadge.unknown' | 'statusBadge.error' | 'statusBadge.on' | 'statusBadge.off'> = {
+  online: 'statusBadge.online',
+  offline: 'statusBadge.offline',
+  unknown: 'statusBadge.unknown',
+  error: 'statusBadge.error',
+  on: 'statusBadge.on',
+  off: 'statusBadge.off',
+}
+
 export function StatusBadge({ variant, label, pulse = false, className }: StatusBadgeProps) {
-  const text = label ?? variant.toUpperCase()
+  const { t } = useI18n()
+  const text = label ?? t(VARIANT_KEY[variant])
   return (
     <span
       className={cn(

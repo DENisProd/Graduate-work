@@ -9,20 +9,20 @@ export declare const createDeviceDataSchema: z.ZodObject<{
     quality: z.ZodOptional<z.ZodNumber>;
     timestamp: z.ZodOptional<z.ZodDate>;
 }, "strip", z.ZodTypeAny, {
-    deviceId: string;
     capability: string;
+    deviceId: string;
     type: import("../../common/schemas/enums").DeviceDataType;
-    attribute?: string | undefined;
     value?: unknown;
+    attribute?: string | undefined;
     unit?: string | undefined;
     quality?: number | undefined;
     timestamp?: Date | undefined;
 }, {
-    deviceId: string;
     capability: string;
+    deviceId: string;
     type: import("../../common/schemas/enums").DeviceDataType;
-    attribute?: string | undefined;
     value?: unknown;
+    attribute?: string | undefined;
     unit?: string | undefined;
     quality?: number | undefined;
     timestamp?: Date | undefined;
@@ -43,21 +43,21 @@ export declare const listDeviceDataQuerySchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     page: number;
     limit: number;
-    deviceId?: string | undefined;
     capability?: string | undefined;
-    attribute?: string | undefined;
+    deviceId?: string | undefined;
     type?: import("../../common/schemas/enums").DeviceDataType | undefined;
+    attribute?: string | undefined;
     from?: Date | undefined;
     to?: Date | undefined;
 }, {
-    deviceId?: string | undefined;
     capability?: string | undefined;
-    attribute?: string | undefined;
+    deviceId?: string | undefined;
     type?: import("../../common/schemas/enums").DeviceDataType | undefined;
-    from?: unknown;
-    to?: unknown;
     page?: unknown;
     limit?: unknown;
+    attribute?: string | undefined;
+    from?: unknown;
+    to?: unknown;
 }>;
 export type ListDeviceDataQuery = z.infer<typeof listDeviceDataQuerySchema>;
 export declare const deviceDataSeriesQuerySchema: z.ZodObject<{

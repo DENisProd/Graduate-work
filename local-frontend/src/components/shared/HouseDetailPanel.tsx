@@ -4,6 +4,7 @@ import { format, parseISO } from 'date-fns'
 import { X, UserPlus, Trash2, Copy, Check, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/hooks/useI18n'
 import {
   listHouseMembers,
   addHouseMember,
@@ -24,6 +25,7 @@ type DetailTab = 'members' | 'roles' | 'invitations'
 // ── Members tab ───────────────────────────────────────────────────────────────
 
 function MembersTab({ house, isOwner }: { house: House; isOwner: boolean }) {
+  const { t } = useI18n()
   const qc = useQueryClient()
   const [newUserId, setNewUserId] = useState('')
 
@@ -40,34 +42,34 @@ function MembersTab({ house, isOwner }: { house: House; isOwner: boolean }) {
   const addMutation = useMutation({
     mutationFn: () => addHouseMember(house.id, newUserId.trim()),
     onSuccess: () => {
-      toast.success('Member added')
+      toast.success(t('housePanel.toastMemberAdded'))
       setNewUserId('')
       qc.invalidateQueries({ queryKey: ['house-members', house.id] })
     },
-    onError: () => toast.error('Failed to add member'),
+    onError: () => toast.error(t('housePanel.toastMemberAddFailed')),
   })
 
   const removeMutation = useMutation({
     mutationFn: (userId: string) => removeHouseMember(house.id, userId),
     onSuccess: () => {
-      toast.success('Member removed')
+      toast.success(t('housePanel.toastMemberRemoved'))
       qc.invalidateQueries({ queryKey: ['house-members', house.id] })
     },
-    onError: () => toast.error('Failed to remove member'),
+    onError: () => toast.error(t('housePanel.toastMemberRemoveFailed')),
   })
 
   const assignMutation = useMutation({
     mutationFn: ({ memberId, roleId }: { memberId: string; roleId: string }) =>
       assignRole(memberId, roleId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['house-members', house.id] }),
-    onError: () => toast.error('Failed to assign role'),
+    onError: () => toast.error(t('housePanel.toastAssignFailed')),
   })
 
   const unassignMutation = useMutation({
     mutationFn: ({ memberId, roleId }: { memberId: string; roleId: string }) =>
       removeRole(memberId, roleId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['house-members', house.id] }),
-    onError: () => toast.error('Failed to remove role'),
+    onError: () => toast.error(t('housePanel.toastUnassignFailed')),
   })
 
   const unassignedRoles = (member: HouseMember) =>
@@ -80,7 +82,7 @@ function MembersTab({ house, isOwner }: { house: House; isOwner: boolean }) {
           <input
             value={newUserId}
             onChange={(e) => setNewUserId(e.target.value)}
-            placeholder="User UUID"
+            placeholder={t('housePanel.userUuid')}
             className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 font-mono text-xs text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
           />
           <button
@@ -88,7 +90,7 @@ function MembersTab({ house, isOwner }: { house: House; isOwner: boolean }) {
             disabled={!newUserId.trim() || addMutation.isPending}
             className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-60"
           >
-            <UserPlus className="h-3.5 w-3.5" /> Add
+            <UserPlus className="h-3.5 w-3.5" /> {t('housePanel.addMember')}
           </button>
         </div>
       )}
@@ -100,7 +102,7 @@ function MembersTab({ house, isOwner }: { house: House; isOwner: boolean }) {
           ))}
         </div>
       ) : members.length === 0 ? (
-        <p className="text-sm text-slate-400">No members yet.</p>
+        <p className="text-sm text-slate-400">{t('housePanel.noMembers')}</p>
       ) : (
         <div className="space-y-2">
           {members.map((member) => (
@@ -114,14 +116,14 @@ function MembersTab({ house, isOwner }: { house: House; isOwner: boolean }) {
                     {member.userId}
                   </p>
                   <p className="mt-0.5 text-xs text-slate-400">
-                    Joined {format(parseISO(member.joinedAt), 'dd MMM yyyy')}
+                    {t('housePanel.joined', { date: format(parseISO(member.joinedAt), 'dd MMM yyyy') })}
                   </p>
                 </div>
                 {isOwner && (
                   <button
                     onClick={() => removeMutation.mutate(member.userId)}
                     className="shrink-0 rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
-                    title="Remove member"
+                    title={t('housePanel.removeMember')}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -138,7 +140,7 @@ function MembersTab({ house, isOwner }: { house: House; isOwner: boolean }) {
                     {role.name}
                     {role.isOwner && (
                       <span className="rounded-full bg-violet-200 px-1 text-violet-700 dark:bg-violet-800 dark:text-violet-300">
-                        owner
+                        {t('common.owner')}
                       </span>
                     )}
                     {isOwner && (
@@ -162,7 +164,7 @@ function MembersTab({ house, isOwner }: { house: House; isOwner: boolean }) {
                     }}
                     className="rounded-full border border-dashed border-slate-300 bg-transparent px-2 py-0.5 text-xs text-slate-500 outline-none dark:border-slate-700 dark:text-slate-400"
                   >
-                    <option value="">+ role</option>
+                    <option value="">{t('housePanel.addRole')}</option>
                     {unassignedRoles(member).map((r) => (
                       <option key={r.id} value={r.id}>
                         {r.name}
@@ -182,6 +184,7 @@ function MembersTab({ house, isOwner }: { house: House; isOwner: boolean }) {
 // ── Roles tab ─────────────────────────────────────────────────────────────────
 
 function RolesTab({ house, isOwner }: { house: House; isOwner: boolean }) {
+  const { t } = useI18n()
   const qc = useQueryClient()
   const [newRoleName, setNewRoleName] = useState('')
 
@@ -193,11 +196,11 @@ function RolesTab({ house, isOwner }: { house: House; isOwner: boolean }) {
   const createMutation = useMutation({
     mutationFn: () => createHouseRole(house.id, newRoleName.trim()),
     onSuccess: () => {
-      toast.success('Role created')
+      toast.success(t('housePanel.toastRoleCreated'))
       setNewRoleName('')
       qc.invalidateQueries({ queryKey: ['house-roles', house.id] })
     },
-    onError: () => toast.error('Failed to create role'),
+    onError: () => toast.error(t('housePanel.toastRoleCreateFailed')),
   })
 
   return (
@@ -207,7 +210,7 @@ function RolesTab({ house, isOwner }: { house: House; isOwner: boolean }) {
           <input
             value={newRoleName}
             onChange={(e) => setNewRoleName(e.target.value)}
-            placeholder="Role name"
+            placeholder={t('housePanel.roleName')}
             onKeyDown={(e) => e.key === 'Enter' && newRoleName.trim() && createMutation.mutate()}
             className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
           />
@@ -216,7 +219,7 @@ function RolesTab({ house, isOwner }: { house: House; isOwner: boolean }) {
             disabled={!newRoleName.trim() || createMutation.isPending}
             className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-60"
           >
-            Create
+            {t('housePanel.createRole')}
           </button>
         </div>
       )}
@@ -228,7 +231,7 @@ function RolesTab({ house, isOwner }: { house: House; isOwner: boolean }) {
           ))}
         </div>
       ) : roles.length === 0 ? (
-        <p className="text-sm text-slate-400">No roles defined yet.</p>
+        <p className="text-sm text-slate-400">{t('housePanel.noRoles')}</p>
       ) : (
         <ul className="space-y-1.5">
           {roles.map((role) => (
@@ -239,7 +242,7 @@ function RolesTab({ house, isOwner }: { house: House; isOwner: boolean }) {
               <span className="flex-1 text-sm text-slate-800 dark:text-slate-200">{role.name}</span>
               {role.isOwner && (
                 <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">
-                  owner
+                  {t('common.owner')}
                 </span>
               )}
             </li>
@@ -253,6 +256,7 @@ function RolesTab({ house, isOwner }: { house: House; isOwner: boolean }) {
 // ── Invitations tab ───────────────────────────────────────────────────────────
 
 function InvitationsTab({ house, isOwner }: { house: House; isOwner: boolean }) {
+  const { t } = useI18n()
   const qc = useQueryClient()
   const [newInvitation, setNewInvitation] = useState<HouseInvitation | null>(null)
   const [copied, setCopied] = useState(false)
@@ -268,16 +272,16 @@ function InvitationsTab({ house, isOwner }: { house: House; isOwner: boolean }) 
       setNewInvitation(inv)
       qc.invalidateQueries({ queryKey: ['house-invitations', house.id] })
     },
-    onError: () => toast.error('Failed to create invitation'),
+    onError: () => toast.error(t('housePanel.toastInviteFailed')),
   })
 
   const revokeMutation = useMutation({
     mutationFn: (id: string) => revokeInvitation(id),
     onSuccess: () => {
-      toast.success('Invitation revoked')
+      toast.success(t('housePanel.toastRevoked'))
       qc.invalidateQueries({ queryKey: ['house-invitations', house.id] })
     },
-    onError: () => toast.error('Failed to revoke'),
+    onError: () => toast.error(t('housePanel.toastRevokeFailed')),
   })
 
   const handleCopy = (token: string) => {
@@ -300,7 +304,7 @@ function InvitationsTab({ house, isOwner }: { house: House; isOwner: boolean }) 
           ) : (
             <UserPlus className="h-3.5 w-3.5" />
           )}
-          Create Invitation
+          {t('housePanel.createInvitation')}
         </button>
       )}
 
@@ -308,7 +312,7 @@ function InvitationsTab({ house, isOwner }: { house: House; isOwner: boolean }) 
       {newInvitation && (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-800 dark:bg-emerald-900/20">
           <p className="mb-2 text-xs font-medium text-emerald-700 dark:text-emerald-400">
-            Invitation token — share this with the new member:
+            {t('housePanel.tokenShare')}
           </p>
           <div className="flex items-center gap-2">
             <code className="flex-1 break-all rounded bg-white px-2 py-1.5 font-mono text-xs text-slate-800 dark:bg-slate-900 dark:text-slate-200">
@@ -331,7 +335,7 @@ function InvitationsTab({ house, isOwner }: { house: House; isOwner: boolean }) 
           ))}
         </div>
       ) : invitations.length === 0 ? (
-        <p className="text-sm text-slate-400">No active invitations.</p>
+        <p className="text-sm text-slate-400">{t('housePanel.noInvitations')}</p>
       ) : (
         <div className="space-y-2">
           {invitations.map((inv) => (
@@ -344,14 +348,15 @@ function InvitationsTab({ house, isOwner }: { house: House; isOwner: boolean }) 
                   {inv.token}
                 </code>
                 <p className="mt-0.5 text-xs text-slate-400">
-                  Created {format(parseISO(inv.createdAt), 'dd MMM yyyy')}
-                  {inv.expiresAt && ` · expires ${format(parseISO(inv.expiresAt), 'dd MMM yyyy')}`}
+                  {t('housePanel.created', { date: format(parseISO(inv.createdAt), 'dd MMM yyyy') })}
+                  {inv.expiresAt &&
+                    ` · ${t('housePanel.expires', { date: format(parseISO(inv.expiresAt), 'dd MMM yyyy') })}`}
                 </p>
               </div>
               <button
                 onClick={() => handleCopy(inv.token)}
                 className="shrink-0 rounded p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                title="Copy token"
+                title={t('housePanel.copyToken')}
               >
                 <Copy className="h-3.5 w-3.5" />
               </button>
@@ -359,7 +364,7 @@ function InvitationsTab({ house, isOwner }: { house: House; isOwner: boolean }) 
                 <button
                   onClick={() => revokeMutation.mutate(inv.id)}
                   className="shrink-0 rounded p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
-                  title="Revoke"
+                  title={t('housePanel.revoke')}
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -380,14 +385,15 @@ interface Props {
 }
 
 export function HouseDetailPanel({ house, onClose }: Props) {
+  const { t } = useI18n()
   const [tab, setTab] = useState<DetailTab>('members')
   const userId = useSettingsStore((s) => s.userId)
   const isOwner = userId === house.ownerId
 
-  const TABS: { key: DetailTab; label: string }[] = [
-    { key: 'members', label: 'Members' },
-    { key: 'roles', label: 'Roles' },
-    { key: 'invitations', label: 'Invitations' },
+  const TABS: { key: DetailTab; labelKey: 'housePanel.members' | 'housePanel.roles' | 'housePanel.invitations' }[] = [
+    { key: 'members', labelKey: 'housePanel.members' },
+    { key: 'roles', labelKey: 'housePanel.roles' },
+    { key: 'invitations', labelKey: 'housePanel.invitations' },
   ]
 
   return (
@@ -412,7 +418,7 @@ export function HouseDetailPanel({ house, onClose }: Props) {
 
         {/* Tabs */}
         <div className="flex border-b border-slate-200 dark:border-slate-800">
-          {TABS.map(({ key, label }) => (
+          {TABS.map(({ key, labelKey }) => (
             <button
               key={key}
               onClick={() => setTab(key)}
@@ -423,7 +429,7 @@ export function HouseDetailPanel({ house, onClose }: Props) {
                   : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200',
               )}
             >
-              {label}
+              {t(labelKey)}
             </button>
           ))}
         </div>

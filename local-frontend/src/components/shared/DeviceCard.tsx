@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { Cpu, Radio, Server, Thermometer, Droplets, BatteryMedium, Wifi } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/hooks/useI18n'
 import { StatusBadge } from './StatusBadge'
 import { useZigbeeSocket } from '@/hooks/useZigbeeSocket'
 import { useDeviceStatesStore } from '@/stores/device-states.store'
@@ -34,6 +35,7 @@ interface DeviceCardProps {
 }
 
 export function DeviceCard({ device, onClick }: DeviceCardProps) {
+  const { dateLocale } = useI18n()
   const { subscribe, unsubscribe } = useZigbeeSocket()
   const state = useDeviceStatesStore((s) => s.states.get(device.protocolAddress))
   const [flash, setFlash] = useState(false)
@@ -119,7 +121,7 @@ export function DeviceCard({ device, onClick }: DeviceCardProps) {
 
       {device.lastSeen && (
         <p className="text-xs text-slate-400 dark:text-slate-600">
-          {formatDistanceToNow(new Date(device.lastSeen), { addSuffix: true })}
+          {formatDistanceToNow(new Date(device.lastSeen), { addSuffix: true, locale: dateLocale })}
         </p>
       )}
     </button>

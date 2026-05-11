@@ -5,9 +5,14 @@ pub mod http;
 pub mod mqtt;
 pub mod persistence;
 
-pub use mqtt::{run_ingestion, RumqttcClient};
+pub use http::{
+    ReqwestCloudAuthClient, ReqwestCloudPhysicalDeviceClient, ReqwestCloudScenarioClient,
+    ReqwestCloudSyncClient, ReqwestCloudWidgetDashboardClient,
+};
+pub use mqtt::{run_ingestion, ModbusGateway, RumqttcClient};
 pub use persistence::{
-    OutboxWriter, SqliteDeviceRepo, SqlitePhysicalDeviceRepo, SqliteScenarioExecutionRepo,
-    SqliteScenarioRepo, SqliteZigbeeRepo,
+    OutboxWriter, SqliteAccessRepo, SqliteAccessSyncRepo, SqliteDeviceRepo, SqliteModbusRepo,
+    SqlitePhysicalDeviceRepo, SqliteRuntimeSettingsRepo, SqliteScenarioExecutionRepo,
+    SqliteScenarioRepo, SqliteSyncOutboxRepo, SqliteWidgetDashboardRepo, SqliteZigbeeRepo,
 };
 pub use sqlx::SqlitePool;

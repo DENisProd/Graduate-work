@@ -1,0 +1,205 @@
+use async_trait::async_trait;
+use chrono::Utc;
+use local_server_application::ports::{
+    AccessSyncRepository, RemoteHouse, RemoteRoom, SyncStatus,
+};
+use local_server_core::DomainError;
+use sqlx::SqlitePool;
+
+pub struct SqliteAccessSyncRepo {
+    pool: SqlitePool,
+}
+
+impl SqliteAccessSyncRepo {
+    pub fn new(pool: SqlitePool) -> Self {
+        Self { pool }
+    }
+}
+
+fn db_err(e: sqlx::Error) -> DomainError {
+    DomainError::Internal(e.to_string())
+}
+
+#[async_trait]
+impl AccessSyncRepository for SqliteAccessSyncRepo {
+    async fn upsert_owner(&self, external_user_id: &str) -> Result<(), DomainError> {
+        let now = Utc::now().to_rfc3339();
+        sqlx::query(
+            r#"
+INSERT INTO users(id, external_user_id, avatar_url, created_at)
+VALUES (?, ?, NULL, ?)
+ON CONFLICT(id) DO NOTHING
+"#,
+        )
+        .bind(external_user_id)
+        .bind(external_user_id)
+        .bind(&now)
+        .execute(&self.pool)
+        .await
+        .map_err(db_err)?;
+        Ok(())
+    }
+
+    async fn upsert_houses(
+        &self,
+        houses: &[RemoteHouse],
+        _owner_external_id: &str,
+    ) -> Result<(), DomainError> {
+        for h in houses {
+            sqlx::query(
+                r#"
+INSERT INTO houses(id, name, avatar_url, address, conflict_strategy, owner_id, created_at, updated_at)
+VALUES (?, ?, ?, ?, 'DENY_OVERRIDES', ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET
+  name             = excluded.name,
+  avatar_url       = excluded.avatar_url,
+  address          = excluded.address,
+  owner_id         = excluded.owner_id,
+  updated_at       = excluded.updated_at
+"#,
+            )
+            .bind(&h.id)
+            .bind(&h.name)
+            .bind(&h.avatar_url)
+            .bind(&h.address)
+            .bind(&h.owner_id)
+            .bind(&h.created_at)
+            .bind(&h.updated_at)
+            .execute(&self.pool)
+            .await
+            .map_err(db_err)?;
+        }
+        Ok(())
+    }
+
+    async fn upsert_rooms(
+        &self,
+        house_id: &str,
+        rooms: &[RemoteRoom],
+    ) -> Result<(), DomainError> {
+        for r in rooms {
+            let path = format!("{}/{}", house_id, r.id);
+            sqlx::query(
+                r#"
+INSERT INTO resources(id, type, name, external_id, path, depth, house_id, parent_id)
+VALUES (?, 'ROOM', ?, NULL, ?, 1, ?, NULL)
+ON CONFLICT(id) DO UPDATE SET
+  name      = excluded.name,
+  path      = excluded.path,
+  house_id  = excluded.house_id
+"#,
+            )
+            .bind(&r.id)
+            .bind(&r.name)
+            .bind(&path)
+            .bind(house_id)
+            .execute(&self.pool)
+            .await
+            .map_err(db_err)?;
+        }
+        Ok(())
+    }
+
+    async fn mark_pulled(&self, entity_type: &str, at: &str) -> Result<(), DomainError> {
+        sqlx::query(
+            r#"
+INSERT INTO sync_versions(entity_type, last_pulled_at, last_pushed_at)
+VALUES (?, ?, NULL)
+ON CONFLICT(entity_type) DO UPDATE SET last_pulled_at = excluded.last_pulled_at
+"#,
+        )
+        .bind(entity_type)
+        .bind(at)
+        .execute(&self.pool)
+        .await
+        .map_err(db_err)?;
+        Ok(())
+    }
+
+    async fn get_status(&self) -> Result<SyncStatus, DomainError> {
+        let pending_outbox: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM sync_outbox WHERE sent_at IS NULL")
+                .fetch_one(&self.pool)
+                .await
+                .map_err(db_err)?;
+
+        // Earliest last_pulled_at across entity types (the weakest point).
+        let last_pulled_at: Option<String> = sqlx::query_scalar(
+            "SELECT MIN(last_pulled_at) FROM sync_versions WHERE last_pulled_at IS NOT NULL",
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(db_err)?
+        .flatten();
+
+        let last_pushed_at: Option<String> = sqlx::query_scalar(
+            "SELECT MAX(last_pushed_at) FROM sync_versions WHERE last_pushed_at IS NOT NULL",
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(db_err)?
+        .flatten();
+
+        Ok(SyncStatus {
+            pending_outbox,
+            last_pulled_at,
+            last_pushed_at,
+        })
+    }
+
+    async fn list_houses(&self, owner_external_id: &str) -> Result<Vec<RemoteHouse>, DomainError> {
+        let rows = sqlx::query(
+            r#"
+SELECT h.id, h.name, h.avatar_url, h.address, h.owner_id, h.created_at, h.updated_at
+FROM   houses h
+JOIN   users  u ON u.id = h.owner_id
+WHERE  u.external_user_id = ?
+ORDER  BY h.created_at ASC
+"#,
+        )
+        .bind(owner_external_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(db_err)?;
+
+        use sqlx::Row as _;
+        Ok(rows
+            .into_iter()
+            .map(|r| RemoteHouse {
+                id: r.get("id"),
+                name: r.get("name"),
+                avatar_url: r.get("avatar_url"),
+                address: r.get("address"),
+                owner_id: r.get("owner_id"),
+                created_at: r.get("created_at"),
+                updated_at: r.get("updated_at"),
+            })
+            .collect())
+    }
+
+    async fn list_rooms(&self, house_id: &str) -> Result<Vec<RemoteRoom>, DomainError> {
+        // `name` was added via migration 007 — use runtime query to avoid
+        // SQLx compile-time schema mismatch on older dev databases.
+        let rows = sqlx::query(
+            "SELECT id, name, house_id FROM resources WHERE house_id = ? AND type = 'ROOM' ORDER BY path ASC",
+        )
+        .bind(house_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(db_err)?;
+
+        use sqlx::Row as _;
+        Ok(rows
+            .into_iter()
+            .map(|r| {
+                let name: Option<String> = r.get("name");
+                RemoteRoom {
+                    id: r.get("id"),
+                    name: name.unwrap_or_default(),
+                    house_id: r.get("house_id"),
+                    created_at: String::new(),
+                }
+            })
+            .collect())
+    }
+}

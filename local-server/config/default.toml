@@ -9,3 +9,5 @@ busy_timeout_ms = 5000
 graceful_shutdown_secs = 10
 mqtt_topic_prefix = "zigbee2mqtt"
 # mqtt_url = "mqtt://localhost:1883"  # uncomment or set ZIGBEE_MQTT_URL env var
+access_service_url = "http://localhost:8085"
+# local_server_public_url = "https://your-public-url.example"

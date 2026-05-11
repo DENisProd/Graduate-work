@@ -4,3 +4,9 @@
 # database_url = "sqlite:/var/lib/local-server/local.db"
 # max_db_connections = 10
 # graceful_shutdown_secs = 15
+#
+# Scenario-service sync (cloud is authoritative, pull every N seconds):
+# scenario_service_url = "http://localhost:3001"
+# sync_interval_secs = 300
+#
+# Env var override: SCENARIO_SERVICE_URL

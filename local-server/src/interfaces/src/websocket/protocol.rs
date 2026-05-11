@@ -43,26 +43,46 @@ impl From<ZigbeeDeviceState> for ZigbeeStateDto {
     }
 }
 
-/// Serialised over the wire as the `zigbee:pairing:status` event payload.
+/// Serialised over the wire as the `zigbee:pairing:event` payload.
+/// Shape matches the frontend `PairingEvent` type.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct PairingStatusDto {
+pub struct PairingEventDto {
+    /// Event type: device_joined, interview_started, interview_successful, interview_failed, device_leave
+    #[serde(rename = "type")]
     pub event_type: String,
-    pub ieee_address: Option<String>,
+    pub ieee_addr: Option<String>,
     pub friendly_name: Option<String>,
+    pub model: Option<String>,
+    pub manufacturer_name: Option<String>,
+    pub message: Option<String>,
     pub timestamp: String,
 }
 
-impl From<&PairingEvent> for PairingStatusDto {
+impl From<&PairingEvent> for PairingEventDto {
     fn from(e: &PairingEvent) -> Self {
         Self {
             event_type: e.event_type.clone(),
-            ieee_address: e.ieee_address.clone(),
+            ieee_addr: e.ieee_address.clone(),
             friendly_name: e.friendly_name.clone(),
+            model: e.model.clone(),
+            manufacturer_name: e.manufacturer_name.clone(),
+            message: e.message.clone(),
             timestamp: e.timestamp.to_rfc3339(),
         }
     }
 }
+
+/// Serialised over the wire as the `zigbee:pairing:status` payload.
+/// Matches what the frontend `usePairing` hook expects: `{ permitJoinEnabled: boolean }`.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PermitJoinStatusDto {
+    pub permit_join_enabled: bool,
+}
+
+// Keep old alias for any remaining references
+pub type PairingStatusDto = PairingEventDto;
 
 // ─── Inbound payloads (client → server) ──────────────────────────────────────
 

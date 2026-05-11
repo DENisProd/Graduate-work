@@ -2,17 +2,28 @@ use std::sync::Arc;
 
 use local_server_application::{
     ports::{
-        DeviceRepository, HealthChecker, PhysicalDeviceRepository, ScenarioExecutionRepository,
-        ScenarioRepository, ZigbeeRepository,
+        AccessRepository, AccessSyncRepository, CloudAuthClient, CloudPhysicalDeviceClient,
+        CloudScenarioClient, CloudSyncClient, CloudWidgetDashboardClient, DeviceRepository,
+        HealthChecker, ModbusBridgePort, ModbusRepository, PhysicalDeviceRepository,
+        RuntimeSettingsRepository, ScenarioExecutionRepository, ScenarioRepository,
+        WidgetDashboardRepository, ZigbeeRepository,
     },
-    services::ZigbeeRealtimeService,
+    services::{AccessEvaluator, ZigbeeRealtimeService},
 };
 use local_server_infrastructure::persistence::{
-    OutboxWriter, SqliteDeviceRepo, SqliteHealthChecker, SqlitePhysicalDeviceRepo,
-    SqliteScenarioExecutionRepo, SqliteScenarioRepo, SqliteZigbeeRepo,
+    OutboxWriter, SqliteAccessRepo, SqliteAccessSyncRepo, SqliteDeviceRepo, SqliteHealthChecker,
+    SqliteModbusRepo, SqlitePhysicalDeviceRepo, SqliteRuntimeSettingsRepo,
+    SqliteScenarioExecutionRepo, SqliteScenarioRepo, SqliteSyncOutboxRepo,
+    SqliteWidgetDashboardRepo, SqliteZigbeeRepo,
 };
-use local_server_infrastructure::SqlitePool;
+use local_server_infrastructure::{
+    ModbusGateway, ReqwestCloudAuthClient, ReqwestCloudPhysicalDeviceClient, ReqwestCloudScenarioClient,
+    ReqwestCloudSyncClient, ReqwestCloudWidgetDashboardClient, SqlitePool,
+};
 use local_server_interfaces::HttpAppState;
+use tokio::sync::Notify;
+
+use crate::mqtt_manager::RuntimeMqttManager;
 
 /// Owns all concrete adapters for the lifetime of the process.
 pub struct AppState {
@@ -25,10 +36,26 @@ pub struct AppState {
     pub realtime_svc: Arc<ZigbeeRealtimeService>,
     pub scenario_repo: Arc<dyn ScenarioRepository>,
     pub scenario_exec_repo: Arc<dyn ScenarioExecutionRepository>,
+    pub runtime_settings_repo: Arc<dyn RuntimeSettingsRepository>,
+    pub cloud_auth_client: Arc<dyn CloudAuthClient>,
+    pub cloud_sync_client: Arc<dyn CloudSyncClient>,
+    pub cloud_scenario_client: Arc<dyn CloudScenarioClient>,
+    pub cloud_phys_dev_client: Arc<dyn CloudPhysicalDeviceClient>,
+    pub cloud_widget_dashboard_client: Arc<dyn CloudWidgetDashboardClient>,
+    pub widget_dashboard_repo: Arc<dyn WidgetDashboardRepository>,
+    pub access_sync_repo: Arc<dyn AccessSyncRepository>,
+    pub access_repo: Arc<dyn AccessRepository>,
+    pub access_evaluator: Arc<AccessEvaluator>,
+    pub sync_outbox_repo: Arc<SqliteSyncOutboxRepo>,
+    pub outbox_notify: Arc<Notify>,
+    pub mqtt_manager: Arc<RuntimeMqttManager>,
+    pub modbus_repo: Arc<dyn ModbusRepository>,
+    /// Trait object passed to the HTTP layer (avoids interface→infra dependency).
+    pub modbus_bridge: Arc<dyn ModbusBridgePort>,
 }
 
 impl AppState {
-    pub fn new(pool: SqlitePool) -> Self {
+    pub fn new(pool: SqlitePool, mqtt_prefix: String) -> Self {
         let outbox = Arc::new(OutboxWriter::new());
 
         let health = Arc::new(SqliteHealthChecker::new(pool.clone())) as Arc<dyn HealthChecker>;
@@ -50,6 +77,50 @@ impl AppState {
         let scenario_exec_repo = Arc::new(SqliteScenarioExecutionRepo::new(pool.clone()))
             as Arc<dyn ScenarioExecutionRepository>;
 
+        let runtime_settings_repo = Arc::new(SqliteRuntimeSettingsRepo::new(pool.clone()))
+            as Arc<dyn RuntimeSettingsRepository>;
+
+        let cloud_auth_client =
+            Arc::new(ReqwestCloudAuthClient::new()) as Arc<dyn CloudAuthClient>;
+
+        let cloud_sync_client =
+            Arc::new(ReqwestCloudSyncClient::new()) as Arc<dyn CloudSyncClient>;
+
+        let cloud_scenario_client =
+            Arc::new(ReqwestCloudScenarioClient::new()) as Arc<dyn CloudScenarioClient>;
+
+        let cloud_phys_dev_client =
+            Arc::new(ReqwestCloudPhysicalDeviceClient::new()) as Arc<dyn CloudPhysicalDeviceClient>;
+
+        let cloud_widget_dashboard_client =
+            Arc::new(ReqwestCloudWidgetDashboardClient::new()) as Arc<dyn CloudWidgetDashboardClient>;
+
+        let widget_dashboard_repo =
+            Arc::new(SqliteWidgetDashboardRepo::new(pool.clone())) as Arc<dyn WidgetDashboardRepository>;
+
+        let access_sync_repo = Arc::new(SqliteAccessSyncRepo::new(pool.clone()))
+            as Arc<dyn AccessSyncRepository>;
+
+        let access_repo_inner = Arc::new(SqliteAccessRepo::new(pool.clone()));
+        let access_repo = access_repo_inner.clone() as Arc<dyn AccessRepository>;
+        let access_evaluator = Arc::new(AccessEvaluator::new(access_repo.clone()));
+
+        let sync_outbox_repo = Arc::new(SqliteSyncOutboxRepo::new(pool.clone()));
+        let outbox_notify = Arc::new(Notify::new());
+
+        let modbus_repo =
+            Arc::new(SqliteModbusRepo::new(pool.clone())) as Arc<dyn ModbusRepository>;
+        let modbus_gateway = Arc::new(ModbusGateway::new());
+        let modbus_bridge = modbus_gateway.clone() as Arc<dyn ModbusBridgePort>;
+
+        let mqtt_manager = Arc::new(RuntimeMqttManager::new(
+            mqtt_prefix,
+            zigbee_repo.clone(),
+            phys_repo.clone(),
+            realtime_svc.clone(),
+            modbus_gateway.clone(),
+        ));
+
         Self {
             pool,
             health,
@@ -59,10 +130,40 @@ impl AppState {
             realtime_svc,
             scenario_repo,
             scenario_exec_repo,
+            runtime_settings_repo,
+            cloud_auth_client,
+            cloud_sync_client,
+            cloud_scenario_client,
+            cloud_phys_dev_client,
+            cloud_widget_dashboard_client,
+            widget_dashboard_repo,
+            access_sync_repo,
+            access_repo,
+            access_evaluator,
+            sync_outbox_repo,
+            outbox_notify,
+            mqtt_manager,
+            modbus_repo,
+            modbus_bridge,
         }
     }
 
-    pub fn http_state(&self, version: &'static str) -> HttpAppState {
-        HttpAppState { version, health: self.health.clone() }
+    pub fn http_state(
+        &self,
+        version: &'static str,
+        default_access_service_url: String,
+        public_base_url: Option<String>,
+    ) -> HttpAppState {
+        HttpAppState {
+            version,
+            health: self.health.clone(),
+            runtime_settings: self.runtime_settings_repo.clone(),
+            mqtt: self.mqtt_manager.clone(),
+            cloud_auth: self.cloud_auth_client.clone(),
+            cloud_sync: self.cloud_sync_client.clone(),
+            access_sync: self.access_sync_repo.clone(),
+            default_access_service_url,
+            public_base_url,
+        }
     }
 }
