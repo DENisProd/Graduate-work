@@ -2,16 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { useTranslation } from '@/hooks';
-import { housesApi } from '@/lib/api-client';
+import { useCurrentUserId, useTranslation } from '@/hooks';
+import { accessApiClient, housesApi } from '@/lib/api-client';
+import { toArray } from '@/features/access-control';
+import type { HouseResponse } from '@/types/api';
 
 export function useDashboardLayout() {
   const { t } = useTranslation();
   const pathname = usePathname();
+  const currentUserId = useCurrentUserId();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
     houses: true,
   });
+  const [userHouses, setUserHouses] = useState<HouseResponse[]>([]);
   const [selectedHouseId, setSelectedHouseId] = useState<string | null>(null);
   const [selectedHouseName, setSelectedHouseName] = useState<string | null>(
     null,
@@ -20,17 +24,40 @@ export function useDashboardLayout() {
   const houseIdFromPath = pathname.match(/^\/dashboard\/houses\/([^/]+)/)?.[1] ?? null;
 
   useEffect(() => {
+    if (!currentUserId) {
+      setUserHouses([]);
+      return;
+    }
+
+    accessApiClient.houses
+      .getHousesByUser(currentUserId, { page: 0, size: 10 })
+      .then((data) => setUserHouses(toArray<HouseResponse>(data)))
+      .catch(() => setUserHouses([]));
+  }, [currentUserId]);
+
+  useEffect(() => {
     if (houseIdFromPath) {
       setSelectedHouseId(houseIdFromPath);
+      const decodedHouseId = decodeURIComponent(houseIdFromPath);
+      const matchedHouse = userHouses.find(
+        (house) =>
+          String(house.id) === decodedHouseId || house.uuid === decodedHouseId,
+      );
+
+      if (matchedHouse) {
+        setSelectedHouseName(matchedHouse.name ?? null);
+        return;
+      }
+
       housesApi
-        .getById(decodeURIComponent(houseIdFromPath))
+        .getById(decodedHouseId)
         .then((house) => setSelectedHouseName(house.name ?? null))
         .catch(() => setSelectedHouseName(null));
     } else {
       setSelectedHouseId(null);
       setSelectedHouseName(null);
     }
-  }, [houseIdFromPath]);
+  }, [houseIdFromPath, userHouses]);
 
   useEffect(() => {
     if (pathname.startsWith('/dashboard/houses')) {
@@ -65,6 +92,7 @@ export function useDashboardLayout() {
     isActive,
     selectedHouseId,
     selectedHouseName,
+    userHouses,
     isFullWidthPage,
   };
 }

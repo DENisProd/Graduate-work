@@ -8,8 +8,7 @@
     "tsc-alias": "^1.8.16"
   },
   "scripts": {
-    "postinstall": "bun run prisma:generate",
-    "prisma:generate": "cd apps/access-service && bun run prisma:generate && cd ../device-service && bun run prisma:generate",
+    "prisma:generate": "cd apps/access-service && bun run prisma:generate",
     "build": "cd apps/access-service && bun run build && cd ../device-service && bun run build && cd ../scenario-service && bun run build",
     "build:access": "cd apps/access-service && bun run build",
     "build:scenario": "cd apps/scenario-service && bun run build",

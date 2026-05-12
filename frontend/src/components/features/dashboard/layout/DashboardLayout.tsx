@@ -21,6 +21,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     isActive,
     selectedHouseId,
     selectedHouseName,
+    userHouses,
     isFullWidthPage,
   } = useDashboardLayout();
 
@@ -28,6 +29,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     t,
     selectedHouseId,
     selectedHouseName,
+    userHouses,
     pathname,
   );
 

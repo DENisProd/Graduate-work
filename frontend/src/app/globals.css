@@ -396,8 +396,9 @@ html[data-theme="dark"] [data-slot="input"] textarea,
   --card-foreground: oklch(0.984 0.003 247.858);
   --popover: oklch(0.17 0.035 264.695);
   --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: #1A237E;
-  --primary-foreground: #ffffff;
+  /* Much brighter accent for contrast against dark indigo surfaces */
+  --primary: #8EA2FF;
+  --primary-foreground: #0b1336;
   --brand-secondary: #FF9800;
   --brand-teal: #009688;
   --secondary: oklch(0.279 0.041 260.031);
@@ -409,7 +410,7 @@ html[data-theme="dark"] [data-slot="input"] textarea,
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
+  --ring: #8EA2FF;
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
@@ -417,12 +418,12 @@ html[data-theme="dark"] [data-slot="input"] textarea,
   --chart-5: oklch(0.645 0.246 16.439);
   --sidebar: oklch(0.15 0.03 264.695);
   --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: #1A237E;
-  --sidebar-primary-foreground: #ffffff;
+  --sidebar-primary: #8EA2FF;
+  --sidebar-primary-foreground: #0b1336;
   --sidebar-accent: oklch(0.279 0.041 260.031);
   --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  --sidebar-ring: #8EA2FF;
 
   --content-area: oklch(0.132 0.041 264.695);
   --surface-1: oklch(0.145 0.038 264.695);

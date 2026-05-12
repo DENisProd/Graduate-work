@@ -9,23 +9,23 @@ export declare const createDeviceDataSchema: z.ZodObject<{
     quality: z.ZodOptional<z.ZodNumber>;
     timestamp: z.ZodOptional<z.ZodDate>;
 }, "strip", z.ZodTypeAny, {
-    capability: string;
-    deviceId: string;
     type: import("../../common/schemas/enums").DeviceDataType;
+    deviceId: string;
+    capability: string;
     value?: unknown;
+    timestamp?: Date | undefined;
     attribute?: string | undefined;
     unit?: string | undefined;
     quality?: number | undefined;
-    timestamp?: Date | undefined;
 }, {
-    capability: string;
-    deviceId: string;
     type: import("../../common/schemas/enums").DeviceDataType;
+    deviceId: string;
+    capability: string;
     value?: unknown;
+    timestamp?: Date | undefined;
     attribute?: string | undefined;
     unit?: string | undefined;
     quality?: number | undefined;
-    timestamp?: Date | undefined;
 }>;
 export type CreateDeviceDataInput = z.infer<typeof createDeviceDataSchema>;
 export declare const deviceDataSeriesRangeSchema: z.ZodEnum<["1m", "1h", "6h", "24h", "7d"]>;
@@ -43,21 +43,21 @@ export declare const listDeviceDataQuerySchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     page: number;
     limit: number;
-    capability?: string | undefined;
-    deviceId?: string | undefined;
     type?: import("../../common/schemas/enums").DeviceDataType | undefined;
-    attribute?: string | undefined;
+    deviceId?: string | undefined;
     from?: Date | undefined;
     to?: Date | undefined;
-}, {
     capability?: string | undefined;
-    deviceId?: string | undefined;
+    attribute?: string | undefined;
+}, {
     type?: import("../../common/schemas/enums").DeviceDataType | undefined;
     page?: unknown;
     limit?: unknown;
-    attribute?: string | undefined;
+    deviceId?: string | undefined;
     from?: unknown;
     to?: unknown;
+    capability?: string | undefined;
+    attribute?: string | undefined;
 }>;
 export type ListDeviceDataQuery = z.infer<typeof listDeviceDataQuerySchema>;
 export declare const deviceDataSeriesQuerySchema: z.ZodObject<{
@@ -68,12 +68,12 @@ export declare const deviceDataSeriesQuerySchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     deviceId: string;
     range: "1m" | "1h" | "6h" | "24h" | "7d";
-    to?: Date | undefined;
     capabilities?: string | undefined;
+    to?: Date | undefined;
 }, {
     deviceId: string;
     range: "1m" | "1h" | "6h" | "24h" | "7d";
-    to?: unknown;
     capabilities?: string | undefined;
+    to?: unknown;
 }>;
 export type DeviceDataSeriesQuery = z.infer<typeof deviceDataSeriesQuerySchema>;

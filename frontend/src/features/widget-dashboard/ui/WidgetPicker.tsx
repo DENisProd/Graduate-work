@@ -96,11 +96,16 @@ const ICON_SVG: Record<string, React.ReactNode> = {
 };
 
 const TEMPLATE_ACCENT: Record<WidgetTemplate['accent'], string> = {
-  green: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:border-emerald-400',
-  blue: 'bg-sky-50 text-sky-700 border-sky-200 hover:border-sky-400',
-  amber: 'bg-amber-50 text-amber-700 border-amber-200 hover:border-amber-400',
-  red: 'bg-rose-50 text-rose-700 border-rose-200 hover:border-rose-400',
-  slate: 'bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-400',
+  green:
+    'bg-emerald-50 text-emerald-700 border-emerald-200 hover:border-emerald-400 dark:bg-emerald-900/25 dark:text-emerald-200 dark:border-emerald-700/60 dark:hover:border-emerald-500/80',
+  blue:
+    'bg-sky-50 text-sky-700 border-sky-200 hover:border-sky-400 dark:bg-sky-900/25 dark:text-sky-200 dark:border-sky-700/60 dark:hover:border-sky-500/80',
+  amber:
+    'bg-amber-50 text-amber-700 border-amber-200 hover:border-amber-400 dark:bg-amber-900/25 dark:text-amber-200 dark:border-amber-700/60 dark:hover:border-amber-500/80',
+  red:
+    'bg-rose-50 text-rose-700 border-rose-200 hover:border-rose-400 dark:bg-rose-900/25 dark:text-rose-200 dark:border-rose-700/60 dark:hover:border-rose-500/80',
+  slate:
+    'bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-400 dark:bg-slate-800/40 dark:text-slate-200 dark:border-slate-700 dark:hover:border-slate-500',
 };
 
 function IconBox({ icon, className }: { icon: string; className?: string }) {
@@ -177,7 +182,7 @@ export function WidgetPicker({ open, onClose, onSelect }: Props) {
                   }}
                   className={`flex items-start gap-3 p-3 rounded-xl border transition-colors text-left ${TEMPLATE_ACCENT[tpl.accent]}`}
                 >
-                  <IconBox icon={tpl.icon} className="bg-white/60 text-current" />
+                  <IconBox icon={tpl.icon} className="bg-white/60 text-current dark:bg-slate-950/45" />
                   <div className="min-w-0">
                     <p className="font-semibold text-sm truncate">{tpl.label}</p>
                     <p className="text-xs opacity-80 mt-0.5 line-clamp-2">{tpl.description}</p>

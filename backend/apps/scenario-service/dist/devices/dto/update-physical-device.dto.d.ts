@@ -1,6 +1,6 @@
 declare const UpdatePhysicalDeviceDto_base: import("nestjs-zod").ZodDto<{
-    name?: string | undefined;
     description?: string | undefined;
+    name?: string | undefined;
     deviceTypeId?: number | undefined;
     houseId?: string | undefined;
     deviceId?: number | undefined;
@@ -23,8 +23,8 @@ declare const UpdatePhysicalDeviceDto_base: import("nestjs-zod").ZodDto<{
     macAddress: import("zod").ZodOptional<import("zod").ZodOptional<import("zod").ZodString>>;
     serialNumber: import("zod").ZodOptional<import("zod").ZodOptional<import("zod").ZodString>>;
 }, "strip", import("zod").ZodTypeAny>, {
-    name?: string | undefined;
     description?: string | undefined;
+    name?: string | undefined;
     deviceTypeId?: number | undefined;
     houseId?: string | undefined;
     deviceId?: number | undefined;

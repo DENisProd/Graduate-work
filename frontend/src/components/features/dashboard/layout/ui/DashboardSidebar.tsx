@@ -41,6 +41,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useUserStore } from '@/store/user-store';
 import DashboardNavigation, { type Route } from '@/components/sidebar-02/nav-main';
+import type { HouseResponse } from '@/types/api';
 import { DashboardIcon, CloseIcon } from './icons';
 
 interface DashboardSidebarProps {
@@ -66,7 +67,7 @@ function DashboardCurrentHouseBlock({
   const isCollapsed = state === 'collapsed';
   const name = selectedHouseName ?? `#${selectedHouseId}`;
   const fullLabel = `${t('dashboard.currentHouse')}: ${name}`;
-  const housesListHref = '/dashboard/houses';
+  const housesListHref = '/dashboard';
   const backLabel = t('common.back');
 
   const backLinkClass = cn(
@@ -308,12 +309,52 @@ export function buildDashboardRoutes(
   t: (key: Parameters<typeof import('@/lib/i18n').getTranslation>[1]) => string,
   selectedHouseId: string | null,
   _selectedHouseName: string | null,
+  userHouses: HouseResponse[],
   pathname: string,
 ): Route[] {
   const overviewSection = t('navigation.overview');
   const propertiesSection = t('navigation.properties');
 
   const routes: Route[] = [];
+
+  if (!selectedHouseId) {
+    routes.push(
+      {
+        id: 'dashboard-home',
+        title: t('navigation.dashboard'),
+        link: '/dashboard',
+        icon: <LayoutDashboard className="size-4" />,
+        section: overviewSection,
+        isActive: pathname === '/dashboard',
+      },
+      {
+        id: 'dashboard-settings',
+        title: t('common.settings'),
+        link: '/dashboard/settings',
+        icon: <Settings className="size-4" />,
+        section: overviewSection,
+        isActive: pathname.startsWith('/dashboard/settings'),
+      },
+      {
+        id: 'houses',
+        title: t('dashboard.myHouses'),
+        link: '/dashboard',
+        icon: <Building2 className="size-4" />,
+        section: propertiesSection,
+        subs: userHouses.slice(0, 10).map((house) => {
+          const houseRouteId = house.uuid ?? String(house.id);
+          const houseLink = `/dashboard/houses/${encodeURIComponent(houseRouteId)}`;
+          return {
+            title: house.name,
+            link: houseLink,
+            icon: <Building2 className="size-4" />,
+            isActive: pathname.startsWith(houseLink),
+          };
+        }),
+        isActive: pathname.startsWith('/dashboard/houses/'),
+      },
+    );
+  }
 
   if (selectedHouseId) {
     const hid = encodeURIComponent(selectedHouseId);
@@ -336,6 +377,14 @@ export function buildDashboardRoutes(
         icon: <DoorOpen className="size-4" />,
         section: propertiesSection,
         isActive: sh() && /\/rooms(?:\/|$)/.test(pathname),
+      },
+      {
+        id: 'house-room-planner',
+        title: t('navigation.room_planner'),
+        link: `${base}/room-planner`,
+        icon: <Map className="size-4" />,
+        section: propertiesSection,
+        isActive: pathname.startsWith(`${base}/room-planner`),
       },
       {
         id: 'house-members',
@@ -368,22 +417,6 @@ export function buildDashboardRoutes(
         icon: <Workflow className="size-4" />,
         section: propertiesSection,
         isActive: sh() && /\/scenarios(?:\/|$)/.test(pathname),
-      },
-      {
-        id: 'house-widgets',
-        title: t('navigation.widgets'),
-        link: `${base}/widgets`,
-        icon: <Gauge className="size-4" />,
-        section: propertiesSection,
-        isActive: pathname.startsWith(`${base}/widgets`),
-      },
-      {
-        id: 'house-room-planner',
-        title: t('navigation.room_planner'),
-        link: `${base}/room-planner`,
-        icon: <Map className="size-4" />,
-        section: propertiesSection,
-        isActive: pathname.startsWith(`${base}/room-planner`),
       },
       {
         id: 'house-settings',

@@ -1,12 +1,12 @@
 declare const CreateDeviceDataDto_base: import("nestjs-zod").ZodDto<{
-    capability: string;
-    deviceId: string;
     type: import("../../common/schemas").DeviceDataType;
+    deviceId: string;
+    capability: string;
     value?: unknown;
+    timestamp?: Date | undefined;
     attribute?: string | undefined;
     unit?: string | undefined;
     quality?: number | undefined;
-    timestamp?: Date | undefined;
 }, import("zod").ZodObjectDef<{
     deviceId: import("zod").ZodString;
     capability: import("zod").ZodString;
@@ -17,14 +17,14 @@ declare const CreateDeviceDataDto_base: import("nestjs-zod").ZodDto<{
     quality: import("zod").ZodOptional<import("zod").ZodNumber>;
     timestamp: import("zod").ZodOptional<import("zod").ZodDate>;
 }, "strip", import("zod").ZodTypeAny>, {
-    capability: string;
-    deviceId: string;
     type: import("../../common/schemas").DeviceDataType;
+    deviceId: string;
+    capability: string;
     value?: unknown;
+    timestamp?: Date | undefined;
     attribute?: string | undefined;
     unit?: string | undefined;
     quality?: number | undefined;
-    timestamp?: Date | undefined;
 }>;
 export declare class CreateDeviceDataDto extends CreateDeviceDataDto_base {
 }

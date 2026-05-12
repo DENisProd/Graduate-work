@@ -51,6 +51,11 @@ export function DashboardHeader({
 
     if (pathname === '/dashboard') return breadcrumbs;
 
+    if (pathname.startsWith('/dashboard/settings')) {
+      breadcrumbs.push({ label: t('common.settings') });
+      return breadcrumbs;
+    }
+
     if (pathname.startsWith('/dashboard/houses')) {
       breadcrumbs.push({
         label: t('dashboard.myHouses'),

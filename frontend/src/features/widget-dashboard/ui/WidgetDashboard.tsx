@@ -194,6 +194,8 @@ export function WidgetDashboard({ dashboard, devices, zigbeeDevices, scenarios }
     setSaving(true);
     try {
       await widgetDashboardsApi.update(dashboard.id, { widgets, layouts: layouts as unknown as Record<string, unknown> });
+      setEditingWidget(null);
+      setEditMode(false);
       showToast('Сохранено', 'success', 2000);
     } catch (e) {
       showToast('Ошибка сохранения', 'error', 4000);
@@ -315,7 +317,7 @@ export function WidgetDashboard({ dashboard, devices, zigbeeDevices, scenarios }
           <p className="text-muted-foreground text-sm">Дашборд пуст.</p>
           <button
             onClick={() => setEditMode(true)}
-            className="px-4 py-2 rounded-lg border border-primary text-primary text-sm hover:bg-primary/10"
+            className="rounded-lg border border-primary/70 bg-primary/8 px-4 py-2 text-sm text-primary hover:bg-primary/16 dark:border-primary dark:bg-primary/10 dark:hover:bg-primary/20"
           >
             Перейти в режим редактирования
           </button>

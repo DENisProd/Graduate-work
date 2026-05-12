@@ -17,7 +17,9 @@ function nanoid(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
-function buildDefaultWidgets() {
+type TranslateFn = ReturnType<typeof useTranslation>['t'];
+
+function buildDefaultWidgets(t: TranslateFn) {
   const w1 = nanoid();
   const w2 = nanoid();
   const w3 = nanoid();
@@ -28,7 +30,7 @@ function buildDefaultWidgets() {
       type: 'TEXT_LABEL',
       config: {
         type: 'TEXT_LABEL',
-        text: 'Погода: скоро',
+        text: `${t('dashboard.overview.widgets.weatherTitle')}: ${t('dashboard.overview.widgets.weatherHint')}`,
         align: 'left',
         fontSize: 'lg',
         style: 'title',
@@ -39,7 +41,7 @@ function buildDefaultWidgets() {
       type: 'TEXT_LABEL',
       config: {
         type: 'TEXT_LABEL',
-        text: 'Автоматизации: скоро',
+        text: `${t('dashboard.overview.widgets.automationTitle')}: ${t('dashboard.overview.widgets.automationHint')}`,
         align: 'left',
         fontSize: 'lg',
         style: 'title',
@@ -50,7 +52,7 @@ function buildDefaultWidgets() {
       type: 'TEXT_LABEL',
       config: {
         type: 'TEXT_LABEL',
-        text: 'Совет: приглушай тёплый свет вечером — помогает расслабиться.',
+        text: `${t('dashboard.overview.widgets.tipTitle')}: ${t('dashboard.overview.widgets.tipBody')}`,
         align: 'left',
         fontSize: 'md',
         style: 'body',
@@ -121,13 +123,13 @@ export function HouseWidgetsSection({
         let created = await widgetDashboardsApi.create({
           houseId,
           userId: currentUserId,
-          name: 'Виджеты',
+          name: t('dashboard.widgets.title'),
           isDefault: true,
         });
 
         // Seed a first-time dashboard with a few useful widgets.
         if ((created.widgets?.length ?? 0) === 0) {
-          const seed = buildDefaultWidgets();
+          const seed = buildDefaultWidgets(t);
           created = await widgetDashboardsApi.update(created.id, {
             widgets: seed.widgets,
             layouts: seed.layouts as unknown as Record<string, unknown>,
@@ -136,11 +138,11 @@ export function HouseWidgetsSection({
         setDashboard(created);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка загрузки');
+      setError(e instanceof Error ? e.message : t('dashboard.widgets.loadError'));
     } finally {
       setLoading(false);
     }
-  }, [currentUserId, houseId]);
+  }, [currentUserId, houseId, t]);
 
   useEffect(() => {
     if (autoLoaded.current) return;

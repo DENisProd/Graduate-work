@@ -28,8 +28,8 @@ export function WidgetDashboardToolbar({
           onClick={onToggleEdit}
           className={`shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
             editMode
-              ? 'border-border text-muted-foreground hover:bg-accent'
-              : 'border-primary text-primary hover:bg-primary/10'
+              ? 'text-muted-foreground hover:bg-accent'
+              : 'bg-primary/8 text-primary hover:bg-primary/16 dark:bg-primary/10 dark:hover:bg-primary/20'
           }`}
         >
           {editMode ? 'Просмотр' : 'Редактировать'}
@@ -40,7 +40,7 @@ export function WidgetDashboardToolbar({
         {editMode && (
           <button
             onClick={onAddWidget}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors"
+            className="flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/20 dark:bg-primary/15 dark:hover:bg-primary/25"
           >
             <span className="text-base leading-none">+</span>
             Виджет

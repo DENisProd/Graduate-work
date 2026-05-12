@@ -28,6 +28,7 @@
     "search": "Search by name...",
     "signIn": "Sign in",
     "optional": "optional",
+    "details": "Details",
     "confirm": "Confirm",
     "yes": "Yes",
     "no": "No"
@@ -146,6 +147,9 @@
       "title": "Widgets",
       "loadError": "Failed to load widgets",
       "noHouses": "No houses to display widgets"
+    },
+    "errors": {
+      "scenarioServiceUnavailable": "The scenario service is unavailable, so part of the dashboard data could not be loaded."
     },
     "sidebar": {
       "open": "Open menu"

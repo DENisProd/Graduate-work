@@ -4,15 +4,18 @@ import { ThemeInitializer } from '@/components/shared';
 import { useTranslation, useCurrentUserId } from '@/hooks';
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Activity, Home, Zap } from 'lucide-react';
+import { Activity, Home, Plus, Search, Zap } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { ApiError, accessApiClient } from '@/lib/api-client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { ApiError, accessApiClient, housesApi } from '@/lib/api-client';
 import {
   dashboardApi,
 } from '@/lib/api/scenario-service';
-import type { HouseResponse } from '@/types/api';
+import type { HouseRequest, HouseResponse } from '@/types/api';
 import { toArray } from '@/features/access-control';
 import { DashboardHouseCard } from '@/features/dashboard/ui/DashboardHouseCard';
+import { HouseFormModal } from '@/features/access-control/ui/modals';
 import { ServiceErrorCard } from '@/components/shared';
 
 type EventResult = 'SUCCESS' | 'DENIED' | 'ERROR';
@@ -26,15 +29,16 @@ interface DashboardEvent {
   result: EventResult;
 }
 
-const PREVIEW_HOUSES_LIMIT = 6;
-
 export default function DashboardPage() {
   const { t, ready } = useTranslation();
   const currentUserId = useCurrentUserId();
 
   // Main data
+  const [searchQuery, setSearchQuery] = useState('');
   const [houses, setHouses] = useState<HouseResponse[]>([]);
   const [loading, setLoading] = useState(false);
+  const [houseFormOpen, setHouseFormOpen] = useState(false);
+  const [editingHouse, setEditingHouse] = useState<HouseResponse | null>(null);
   const [totalDevices, setTotalDevices] = useState(0);
   const [totalActiveScenarios, setTotalActiveScenarios] = useState(0);
   const [recentEvents, setRecentEvents] = useState<DashboardEvent[]>([]);
@@ -47,7 +51,7 @@ export default function DashboardPage() {
     setScenarioServiceError(null);
     try {
       const [housesData] = await Promise.all([
-        accessApiClient.houses.getHousesByUser(currentUserId, { page: 0, size: PREVIEW_HOUSES_LIMIT }),
+        accessApiClient.houses.getHousesByUser(currentUserId, { page: 0, size: 50 }),
       ]);
 
       const fetchedHouses = toArray<HouseResponse>(housesData);
@@ -87,7 +91,7 @@ export default function DashboardPage() {
       if (e instanceof ApiError && e.status === 0) {
         setScenarioServiceError([
           'Failed to load resource: net::ERR_CONNECTION_REFUSED',
-          `details: ${e.message || 'Network error'}`,
+          `${t('common.details')}: ${e.message || t('errors.networkError')}`,
         ]);
       } else {
         console.error(e);
@@ -100,6 +104,30 @@ export default function DashboardPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const saveHouse = async (payload: HouseRequest) => {
+    if (!currentUserId) return;
+
+    const data: HouseRequest = { ...payload, ownerId: payload.ownerId || currentUserId };
+    if (editingHouse) {
+      await housesApi.update(editingHouse.id, data);
+    } else {
+      await housesApi.create(data);
+    }
+
+    setEditingHouse(null);
+    setHouseFormOpen(false);
+    await loadData();
+  };
+
+  const openCreate = () => {
+    setEditingHouse(null);
+    setHouseFormOpen(true);
+  };
+
+  const filteredHouses = houses.filter((house) =>
+    house.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   if (!ready) {
     return (
@@ -137,77 +165,53 @@ export default function DashboardPage() {
         <div className="mb-6">
           <ServiceErrorCard
             title={t('common.error')}
-            description={
-              t('dashboard.stats.activeScenarios') +
-              ': scenario-service недоступен — часть данных на дашборде не загрузилась.'
-            }
+            description={t('dashboard.errors.scenarioServiceUnavailable')}
             details={scenarioServiceError}
             onRetry={loadData}
           />
         </div>
       ) : null}
 
-      {/* Stats */}
-      <section className="mb-8">
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          <Card className="border border-border bg-card shadow">
-            <Card.Content className="flex items-center gap-3 p-6">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                <Home className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">{t('dashboard.stats.totalDevices')}</p>
-                <p className="text-2xl font-bold">{totalDevices}</p>
-              </div>
-            </Card.Content>
-          </Card>
-          <Card className="border border-border bg-card shadow">
-            <Card.Content className="flex items-center gap-3 p-6">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-500/10">
-                <Zap className="h-5 w-5 text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">{t('dashboard.stats.activeScenarios')}</p>
-                <p className="text-2xl font-bold">{totalActiveScenarios}</p>
-              </div>
-            </Card.Content>
-          </Card>
-          <Card className="border border-border bg-card shadow">
-            <Card.Content className="flex items-center gap-3 p-6">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-500/10">
-                <Activity className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">{t('dashboard.stats.events24h')}</p>
-                <p className="text-2xl font-bold">{eventsCount}</p>
-              </div>
-            </Card.Content>
-          </Card>
-        </div>
-      </section>
+
 
       {/* Houses */}
       <section className="mb-8">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-2xl font-semibold">{t('dashboard.myHouses')}</h2>
-          <Link
-            href="/dashboard/houses"
-            className="text-sm font-medium text-primary hover:underline"
-          >
-            {t('dashboard.viewAll')}
-          </Link>
+          <Button onClick={openCreate} className="flex shrink-0 items-center gap-2">
+            <Plus className="h-5 w-5" />
+            {t('admin.accessControl.createHouse')}
+          </Button>
         </div>
+
+        <div className="mb-6 rounded-lg border border-border bg-card p-4 shadow">
+          <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
+            <div className="w-full flex-1 md:w-auto">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder={t('common.search')}
+                  className="w-full pl-10"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent" />
           </div>
-        ) : houses.length === 0 ? (
+        ) : filteredHouses.length === 0 ? (
           <p className="rounded-lg border border-border bg-muted/30 px-4 py-6 text-center text-muted-foreground">
-            {t('dashboard.noHouses')}
+            {searchQuery ? t('common.noResults') : t('dashboard.noHouses')}
           </p>
         ) : (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {houses.map((house) => (
+            {filteredHouses.map((house) => (
               <DashboardHouseCard key={house.id} house={house} basePath="/dashboard/houses" />
             ))}
           </div>
@@ -217,7 +221,7 @@ export default function DashboardPage() {
       {/* Recent Events */}
       <section>
         <Card className="border border-border bg-card shadow">
-          <Card.Content className="p-6">
+          <Card.Content>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-semibold">{t('dashboard.recentEvents.title')}</h2>
               <button
@@ -273,6 +277,16 @@ export default function DashboardPage() {
           </Card.Content>
         </Card>
       </section>
+
+      {currentUserId && (
+        <HouseFormModal
+          isOpen={houseFormOpen}
+          onOpenChange={setHouseFormOpen}
+          initialValues={editingHouse ?? undefined}
+          initialOwnerId={currentUserId}
+          onSubmit={saveHouse}
+        />
+      )}
     </>
   );
 }
