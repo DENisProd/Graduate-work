@@ -1,0 +1,2 @@
+# SQLx embeds migration checksums at compile time; line-ending drift breaks startup.
+local-server/migrations/*.sql text eol=lf

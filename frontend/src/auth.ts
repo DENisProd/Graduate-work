@@ -1,6 +1,16 @@
 import NextAuth from "next-auth";
 import Keycloak from "next-auth/providers/keycloak";
 
+type TokenWithKeycloakSub = {
+  sub?: string;
+  keycloakSub?: string;
+};
+
+type KeycloakProfileLike = {
+  sub?: string;
+  id?: string;
+};
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Keycloak({
@@ -20,20 +30,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     session({ session, token }) {
       if (session.user) {
-        // Prefer stable Keycloak subject from the profile (if captured in jwt callback).
-        const kcSub = (token as unknown as { keycloakSub?: string }).keycloakSub;
+        // Always expose stable Keycloak subject id in the session.
+        const kcSub = (token as TokenWithKeycloakSub).keycloakSub;
         session.user.id = kcSub ?? token.sub ?? "";
       }
       return session;
     },
     jwt({ token, account, profile }) {
-      // NextAuth's token.sub can vary depending on configuration. Keycloak's OIDC `sub`
-      // is the stable external user id we rely on across services.
+      // Keep stable Keycloak user id in token for all later requests/session reads.
       if (account?.provider === 'keycloak') {
-        const p = profile as unknown as { sub?: string } | undefined;
-        if (p?.sub) {
-          (token as unknown as { keycloakSub?: string }).keycloakSub = p.sub;
-          token.sub = p.sub;
+        const profileData = profile as KeycloakProfileLike | undefined;
+        const profileSub = profileData?.sub ?? profileData?.id;
+        const providerAccountSub = account.providerAccountId;
+        const tokenData = token as TokenWithKeycloakSub;
+        const stableSub = profileSub ?? providerAccountSub ?? tokenData.keycloakSub ?? token.sub;
+
+        if (stableSub) {
+          tokenData.keycloakSub = stableSub;
+          token.sub = stableSub;
         }
       }
       return token;

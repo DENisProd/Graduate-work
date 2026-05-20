@@ -13,15 +13,19 @@ import type {
   ListResponse,
 } from '@/types/api';
 import { physicalDevicesApiCall } from './core';
+import type { ApiCallOptions } from './core';
 
 type ListParams = { page?: number; limit?: number; signal?: AbortSignal };
+
+const scenarioApi = <T>(path: string, options?: ApiCallOptions) =>
+  physicalDevicesApiCall<T>(`/api/v1${path}`, options);
 
 export const houseDevicesApi = {
   create: (
     houseId: number | string,
     data: HouseDeviceRegistrationRequest,
   ): Promise<HouseDeviceRegistrationResponse> =>
-    physicalDevicesApiCall('/physical-devices', {
+    scenarioApi('/physical-devices', {
       method: 'POST',
       body: JSON.stringify({ houseId, ...data }),
     }),
@@ -42,7 +46,7 @@ export const zigbeeDevicesApi = {
     if (params?.page !== undefined) q.append('page', String(params.page));
     if (params?.limit !== undefined) q.append('limit', String(params.limit));
     const query = q.toString();
-    return physicalDevicesApiCall(`/zigbee/devices${query ? `?${query}` : ''}`, {
+    return scenarioApi(`/zigbee/devices${query ? `?${query}` : ''}`, {
       signal: params?.signal,
     });
   },
@@ -51,7 +55,7 @@ export const zigbeeDevicesApi = {
     houseId: string,
     options?: { signal?: AbortSignal },
   ): Promise<{ ok: boolean; message?: string }> =>
-    physicalDevicesApiCall(`/zigbee/devices:sync-from-bridge?houseId=${encodeURIComponent(houseId)}`, {
+    scenarioApi(`/zigbee/devices:sync-from-bridge?houseId=${encodeURIComponent(houseId)}`, {
       method: 'POST',
       signal: options?.signal,
     }),
@@ -71,21 +75,21 @@ export const zigbeeDevicesApi = {
       q.append('to', params.to instanceof Date ? params.to.toISOString() : params.to);
     if (params.page !== undefined) q.append('page', params.page.toString());
     if (params.limit !== undefined) q.append('limit', params.limit.toString());
-    return physicalDevicesApiCall(`/zigbee/states?${q.toString()}`, { signal: params.signal });
+    return scenarioApi(`/zigbee/states?${q.toString()}`, { signal: params.signal });
   },
 
   sendCommand: (
     ieeeAddr: string,
     payload: Record<string, unknown>,
   ): Promise<{ ok: true; topic: string }> =>
-    physicalDevicesApiCall(`/zigbee/devices/${encodeURIComponent(ieeeAddr)}/command`, {
+    scenarioApi(`/zigbee/devices/${encodeURIComponent(ieeeAddr)}/command`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ payload }),
     }),
 
   remove: (ieeeAddr: string, force = false): Promise<{ ok: boolean; deleted?: unknown }> =>
-    physicalDevicesApiCall(
+    scenarioApi(
       `/zigbee/devices/${encodeURIComponent(ieeeAddr)}${force ? '?force=true' : ''}`,
       { method: 'DELETE' },
     ),
@@ -112,7 +116,7 @@ export const zigbeeDevicesApi = {
     if (params?.page !== undefined) q.append('page', params.page.toString());
     if (params?.limit !== undefined) q.append('limit', params.limit.toString());
     const query = q.toString();
-    return physicalDevicesApiCall(`/zigbee/device-logs${query ? `?${query}` : ''}`, {
+    return scenarioApi(`/zigbee/device-logs${query ? `?${query}` : ''}`, {
       signal: params?.signal,
     });
   },
@@ -121,7 +125,7 @@ export const zigbeeDevicesApi = {
 export const houseMqttApi = {
   /** Get MQTT config for a house (without password). */
   get: (houseId: string, options?: { signal?: AbortSignal }): Promise<HouseMqttConfigResponse> =>
-    physicalDevicesApiCall(`/zigbee/house-mqtt/${encodeURIComponent(houseId)}`, {
+    scenarioApi(`/zigbee/house-mqtt/${encodeURIComponent(houseId)}`, {
       signal: options?.signal,
     }),
 
@@ -131,20 +135,20 @@ export const houseMqttApi = {
     dto: HouseMqttConfigUpsertRequest,
     options?: { signal?: AbortSignal },
   ): Promise<HouseMqttConfigResponse> =>
-    physicalDevicesApiCall(`/zigbee/house-mqtt/${encodeURIComponent(houseId)}`, {
+    scenarioApi(`/zigbee/house-mqtt/${encodeURIComponent(houseId)}`, {
       method: 'PUT',
       signal: options?.signal,
       body: JSON.stringify(dto),
     }),
 
   delete: (houseId: string, options?: { signal?: AbortSignal }): Promise<{ ok: true; houseId: string }> =>
-    physicalDevicesApiCall(`/zigbee/house-mqtt/${encodeURIComponent(houseId)}`, {
+    scenarioApi(`/zigbee/house-mqtt/${encodeURIComponent(houseId)}`, {
       method: 'DELETE',
       signal: options?.signal,
     }),
 
   reconnect: (houseId: string, options?: { signal?: AbortSignal }): Promise<{ ok: true; houseId: string }> =>
-    physicalDevicesApiCall(`/zigbee/house-mqtt/${encodeURIComponent(houseId)}/reconnect`, {
+    scenarioApi(`/zigbee/house-mqtt/${encodeURIComponent(houseId)}/reconnect`, {
       method: 'POST',
       signal: options?.signal,
     }),
@@ -175,7 +179,7 @@ export const dashboardApi = {
       q.append('from', params.from instanceof Date ? params.from.toISOString() : String(params.from));
     }
     if (params.limit !== undefined) q.append('limit', String(params.limit));
-    return physicalDevicesApiCall(`/dashboard/overview?${q.toString()}`, { signal: params.signal });
+    return scenarioApi(`/dashboard/overview?${q.toString()}`, { signal: params.signal });
   },
 };
 
@@ -189,13 +193,13 @@ export const physicalDevicesApi = {
     if (params?.page !== undefined) q.append('page', params.page.toString());
     if (params?.limit !== undefined) q.append('limit', params.limit.toString());
     const query = q.toString();
-    return physicalDevicesApiCall(`/physical-devices${query ? `?${query}` : ''}`, {
+    return scenarioApi(`/physical-devices${query ? `?${query}` : ''}`, {
       signal: params?.signal,
     });
   },
 
   getById: (id: string, options?: { signal?: AbortSignal }): Promise<PhysicalDeviceResponse> =>
-    physicalDevicesApiCall(`/physical-devices/${id}`, { signal: options?.signal }),
+    scenarioApi(`/physical-devices/${id}`, { signal: options?.signal }),
 
   update: (
     id: string,
@@ -213,7 +217,7 @@ export const physicalDevicesApi = {
       serialNumber?: string | null;
     },
   ): Promise<PhysicalDeviceResponse> =>
-    physicalDevicesApiCall(`/physical-devices/${id}`, {
+    scenarioApi(`/physical-devices/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
@@ -248,7 +252,7 @@ export const deviceDataApi = {
     if (params?.page !== undefined) q.append('page', params.page.toString());
     if (params?.limit !== undefined) q.append('limit', params.limit.toString());
     const query = q.toString();
-    return physicalDevicesApiCall(`/device-data${query ? `?${query}` : ''}`, {
+    return scenarioApi(`/device-data${query ? `?${query}` : ''}`, {
       signal: params?.signal,
     });
   },
@@ -267,16 +271,16 @@ export const deviceDataApi = {
       q.append('capabilities', params.capabilities.join(','));
     }
     if (params.to) q.append('to', params.to instanceof Date ? params.to.toISOString() : params.to);
-    return physicalDevicesApiCall(`/device-data/series?${q.toString()}`, { signal: params.signal });
+    return scenarioApi(`/device-data/series?${q.toString()}`, { signal: params.signal });
   },
 };
 
 export const widgetDashboardsApi = {
   getByHouse: (houseId: string): Promise<import('@/features/widget-dashboard/types/widget.types').WidgetDashboard[]> =>
-    physicalDevicesApiCall(`/widget-dashboards?houseId=${encodeURIComponent(houseId)}`),
+    scenarioApi(`/widget-dashboards?houseId=${encodeURIComponent(houseId)}`),
 
   getById: (id: string): Promise<import('@/features/widget-dashboard/types/widget.types').WidgetDashboard> =>
-    physicalDevicesApiCall(`/widget-dashboards/${id}`),
+    scenarioApi(`/widget-dashboards/${id}`),
 
   create: (dto: {
     houseId: string;
@@ -284,7 +288,7 @@ export const widgetDashboardsApi = {
     name: string;
     isDefault?: boolean;
   }): Promise<import('@/features/widget-dashboard/types/widget.types').WidgetDashboard> =>
-    physicalDevicesApiCall('/widget-dashboards', { method: 'POST', body: JSON.stringify(dto) }),
+    scenarioApi('/widget-dashboards', { method: 'POST', body: JSON.stringify(dto) }),
 
   update: (
     id: string,
@@ -295,19 +299,19 @@ export const widgetDashboardsApi = {
       widgets?: unknown[];
     },
   ): Promise<import('@/features/widget-dashboard/types/widget.types').WidgetDashboard> =>
-    physicalDevicesApiCall(`/widget-dashboards/${id}`, { method: 'PUT', body: JSON.stringify(dto) }),
+    scenarioApi(`/widget-dashboards/${id}`, { method: 'PUT', body: JSON.stringify(dto) }),
 
   updateLayout: (
     id: string,
     layouts: Record<string, unknown>,
   ): Promise<import('@/features/widget-dashboard/types/widget.types').WidgetDashboard> =>
-    physicalDevicesApiCall(`/widget-dashboards/${id}/layout`, {
+    scenarioApi(`/widget-dashboards/${id}/layout`, {
       method: 'PATCH',
       body: JSON.stringify({ layouts }),
     }),
 
   delete: (id: string): Promise<void> =>
-    physicalDevicesApiCall(`/widget-dashboards/${id}`, { method: 'DELETE' }),
+    scenarioApi(`/widget-dashboards/${id}`, { method: 'DELETE' }),
 };
 
 export const scenariosApi = {
@@ -325,23 +329,23 @@ export const scenariosApi = {
     if (params?.page !== undefined) q.append('page', params.page.toString());
     if (params?.limit !== undefined) q.append('limit', params.limit.toString());
     const query = q.toString();
-    return physicalDevicesApiCall(`/scenarios${query ? `?${query}` : ''}`, {
+    return scenarioApi(`/scenarios${query ? `?${query}` : ''}`, {
       signal: params?.signal,
     });
   },
 
   getById: (id: string, options?: { signal?: AbortSignal }): Promise<ScenarioResponse> =>
-    physicalDevicesApiCall(`/scenarios/${encodeURIComponent(id)}`, { signal: options?.signal }),
+    scenarioApi(`/scenarios/${encodeURIComponent(id)}`, { signal: options?.signal }),
 
   create: (dto: unknown): Promise<ScenarioResponse> =>
-    physicalDevicesApiCall('/scenarios', { method: 'POST', body: JSON.stringify(dto) }),
+    scenarioApi('/scenarios', { method: 'POST', body: JSON.stringify(dto) }),
 
   update: (id: string, dto: unknown): Promise<ScenarioResponse> =>
-    physicalDevicesApiCall(`/scenarios/${encodeURIComponent(id)}`, {
+    scenarioApi(`/scenarios/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       body: JSON.stringify(dto),
     }),
 
   delete: (id: string): Promise<void> =>
-    physicalDevicesApiCall(`/scenarios/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    scenarioApi(`/scenarios/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 };
