@@ -8,10 +8,12 @@ export const useUserStore = create<UserStore>()(
   persist(
     (set) => ({
       user: null,
+      accessToken: null,
 
       setUser: (user) => set({ user }),
+      setAccessToken: (token) => set({ accessToken: token }),
 
-      logout: () => set({ user: null }),
+      logout: () => set({ user: null, accessToken: null }),
     }),
     {
       name: 'smart-home-user',

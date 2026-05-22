@@ -7,6 +7,6 @@ export class ProxyMiddleware implements NestMiddleware {
   constructor(private readonly proxyService: ProxyService) {}
 
   use(req: Request, res: Response, next: NextFunction) {
-    this.proxyService.resolve(req.path)(req, res, next);
+    this.proxyService.resolve(req)(req, res, next);
   }
 }

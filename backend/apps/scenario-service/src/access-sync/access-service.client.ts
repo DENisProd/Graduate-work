@@ -34,7 +34,7 @@ export class AccessServiceClient {
     payload: RegisterResourcePayload,
   ): Promise<{ id: string } | null> {
     try {
-      const res = await fetch(`${this.baseUrl}/api/v1/resources/register`, {
+      const res = await fetch(`${this.baseUrl}/api/access/v1/resources/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -55,7 +55,7 @@ export class AccessServiceClient {
   async deleteResource(id: string): Promise<void> {
     try {
       const res = await fetch(
-        `${this.baseUrl}/api/v1/resources/${encodeURIComponent(id)}`,
+        `${this.baseUrl}/api/access/v1/resources/${encodeURIComponent(id)}`,
         {
           method: 'DELETE',
         },
@@ -75,7 +75,7 @@ export class AccessServiceClient {
   ): Promise<DeviceFunctionActionDto[] | null> {
     try {
       const res = await fetch(
-        `${this.baseUrl}/api/v1/device-function-actions/by-device/${encodeURIComponent(String(deviceId))}/all`,
+        `${this.baseUrl}/api/access/v1/device-function-actions/by-device/${encodeURIComponent(String(deviceId))}/all`,
       );
       if (!res.ok) {
         const text = await res.text().catch(() => '');

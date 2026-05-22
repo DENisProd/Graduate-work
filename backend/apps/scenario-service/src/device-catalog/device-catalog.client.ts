@@ -98,13 +98,13 @@ export class DeviceCatalogClient {
 
   findDeviceByCode(code: string): Promise<CatalogDevice | null> {
     return this.get<CatalogDevice>(
-      `/api/v1/devices/code/${encodeURIComponent(code)}`,
+      `/api/access/v1/devices/code/${encodeURIComponent(code)}`,
     );
   }
 
   findDeviceTypeByCode(code: string): Promise<CatalogDeviceType | null> {
     return this.get<CatalogDeviceType>(
-      `/api/v1/device-types/code/${encodeURIComponent(code)}`,
+      `/api/access/v1/device-types/code/${encodeURIComponent(code)}`,
     );
   }
 
@@ -112,7 +112,7 @@ export class DeviceCatalogClient {
     code: string,
   ): Promise<CatalogDeviceCategory | null> {
     return this.get<CatalogDeviceCategory>(
-      `/api/v1/device-categories/code/${encodeURIComponent(code)}`,
+      `/api/access/v1/device-categories/code/${encodeURIComponent(code)}`,
     );
   }
 
@@ -120,7 +120,7 @@ export class DeviceCatalogClient {
     code: string,
     name: string,
   ): Promise<CatalogDeviceType | null> {
-    return this.post<CatalogDeviceType>('/api/v1/admin/device-types', {
+    return this.post<CatalogDeviceType>('/api/access/v1/admin/device-types', {
       code,
       active: true,
       translations: { en: { name }, ru: { name } },
@@ -132,7 +132,7 @@ export class DeviceCatalogClient {
     name: string,
     deviceTypeId: number,
   ): Promise<CatalogDeviceCategory | null> {
-    return this.post<CatalogDeviceCategory>('/api/v1/admin/device-categories', {
+    return this.post<CatalogDeviceCategory>('/api/access/v1/admin/device-categories', {
       code,
       deviceTypeId,
       active: true,
@@ -145,7 +145,7 @@ export class DeviceCatalogClient {
     name: string,
     deviceCategoryId: number,
   ): Promise<CatalogDevice | null> {
-    return this.post<CatalogDevice>('/api/v1/admin/devices', {
+    return this.post<CatalogDevice>('/api/access/v1/admin/devices', {
       code,
       deviceCategoryId,
       status: 'OFFLINE',
@@ -160,7 +160,7 @@ export class DeviceCatalogClient {
     deviceId: number,
     functionType: 'READ' | 'WRITE' | 'READ_WRITE' = 'READ_WRITE',
   ): Promise<{ id: number } | null> {
-    return this.post<{ id: number }>('/api/v1/admin/device-functions', {
+    return this.post<{ id: number }>('/api/access/v1/admin/device-functions', {
       code,
       deviceId,
       functionType,
@@ -173,7 +173,7 @@ export class DeviceCatalogClient {
     payload: EnsureCatalogPayload,
   ): Promise<EnsureCatalogResult | null> {
     return this.post<EnsureCatalogResult>(
-      '/api/v1/integration/catalog/ensure',
+      '/api/access/v1/integration/catalog/ensure',
       payload,
     );
   }
@@ -182,7 +182,7 @@ export class DeviceCatalogClient {
     deviceId: number,
   ): Promise<CatalogDeviceFunction[] | null> {
     return this.get<CatalogDeviceFunction[]>(
-      `/api/v1/device-functions/by-device/${encodeURIComponent(String(deviceId))}/all`,
+      `/api/access/v1/device-functions/by-device/${encodeURIComponent(String(deviceId))}/all`,
     );
   }
 }

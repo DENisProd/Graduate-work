@@ -18,7 +18,7 @@ import type { ApiCallOptions } from './core';
 type ListParams = { page?: number; limit?: number; signal?: AbortSignal };
 
 const scenarioApi = <T>(path: string, options?: ApiCallOptions) =>
-  physicalDevicesApiCall<T>(`/api/v1${path}`, options);
+  physicalDevicesApiCall<T>(`/v1${path}`, options);
 
 export const houseDevicesApi = {
   create: (

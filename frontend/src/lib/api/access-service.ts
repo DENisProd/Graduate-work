@@ -55,28 +55,28 @@ export interface ConnectedLocalServerItem {
 
 export const housesApi = {
   getById: (id: number | string): Promise<HouseResponse> =>
-    accessApiCall(`/api/v1/houses/${id}`),
+    accessApiCall(`/v1/houses/${id}`),
 
   getResourcesTree: (id: number | string): Promise<HouseResourceTreeNode | HouseResourceTreeNode[]> =>
-    accessApiCall(`/api/v1/houses/${id}/resources/tree`),
+    accessApiCall(`/v1/houses/${id}/resources/tree`),
 
   getByOwner: (ownerId: string, params?: PageRequest): Promise<HouseResponse[] | PageResponse<HouseResponse>> =>
-    accessApiCall(`/api/v1/houses/user/${ownerId}${buildPageQuery(params)}`),
+    accessApiCall(`/v1/houses/user/${ownerId}${buildPageQuery(params)}`),
 
   getAllAdmin: (params?: PageRequest): Promise<HouseResponse[] | PageResponse<HouseResponse>> =>
-    accessApiCall(`/api/v1/admin/houses${buildPageQuery(params)}`),
+    accessApiCall(`/v1/admin/houses${buildPageQuery(params)}`),
 
   getByOwnerAdmin: (ownerId: string, params?: PageRequest): Promise<HouseResponse[] | PageResponse<HouseResponse>> =>
-    accessApiCall(`/api/v1/admin/houses/owner/${encodeURIComponent(ownerId)}${buildPageQuery(params)}`),
+    accessApiCall(`/v1/admin/houses/owner/${encodeURIComponent(ownerId)}${buildPageQuery(params)}`),
 
   create: (data: HouseRequest): Promise<HouseResponse> =>
-    accessApiCall('/api/v1/houses', { method: 'POST', body: JSON.stringify(data) }),
+    accessApiCall('/v1/houses', { method: 'POST', body: JSON.stringify(data) }),
 
   update: (id: number | string, data: HouseRequest): Promise<HouseResponse> =>
-    accessApiCall(`/api/v1/houses/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    accessApiCall(`/v1/houses/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
 
   delete: (id: number | string): Promise<void> =>
-    accessApiCall(`/api/v1/houses/${id}`, { method: 'DELETE' }),
+    accessApiCall(`/v1/houses/${id}`, { method: 'DELETE' }),
 };
 
 function findResourceNodeByType(
@@ -102,28 +102,28 @@ async function resolveRoomParentId(data: HouseRoomRequest): Promise<number | str
 
 export const houseRoomsApi = {
   getById: (id: number | string): Promise<HouseRoomResponse> =>
-    accessApiCall(`/api/v1/house-rooms/${id}`),
+    accessApiCall(`/v1/house-rooms/${id}`),
 
   getByHouseId: (houseId: number | string): Promise<HouseRoomResponse[]> =>
-    accessApiCall(`/api/v1/house-rooms/house/${houseId}`),
+    accessApiCall(`/v1/house-rooms/house/${houseId}`),
 
   create: async (data: HouseRoomRequest): Promise<HouseRoomResponse> => {
     const houseId =
       typeof data.houseId === 'string' && /^\d+$/.test(data.houseId) ? Number(data.houseId) : data.houseId;
-    return accessApiCall('/api/v1/house-rooms', {
+    return accessApiCall('/v1/house-rooms', {
       method: 'POST',
       body: JSON.stringify({ houseId, name: data.name }),
     });
   },
 
   update: (id: number | string, data: HouseRoomRequest): Promise<HouseRoomResponse> =>
-    accessApiCall(`/api/v1/house-rooms/${id}`, {
+    accessApiCall(`/v1/house-rooms/${id}`, {
       method: 'PUT',
       body: JSON.stringify({ houseId: data.houseId, name: data.name }),
     }),
 
   delete: (id: number | string): Promise<void> =>
-    accessApiCall(`/api/v1/house-rooms/${id}`, { method: 'DELETE' }),
+    accessApiCall(`/v1/house-rooms/${id}`, { method: 'DELETE' }),
 };
 
 export const houseMembersApi = {
@@ -131,23 +131,23 @@ export const houseMembersApi = {
     houseId: number | string,
     params?: PageRequest,
   ): Promise<HouseMemberResponse[] | PageResponse<HouseMemberResponse>> =>
-    accessApiCall(`/api/v1/house-members/house/${houseId}${buildPageQuery(params)}`),
+    accessApiCall(`/v1/house-members/house/${houseId}${buildPageQuery(params)}`),
 
   getHousesByUserId: (
     userId: string,
     params?: PageRequest,
   ): Promise<HouseResponse[] | PageResponse<HouseResponse>> =>
-    accessApiCall(`/api/v1/houses/user/${userId}${buildPageQuery(params)}`),
+    accessApiCall(`/v1/houses/user/${userId}${buildPageQuery(params)}`),
 
   addMember: (houseId: number | string, userId: string): Promise<HouseMemberResponse> =>
     accessApiCall(
-      `/api/v1/house-members?houseId=${encodeURIComponent(String(houseId))}&userId=${encodeURIComponent(userId)}`,
+      `/v1/house-members?houseId=${encodeURIComponent(String(houseId))}&userId=${encodeURIComponent(userId)}`,
       { method: 'POST' },
     ),
 
   removeMember: (houseId: number | string, memberIdOrUserId: number | string): Promise<void> =>
     accessApiCall(
-      `/api/v1/house-members?houseId=${encodeURIComponent(String(houseId))}&userId=${encodeURIComponent(String(memberIdOrUserId))}`,
+      `/v1/house-members?houseId=${encodeURIComponent(String(houseId))}&userId=${encodeURIComponent(String(memberIdOrUserId))}`,
       { method: 'DELETE' },
     ),
 };
@@ -180,11 +180,11 @@ export const houseRolesApi = {
   getHouseRoles: async (houseId: number | string): Promise<HouseRoleResponse[]> => {
     try {
       const data = await accessApiCall<unknown>(
-        `/api/v1/house-roles/house/${encodeURIComponent(String(houseId))}`,
+        `/v1/house-roles/house/${encodeURIComponent(String(houseId))}`,
       );
       return mapRolesArray(data);
     } catch {
-      const fallback = await accessApiCall<unknown>(`/api/v1/houses/${houseId}/roles`);
+      const fallback = await accessApiCall<unknown>(`/v1/houses/${houseId}/roles`);
       return mapRolesArray(fallback);
     }
   },
@@ -194,13 +194,13 @@ export const houseRolesApi = {
     houseRolesApi.getHouseRoles(houseId),
 
   createRole: (houseId: number | string, data: HouseRoleCreateRequest): Promise<HouseRoleResponse> =>
-    accessApiCall(`/api/v1/house-roles/house/${encodeURIComponent(String(houseId))}`, {
+    accessApiCall(`/v1/house-roles/house/${encodeURIComponent(String(houseId))}`, {
       method: 'POST',
       body: JSON.stringify({ name: data.name.trim(), priority: data.priority ?? 0 }),
     }).then((res: unknown) => mapRoleResponse(res as Record<string, unknown>)),
 
   updateRole: (roleId: number | string, data: HouseRoleCreateRequest): Promise<HouseRoleResponse> =>
-    accessApiCall(`/api/v1/house-roles/${roleId}`, {
+    accessApiCall(`/v1/house-roles/${roleId}`, {
       method: 'PATCH',
       body: JSON.stringify({
         name: data.name.trim(),
@@ -209,19 +209,19 @@ export const houseRolesApi = {
     }).then((res: unknown) => mapRoleResponse(res as Record<string, unknown>)),
 
   deleteRole: (roleId: number | string): Promise<void> =>
-    accessApiCall(`/api/v1/house-roles/${roleId}`, { method: 'DELETE' }),
+    accessApiCall(`/v1/house-roles/${roleId}`, { method: 'DELETE' }),
 
   /**
    * List role members.
-   * The old endpoint `/api/v1/house-roles/:roleId/members` was removed on backend.
-   * We derive members via `/api/v1/house-members/house/:houseId` and filter by roleId.
+   * The old endpoint `/v1/house-roles/:roleId/members` was removed on backend.
+   * We derive members via `/v1/house-members/house/:houseId` and filter by roleId.
    */
   getRoleMembers: async (
     houseId: number | string,
     roleId: number | string,
   ): Promise<RoleMemberResponse[]> => {
     const members = await accessApiCall<unknown>(
-      `/api/v1/house-members/house/${encodeURIComponent(String(houseId))}`,
+      `/v1/house-members/house/${encodeURIComponent(String(houseId))}`,
     );
     if (!Array.isArray(members)) return [];
 
@@ -246,7 +246,7 @@ export const houseRolesApi = {
   },
 
   getHousePolicies: (houseId: number | string): Promise<HousePolicyResponse[]> =>
-    accessApiCall(`/api/v1/houses/${encodeURIComponent(String(houseId))}/policies`).then(
+    accessApiCall(`/v1/houses/${encodeURIComponent(String(houseId))}/policies`).then(
       (data: unknown) => {
         if (!Array.isArray(data)) return [];
         return data.map((item: unknown) => {
@@ -269,7 +269,7 @@ export const houseRolesApi = {
     ),
 
   createPolicy: (body: CreatePolicyRequestDto): Promise<HousePolicyResponse> =>
-    accessApiCall('/api/v1/policies', { method: 'POST', body: JSON.stringify(body) }).then(
+    accessApiCall('/v1/policies', { method: 'POST', body: JSON.stringify(body) }).then(
       (res: unknown) => {
         const o = res as Record<string, unknown>;
         return {
@@ -289,7 +289,7 @@ export const houseRolesApi = {
     ),
 
   createResource: (body: CreateResourceRequestDto): Promise<ResourceResponseDto> =>
-    accessApiCall('/api/v1/resources', { method: 'POST', body: JSON.stringify(body) }).then(
+    accessApiCall('/v1/resources', { method: 'POST', body: JSON.stringify(body) }).then(
       (res: unknown) => {
         const o = res as Record<string, unknown>;
         return {
@@ -303,40 +303,40 @@ export const houseRolesApi = {
     ),
 
   assignRoleToMember: (memberId: number | string, roleId: string): Promise<unknown> =>
-    accessApiCall(`/api/v1/house-roles/members/${memberId}/roles/${roleId}`, { method: 'POST' }),
+    accessApiCall(`/v1/house-roles/members/${memberId}/roles/${roleId}`, { method: 'POST' }),
 
   removeRoleFromMember: (memberId: number | string, roleId: string): Promise<void> =>
-    accessApiCall(`/api/v1/house-roles/members/${memberId}/roles/${roleId}`, { method: 'DELETE' }),
+    accessApiCall(`/v1/house-roles/members/${memberId}/roles/${roleId}`, { method: 'DELETE' }),
 
   getRolePermissions: (roleId: string): Promise<unknown> =>
-    accessApiCall(`/api/v1/roles/${roleId}/permissions`),
+    accessApiCall(`/v1/roles/${roleId}/permissions`),
 
   addRolePermission: (roleId: string, body: Record<string, unknown>): Promise<unknown> =>
-    accessApiCall(`/api/v1/roles/${roleId}/permissions`, { method: 'POST', body: JSON.stringify(body) }),
+    accessApiCall(`/v1/roles/${roleId}/permissions`, { method: 'POST', body: JSON.stringify(body) }),
 
   deleteRolePermission: (roleId: string, permissionId?: string): Promise<void> =>
     accessApiCall(
-      `/api/v1/roles/${roleId}/permissions${permissionId ? `?permissionId=${encodeURIComponent(permissionId)}` : ''}`,
+      `/v1/roles/${roleId}/permissions${permissionId ? `?permissionId=${encodeURIComponent(permissionId)}` : ''}`,
       { method: 'DELETE' },
     ),
 };
 
 export const houseInvitationsApi = {
   getByToken: (token: string): Promise<HouseInvitationResponse> =>
-    accessApiCall(`/api/v1/house-invitations/token/${encodeURIComponent(token)}`),
+    accessApiCall(`/v1/house-invitations/token/${encodeURIComponent(token)}`),
 
   getByHouseId: (
     houseId: number | string,
     params?: PageRequest,
   ): Promise<HouseInvitationResponse[] | PageResponse<HouseInvitationResponse>> =>
-    accessApiCall(`/api/v1/house-invitations/house/${houseId}${buildPageQuery(params)}`),
+    accessApiCall(`/v1/house-invitations/house/${houseId}${buildPageQuery(params)}`),
 
   create: (
     houseId: number | string,
     data: HouseInvitationRequest,
     userId: string,
   ): Promise<HouseInvitationResponse> =>
-    accessApiCall('/api/v1/house-invitations', {
+    accessApiCall('/v1/house-invitations', {
       method: 'POST',
       headers: { 'X-User-Id': userId },
       body: JSON.stringify({
@@ -350,14 +350,14 @@ export const houseInvitationsApi = {
     }),
 
   accept: (token: string, userId: string): Promise<HouseInvitationResponse> =>
-    accessApiCall(`/api/v1/house-invitations/${encodeURIComponent(token)}/accept`, {
+    accessApiCall(`/v1/house-invitations/${encodeURIComponent(token)}/accept`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-User-Id': userId },
       body: JSON.stringify({ token, userId }),
     }),
 
   revoke: (id: number | string, userId: string): Promise<void> =>
-    accessApiCall(`/api/v1/house-invitations/${id}/revoke`, {
+    accessApiCall(`/v1/house-invitations/${id}/revoke`, {
       method: 'POST',
       headers: { 'X-User-Id': userId },
     }),
@@ -365,23 +365,23 @@ export const houseInvitationsApi = {
 
 export const deviceAuthApi = {
   startSession: (callbackUrl?: string): Promise<DeviceAuthSessionStartResponse> =>
-    accessApiCall('/api/v1/device-auth/sessions', {
+    accessApiCall('/v1/device-auth/sessions', {
       method: 'POST',
       body: JSON.stringify(callbackUrl ? { callbackUrl } : {}),
     }),
 
   pollSession: (sessionId: string): Promise<DeviceAuthPollResponse> =>
-    accessApiCall(`/api/v1/device-auth/sessions/${encodeURIComponent(sessionId)}/poll`),
+    accessApiCall(`/v1/device-auth/sessions/${encodeURIComponent(sessionId)}/poll`),
 
   listConnectedServers: (): Promise<ConnectedLocalServerItem[]> =>
-    accessApiCall('/api/v1/device-auth/connected-servers'),
+    accessApiCall('/v1/device-auth/connected-servers'),
 
   confirm: (
     userCode: string,
     externalUserId: string,
     displayName?: string,
   ): Promise<{ status: string }> =>
-    accessApiCall('/api/v1/device-auth/confirm', {
+    accessApiCall('/v1/device-auth/confirm', {
       method: 'POST',
       body: JSON.stringify({
         userCode,
@@ -391,7 +391,7 @@ export const deviceAuthApi = {
     }),
 
   logoutSession: (sessionId: string): Promise<{ status: string }> =>
-    accessApiCall(`/api/v1/device-auth/sessions/${encodeURIComponent(sessionId)}/logout`, {
+    accessApiCall(`/v1/device-auth/sessions/${encodeURIComponent(sessionId)}/logout`, {
       method: 'POST',
     }),
 };
@@ -411,7 +411,7 @@ export async function fetchAccessControlRightsByMember(
   params?: PageRequest,
 ): Promise<HouseAccessRightResponse[] | PageResponse<HouseAccessRightResponse>> {
   return accessApiCall(
-    `/api/v1/access-control/rights/member/${encodeURIComponent(memberId)}${buildPageQuery(params)}`,
+    `/v1/access-control/rights/member/${encodeURIComponent(memberId)}${buildPageQuery(params)}`,
   );
 }
 
@@ -420,22 +420,22 @@ export async function fetchAccessControlRightsByHouse(
   params?: PageRequest,
 ): Promise<HouseAccessRightResponse[] | PageResponse<HouseAccessRightResponse>> {
   return accessApiCall(
-    `/api/v1/access-control/rights/house/${encodeURIComponent(houseId)}${buildPageQuery(params)}`,
+    `/v1/access-control/rights/house/${encodeURIComponent(houseId)}${buildPageQuery(params)}`,
   );
 }
 
 export const accessControlRightsApi = {
   create: (dto: HouseAccessRightRequestDto): Promise<HouseAccessRightResponse> =>
-    accessApiCall('/api/v1/access-control/rights', { method: 'POST', body: JSON.stringify(dto) }),
+    accessApiCall('/v1/access-control/rights', { method: 'POST', body: JSON.stringify(dto) }),
 
   update: (id: string, dto: HouseAccessRightRequestDto): Promise<HouseAccessRightResponse> =>
-    accessApiCall(`/api/v1/access-control/rights/${encodeURIComponent(id)}`, {
+    accessApiCall(`/v1/access-control/rights/${encodeURIComponent(id)}`, {
       method: 'PUT',
       body: JSON.stringify(dto),
     }),
 
   delete: (id: number | string): Promise<void> =>
-    accessApiCall(`/api/v1/access-control/rights/${encodeURIComponent(String(id))}`, {
+    accessApiCall(`/v1/access-control/rights/${encodeURIComponent(String(id))}`, {
       method: 'DELETE',
     }),
 
@@ -443,15 +443,15 @@ export const accessControlRightsApi = {
   getByHouse: fetchAccessControlRightsByHouse,
 
   checkAccess: (dto: AccessControlCheckRequestDto): Promise<AccessCheckResponse> =>
-    accessApiCall('/api/v1/access-control/check', { method: 'POST', body: JSON.stringify(dto) }),
+    accessApiCall('/v1/access-control/check', { method: 'POST', body: JSON.stringify(dto) }),
 
   cleanupExpired: (): Promise<void> =>
-    accessApiCall('/api/v1/access-control/cleanup/expired', { method: 'POST' }),
+    accessApiCall('/v1/access-control/cleanup/expired', { method: 'POST' }),
 };
 
 export const accessRightsApi = {
   create: (dto: CreateAccessRightDto): Promise<AccessRightResponse> =>
-    accessApiCall('/api/v1/access-rights', { method: 'POST', body: JSON.stringify(dto) }),
+    accessApiCall('/v1/access-rights', { method: 'POST', body: JSON.stringify(dto) }),
 
   delete: (id: number | string): Promise<void> =>
     import('../rbac-access-rights').then((m) => m.deleteRbacAccessRight(id)),
@@ -463,10 +463,10 @@ export const accessRightsApi = {
     import('../rbac-access-rights').then((m) => m.fetchRbacAccessRightsByResource(resourceId)),
 
   rebuildCache: (): Promise<void> =>
-    accessApiCall('/api/v1/permissions/rebuild', { method: 'POST' }),
+    accessApiCall('/v1/permissions/rebuild', { method: 'POST' }),
 
   getAccessStructure: (userId: string): Promise<AccessStructureResponse> =>
-    accessApiCall(`/api/v1/access-structure?userId=${encodeURIComponent(userId)}`),
+    accessApiCall(`/v1/access-structure?userId=${encodeURIComponent(userId)}`),
 };
 
 export function fetchRbacAccessRightsByUser(userId: string): Promise<AccessRightResponse[]> {
@@ -485,16 +485,16 @@ export function fetchRbacAccessRightsByResource(resourceId: number | string): Pr
 export const accessApiClient = {
   houses: {
     getHouses: (params?: PageRequest): Promise<HouseResponse[] | PageResponse<HouseResponse>> =>
-      accessApiCall(`/api/v1/houses${buildPageQuery(params)}`),
+      accessApiCall(`/v1/houses${buildPageQuery(params)}`),
     getHousesByUser: (userId: string, params?: PageRequest): Promise<HouseResponse[] | PageResponse<HouseResponse>> =>
-      accessApiCall(`/api/v1/houses/user/${userId}${buildPageQuery(params)}`),
+      accessApiCall(`/v1/houses/user/${userId}${buildPageQuery(params)}`),
     getAdminHouses: (params?: PageRequest): Promise<HouseResponse[] | PageResponse<HouseResponse>> =>
-      accessApiCall(`/api/v1/admin/houses${buildPageQuery(params)}`),
+      accessApiCall(`/v1/admin/houses${buildPageQuery(params)}`),
     getAdminHousesByOwner: (ownerId: string, params?: PageRequest): Promise<HouseResponse[] | PageResponse<HouseResponse>> =>
-      accessApiCall(`/api/v1/admin/houses/owner/${encodeURIComponent(ownerId)}${buildPageQuery(params)}`),
+      accessApiCall(`/v1/admin/houses/owner/${encodeURIComponent(ownerId)}${buildPageQuery(params)}`),
     getHouseById: (id: number): Promise<HouseResponse> =>
-      accessApiCall(`/api/v1/houses/${id}`),
+      accessApiCall(`/v1/houses/${id}`),
     create: (data: HouseRequest): Promise<HouseResponse> =>
-      accessApiCall('/api/v1/houses', { method: 'POST', body: JSON.stringify(data) }),
+      accessApiCall('/v1/houses', { method: 'POST', body: JSON.stringify(data) }),
   },
 };

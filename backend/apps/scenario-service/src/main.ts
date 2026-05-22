@@ -29,7 +29,7 @@ async function bootstrap() {
     credentials: true,
   });
 
-  app.setGlobalPrefix('api/v1', {
+  app.setGlobalPrefix('v1', {
     exclude: ['docs', 'docs-json', 'docs-yaml'],
   });
   app.useGlobalPipes(new ZodValidationPipe());

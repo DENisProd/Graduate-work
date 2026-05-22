@@ -39,7 +39,7 @@ async function bootstrap() {
       'Accept-Language',
     ],
   });
-  app.setGlobalPrefix('api/v1', { exclude: ['health', 'api/docs', 'api/docs/(.*)'] });
+  app.setGlobalPrefix('api/access/v1', { exclude: ['health', 'docs', 'docs/(.*)'] });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -102,7 +102,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config, {
     extraModels: [ErrorResponse],
   });
-  SwaggerModule.setup('api/docs', app, document, {
+  SwaggerModule.setup('docs', app, document, {
     swaggerOptions: {
       persistAuthorization: true,
       docExpansion: 'list',
@@ -112,7 +112,7 @@ async function bootstrap() {
   });
 
   await app.listen(port);
-  console.log(`Application is running on: http://localhost:${port}/api/v1`);
+  console.log(`Application is running on: http://localhost:${port}/v1`);
   console.log(`CORS origins: ${corsOrigins.join(', ')}`);
 }
 

@@ -1,14 +1,16 @@
 import { Inject, Injectable, Logger, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import * as jwt from 'jsonwebtoken';
-import * as jwksRsa from 'jwks-rsa';
+import jwksRsa from 'jwks-rsa';
+import type { JwksClient } from 'jwks-rsa';
 import { GATEWAY_CONFIG, type GatewayConfig } from '../config/gateway.config';
 import { PUBLIC_PREFIXES } from '../config/routes.config';
+import { getRequestPathname } from '../proxy/request-path';
 
 @Injectable()
 export class AuthMiddleware implements NestMiddleware {
   private readonly logger = new Logger(AuthMiddleware.name);
-  private jwksClient: jwksRsa.JwksClient | null = null;
+  private jwksClient: JwksClient | null = null;
 
   constructor(@Inject(GATEWAY_CONFIG) private readonly config: GatewayConfig) {
     if (config.keycloakIssuer) {
@@ -28,8 +30,9 @@ export class AuthMiddleware implements NestMiddleware {
     // Preflight requests never carry auth
     if (req.method === 'OPTIONS') return next();
 
-    // Public paths bypass auth
-    if (PUBLIC_PREFIXES.some((p) => req.path.startsWith(p))) return next();
+    // Public paths bypass auth (prefix match or exact /health suffix)
+    const path = getRequestPathname(req);
+    if (PUBLIC_PREFIXES.some((p) => path.startsWith(p)) || path.endsWith('/health')) return next();
 
     // No Keycloak configured — pass through (development mode)
     if (!this.jwksClient) return next();

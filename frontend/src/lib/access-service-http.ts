@@ -35,6 +35,8 @@ function getCurrentLocale(): string {
 
 function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
+  const storeToken = useUserStore.getState().accessToken;
+  if (storeToken) return storeToken;
   const keys = ['keycloak-token', 'access_token', 'token', 'smart-home-token'];
   for (const key of keys) {
     const raw = localStorage.getItem(key);
