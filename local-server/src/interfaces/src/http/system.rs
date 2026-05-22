@@ -3,9 +3,12 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use chrono::Utc;
-use local_server_application::ports::{AuthPollResult, CompleteAuthArgs};
+use chrono::{DateTime, Utc};
+use local_server_application::ports::{
+    AuthPollResult, CompleteAuthArgs, UpsertFromCloudCmd, UpsertFromCloudWidgetDashboardCmd,
+};
 use local_server_application::DomainError;
+use local_server_core::entities::scenario::ScenarioStatus;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -83,6 +86,9 @@ async fn sync_status(
 pub struct SyncReport {
     pub houses_upserted: usize,
     pub rooms_upserted: usize,
+    pub members_upserted: usize,
+    pub scenarios_upserted: usize,
+    pub dashboards_upserted: usize,
 }
 
 async fn trigger_sync(
@@ -106,15 +112,13 @@ async fn trigger_sync(
         .fetch_user_houses(&access_service_url, &user_id)
         .await?;
     let houses_upserted = houses.len();
-    state
-        .access_sync
-        .upsert_houses(&houses, &user_id)
-        .await?;
+    state.access_sync.upsert_houses(&houses, &user_id).await?;
     let now = Utc::now().to_rfc3339();
     state.access_sync.mark_pulled("houses", &now).await?;
 
-    // Pull rooms for each house.
+    // Pull rooms and members for each house.
     let mut rooms_upserted = 0usize;
+    let mut members_upserted = 0usize;
     for house in &houses {
         match state
             .cloud_sync
@@ -126,22 +130,121 @@ async fn trigger_sync(
                 state.access_sync.upsert_rooms(&house.id, &rooms).await?;
             }
             Err(e) => {
-                tracing::warn!(house_id = %house.id, error = %e, "failed to fetch rooms for house");
+                tracing::warn!(house_id = %house.id, error = %e, "trigger_sync: failed to fetch rooms");
+            }
+        }
+        match state
+            .cloud_sync
+            .fetch_house_members(&access_service_url, &house.id)
+            .await
+        {
+            Ok(members) => {
+                members_upserted += members.len();
+                state.access_sync.upsert_members(&house.id, &members).await?;
+            }
+            Err(e) => {
+                tracing::warn!(house_id = %house.id, error = %e, "trigger_sync: failed to fetch members");
             }
         }
     }
     let now = Utc::now().to_rfc3339();
     state.access_sync.mark_pulled("rooms", &now).await?;
+    state.access_sync.mark_pulled("members", &now).await?;
+
+    // Pull scenarios from scenario-service.
+    let scenarios_upserted = match state.cloud_scenario.list_all(&state.scenario_service_url).await {
+        Ok(remote_scenarios) => {
+            let count = remote_scenarios.len();
+            for remote in remote_scenarios {
+                let status = remote
+                    .status
+                    .parse::<ScenarioStatus>()
+                    .unwrap_or(ScenarioStatus::Offline);
+                let cloud_updated_at = DateTime::parse_from_rfc3339(&remote.updated_at)
+                    .map(|dt| dt.with_timezone(&Utc))
+                    .unwrap_or_else(|_| Utc::now());
+                if let Err(e) = state
+                    .scenario_repo
+                    .upsert_from_cloud(
+                        &remote.cloud_id,
+                        UpsertFromCloudCmd {
+                            name: remote.name,
+                            description: remote.description,
+                            house_id: remote.house_id,
+                            creator_id: remote.creator_id,
+                            definition: remote.definition,
+                            status,
+                            cloud_updated_at,
+                        },
+                    )
+                    .await
+                {
+                    tracing::warn!(error = %e, cloud_id = %remote.cloud_id, "trigger_sync: scenario upsert failed");
+                }
+            }
+            count
+        }
+        Err(e) => {
+            tracing::warn!(error = %e, "trigger_sync: failed to fetch scenarios");
+            0
+        }
+    };
+
+    // Pull widget dashboards per house.
+    let mut dashboards_upserted = 0usize;
+    for house in &houses {
+        match state
+            .cloud_widget_dashboard
+            .list_by_house(&state.scenario_service_url, &house.id)
+            .await
+        {
+            Ok(remotes) => {
+                dashboards_upserted += remotes.len();
+                for remote in remotes {
+                    let cloud_updated_at = DateTime::parse_from_rfc3339(&remote.updated_at)
+                        .map(|dt| dt.with_timezone(&Utc))
+                        .unwrap_or_else(|_| Utc::now());
+                    if let Err(e) = state
+                        .widget_dashboard_repo
+                        .upsert_from_cloud(
+                            &remote.cloud_id,
+                            UpsertFromCloudWidgetDashboardCmd {
+                                house_id: remote.house_id,
+                                user_id: remote.user_id,
+                                name: remote.name,
+                                is_default: remote.is_default,
+                                layouts: remote.layouts,
+                                widgets: remote.widgets,
+                                cloud_updated_at,
+                            },
+                        )
+                        .await
+                    {
+                        tracing::warn!(error = %e, cloud_id = %remote.cloud_id, "trigger_sync: dashboard upsert failed");
+                    }
+                }
+            }
+            Err(e) => {
+                tracing::warn!(house_id = %house.id, error = %e, "trigger_sync: failed to fetch dashboards");
+            }
+        }
+    }
 
     tracing::info!(
         houses = houses_upserted,
         rooms = rooms_upserted,
+        members = members_upserted,
+        scenarios = scenarios_upserted,
+        dashboards = dashboards_upserted,
         "cloud sync pull complete"
     );
 
     Ok(Json(SyncReport {
         houses_upserted,
         rooms_upserted,
+        members_upserted,
+        scenarios_upserted,
+        dashboards_upserted,
     }))
 }
 

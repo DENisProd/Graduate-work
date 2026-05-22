@@ -40,11 +40,15 @@ type PairingEventListener = (event: ZigbeePairingEvent) => void;
 type PairingStatusListener = (status: ZigbeePairingStatus) => void;
 
 function socketBaseFromPhysicalDevicesApiBase(baseUrl: string): string {
-  // REST can be configured with `/api/v1`, but Socket.IO namespace is mounted at server root.
-  // Example: `http://localhost:3001/api/v1` -> `http://localhost:3001`
-  return baseUrl
-    .replace(/\/+$/, '')
-    .replace(/\/api\/v\d+$/i, '');
+  // Socket.IO is mounted at the server root, so we only need the origin.
+  // Works for both direct service URL and gateway prefix URL:
+  //   http://localhost:8095        → http://localhost:8095
+  //   http://localhost:4001/api/scenario → http://localhost:4001
+  try {
+    return new URL(baseUrl).origin;
+  } catch {
+    return baseUrl.replace(/\/+$/, '').replace(/\/api\/.*$/i, '');
+  }
 }
 
 function readAuthToken(): string | null {

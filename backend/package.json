@@ -16,6 +16,7 @@
     "access:dev": "cd apps/access-service && bun run start:dev",
     "scenario:dev": "cd apps/scenario-service && bun run start:dev",
     "devices:dev": "cd apps/device-service && bun run start:dev",
-    "lint:scenario": "cd apps/scenario-service && bun run lint"
+    "lint:scenario": "cd apps/scenario-service && bun run lint",
+    "gateway:dev": "cd apps/api-gateway && bun run start:dev"
   }
 }

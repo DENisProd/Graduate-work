@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
 use local_server_application::ports::{
-    AccessSyncRepository, CloudAuthClient, CloudSyncClient, HealthChecker, MqttClient,
-    RuntimeSettingsRepository,
+    AccessSyncRepository, CloudAuthClient, CloudScenarioClient, CloudSyncClient,
+    CloudWidgetDashboardClient, HealthChecker, MqttClient, RuntimeSettingsRepository,
+    ScenarioRepository, WidgetDashboardRepository,
 };
 
 /// State shared across HTTP route handlers.
@@ -31,4 +32,14 @@ pub struct HttpAppState {
     pub default_access_service_url: String,
     /// Optional externally reachable base URL for callback flow.
     pub public_base_url: Option<String>,
+    /// Outbound HTTP client for scenario-service (scenarios sync).
+    pub cloud_scenario: Arc<dyn CloudScenarioClient>,
+    /// Outbound HTTP client for scenario-service (widget dashboards sync).
+    pub cloud_widget_dashboard: Arc<dyn CloudWidgetDashboardClient>,
+    /// Local scenario repository (used by trigger_sync).
+    pub scenario_repo: Arc<dyn ScenarioRepository>,
+    /// Local widget dashboard repository (used by trigger_sync).
+    pub widget_dashboard_repo: Arc<dyn WidgetDashboardRepository>,
+    /// Base URL for scenario-service REST calls.
+    pub scenario_service_url: String,
 }

@@ -153,6 +153,7 @@ impl AppState {
         version: &'static str,
         default_access_service_url: String,
         public_base_url: Option<String>,
+        scenario_service_url: String,
     ) -> HttpAppState {
         HttpAppState {
             version,
@@ -164,6 +165,11 @@ impl AppState {
             access_sync: self.access_sync_repo.clone(),
             default_access_service_url,
             public_base_url,
+            cloud_scenario: self.cloud_scenario_client.clone(),
+            cloud_widget_dashboard: self.cloud_widget_dashboard_client.clone(),
+            scenario_repo: self.scenario_repo.clone(),
+            widget_dashboard_repo: self.widget_dashboard_repo.clone(),
+            scenario_service_url,
         }
     }
 }

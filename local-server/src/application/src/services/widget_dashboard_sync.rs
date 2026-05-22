@@ -4,24 +4,43 @@ use std::time::Duration;
 use chrono::DateTime;
 
 use crate::ports::{
-    CloudWidgetDashboardClient, CreateCloudWidgetDashboardCmd, WidgetDashboardRepository,
-    UpsertFromCloudWidgetDashboardCmd,
+    AccessSyncRepository, CloudWidgetDashboardClient, CreateCloudWidgetDashboardCmd,
+    UpsertFromCloudWidgetDashboardCmd, WidgetDashboardRepository,
 };
+use crate::services::UserIdProvider;
 
 pub async fn run_widget_dashboard_sync(
     repo: Arc<dyn WidgetDashboardRepository>,
     cloud: Arc<dyn CloudWidgetDashboardClient>,
     interval_secs: u64,
     scenario_service_url: String,
-    house_ids: Vec<String>,
+    access_sync: Arc<dyn AccessSyncRepository>,
+    user_id_provider: Arc<dyn UserIdProvider>,
 ) {
     loop {
+        let house_ids = resolve_house_ids(&access_sync, &user_id_provider).await;
         for house_id in &house_ids {
             pull_from_cloud(&repo, &cloud, &scenario_service_url, house_id).await;
         }
         push_local_to_cloud(&repo, &cloud, &scenario_service_url).await;
         tokio::time::sleep(Duration::from_secs(interval_secs)).await;
     }
+}
+
+async fn resolve_house_ids(
+    access_sync: &Arc<dyn AccessSyncRepository>,
+    user_id_provider: &Arc<dyn UserIdProvider>,
+) -> Vec<String> {
+    let Some(user_id) = user_id_provider.get().await else {
+        return Vec::new();
+    };
+    access_sync
+        .list_houses(&user_id)
+        .await
+        .unwrap_or_default()
+        .into_iter()
+        .map(|h| h.id)
+        .collect()
 }
 
 async fn pull_from_cloud(

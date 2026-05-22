@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use chrono::Utc;
 use local_server_application::ports::{
-    AccessSyncRepository, RemoteHouse, RemoteRoom, SyncStatus,
+    AccessSyncRepository, RemoteHouse, RemoteHouseMember, RemoteRoom, SyncStatus,
 };
 use local_server_core::DomainError;
 use sqlx::SqlitePool;
@@ -45,7 +45,22 @@ ON CONFLICT(id) DO NOTHING
         houses: &[RemoteHouse],
         _owner_external_id: &str,
     ) -> Result<(), DomainError> {
+        let now = Utc::now().to_rfc3339();
         for h in houses {
+            // The house owner may be a different user than the authenticated one
+            // (user can be a member of houses owned by others). Ensure the owner
+            // exists in users before inserting with the FK constraint.
+            sqlx::query(
+                "INSERT INTO users(id, external_user_id, avatar_url, created_at) \
+                 VALUES (?, ?, NULL, ?) ON CONFLICT(id) DO NOTHING",
+            )
+            .bind(&h.owner_id)
+            .bind(&h.owner_id)
+            .bind(&now)
+            .execute(&self.pool)
+            .await
+            .map_err(db_err)?;
+
             sqlx::query(
                 r#"
 INSERT INTO houses(id, name, avatar_url, address, conflict_strategy, owner_id, created_at, updated_at)
@@ -175,6 +190,38 @@ ORDER  BY h.created_at ASC
                 updated_at: r.get("updated_at"),
             })
             .collect())
+    }
+
+    async fn upsert_members(
+        &self,
+        house_id: &str,
+        members: &[RemoteHouseMember],
+    ) -> Result<(), DomainError> {
+        let now = Utc::now().to_rfc3339();
+        for m in members {
+            sqlx::query(
+                r#"
+INSERT INTO cloud_house_members(id, user_id, house_id, user_display_name, user_avatar_url, joined_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET
+  user_display_name = excluded.user_display_name,
+  user_avatar_url   = excluded.user_avatar_url,
+  joined_at         = excluded.joined_at,
+  updated_at        = excluded.updated_at
+"#,
+            )
+            .bind(&m.id)
+            .bind(&m.user_id)
+            .bind(house_id)
+            .bind(&m.user_display_name)
+            .bind(&m.user_avatar_url)
+            .bind(&m.joined_at)
+            .bind(&now)
+            .execute(&self.pool)
+            .await
+            .map_err(db_err)?;
+        }
+        Ok(())
     }
 
     async fn list_rooms(&self, house_id: &str) -> Result<Vec<RemoteRoom>, DomainError> {

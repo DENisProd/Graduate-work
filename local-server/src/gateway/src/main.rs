@@ -171,10 +171,12 @@ async fn main() -> anyhow::Result<()> {
         let cloud = state.cloud_widget_dashboard_client.clone();
         let url = cfg.scenario_service_url.clone();
         let interval = cfg.sync_interval_secs;
-        // house_ids for pull phase; local push works without them
-        let house_ids: Vec<String> = Vec::new();
+        let access_sync = state.access_sync_repo.clone();
+        let user_id_provider = Arc::new(RuntimeSettingsUserIdProvider {
+            settings: state.runtime_settings_repo.clone(),
+        }) as Arc<dyn UserIdProvider>;
         tokio::spawn(async move {
-            run_widget_dashboard_sync(repo, cloud, interval, url, house_ids).await;
+            run_widget_dashboard_sync(repo, cloud, interval, url, access_sync, user_id_provider).await;
         });
     }
 
@@ -184,6 +186,7 @@ async fn main() -> anyhow::Result<()> {
             VERSION,
             cfg.access_service_url.clone(),
             cfg.local_server_public_url.clone(),
+            cfg.scenario_service_url.clone(),
         ),
         state.device_repo.clone(),
         state.phys_repo.clone(),

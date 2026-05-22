@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use local_server_application::ports::{CloudSyncClient, RemoteHouse, RemoteRoom, SyncEntry};
+use local_server_application::ports::{CloudSyncClient, RemoteHouse, RemoteHouseMember, RemoteRoom, SyncEntry};
 use local_server_core::DomainError;
 use serde::{Deserialize, Serialize};
 
@@ -51,6 +51,18 @@ struct HouseRoomDto {
     name: String,
     house_id: String,
     created_at: String,
+}
+
+// ── access-service member response shape ─────────────────────────────────────
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct HouseMemberDto {
+    id: String,
+    user_id: String,
+    user_display_name: Option<String>,
+    user_avatar_url: Option<String>,
+    joined_at: String,
 }
 
 // ── trait impl ────────────────────────────────────────────────────────────────
@@ -131,6 +143,45 @@ impl CloudSyncClient for ReqwestCloudSyncClient {
                 name: d.name,
                 house_id: d.house_id,
                 created_at: d.created_at,
+            })
+            .collect())
+    }
+
+    async fn fetch_house_members(
+        &self,
+        base_url: &str,
+        house_id: &str,
+    ) -> Result<Vec<RemoteHouseMember>, DomainError> {
+        let url = Self::url(base_url, &format!("/house-members/house/{house_id}"));
+        let res = self
+            .http
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| DomainError::DependencyUnavailable(format!("fetch_house_members: {e}")))?;
+
+        let status = res.status();
+        if !status.is_success() {
+            let body = res.text().await.unwrap_or_default();
+            return Err(DomainError::DependencyUnavailable(format!(
+                "access-service members {status}: {body}"
+            )));
+        }
+
+        let dtos = res
+            .json::<Vec<HouseMemberDto>>()
+            .await
+            .map_err(|e| DomainError::Internal(format!("parse members: {e}")))?;
+
+        Ok(dtos
+            .into_iter()
+            .map(|d| RemoteHouseMember {
+                id: d.id,
+                user_id: d.user_id,
+                house_id: house_id.to_string(),
+                user_display_name: d.user_display_name,
+                user_avatar_url: d.user_avatar_url,
+                joined_at: d.joined_at,
             })
             .collect())
     }

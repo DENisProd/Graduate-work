@@ -11,85 +11,90 @@ pub trait CloudSyncUrlProvider: Send + Sync {
     async fn get(&self) -> String;
 }
 
-/// Background loop: on startup (and every `interval_secs`) pull delta from cloud.
-/// Gracefully degrades if the cloud is unavailable.
+/// Provides the current authenticated user's external ID at runtime.
+#[async_trait::async_trait]
+pub trait UserIdProvider: Send + Sync {
+    async fn get(&self) -> Option<String>;
+}
+
+/// Background loop: on startup (and every `interval_secs`) pull all houses,
+/// rooms, and members from the cloud access-service into local SQLite.
+///
+/// The access-service has no incremental delta endpoint, so every cycle
+/// performs a full pull. Gracefully degrades when the cloud is unavailable.
 pub async fn run_delta_puller(
     access_sync: Arc<dyn AccessSyncRepository>,
     cloud: Arc<dyn CloudSyncClient>,
     interval_secs: u64,
     cloud_api_url: Arc<dyn CloudSyncUrlProvider>,
-    cloud_api_key: String,
+    _cloud_api_key: String,
     user_id_provider: Arc<dyn UserIdProvider>,
 ) {
     loop {
         let now = Utc::now();
-        let status = match access_sync.get_status().await {
-            Ok(s) => s,
-            Err(e) => {
-                tracing::warn!(error = %e, "delta_puller: get_status failed");
-                tokio::time::sleep(Duration::from_secs(interval_secs)).await;
-                continue;
-            }
-        };
-
-        let since = status
-            .last_pulled_at
-            .as_deref()
-            .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
-            .map(|dt| dt.with_timezone(&Utc));
-
         let access_url = cloud_api_url.get().await;
 
-        let result = match since {
-            Some(ts) => cloud.delta(&access_url, &cloud_api_key, ts).await,
+        let user_id = match user_id_provider.get().await {
+            Some(id) => id,
             None => {
-                // First run: trigger a full house/room pull if we have a user
-                if let Some(user_id) = user_id_provider.get().await {
-                    let houses = cloud.fetch_user_houses(&access_url, &user_id).await;
-                    match houses {
-                        Ok(h) => {
-                            access_sync.upsert_owner(&user_id).await.ok();
-                            access_sync.upsert_houses(&h, &user_id).await.ok();
-                            let mark = now.to_rfc3339();
-                            access_sync.mark_pulled("houses", &mark).await.ok();
-                            for house in &h {
-                                if let Ok(rooms) =
-                                    cloud.fetch_house_rooms(&access_url, &house.id).await
-                                {
-                                    access_sync.upsert_rooms(&house.id, &rooms).await.ok();
-                                }
-                            }
-                            access_sync.mark_pulled("rooms", &mark).await.ok();
-                            tracing::info!("delta_puller: initial full pull completed");
-                        }
-                        Err(e) => {
-                            tracing::warn!(error = %e, "delta_puller: initial pull failed");
-                        }
-                    }
-                }
                 tokio::time::sleep(Duration::from_secs(interval_secs)).await;
                 continue;
             }
         };
 
-        match result {
-            Ok(entries) => {
-                tracing::info!(count = entries.len(), "delta_puller: received entries from cloud");
-                // Entries are applied by the cloud push handler; here we just log
-                let mark = now.to_rfc3339();
-                access_sync.mark_pulled("delta", &mark).await.ok();
-            }
+        // Full pull: houses
+        let houses = match cloud.fetch_user_houses(&access_url, &user_id).await {
+            Ok(h) => h,
             Err(e) => {
-                tracing::warn!(error = %e, "delta_puller: cloud delta failed, skipping");
+                tracing::warn!(error = %e, "delta_puller: fetch_user_houses failed, skipping cycle");
+                tokio::time::sleep(Duration::from_secs(interval_secs)).await;
+                continue;
+            }
+        };
+
+        let house_count = houses.len();
+        access_sync.upsert_owner(&user_id).await.ok();
+        access_sync.upsert_houses(&houses, &user_id).await.ok();
+        let mark = now.to_rfc3339();
+        access_sync.mark_pulled("houses", &mark).await.ok();
+
+        // Full pull: rooms per house
+        let mut room_count = 0usize;
+        for house in &houses {
+            match cloud.fetch_house_rooms(&access_url, &house.id).await {
+                Ok(rooms) => {
+                    room_count += rooms.len();
+                    access_sync.upsert_rooms(&house.id, &rooms).await.ok();
+                }
+                Err(e) => {
+                    tracing::warn!(error = %e, house_id = %house.id, "delta_puller: fetch_house_rooms failed");
+                }
             }
         }
+        access_sync.mark_pulled("rooms", &mark).await.ok();
+
+        // Full pull: members per house
+        let mut member_count = 0usize;
+        for house in &houses {
+            match cloud.fetch_house_members(&access_url, &house.id).await {
+                Ok(members) => {
+                    member_count += members.len();
+                    access_sync.upsert_members(&house.id, &members).await.ok();
+                }
+                Err(e) => {
+                    tracing::warn!(error = %e, house_id = %house.id, "delta_puller: fetch_house_members failed");
+                }
+            }
+        }
+        access_sync.mark_pulled("members", &mark).await.ok();
+
+        tracing::info!(
+            houses = house_count,
+            rooms = room_count,
+            members = member_count,
+            "delta_puller: pull complete"
+        );
 
         tokio::time::sleep(Duration::from_secs(interval_secs)).await;
     }
-}
-
-/// Provides the current authenticated user's external ID at runtime.
-#[async_trait::async_trait]
-pub trait UserIdProvider: Send + Sync {
-    async fn get(&self) -> Option<String>;
 }

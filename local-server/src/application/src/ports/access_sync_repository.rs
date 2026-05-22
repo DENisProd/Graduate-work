@@ -2,7 +2,7 @@ use async_trait::async_trait;
 
 use local_server_core::DomainError;
 
-use super::cloud_sync_client::{RemoteHouse, RemoteRoom};
+use super::cloud_sync_client::{RemoteHouse, RemoteHouseMember, RemoteRoom};
 
 /// Sync status read from the local DB.
 #[derive(Debug, Clone)]
@@ -46,4 +46,11 @@ pub trait AccessSyncRepository: Send + Sync {
 
     /// List synced rooms for a house.
     async fn list_rooms(&self, house_id: &str) -> Result<Vec<RemoteRoom>, DomainError>;
+
+    /// Bulk upsert members for a house pulled from access-service.
+    async fn upsert_members(
+        &self,
+        house_id: &str,
+        members: &[RemoteHouseMember],
+    ) -> Result<(), DomainError>;
 }

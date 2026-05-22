@@ -25,6 +25,17 @@ pub struct RemoteRoom {
     pub created_at: String,
 }
 
+/// A house member record fetched from access-service.
+#[derive(Debug, Clone)]
+pub struct RemoteHouseMember {
+    pub id: String,
+    pub user_id: String,
+    pub house_id: String,
+    pub user_display_name: Option<String>,
+    pub user_avatar_url: Option<String>,
+    pub joined_at: String,
+}
+
 /// Result of a full pull sync cycle.
 #[derive(Debug, Clone, Default)]
 pub struct SyncPullReport {
@@ -62,6 +73,13 @@ pub trait CloudSyncClient: Send + Sync {
         base_url: &str,
         house_id: &str,
     ) -> Result<Vec<RemoteRoom>, DomainError>;
+
+    /// Fetch all members of a house.
+    async fn fetch_house_members(
+        &self,
+        base_url: &str,
+        house_id: &str,
+    ) -> Result<Vec<RemoteHouseMember>, DomainError>;
 
     /// Push a batch of local mutations to the cloud ingest endpoint.
     async fn ingest(
