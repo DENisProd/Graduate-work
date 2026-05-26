@@ -5,6 +5,7 @@ import { useDashboardLayout } from './model/useDashboardLayout';
 import { DashboardSidebar, buildDashboardRoutes } from './ui/DashboardSidebar';
 import { DashboardHeader } from './ui/DashboardHeader';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { useHousePermissions } from '@/hooks';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -25,12 +26,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     isFullWidthPage,
   } = useDashboardLayout();
 
+  const perms = useHousePermissions();
+  const houseNavPerms = selectedHouseId
+    ? { canEditRoles: perms.canEditRoles, isOwner: perms.isOwner }
+    : undefined;
+
   const routes = buildDashboardRoutes(
     t,
     selectedHouseId,
     selectedHouseName,
     userHouses,
     pathname,
+    houseNavPerms,
   );
 
   return (

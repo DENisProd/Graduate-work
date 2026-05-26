@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { deviceAuthApi } from '@/lib/api/access-service';
+import { useTranslation } from '@/hooks';
 import { useCurrentUserId } from '@/hooks/use-current-user-id';
 import { useUserStore } from '@/store/user-store';
 import { ApiError } from '@/lib/api/core';
@@ -15,6 +16,7 @@ import { useToast } from '@/components/shared';
 type SubmitState = 'idle' | 'submitting' | 'success' | 'error';
 
 function DeviceAuthContent() {
+  const { t } = useTranslation();
   const params = useSearchParams();
   const router = useRouter();
   const currentUserId = useCurrentUserId();
@@ -29,19 +31,19 @@ function DeviceAuthContent() {
 
   useEffect(() => {
     if (initialCode || sessionId) {
-      showToast('Нужно подтвердить код авторизации на этой странице', 'info', 5000);
+      showToast(t('deviceAuth.toasts.confirmOnPage'), 'info', 5000);
     }
-  }, [initialCode, sessionId, showToast]);
+  }, [initialCode, sessionId, showToast, t]);
 
   const handleSubmit = async () => {
     if (!currentUserId) {
       setState('error');
-      setMessage('Sign in first to confirm this code.');
+      setMessage(t('deviceAuth.errors.signInRequired'));
       return;
     }
     if (!userCode.trim()) {
       setState('error');
-      setMessage('User code is required.');
+      setMessage(t('deviceAuth.errors.userCodeRequired'));
       return;
     }
 
@@ -50,8 +52,8 @@ function DeviceAuthContent() {
     try {
       await deviceAuthApi.confirm(userCode.trim(), currentUserId, displayName || undefined);
       setState('success');
-      setMessage('Code confirmed. You can return to local app and continue authorization.');
-      showToast('Код подтверждён. Вернитесь в локальное приложение.', 'success', 5000);
+      setMessage(t('deviceAuth.messages.confirmed'));
+      showToast(t('deviceAuth.toasts.confirmed'), 'success', 5000);
       window.setTimeout(() => {
         router.push('/dashboard');
       }, 1200);
@@ -61,8 +63,8 @@ function DeviceAuthContent() {
         setMessage(error.message);
         showToast(error.message, 'error', 5000);
       } else {
-        setMessage('Failed to confirm code. Please try again.');
-        showToast('Не удалось подтвердить код. Попробуйте снова.', 'error', 5000);
+        setMessage(t('deviceAuth.errors.confirmFailed'));
+        showToast(t('deviceAuth.errors.confirmFailed'), 'error', 5000);
       }
     }
   };
@@ -71,33 +73,33 @@ function DeviceAuthContent() {
     <div className="flex min-h-screen items-center justify-center px-4 py-8">
       <Card className="w-full max-w-md">
         <Card.Header className="flex flex-col gap-1">
-          <Card.Title>Device authorization</Card.Title>
+          <Card.Title>{t('deviceAuth.title')}</Card.Title>
           <Card.Description className="text-foreground/80">
-            Confirm the one-time code from your local smart home server.
+            {t('deviceAuth.description')}
           </Card.Description>
         </Card.Header>
         <Card.Content className="space-y-4">
           {!currentUserId && (
             <div className="rounded-md border border-border bg-surface-2 px-3 py-2 text-sm text-foreground/80">
-              <p>You need to sign in before confirming the code.</p>
+              <p>{t('deviceAuth.signInRequired')}</p>
               <Link
                 href={`/api/auth/signin?callbackUrl=${encodeURIComponent('/device-auth' + (params?.toString() ? `?${params.toString()}` : ''))}`}
                 className="mt-2 inline-block text-primary underline"
               >
-                Sign in
+                {t('common.signIn')}
               </Link>
             </div>
           )}
 
           {sessionId && (
             <div className="rounded-md border border-border bg-surface-2 px-3 py-2 text-xs text-foreground/70">
-              Session ID: <span className="font-mono">{sessionId}</span>
+              {t('deviceAuth.sessionId')}: <span className="font-mono">{sessionId}</span>
             </div>
           )}
 
           <div className="space-y-2">
             <label htmlFor="userCode" className="text-sm font-medium">
-              User code
+              {t('deviceAuth.userCode')}
             </label>
             <Input
               id="userCode"
@@ -128,7 +130,7 @@ function DeviceAuthContent() {
             onPress={handleSubmit}
             className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
-            {state === 'submitting' ? 'Confirming...' : 'Confirm code'}
+            {state === 'submitting' ? t('deviceAuth.confirming') : t('deviceAuth.confirmCode')}
           </Button>
         </Card.Content>
       </Card>
@@ -137,11 +139,13 @@ function DeviceAuthContent() {
 }
 
 export default function DeviceAuthPage() {
+  const { t } = useTranslation();
+
   return (
     <Suspense
       fallback={
         <div className="flex min-h-screen items-center justify-center">
-          <span className="text-muted-foreground">Loading...</span>
+          <span className="text-muted-foreground">{t('common.loading')}</span>
         </div>
       }
     >

@@ -34,8 +34,10 @@ export function useConnectedLocalServers() {
         await deviceAuthApi.logoutSession(sessionId);
         showToast(t('admin.accessControl.connectedDevices.localServer.logoutSuccess'), 'success');
         await load();
+        return true;
       } catch {
         showToast(t('admin.accessControl.connectedDevices.localServer.logoutError'), 'error');
+        return false;
       }
     },
     [load, showToast, t]

@@ -1,5 +1,8 @@
 'use client';
 
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { signOut, useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import {
   Sidebar,
@@ -10,10 +13,17 @@ import {
   SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import { motion } from 'framer-motion';
-import { AccountBlock } from '@/features/auth';
-import { NotificationsPopover } from '@/components/sidebar-02/nav-notifications';
+import { useUserStore } from '@/store/user-store';
+import { ChevronUp, LogOut, User } from 'lucide-react';
 import DashboardNavigation, { type Route } from '@/components/sidebar-02/nav-main';
 import { AppLogo } from '@/components/layout/app-logo';
 import {
@@ -37,6 +47,105 @@ interface AdminSidebarProps {
   t: (key: Parameters<typeof import('@/lib/i18n').getTranslation>[1]) => string;
 }
 
+function AdminSidebarUserCard({ t }: { t: AdminSidebarProps['t'] }) {
+  const { data: session } = useSession();
+  const { state } = useSidebar();
+  const isCollapsed = state === 'collapsed';
+  const router = useRouter();
+  const logoutStore = useUserStore((s) => s.logout);
+
+  const user = session?.user;
+  const displayName = user?.name ?? user?.email ?? t('auth.account');
+  const email = user?.email ?? '';
+  const initials =
+    displayName
+      .split(/\s+/)
+      .map((s) => s[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2) || '?';
+
+  const handleSignOut = async () => {
+    await signOut({ redirect: false });
+    logoutStore();
+    router.push('/');
+  };
+
+  const avatarEl = user?.image ? (
+    <img
+      src={user.image}
+      alt=""
+      className="h-8 w-8 shrink-0 rounded-full object-cover"
+    />
+  ) : (
+    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+      {initials}
+    </div>
+  );
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className={cn(
+            'flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors',
+            'hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            isCollapsed && 'justify-center px-0',
+          )}
+        >
+          {avatarEl}
+          {!isCollapsed && (
+            <>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium leading-none text-foreground">
+                  {displayName}
+                </p>
+                {email && (
+                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                    {email}
+                  </p>
+                )}
+              </div>
+              <ChevronUp className="size-3.5 shrink-0 text-muted-foreground" />
+            </>
+          )}
+        </button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent
+        side={isCollapsed ? 'right' : 'top'}
+        align={isCollapsed ? 'start' : 'end'}
+        className="mb-1 w-56"
+      >
+        <DropdownMenuLabel className="font-normal">
+          <p className="text-sm font-medium leading-none">{displayName}</p>
+          {email && (
+            <p className="mt-1 truncate text-xs text-muted-foreground">{email}</p>
+          )}
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/profile" className="cursor-pointer">
+            <User className="mr-2 size-4" />
+            {t('auth.profile')}
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="text-destructive focus:text-destructive"
+          onSelect={(e) => {
+            e.preventDefault();
+            void handleSignOut();
+          }}
+        >
+          <LogOut className="mr-2 size-4" />
+          {t('auth.logout')}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export function AdminSidebar({
   navItems,
   isActive,
@@ -44,35 +153,12 @@ export function AdminSidebar({
   toggleGroup,
   selectedDeviceId,
   selectedHouseId,
-  selectedHouseName,
+  selectedHouseName: _selectedHouseName,
   pathname,
   t,
 }: AdminSidebarProps) {
   const { state, setOpenMobile, isMobile } = useSidebar();
   const isCollapsed = state === 'collapsed';
-  const notifications = [
-    {
-      id: '1',
-      avatar: '/avatars/01.png',
-      fallback: 'OM',
-      text: 'New order received.',
-      time: '10m ago',
-    },
-    {
-      id: '2',
-      avatar: '/avatars/02.png',
-      fallback: 'JL',
-      text: 'Server upgrade completed.',
-      time: '1h ago',
-    },
-    {
-      id: '3',
-      avatar: '/avatars/03.png',
-      fallback: 'HH',
-      text: 'New user signed up.',
-      time: '2h ago',
-    },
-  ];
 
   const getGroupIcon = (group: GroupKey) => {
     const Icon = navItems.find((item) => item.group === group)?.icon;
@@ -182,44 +268,37 @@ export function AdminSidebar({
     <Sidebar variant="inset" collapsible="icon">
       <SidebarHeader
         className={cn(
-          'flex px-2 py-3 md:pt-3.5',
+          'px-3 py-3',
           isCollapsed
-            ? 'flex-row items-center justify-between gap-y-4 md:flex-col md:items-start md:justify-start'
-            : 'flex-row items-center justify-between',
+            ? 'flex flex-col items-center gap-3'
+            : 'flex flex-row items-center justify-between',
         )}
       >
         <AppLogo
           label={t('header.title')}
+          href="/admin"
           className={cn(
-            'text-sm font-medium text-foreground/60 hover:text-foreground',
-            isCollapsed && 'md:w-full md:justify-center',
+            'text-sm font-medium text-foreground/70 hover:text-foreground',
+            isCollapsed && 'justify-center',
           )}
-          labelClassName="whitespace-nowrap text-lg font-semibold"
+          labelClassName="whitespace-nowrap text-sm font-semibold"
           showLabel={!isCollapsed}
         />
-        <motion.div
-          key={isCollapsed ? 'header-collapsed' : 'header-expanded'}
-          className={cn(
-            'flex items-center gap-2',
-            isCollapsed ? 'flex-row md:flex-col-reverse' : 'flex-row',
-          )}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8 }}
-        >
-          <SidebarTrigger />
+
+        <div className="flex items-center gap-1">
+          <SidebarTrigger className="h-7 w-7" />
           {isMobile && (
             <Button
               isIconOnly
               size="sm"
               variant="ghost"
               onPress={() => setOpenMobile(false)}
-              className="md:hidden"
+              className="h-7 w-7 md:hidden"
             >
-              <CloseIcon className="h-5 w-5" />
+              <CloseIcon className="h-4 w-4" />
             </Button>
           )}
-        </motion.div>
+        </div>
       </SidebarHeader>
 
       <SidebarContent className="gap-2 px-2 py-4">
@@ -230,12 +309,11 @@ export function AdminSidebar({
           onToggleGroup={handleToggleGroup}
         />
       </SidebarContent>
+
       <SidebarSeparator />
-      <SidebarFooter className="mt-auto px-2 pb-3">
-        <div className="flex w-full items-center justify-between gap-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:[&_button]:min-w-0 group-data-[collapsible=icon]:[&_button]:w-10 group-data-[collapsible=icon]:[&_button]:justify-center group-data-[collapsible=icon]:[&_span]:hidden">
-          <NotificationsPopover notifications={notifications} />
-          <AccountBlock />
-        </div>
+
+      <SidebarFooter className="px-2 py-3">
+        <AdminSidebarUserCard t={t} />
       </SidebarFooter>
     </Sidebar>
   );

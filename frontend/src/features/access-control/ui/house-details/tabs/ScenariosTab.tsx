@@ -30,6 +30,7 @@ import {
 interface ScenariosTabProps {
   houseId: string | null;
   activeTab: string;
+  canManage?: boolean;
 }
 
 type UiScenario = ScenarioResponse & {
@@ -43,7 +44,7 @@ const asDefinitionV1 = (v: unknown): ScenarioDefinitionV1 | undefined => {
   return v as ScenarioDefinitionV1;
 };
 
-export function ScenariosTab({ houseId, activeTab }: ScenariosTabProps) {
+export function ScenariosTab({ houseId, activeTab, canManage = true }: ScenariosTabProps) {
   const { t, locale } = useTranslation();
   const { showToast } = useToast();
   const router = useRouter();
@@ -204,9 +205,11 @@ export function ScenariosTab({ houseId, activeTab }: ScenariosTabProps) {
           <Button variant="secondary" size="sm" onClick={() => loadScenarios()}>
             {t('admin.retry')}
           </Button>
-          <Button size="sm" onClick={openCreate} disabled={!houseId}>
-            {locale === 'ru' ? 'Создать сценарий' : 'Create scenario'}
-          </Button>
+          {canManage && (
+            <Button size="sm" onClick={openCreate} disabled={!houseId}>
+              {locale === 'ru' ? 'Создать сценарий' : 'Create scenario'}
+            </Button>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2">
@@ -254,18 +257,20 @@ export function ScenariosTab({ houseId, activeTab }: ScenariosTabProps) {
               <CardHeader>
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="text-base">{scenario.name}</CardTitle>
-                  <div className="flex items-center gap-1">
-                    <Switch
-                      checked={scenario.status === 'ONLINE'}
-                      onCheckedChange={(checked) => setOnline(scenario, checked)}
-                      disabled={scenario.status === 'ERROR'}
-                      aria-label={
-                        locale === 'ru'
-                          ? 'Включить или выключить сценарий'
-                          : 'Enable or disable scenario'
-                      }
-                    />
-                  </div>
+                  {canManage && (
+                    <div className="flex items-center gap-1">
+                      <Switch
+                        checked={scenario.status === 'ONLINE'}
+                        onCheckedChange={(checked) => setOnline(scenario, checked)}
+                        disabled={scenario.status === 'ERROR'}
+                        aria-label={
+                          locale === 'ru'
+                            ? 'Включить или выключить сценарий'
+                            : 'Enable or disable scenario'
+                        }
+                      />
+                    </div>
+                  )}
                 </div>
                 <CardDescription className="text-xs text-muted-foreground">
                   {scenario.description || '—'}

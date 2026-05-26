@@ -85,8 +85,10 @@ impl AppState {
         let cloud_auth_client =
             Arc::new(ReqwestCloudAuthClient::new()) as Arc<dyn CloudAuthClient>;
 
-        let cloud_sync_client =
-            Arc::new(ReqwestCloudSyncClient::new(cloud_sync_api_key)) as Arc<dyn CloudSyncClient>;
+        let cloud_sync_client = Arc::new(ReqwestCloudSyncClient::with_settings(
+            cloud_sync_api_key,
+            runtime_settings_repo.clone(),
+        )) as Arc<dyn CloudSyncClient>;
 
         let cloud_scenario_client =
             Arc::new(ReqwestCloudScenarioClient::new()) as Arc<dyn CloudScenarioClient>;

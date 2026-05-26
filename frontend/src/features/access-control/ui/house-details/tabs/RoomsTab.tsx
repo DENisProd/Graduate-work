@@ -11,22 +11,24 @@ interface RoomsTabProps {
   houseIdParam: string | undefined;
   onRoomPlanner: () => void;
   isAdmin: boolean;
+  canManage?: boolean;
 }
 
-export function RoomsTab({ houseIdParam, onRoomPlanner, isAdmin }: RoomsTabProps) {
+export function RoomsTab({ houseIdParam, onRoomPlanner, isAdmin, canManage = true }: RoomsTabProps) {
   if (isAdmin) {
-    return <AdminRoomsTab houseIdParam={houseIdParam} onRoomPlanner={onRoomPlanner} />;
+    return <AdminRoomsTab houseIdParam={houseIdParam} onRoomPlanner={onRoomPlanner} canManage={canManage} />;
   }
 
-  return <RegularRoomsTab houseIdParam={houseIdParam} onRoomPlanner={onRoomPlanner} />;
+  return <RegularRoomsTab houseIdParam={houseIdParam} onRoomPlanner={onRoomPlanner} canManage={canManage} />;
 }
 
 interface RoomsTabVariantProps {
   houseIdParam: string | undefined;
   onRoomPlanner: () => void;
+  canManage?: boolean;
 }
 
-function AdminRoomsTab({ houseIdParam, onRoomPlanner }: RoomsTabVariantProps) {
+function AdminRoomsTab({ houseIdParam, onRoomPlanner, canManage = true }: RoomsTabVariantProps) {
   const { t } = useTranslation();
   const rooms = useAccessControlStore((s) => s.rooms);
   const setRoomModalOpen = useAccessControlStore((s) => s.setRoomModalOpen);
@@ -47,9 +49,11 @@ function AdminRoomsTab({ houseIdParam, onRoomPlanner }: RoomsTabVariantProps) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <AppButton onClick={() => setRoomModalOpen(true)}>
-          {t('admin.create')} — {t('admin.accessControl.houseRooms')}
-        </AppButton>
+        {canManage && (
+          <AppButton onClick={() => setRoomModalOpen(true)}>
+            {t('admin.create')} — {t('admin.accessControl.houseRooms')}
+          </AppButton>
+        )}
         {houseIdParam && (
           <AppButton variant="secondary" onClick={onRoomPlanner}>
             {t('admin.roomPlanner.title')}
@@ -62,7 +66,7 @@ function AdminRoomsTab({ houseIdParam, onRoomPlanner }: RoomsTabVariantProps) {
   );
 }
 
-function RegularRoomsTab({ houseIdParam, onRoomPlanner }: RoomsTabVariantProps) {
+function RegularRoomsTab({ houseIdParam, onRoomPlanner, canManage = true }: RoomsTabVariantProps) {
   const { t } = useTranslation();
   const rooms = useAccessControlStore((s) => s.rooms);
   const setRoomModalOpen = useAccessControlStore((s) => s.setRoomModalOpen);
@@ -70,9 +74,11 @@ function RegularRoomsTab({ houseIdParam, onRoomPlanner }: RoomsTabVariantProps) 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <AppButton onClick={() => setRoomModalOpen(true)}>
-          {t('admin.create')} — {t('admin.accessControl.houseRooms')}
-        </AppButton>
+        {canManage && (
+          <AppButton onClick={() => setRoomModalOpen(true)}>
+            {t('admin.create')} — {t('admin.accessControl.houseRooms')}
+          </AppButton>
+        )}
         {houseIdParam && (
           <AppButton variant="secondary" onClick={onRoomPlanner}>
             {t('admin.roomPlanner.title')}

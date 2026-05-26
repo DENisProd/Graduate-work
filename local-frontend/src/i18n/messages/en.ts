@@ -529,6 +529,11 @@ export const en = {
     toastScanTriggered: 'Scan started',
     toastScanFailed: 'Failed to start scan',
   },
+  authBanner: {
+    deniedTitle: 'Authorization denied — sync disabled',
+    deniedHint: 'Cloud rejected the device auth. Re-authorize in Settings.',
+    goToSettings: 'Settings',
+  },
   placeholder: {
     comingIn: 'Coming in {{sprint}}',
   },

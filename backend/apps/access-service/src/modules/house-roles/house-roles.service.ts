@@ -29,6 +29,8 @@ export class HouseRolesService {
 
     const roleNames = [SYSTEM_ROLE_NAMES.OWNER, SYSTEM_ROLE_NAMES.ADMIN, SYSTEM_ROLE_NAMES.DEFAULT] as const;
     let ownerRoleId: string | undefined;
+    let adminRoleId: string | undefined;
+    let defaultRoleId: string | undefined;
 
     for (const name of roleNames) {
       const priority = SYSTEM_ROLE_PRIORITIES[name];
@@ -50,16 +52,18 @@ export class HouseRolesService {
           data: { houseMemberId: ownerMemberId, roleId: role.id },
         });
       }
+      if (name === SYSTEM_ROLE_NAMES.ADMIN) adminRoleId = role.id;
+      if (name === SYSTEM_ROLE_NAMES.DEFAULT) defaultRoleId = role.id;
     }
 
-    if (ownerRoleId) {
-      await this.grantOwnerFullResourceAccess(houseId, ownerMemberId, ownerRoleId);
+    if (ownerRoleId && adminRoleId && defaultRoleId) {
+      await this.setupHouseResourceAccess(houseId, ownerMemberId, ownerRoleId, adminRoleId, defaultRoleId);
     }
   }
 
   /**
-   * Корневой ресурс HOUSE + право ALLOW на всё дерево для роли «Владелец» и кэш effective для участника.
-   * Идемпотентно: при повторном вызове дубли не создаются.
+   * Идемпотентно пересоздаёт права доступа для всех системных ролей дома.
+   * Вызывается после создания дома или при пересборке прав.
    */
   async ensureOwnerFullAccessForHouse(houseId: string): Promise<void> {
     const house = await this.prisma.house.findUnique({
@@ -73,70 +77,109 @@ export class HouseRolesService {
     });
     if (!ownerMember) return;
 
-    const ownerRole = await this.prisma.houseRole.findFirst({
-      where: { houseId, name: SYSTEM_ROLE_NAMES.OWNER },
-    });
-    if (!ownerRole) return;
+    const [ownerRole, adminRole, defaultRole] = await Promise.all([
+      this.prisma.houseRole.findFirst({ where: { houseId, name: SYSTEM_ROLE_NAMES.OWNER } }),
+      this.prisma.houseRole.findFirst({ where: { houseId, name: SYSTEM_ROLE_NAMES.ADMIN } }),
+      this.prisma.houseRole.findFirst({ where: { houseId, name: SYSTEM_ROLE_NAMES.DEFAULT } }),
+    ]);
+    if (!ownerRole || !adminRole || !defaultRole) return;
 
-    await this.grantOwnerFullResourceAccess(houseId, ownerMember.id, ownerRole.id);
+    await this.setupHouseResourceAccess(houseId, ownerMember.id, ownerRole.id, adminRole.id, defaultRole.id);
   }
 
-  private async grantOwnerFullResourceAccess(
+  /**
+   * Создаёт корневой ресурс HOUSE и функциональные дочерние ресурсы,
+   * затем выставляет права: Owner/Admin → ALLOW (полный доступ),
+   * Default → READ (только чтение). Идемпотентно.
+   */
+  private async setupHouseResourceAccess(
     houseId: string,
     ownerMemberId: string,
     ownerRoleId: string,
+    adminRoleId: string,
+    defaultRoleId: string,
   ): Promise<void> {
     let root = await this.prisma.resource.findFirst({
       where: { houseId, type: ResourceType.HOUSE, parentId: null },
     });
     if (!root) {
       root = await this.prisma.resource.create({
-        data: {
-          houseId,
-          type: ResourceType.HOUSE,
-          path: `/${houseId}`,
-          depth: 0,
-        },
+        data: { houseId, type: ResourceType.HOUSE, path: `/${houseId}`, depth: 0 },
       });
     }
 
-    let right = await this.prisma.accessRight.findFirst({
-      where: {
-        resourceId: root.id,
-        roleId: ownerRoleId,
-        accessRightType: AccessRightType.ALLOW,
-      },
+    // Создаём функциональные дочерние ресурсы для каждой зоны системы
+    const functionalResources = [
+      { type: ResourceType.ROOM,       name: 'Комнаты' },
+      { type: ResourceType.DEVICE,     name: 'Устройства' },
+      { type: ResourceType.SCENE,      name: 'Сценарии' },
+      { type: ResourceType.AUTOMATION, name: 'Автоматизации' },
+      { type: ResourceType.GROUP,      name: 'Виджеты' },
+    ] as const;
+
+    for (const res of functionalResources) {
+      const existing = await this.prisma.resource.findFirst({
+        where: { houseId, type: res.type, parentId: root.id },
+      });
+      if (!existing) {
+        const created = await this.prisma.resource.create({
+          data: { houseId, type: res.type, name: res.name, parentId: root.id, path: root.path, depth: 1 },
+        });
+        await this.prisma.resource.update({
+          where: { id: created.id },
+          data: { path: `${root.path}/${created.id}` },
+        });
+      }
+    }
+
+    // Owner и Admin → полный доступ (ALLOW) на корень (каскадируется на всех детей)
+    for (const roleId of [ownerRoleId, adminRoleId]) {
+      const exists = await this.prisma.accessRight.findFirst({
+        where: { resourceId: root.id, roleId, accessRightType: AccessRightType.ALLOW },
+      });
+      if (!exists) {
+        await this.prisma.accessRight.create({
+          data: { resourceId: root.id, roleId, accessRightType: AccessRightType.ALLOW },
+        });
+      }
+    }
+
+    // Default → только чтение (READ) на корень
+    const defaultExists = await this.prisma.accessRight.findFirst({
+      where: { resourceId: root.id, roleId: defaultRoleId, accessRightType: AccessRightType.READ },
     });
-    if (!right) {
-      right = await this.prisma.accessRight.create({
-        data: {
-          resourceId: root.id,
-          roleId: ownerRoleId,
-          accessRightType: AccessRightType.ALLOW,
-        },
+    if (!defaultExists) {
+      await this.prisma.accessRight.create({
+        data: { resourceId: root.id, roleId: defaultRoleId, accessRightType: AccessRightType.READ },
       });
     }
 
-    await this.prisma.effectivePermission.upsert({
-      where: {
-        houseMemberId_resourceId_accessRightType: {
+    // Кэш effective permissions для участника-владельца
+    const ownerRight = await this.prisma.accessRight.findFirst({
+      where: { resourceId: root.id, roleId: ownerRoleId, accessRightType: AccessRightType.ALLOW },
+    });
+    if (ownerRight) {
+      await this.prisma.effectivePermission.upsert({
+        where: {
+          houseMemberId_resourceId_accessRightType: {
+            houseMemberId: ownerMemberId,
+            resourceId: root.id,
+            accessRightType: AccessRightType.ALLOW,
+          },
+        },
+        create: {
           houseMemberId: ownerMemberId,
           resourceId: root.id,
           accessRightType: AccessRightType.ALLOW,
+          sourceType: PermissionSourceType.ROLE,
+          sourceId: ownerRight.id,
         },
-      },
-      create: {
-        houseMemberId: ownerMemberId,
-        resourceId: root.id,
-        accessRightType: AccessRightType.ALLOW,
-        sourceType: PermissionSourceType.ROLE,
-        sourceId: right.id,
-      },
-      update: {
-        sourceType: PermissionSourceType.ROLE,
-        sourceId: right.id,
-      },
-    });
+        update: {
+          sourceType: PermissionSourceType.ROLE,
+          sourceId: ownerRight.id,
+        },
+      });
+    }
   }
 
   async getRoleByHouseAndName(houseId: string, name: string) {

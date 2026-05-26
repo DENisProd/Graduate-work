@@ -8,6 +8,37 @@
     "enterUserId": "Введите ID пользователя",
     "alreadyInHouse": "Вы уже в доме"
   },
+  "invite": {
+    "redirecting": "Перенаправление...",
+    "status": {
+      "pending": "Ожидает",
+      "accepted": "Принято",
+      "declined": "Отклонено",
+      "revoked": "Отозвано",
+      "expired": "Истекло"
+    }
+  },
+  "deviceAuth": {
+    "title": "Авторизация устройства",
+    "description": "Подтвердите одноразовый код с локального сервера умного дома.",
+    "signInRequired": "Войдите в аккаунт перед подтверждением кода.",
+    "sessionId": "ID сессии",
+    "userCode": "Код пользователя",
+    "confirmCode": "Подтвердить код",
+    "confirming": "Подтверждение...",
+    "messages": {
+      "confirmed": "Код подтверждён. Вернитесь в локальное приложение, чтобы продолжить авторизацию."
+    },
+    "toasts": {
+      "confirmOnPage": "Подтвердите код авторизации на этой странице.",
+      "confirmed": "Код подтверждён. Вернитесь в локальное приложение."
+    },
+    "errors": {
+      "signInRequired": "Сначала войдите, чтобы подтвердить этот код.",
+      "userCodeRequired": "Введите код пользователя.",
+      "confirmFailed": "Не удалось подтвердить код. Попробуйте снова."
+    }
+  },
   "header": {
     "title": "Домовой"
   },
@@ -616,12 +647,26 @@
         "localServer": {
           "panelTitle": "Подключённый local-server",
           "empty": "Нет авторизованных экземпляров local-server.",
-          "defaultDisplayName": "Локальный пользователь",
+          "defaultDisplayName": "Локальный сервер",
+          "deviceBadge": "local-server",
+          "cardDescription": "Авторизованный экземпляр локального сервера",
           "sessionMeta": "сессия {{sessionId}} · код {{userCode}}",
+          "lastSeenAt": "последняя активность: {{value}}",
+          "detailsTitle": "Local-server",
+          "actionsTitle": "Сессия local-server",
+          "actionsDescription": "Завершите сессию этого экземпляра или выйдите из фронтенда.",
+          "notFound": "Сессия local-server не найдена или уже завершена.",
           "logoutFrontend": "Выйти из фронтенда",
           "logout": "Выйти из local-server",
           "logoutSuccess": "Сессия local-server завершена",
-          "logoutError": "Не удалось завершить сессию local-server"
+          "logoutError": "Не удалось завершить сессию local-server",
+          "fields": {
+            "sessionId": "ID сессии",
+            "userCode": "Код пользователя",
+            "externalUserId": "ID пользователя",
+            "authorizedAt": "Авторизовано",
+            "lastSeenAt": "Последняя активность"
+          }
         },
         "serviceUnavailable": {
           "title": "Сервис устройств/сценариев недоступен",

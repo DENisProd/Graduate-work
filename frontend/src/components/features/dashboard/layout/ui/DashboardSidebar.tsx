@@ -305,12 +305,18 @@ export function DashboardSidebar({
   );
 }
 
+interface HouseNavPermissions {
+  canEditRoles: boolean;
+  isOwner: boolean;
+}
+
 export function buildDashboardRoutes(
   t: (key: Parameters<typeof import('@/lib/i18n').getTranslation>[1]) => string,
   selectedHouseId: string | null,
   _selectedHouseName: string | null,
   userHouses: HouseResponse[],
   pathname: string,
+  permissions?: HouseNavPermissions,
 ): Route[] {
   const overviewSection = t('navigation.overview');
   const propertiesSection = t('navigation.properties');
@@ -394,14 +400,20 @@ export function buildDashboardRoutes(
         section: propertiesSection,
         isActive: sh() && /\/members(?:\/|$)/.test(pathname),
       },
-      {
+    );
+
+    if (!permissions || permissions.canEditRoles) {
+      routes.push({
         id: 'house-roles',
         title: t('admin.accessControl.roles'),
         link: `${base}/roles`,
         icon: <Shield className="size-4" />,
         section: propertiesSection,
         isActive: sh() && /\/roles(?:\/|$)/.test(pathname),
-      },
+      });
+    }
+
+    routes.push(
       {
         id: 'house-devices',
         title: t('admin.tabs.devices'),
@@ -418,15 +430,18 @@ export function buildDashboardRoutes(
         section: propertiesSection,
         isActive: sh() && /\/scenarios(?:\/|$)/.test(pathname),
       },
-      {
+    );
+
+    if (!permissions || permissions.isOwner) {
+      routes.push({
         id: 'house-settings',
         title: t('common.settings'),
         link: `${base}/settings`,
         icon: <Settings className="size-4" />,
         section: propertiesSection,
         isActive: sh() && /\/settings(?:\/|$)/.test(pathname),
-      },
-    );
+      });
+    }
   }
 
   return routes;

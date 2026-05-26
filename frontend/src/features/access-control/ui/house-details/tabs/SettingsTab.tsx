@@ -14,6 +14,7 @@ import type { HouseMqttConfigResponse, HouseMqttConfigUpsertRequest } from '@/ty
 
 interface SettingsTabProps {
   houseId: string | null;
+  canManage?: boolean;
 }
 
 type LoadState = 'idle' | 'loading' | 'error';
@@ -29,7 +30,7 @@ const emptyDraft = (): HouseMqttConfigUpsertRequest & {
   topicPrefix: 'zigbee2mqtt',
 });
 
-export function SettingsTab({ houseId }: SettingsTabProps) {
+export function SettingsTab({ houseId, canManage = true }: SettingsTabProps) {
   const { t, locale } = useTranslation();
   const { showToast } = useToast();
   const router = useRouter();
@@ -302,34 +303,23 @@ export function SettingsTab({ houseId }: SettingsTabProps) {
                   : 'Password is not returned by the server. Leave empty if you don’t want to change it.'}
               </p>
             </div>
-
-            <div className="space-y-1.5 md:col-span-2">
-              <p className="text-xs font-medium text-foreground">
-                {locale === 'ru' ? 'Topic prefix' : 'Topic prefix'}
-              </p>
-              <Input
-                placeholder="zigbee2mqtt"
-                value={draft.topicPrefix}
-                onChange={(e) => setDraft((prev) => ({ ...prev, topicPrefix: e.target.value }))}
-              />
-            </div>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Button onClick={onSave} disabled={saving || !isValid || reconnecting || deleting}>
+            <Button onClick={onSave} disabled={!canManage || saving || !isValid || reconnecting || deleting}>
               {saving ? (locale === 'ru' ? 'Сохранение…' : 'Saving…') : t('common.save')}
             </Button>
             <Button
               variant="secondary"
               onClick={onReconnect}
-              disabled={reconnecting || saving || deleting || !serverConfig}
+              disabled={!canManage || reconnecting || saving || deleting || !serverConfig}
             >
               {reconnecting ? (locale === 'ru' ? 'Переподключение…' : 'Reconnecting…') : (locale === 'ru' ? 'Переподключить' : 'Reconnect')}
             </Button>
             <Button
               variant="destructive"
               onClick={onDelete}
-              disabled={deleting || saving || reconnecting || !serverConfig}
+              disabled={!canManage || deleting || saving || reconnecting || !serverConfig}
             >
               {deleting ? (locale === 'ru' ? 'Удаление…' : 'Deleting…') : (locale === 'ru' ? 'Удалить конфигурацию' : 'Delete config')}
             </Button>

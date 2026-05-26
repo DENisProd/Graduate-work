@@ -1,13 +1,16 @@
 import { useEffect } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Link, Outlet } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { AlertTriangle } from 'lucide-react'
 import { listUserHouses } from '@/api/access'
 import { getRuntimeSettings } from '@/api/system'
 import { useSettingsStore } from '@/stores/settings.store'
+import { useI18n } from '@/hooks/useI18n'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 
 export function AppShell() {
+  const { t } = useI18n()
   const setAuthState = useSettingsStore((s) => s.setAuthState)
   const setAccessServiceUrl = useSettingsStore((s) => s.setAccessServiceUrl)
   const setUserId = useSettingsStore((s) => s.setUserId)
@@ -80,6 +83,20 @@ export function AppShell() {
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <TopBar />
+        {authStatus === 'denied' && (
+          <div className="flex shrink-0 items-center gap-2.5 border-b border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span className="font-medium">{t('authBanner.deniedTitle')}</span>
+            <span className="mx-1 text-red-400">·</span>
+            <span className="text-red-600 dark:text-red-400">{t('authBanner.deniedHint')}</span>
+            <Link
+              to="/settings"
+              className="ml-auto shrink-0 rounded font-medium underline underline-offset-2 hover:no-underline"
+            >
+              {t('authBanner.goToSettings')}
+            </Link>
+          </div>
+        )}
         <main className="flex-1 overflow-y-auto p-6">
           <Outlet />
         </main>

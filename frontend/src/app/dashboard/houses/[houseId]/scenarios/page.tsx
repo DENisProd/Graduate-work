@@ -1,21 +1,19 @@
 'use client';
 
-import { useMemo } from 'react';
 import { useParams } from 'next/navigation';
-import { useAccessControlStore } from '@/store/access-control-store';
+import { useHousePermissions } from '@/hooks';
 import { ScenariosTab } from '@/features/access-control/ui/house-details';
 
 export default function HouseScenariosPage() {
   const params = useParams();
-  const houseIdParam = params?.houseId as string | undefined;
-  const house = useAccessControlStore((s) => s.house);
+  const houseId = (params?.houseId as string | undefined) ?? null;
+  const perms = useHousePermissions();
 
-  const houseId = useMemo(() => {
-    if (house?.id != null) return String(house.id);
-    if (!houseIdParam) return null;
-    return houseIdParam;
-  }, [house, houseIdParam]);
-
-  return <ScenariosTab houseId={houseId} activeTab="scenarios" />;
+  return (
+    <ScenariosTab
+      houseId={houseId}
+      activeTab="scenarios"
+      canManage={perms.isOwner || perms.canManageAutomations}
+    />
+  );
 }
-

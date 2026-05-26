@@ -33,7 +33,6 @@ export function RoleMembersTable({ loading, members }: Props) {
         <TableRow>
           <TableHead className="w-9" />
           <TableHead>{t('admin.accessControl.members')}</TableHead>
-          <TableHead>{t('admin.accessControl.email')}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -48,7 +47,6 @@ export function RoleMembersTable({ loading, members }: Props) {
               />
             </TableCell>
             <TableCell>{member.name ?? member.userId ?? member.id}</TableCell>
-            <TableCell className="text-muted-foreground">{member.email ?? '—'}</TableCell>
           </TableRow>
         ))}
       </TableBody>

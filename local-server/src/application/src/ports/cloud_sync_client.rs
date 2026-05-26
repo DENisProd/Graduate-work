@@ -34,6 +34,18 @@ pub struct RemoteHouseMember {
     pub user_display_name: Option<String>,
     pub user_avatar_url: Option<String>,
     pub joined_at: String,
+    /// Cloud role IDs assigned to this member.
+    pub role_ids: Vec<String>,
+}
+
+/// A house role record fetched from access-service.
+#[derive(Debug, Clone)]
+pub struct RemoteHouseRole {
+    pub id: String,
+    pub name: String,
+    pub priority: i32,
+    pub is_system: bool,
+    pub house_id: String,
 }
 
 /// Result of a full pull sync cycle.
@@ -74,12 +86,19 @@ pub trait CloudSyncClient: Send + Sync {
         house_id: &str,
     ) -> Result<Vec<RemoteRoom>, DomainError>;
 
-    /// Fetch all members of a house.
+    /// Fetch all members of a house (includes their role assignments).
     async fn fetch_house_members(
         &self,
         base_url: &str,
         house_id: &str,
     ) -> Result<Vec<RemoteHouseMember>, DomainError>;
+
+    /// Fetch all roles defined for a house.
+    async fn fetch_house_roles(
+        &self,
+        base_url: &str,
+        house_id: &str,
+    ) -> Result<Vec<RemoteHouseRole>, DomainError>;
 
     /// Push a batch of local mutations to the cloud ingest endpoint.
     async fn ingest(

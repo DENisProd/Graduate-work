@@ -5,7 +5,7 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { getHouseRole } from '@/components/ui/role-badge';
-import { useTranslation, useCanEditHouseRoles, useCurrentUserId } from '@/hooks';
+import { useTranslation, useCurrentUserId, useHousePermissions } from '@/hooks';
 import { useAccessControlStore, type HouseDetailsTab, normalizeHouseDetailsTab } from '@/store/access-control-store';
 
 import {
@@ -59,9 +59,10 @@ export function HouseDetailsWidget({
     if (house?.id != null) return String(house.id);
     if (!houseIdParam) return null;
     return houseIdParam;
-  }, [house?.id, houseIdParam]);
+  }, [house, houseIdParam]);
 
-  const canEditRoles = useCanEditHouseRoles(houseId);
+  const perms = useHousePermissions();
+  const canEditRoles = perms.canEditRoles;
   const currentUserRole =
     house?.ownerId && currentUserId ? getHouseRole(house.ownerId, currentUserId) : 'member';
 
@@ -96,7 +97,12 @@ export function HouseDetailsWidget({
           ))}
         </TabsList>
         <TabsContent value="rooms">
-          <RoomsTab houseIdParam={houseIdParam} onRoomPlanner={onRoomPlanner} isAdmin={isAdmin} />
+          <RoomsTab
+            houseIdParam={houseIdParam}
+            onRoomPlanner={onRoomPlanner}
+            isAdmin={isAdmin}
+            canManage={perms.isOwner || perms.canManageDevices}
+          />
         </TabsContent>
 
         <TabsContent value="members">
@@ -104,6 +110,8 @@ export function HouseDetailsWidget({
             onAddMember={() => setMemberModalOpen(true)}
             onMemberClick={openMemberDetail}
             onRemoveMember={(member) => removeMember(member.userId)}
+            canInvite={perms.canInviteMembers}
+            canRemove={perms.isOwner || perms.canInviteMembers}
           />
         </TabsContent>
 
@@ -112,11 +120,20 @@ export function HouseDetailsWidget({
         </TabsContent>
 
         <TabsContent value="devices">
-          <DevicesTab houseId={houseId} activeTab={activeTab} />
+          <DevicesTab
+            houseId={houseId}
+            activeTab={activeTab}
+            canManage={perms.isOwner || perms.canManageDevices}
+            detailsPathPrefix={
+              houseId
+                ? `${isAdmin ? '/admin/access-control/houses' : '/dashboard/houses'}/${encodeURIComponent(houseId)}/devices`
+                : null
+            }
+          />
         </TabsContent>
 
         <TabsContent value="scenarios">
-          <ScenariosTab houseId={houseId} activeTab={activeTab} />
+          <ScenariosTab houseId={houseId} activeTab={activeTab} canManage={perms.isOwner || perms.canManageAutomations} />
         </TabsContent>
       </Tabs>
     </div>

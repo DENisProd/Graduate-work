@@ -8,6 +8,37 @@
     "enterUserId": "Enter user ID",
     "alreadyInHouse": "You are already in the house"
   },
+  "invite": {
+    "redirecting": "Redirecting...",
+    "status": {
+      "pending": "Pending",
+      "accepted": "Accepted",
+      "declined": "Declined",
+      "revoked": "Revoked",
+      "expired": "Expired"
+    }
+  },
+  "deviceAuth": {
+    "title": "Device authorization",
+    "description": "Confirm the one-time code from your local smart home server.",
+    "signInRequired": "You need to sign in before confirming the code.",
+    "sessionId": "Session ID",
+    "userCode": "User code",
+    "confirmCode": "Confirm code",
+    "confirming": "Confirming...",
+    "messages": {
+      "confirmed": "Code confirmed. You can return to local app and continue authorization."
+    },
+    "toasts": {
+      "confirmOnPage": "Confirm the authorization code on this page.",
+      "confirmed": "Code confirmed. Return to the local app."
+    },
+    "errors": {
+      "signInRequired": "Sign in first to confirm this code.",
+      "userCodeRequired": "User code is required.",
+      "confirmFailed": "Failed to confirm code. Please try again."
+    }
+  },
   "header": {
     "title": "Domovoy"
   },
@@ -614,12 +645,26 @@
         "localServer": {
           "panelTitle": "Connected local-server",
           "empty": "No authorized local-server instances yet.",
-          "defaultDisplayName": "Local user",
+          "defaultDisplayName": "Local server",
+          "deviceBadge": "local-server",
+          "cardDescription": "Authorized local-server instance",
           "sessionMeta": "session {{sessionId}} · code {{userCode}}",
+          "lastSeenAt": "last seen: {{value}}",
+          "detailsTitle": "Local-server",
+          "actionsTitle": "Local-server session",
+          "actionsDescription": "End this instance session or sign out from the frontend.",
+          "notFound": "Local-server session was not found or has already ended.",
           "logoutFrontend": "Logout frontend",
           "logout": "Logout local-server",
           "logoutSuccess": "Local-server session logged out",
-          "logoutError": "Failed to logout local-server session"
+          "logoutError": "Failed to logout local-server session",
+          "fields": {
+            "sessionId": "Session ID",
+            "userCode": "User code",
+            "externalUserId": "User ID",
+            "authorizedAt": "Authorized at",
+            "lastSeenAt": "Last seen"
+          }
         },
         "serviceUnavailable": {
           "title": "Scenario/device service is unavailable",

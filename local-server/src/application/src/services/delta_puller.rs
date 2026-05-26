@@ -72,13 +72,31 @@ pub async fn run_delta_puller(
         }
         access_sync.mark_pulled("rooms", &mark).await.ok();
 
-        // Full pull: members per house
+        // Full pull: roles per house
+        let mut role_count = 0usize;
+        for house in &houses {
+            match cloud.fetch_house_roles(&access_url, &house.id).await {
+                Ok(roles) => {
+                    role_count += roles.len();
+                    access_sync.upsert_rbac_roles(&house.id, &roles).await.ok();
+                }
+                Err(e) => {
+                    tracing::warn!(error = %e, house_id = %house.id, "delta_puller: fetch_house_roles failed");
+                }
+            }
+        }
+        access_sync.mark_pulled("roles", &mark).await.ok();
+
+        // Full pull: members per house (includes role assignments)
         let mut member_count = 0usize;
         for house in &houses {
             match cloud.fetch_house_members(&access_url, &house.id).await {
                 Ok(members) => {
                     member_count += members.len();
+                    // Display data (cloud_house_members table)
                     access_sync.upsert_members(&house.id, &members).await.ok();
+                    // RBAC data (house_members + house_member_roles tables)
+                    access_sync.upsert_rbac_members(&house.id, &members).await.ok();
                 }
                 Err(e) => {
                     tracing::warn!(error = %e, house_id = %house.id, "delta_puller: fetch_house_members failed");
@@ -90,6 +108,7 @@ pub async fn run_delta_puller(
         tracing::info!(
             houses = house_count,
             rooms = room_count,
+            roles = role_count,
             members = member_count,
             "delta_puller: pull complete"
         );

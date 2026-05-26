@@ -5,7 +5,6 @@ import { useAddDeviceModalStore } from '@/store/add-device-modal-store';
 import type { HouseDetailsTab } from '@/store/access-control-store';
 import { useConnectedLocalServers } from '@/features/access-control/model/use-connected-local-servers';
 import { useDevicesTab } from '@/features/access-control/model/use-devices-tab';
-import { ConnectedLocalServersPanel } from './ConnectedLocalServersPanel';
 import { DevicesListContent } from './DevicesListContent';
 import { DevicesListHeader } from './DevicesListHeader';
 import { DevicesPagination } from './DevicesPagination';
@@ -13,9 +12,16 @@ import { DevicesPagination } from './DevicesPagination';
 interface DevicesTabProps {
   houseId: string | null;
   activeTab: HouseDetailsTab;
+  canManage?: boolean;
+  detailsPathPrefix?: string | null;
 }
 
-export function DevicesTab({ houseId, activeTab }: DevicesTabProps) {
+export function DevicesTab({
+  houseId,
+  activeTab,
+  canManage = true,
+  detailsPathPrefix,
+}: DevicesTabProps) {
   const openAddDeviceModal = useAddDeviceModalStore((s) => s.open);
   const addDeviceModalOpen = useAddDeviceModalStore((s) => s.isOpen);
   const prevAddDeviceModalOpenRef = useRef(addDeviceModalOpen);
@@ -24,8 +30,6 @@ export function DevicesTab({ houseId, activeTab }: DevicesTabProps) {
     servers,
     loading: serversLoading,
     load: loadServers,
-    logoutServer,
-    logoutFrontend,
   } = useConnectedLocalServers();
 
   const {
@@ -57,31 +61,31 @@ export function DevicesTab({ houseId, activeTab }: DevicesTabProps) {
     }
   }, [addDeviceModalOpen, activeTab, loadDevices, loadServers]);
 
+  const resolvedDetailsPathPrefix =
+    detailsPathPrefix ??
+    (houseId ? `/admin/access-control/houses/${encodeURIComponent(houseId)}/devices` : null);
+
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <ConnectedLocalServersPanel
-          servers={servers}
-          loading={serversLoading}
-          onLogoutFrontend={logoutFrontend}
-          onLogoutServer={logoutServer}
-        />
-
         <DevicesListHeader
           houseId={houseId}
           onAddDevice={() => houseId && openAddDeviceModal(houseId)}
+          canManage={canManage}
         />
 
         <DevicesListContent
           houseId={houseId}
           devices={devices}
-          loading={devicesLoading}
+          servers={servers}
+          loading={devicesLoading || serversLoading}
           error={devicesError}
           errorDetails={devicesErrorDetails}
           getLiveState={getLiveState}
           isSocketConnected={isSocketConnected}
+          detailsPathPrefix={resolvedDetailsPathPrefix}
           onRetry={() => void loadDevices()}
-          onDeviceRemoved={removeDevice}
+          onDeviceRemoved={canManage ? removeDevice : undefined}
         />
 
         {houseId && devicesPages > 1 ? (

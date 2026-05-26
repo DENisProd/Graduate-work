@@ -1,21 +1,23 @@
 'use client';
 
-import { useMemo } from 'react';
-import { useParams } from 'next/navigation';
-import { useAccessControlStore } from '@/store/access-control-store';
+import { useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { useHousePermissions } from '@/hooks';
 import { SettingsTab } from '@/features/access-control/ui/house-details/tabs/SettingsTab';
 
 export default function HouseSettingsPage() {
   const params = useParams();
-  const houseIdParam = params?.houseId as string | undefined;
-  const house = useAccessControlStore((s) => s.house);
+  const router = useRouter();
+  const houseId = (params?.houseId as string | undefined) ?? null;
+  const perms = useHousePermissions();
 
-  const houseId = useMemo(() => {
-    if (house?.id != null) return String(house.id);
-    if (!houseIdParam) return null;
-    return houseIdParam;
-  }, [house, houseIdParam]);
+  useEffect(() => {
+    if (!perms.loading && !perms.isOwner) {
+      router.replace(houseId ? `/dashboard/houses/${encodeURIComponent(houseId)}` : '/dashboard');
+    }
+  }, [perms.loading, perms.isOwner, houseId, router]);
 
-  return <SettingsTab houseId={houseId} />;
+  if (!perms.isOwner) return null;
+
+  return <SettingsTab houseId={houseId} canManage={perms.isOwner} />;
 }
-

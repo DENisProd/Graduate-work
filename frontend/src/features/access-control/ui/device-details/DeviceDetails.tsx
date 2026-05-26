@@ -6,10 +6,10 @@ import { useTranslation } from '@/hooks';
 import { useToast } from '@/components/shared';
 import { ApiError, physicalDevicesApi, deviceDataApi } from '@/lib/api-client';
 import type { PhysicalDeviceResponse, DeviceDataResponse, DeviceDataSeriesResponse } from '@/types/api';
-import { Badge } from '@/components/ui/badge';
-import { AppButton } from '@/components/ui/app-button';
 import { connectivityFromLastOnline, connectivityLabel, type ConnectivityStatus } from '@/lib/device-connectivity';
 import { Chart, type AxisOptions } from 'react-charts';
+import { parseLocalServerDeviceId } from '@/features/access-control/lib/local-server-device';
+import { LocalServerDetails } from './LocalServerDetails';
 
 interface DeviceDetailsProps {
   houseId: string;
@@ -910,6 +910,30 @@ function DeviceHistorySection({ deviceId }: { deviceId: string }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function DeviceDetails({ houseId, deviceId, backHref, backLabel }: DeviceDetailsProps) {
+  const localServerId = parseLocalServerDeviceId(deviceId);
+
+  if (localServerId) {
+    return (
+      <LocalServerDetails
+        houseId={houseId}
+        serverId={localServerId}
+        backHref={backHref}
+        backLabel={backLabel}
+      />
+    );
+  }
+
+  return (
+    <PhysicalDeviceDetails
+      houseId={houseId}
+      deviceId={deviceId}
+      backHref={backHref}
+      backLabel={backLabel}
+    />
+  );
+}
+
+function PhysicalDeviceDetails({ houseId, deviceId, backHref, backLabel }: DeviceDetailsProps) {
   const { t } = useTranslation();
   const { showToast } = useToast();
   const router = useRouter();
@@ -1072,32 +1096,8 @@ export function DeviceDetails({ houseId, deviceId, backHref, backLabel }: Device
       ) : null}
 
       {/* Hero card */}
-      <div
-        className="relative overflow-hidden rounded-2xl border border-border bg-card"
-      >
-        {/* Decorative mesh */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0"
-          style={{
-            backgroundImage: `radial-gradient(ellipse 60% 50% at 80% 50%, ${
-              status === 'ONLINE'
-                ? 'rgba(16,185,129,0.10)'
-                : status === 'ERROR'
-                  ? 'rgba(239,68,68,0.10)'
-                  : 'rgba(113,113,122,0.08)'
-            } 0%, transparent 70%)`,
-          }}
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23fff' fill-opacity='1'%3E%3Ccircle cx='20' cy='20' r='0.5'/%3E%3C/g%3E%3C/svg%3E")`,
-          }}
-        />
-
-        <div className="relative flex flex-wrap items-center gap-5 px-6 py-5 sm:flex-nowrap">
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
+        <div className="flex flex-wrap items-center gap-5 px-6 py-5 sm:flex-nowrap">
           {/* Device icon */}
           <div
             className="flex size-16 shrink-0 items-center justify-center rounded-2xl border border-border bg-muted/40"

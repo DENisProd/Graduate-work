@@ -45,16 +45,6 @@ export function RoleDetailsPanel({
           <dt className="text-muted-foreground">{t('admin.accessControl.rolesTablePriority')}</dt>
           <dd className="font-medium">{selectedRole.priority ?? '—'}</dd>
         </div>
-        <div>
-          <dt className="text-muted-foreground">{t('admin.accessControl.rolesTableSystem')}</dt>
-          <dd className="font-medium">
-            {selectedRole.system ? t('admin.accessControl.rolesTableSystem') : '—'}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">{t('admin.accessControl.rolesTableUsers')}</dt>
-          <dd className="font-medium">{selectedRole.memberCount ?? 0}</dd>
-        </div>
       </dl>
 
       <div className="mt-4 border-t border-border pt-3">

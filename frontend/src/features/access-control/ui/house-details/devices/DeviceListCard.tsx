@@ -34,16 +34,16 @@ function definitionStringField(
 
 export function DeviceListCard({
   device,
-  houseId,
+  detailsPathPrefix,
   live,
   isSocketConnected,
   onRemoved,
 }: {
   device: ZigbeeDeviceListItem;
-  houseId: string;
+  detailsPathPrefix: string;
   live: ZigbeeStateWire | undefined;
   isSocketConnected: boolean;
-  onRemoved: (id: string) => void;
+  onRemoved?: (id: string) => void;
 }) {
   const router = useRouter();
   const { t, locale } = useTranslation();
@@ -56,7 +56,7 @@ export function DeviceListCard({
     definitionStringField(device.definition, 'vendor') ?? device.manufacturerName ?? null;
   const defDescription = definitionStringField(device.definition, 'description');
   const showTelemetry = isZigbeeDevice(device) || Boolean(live);
-  const lastOnline = live?.timestamp ?? (device as any)?.lastSeen ?? null;
+  const lastOnline = live?.timestamp ?? device.lastSeen ?? null;
   const connectivity = connectivityFromLastOnline(lastOnline);
   const isOffline = connectivity === 'OFFLINE';
   const telemetryPulseKey = useTelemetryPulseKey(connectivity === 'ONLINE' ? live : undefined);
@@ -104,7 +104,7 @@ export function DeviceListCard({
     try {
       await zigbeeDevicesApi.remove(ieeeAddr, true);
       showToast(t('admin.accessControl.connectedDevices.removeDeviceSuccess'), 'success');
-      onRemoved(device.id);
+      onRemoved?.(device.id);
     } catch {
       showToast(t('admin.accessControl.connectedDevices.removeDeviceError'), 'error');
     } finally {
@@ -124,7 +124,7 @@ export function DeviceListCard({
         'relative cursor-pointer border border-border bg-card shadow-sm transition hover:border-accent',
         isOffline && 'hover:border-border'
       )}
-      onClick={() => router.push(`/admin/access-control/houses/${houseId}/devices/${device.id}`)}
+      onClick={() => router.push(`${detailsPathPrefix}/${encodeURIComponent(device.id)}`)}
     >
       <TelemetryFlashOverlay pulseKey={telemetryPulseKey} />
       {isOffline ? (
@@ -221,7 +221,7 @@ export function DeviceListCard({
               {t('admin.accessControl.connectedDevices.protocolZigbee')}
             </Badge>
           ) : null}
-          {ieeeAddr ? (
+          {ieeeAddr && onRemoved ? (
             <button
               type="button"
               title={t('admin.accessControl.connectedDevices.removeDevice')}

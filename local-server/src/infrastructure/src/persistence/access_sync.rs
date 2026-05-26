@@ -1,10 +1,11 @@
 use async_trait::async_trait;
 use chrono::Utc;
 use local_server_application::ports::{
-    AccessSyncRepository, RemoteHouse, RemoteHouseMember, RemoteRoom, SyncStatus,
+    AccessSyncRepository, RemoteHouse, RemoteHouseMember, RemoteHouseRole, RemoteRoom, SyncStatus,
 };
 use local_server_core::DomainError;
 use sqlx::SqlitePool;
+use uuid::Uuid;
 
 pub struct SqliteAccessSyncRepo {
     pool: SqlitePool,
@@ -220,6 +221,115 @@ ON CONFLICT(id) DO UPDATE SET
             .execute(&self.pool)
             .await
             .map_err(db_err)?;
+        }
+        Ok(())
+    }
+
+    async fn upsert_rbac_roles(
+        &self,
+        _house_id: &str,
+        roles: &[RemoteHouseRole],
+    ) -> Result<(), DomainError> {
+        let now = Utc::now().to_rfc3339();
+        for role in roles {
+            sqlx::query(
+                r#"
+INSERT INTO house_roles(id, name, priority, is_system, house_id, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET
+  name      = excluded.name,
+  priority  = excluded.priority,
+  is_system = excluded.is_system,
+  updated_at = excluded.updated_at
+"#,
+            )
+            .bind(&role.id)
+            .bind(&role.name)
+            .bind(role.priority as i64)
+            .bind(role.is_system as i64)
+            .bind(&role.house_id)
+            .bind(&now)
+            .bind(&now)
+            .execute(&self.pool)
+            .await
+            .map_err(db_err)?;
+        }
+        Ok(())
+    }
+
+    async fn upsert_rbac_members(
+        &self,
+        house_id: &str,
+        members: &[RemoteHouseMember],
+    ) -> Result<(), DomainError> {
+        let now = Utc::now().to_rfc3339();
+        for m in members {
+            // Ensure the user row exists (users.id = external_user_id in this schema).
+            sqlx::query(
+                "INSERT INTO users(id, external_user_id, created_at) VALUES(?,?,?) \
+                 ON CONFLICT(id) DO NOTHING",
+            )
+            .bind(&m.user_id)
+            .bind(&m.user_id)
+            .bind(&now)
+            .execute(&self.pool)
+            .await
+            .map_err(db_err)?;
+
+            // Upsert the RBAC house_member row, using the cloud member ID as PK.
+            sqlx::query(
+                r#"
+INSERT INTO house_members(id, house_id, user_id, joined_at)
+VALUES (?, ?, ?, ?)
+ON CONFLICT(house_id, user_id) DO UPDATE SET
+  removed_at = NULL,
+  joined_at  = excluded.joined_at
+"#,
+            )
+            .bind(&m.id)
+            .bind(house_id)
+            .bind(&m.user_id)
+            .bind(&m.joined_at)
+            .execute(&self.pool)
+            .await
+            .map_err(db_err)?;
+
+            // Fetch the actual local member ID (may differ when conflict resolved).
+            let local_id: Option<String> = sqlx::query_scalar(
+                "SELECT id FROM house_members WHERE house_id = ? AND user_id = ?",
+            )
+            .bind(house_id)
+            .bind(&m.user_id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(db_err)?;
+
+            let local_id = match local_id {
+                Some(id) => id,
+                None => continue,
+            };
+
+            // Replace role assignments with the cloud state.
+            sqlx::query("DELETE FROM house_member_roles WHERE house_member_id = ?")
+                .bind(&local_id)
+                .execute(&self.pool)
+                .await
+                .map_err(db_err)?;
+
+            for role_id in &m.role_ids {
+                let mr_id = Uuid::new_v4().to_string();
+                sqlx::query(
+                    "INSERT OR IGNORE INTO house_member_roles(id, house_member_id, role_id, assigned_at) \
+                     VALUES(?, ?, ?, ?)",
+                )
+                .bind(&mr_id)
+                .bind(&local_id)
+                .bind(role_id)
+                .bind(&now)
+                .execute(&self.pool)
+                .await
+                .map_err(db_err)?;
+            }
         }
         Ok(())
     }

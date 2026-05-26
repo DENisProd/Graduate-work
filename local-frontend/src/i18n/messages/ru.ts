@@ -544,6 +544,11 @@ export const ru = {
     toastScanTriggered: 'Сканирование запущено',
     toastScanFailed: 'Ошибка запуска сканирования',
   },
+  authBanner: {
+    deniedTitle: 'Авторизация отклонена — синхронизация отключена',
+    deniedHint: 'Облачный сервис отклонил авторизацию устройства. Повторите в Настройках.',
+    goToSettings: 'Настройки',
+  },
   placeholder: {
     comingIn: 'Появится в {{sprint}}',
   },

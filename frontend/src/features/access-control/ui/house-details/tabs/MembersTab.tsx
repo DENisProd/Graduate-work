@@ -14,6 +14,10 @@ interface MembersTabProps {
   onInvite?: () => void;
   onMemberClick: (member: HouseMemberResponse) => void;
   onRemoveMember: (member: HouseMemberResponse) => void;
+  /** Может ли текущий пользователь приглашать участников */
+  canInvite?: boolean;
+  /** Может ли текущий пользователь удалять участников */
+  canRemove?: boolean;
 }
 
 function memberDisplayName(
@@ -37,6 +41,8 @@ export function MembersTab({
   onInvite,
   onMemberClick,
   onRemoveMember,
+  canInvite = true,
+  canRemove = true,
 }: MembersTabProps) {
   const { t } = useTranslation();
   const { data: session } = useSession();
@@ -52,12 +58,14 @@ export function MembersTab({
         <h3 className="text-sm font-semibold text-foreground">
           {t('admin.accessControl.members')}
         </h3>
-        <div className="flex items-center gap-2">
-          <AppButton onClick={openInviteModal} variant="secondary">
-            <Mail className="size-4" />
-            {t('admin.accessControl.inviteMember')}
-          </AppButton>
-        </div>
+        {canInvite && (
+          <div className="flex items-center gap-2">
+            <AppButton onClick={openInviteModal} variant="secondary">
+              <Mail className="size-4" />
+              {t('admin.accessControl.inviteMember')}
+            </AppButton>
+          </div>
+        )}
       </div>
       {members.length > 0 && (
         <div className="space-y-2">
@@ -102,16 +110,18 @@ export function MembersTab({
                   </p>
                 )}
               </div>
-              <AppButton
-                size="sm"
-                variant="destructive"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRemoveMember(member);
-                }}
-              >
-                {t('admin.delete')}
-              </AppButton>
+              {canRemove && (
+                <AppButton
+                  size="sm"
+                  variant="destructive"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemoveMember(member);
+                  }}
+                >
+                  {t('admin.delete')}
+                </AppButton>
+              )}
             </div>
           ))}
         </div>

@@ -1,25 +1,15 @@
 'use client';
 
-import { useMemo } from 'react';
-
-/** Код разрешения: управление ролями дома (создание, редактирование, удаление ролей с меньшим приоритетом). */
-export const PERMISSION_EDIT_LOWER_ROLES = 'EDIT_LOWER_ROLES';
+export const PERMISSION_EDIT_LOWER_ROLES = 'EDIT_ROLES';
 
 /**
- * Определяет, может ли текущий пользователь управлять ролями дома (Create/Edit/Delete).
- * Требуется разрешение EDIT_LOWER_ROLES для дома.
- *
- * Пока бэкенд не отдаёт список разрешений пользователя для дома,
- * возвращается true (все действия разрешены). Когда будет доступен
- * API вида GET /api/v1/houses/:houseId/members/me или GET /me/permissions,
- * нужно подставить проверку: permissions.includes(PERMISSION_EDIT_LOWER_ROLES).
+ * Whether the current user can manage house roles (create/edit/delete).
+ * Reads from the already-loaded members list via useHousePermissions.
  */
-export function useCanEditHouseRoles(houseId: string | null): boolean {
-  return useMemo(() => {
-    if (!houseId) return false;
-    // TODO: когда бэкенд отдаёт разрешения участника для дома — запросить и проверить
-    // const { data: permissions } = useHouseMemberPermissions(houseId);
-    // return permissions?.includes(PERMISSION_EDIT_LOWER_ROLES) ?? false;
-    return true;
-  }, [houseId]);
+export function useCanEditHouseRoles(_houseId: string | null): boolean {
+  // Lazy import to avoid circular dependency (useHousePermissions → store → here).
+  // The real value is derived inside HouseDetailsWidget via useHousePermissions.
+  // This shim keeps the call-site API unchanged; HouseDetailsWidget now passes
+  // the computed value directly via the canEditRoles prop.
+  return false;
 }

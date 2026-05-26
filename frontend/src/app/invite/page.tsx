@@ -14,20 +14,16 @@ import Link from 'next/link';
 
 type InvitationStatus = 'idle' | 'loading' | 'success' | 'error';
 
-function formatInvitationStatus(status: string, locale?: string): string {
-  const ru = locale === 'ru';
-  switch (status) {
-    case 'PENDING': return ru ? 'Ожидает' : 'Pending';
-    case 'ACCEPTED': return ru ? 'Принято' : 'Accepted';
-    case 'DECLINED': return ru ? 'Отклонено' : 'Declined';
-    case 'REVOKED': return ru ? 'Отозвано' : 'Revoked';
-    case 'EXPIRED': return ru ? 'Истекло' : 'Expired';
-    default: return status;
-  }
-}
+const INVITATION_STATUS_TRANSLATION_KEYS = {
+  PENDING: 'invite.status.pending',
+  ACCEPTED: 'invite.status.accepted',
+  DECLINED: 'invite.status.declined',
+  REVOKED: 'invite.status.revoked',
+  EXPIRED: 'invite.status.expired',
+} as const;
 
 function InviteContent() {
-  const { t, locale } = useTranslation();
+  const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams?.get('token') ?? undefined;
@@ -171,7 +167,17 @@ function InviteContent() {
                 <p className="text-lg font-semibold">
                   {invitation.houseName ?? t('admin.accessControl.houses')}
                 </p>
-                {invitation.status && <Badge variant="secondary">{formatInvitationStatus(invitation.status, locale)}</Badge>}
+                {invitation.status && (
+                  <Badge variant="secondary">
+                    {invitation.status in INVITATION_STATUS_TRANSLATION_KEYS
+                      ? t(
+                          INVITATION_STATUS_TRANSLATION_KEYS[
+                            invitation.status as keyof typeof INVITATION_STATUS_TRANSLATION_KEYS
+                          ]
+                        )
+                      : invitation.status}
+                  </Badge>
+                )}
               </div>
 
               {invitation.expiresAt && (
@@ -222,11 +228,13 @@ function InviteContent() {
 }
 
 export default function InvitePage() {
+  const { t } = useTranslation();
+
   return (
     <Suspense
       fallback={
         <div className="flex min-h-screen items-center justify-center">
-          <span className="text-muted-foreground">Loading…</span>
+          <span className="text-muted-foreground">{t('common.loading')}</span>
         </div>
       }
     >
