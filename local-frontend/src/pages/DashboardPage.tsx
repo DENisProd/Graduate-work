@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import type { Locale } from 'date-fns/locale'
@@ -14,6 +15,7 @@ import {
   CloudOff,
   Clock,
   ArrowUpDown,
+  LayoutDashboard,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -23,6 +25,10 @@ import {
   getZigbeeDevicesCount,
   getScenariosCount,
 } from '@/api/system'
+import { listLocalHouses } from '@/api/local-access'
+import { listWidgetDashboards } from '@/api/widget-dashboards'
+import { useSettingsStore } from '@/stores/settings.store'
+import { WidgetGrid } from '@/components/widgets/WidgetGrid'
 
 function Skeleton({ className }: { className?: string }) {
   return (
@@ -149,6 +155,28 @@ function SyncRow({
 
 export function DashboardPage() {
   const { t, dateLocale } = useI18n()
+  const userId = useSettingsStore((s) => s.userId)
+  const [activeDashId, setActiveDashId] = useState<string | null>(null)
+
+  const housesQ = useQuery({
+    queryKey: ['local-houses', userId],
+    queryFn: () => listLocalHouses(userId || undefined),
+    staleTime: 60_000,
+  })
+  const house = housesQ.data?.[0]
+
+  const dashboardsQ = useQuery({
+    queryKey: ['widget-dashboards', house?.id],
+    queryFn: () => listWidgetDashboards(house!.id),
+    enabled: !!house,
+    staleTime: 30_000,
+  })
+  const dashboards = dashboardsQ.data ?? []
+  const activeDash =
+    dashboards.find((d) => d.id === activeDashId) ??
+    dashboards.find((d) => d.isDefault) ??
+    dashboards[0] ??
+    null
 
   const health = useQuery({
     queryKey: ['system', 'health'],
@@ -231,6 +259,60 @@ export function DashboardPage() {
           />
         </div>
       </section>
+
+      {/* ── Widgets ── */}
+      {house && (
+        <section className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              {t('dashboard.widgetsTitle')}
+            </h2>
+            {dashboards.length > 1 && (
+              <div className="flex gap-1">
+                {dashboards.map((d) => (
+                  <button
+                    key={d.id}
+                    onClick={() => setActiveDashId(d.id)}
+                    className={cn(
+                      'rounded-lg px-2.5 py-1 text-xs font-medium transition-colors',
+                      activeDash?.id === d.id
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                        : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800',
+                    )}
+                  >
+                    {d.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {dashboardsQ.isPending && (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="h-40 animate-pulse rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-800"
+                />
+              ))}
+            </div>
+          )}
+
+          {activeDash && <WidgetGrid dashboard={activeDash} />}
+
+          {dashboardsQ.isSuccess && dashboards.length === 0 && (
+            <div className="flex flex-col items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 py-10 text-center dark:border-slate-800 dark:bg-slate-900/50">
+              <LayoutDashboard className="h-8 w-8 text-slate-300 dark:text-slate-600" />
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                {t('dashboard.noWidgets')}
+              </p>
+              <p className="max-w-sm text-xs text-slate-400 dark:text-slate-500">
+                {t('dashboard.noWidgetsHint')}
+              </p>
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="space-y-2">
         <h2 className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">

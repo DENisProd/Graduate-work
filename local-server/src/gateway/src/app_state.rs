@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use local_server_core::entities::scan_log::{new_scan_log, ScanLog};
 use local_server_application::{
     ports::{
         AccessRepository, AccessSyncRepository, CloudAuthClient, CloudPhysicalDeviceClient,
@@ -52,10 +53,11 @@ pub struct AppState {
     pub modbus_repo: Arc<dyn ModbusRepository>,
     /// Trait object passed to the HTTP layer (avoids interface→infra dependency).
     pub modbus_bridge: Arc<dyn ModbusBridgePort>,
+    pub scan_log: ScanLog,
 }
 
 impl AppState {
-    pub fn new(pool: SqlitePool, mqtt_prefix: String) -> Self {
+    pub fn new(pool: SqlitePool, mqtt_prefix: String, cloud_sync_api_key: String) -> Self {
         let outbox = Arc::new(OutboxWriter::new());
 
         let health = Arc::new(SqliteHealthChecker::new(pool.clone())) as Arc<dyn HealthChecker>;
@@ -84,7 +86,7 @@ impl AppState {
             Arc::new(ReqwestCloudAuthClient::new()) as Arc<dyn CloudAuthClient>;
 
         let cloud_sync_client =
-            Arc::new(ReqwestCloudSyncClient::new()) as Arc<dyn CloudSyncClient>;
+            Arc::new(ReqwestCloudSyncClient::new(cloud_sync_api_key)) as Arc<dyn CloudSyncClient>;
 
         let cloud_scenario_client =
             Arc::new(ReqwestCloudScenarioClient::new()) as Arc<dyn CloudScenarioClient>;
@@ -113,12 +115,16 @@ impl AppState {
         let modbus_gateway = Arc::new(ModbusGateway::new());
         let modbus_bridge = modbus_gateway.clone() as Arc<dyn ModbusBridgePort>;
 
+        let scan_log = new_scan_log();
+
         let mqtt_manager = Arc::new(RuntimeMqttManager::new(
             mqtt_prefix,
             zigbee_repo.clone(),
             phys_repo.clone(),
             realtime_svc.clone(),
             modbus_gateway.clone(),
+            modbus_repo.clone(),
+            scan_log.clone(),
         ));
 
         Self {
@@ -145,6 +151,7 @@ impl AppState {
             mqtt_manager,
             modbus_repo,
             modbus_bridge,
+            scan_log,
         }
     }
 

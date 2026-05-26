@@ -11,7 +11,6 @@ interface SettingsState {
   serverUrl: string
   /** Base URL of NestJS access-service (houses, RBAC). Empty → VITE_ACCESS_SERVICE_URL. */
   accessServiceUrl: string
-  mqttGatewayUrl: string
   userId: string
   authSessionId: string
   authUserCode: string
@@ -29,7 +28,6 @@ interface SettingsState {
   locale: AppLocale
   setServerUrl: (url: string) => void
   setAccessServiceUrl: (url: string) => void
-  setMqttGatewayUrl: (url: string) => void
   setUserId: (id: string) => void
   setAuthState: (patch: Partial<Pick<
     SettingsState,
@@ -55,7 +53,6 @@ export const useSettingsStore = create<SettingsState>()(
     (set) => ({
       serverUrl: import.meta.env.VITE_LOCAL_SERVER_URL || 'http://localhost:8080',
       accessServiceUrl: (import.meta.env.VITE_ACCESS_SERVICE_URL as string | undefined)?.trim() || '',
-      mqttGatewayUrl: import.meta.env.VITE_DEFAULT_GATEWAY_URL || 'mqtt://localhost:1883',
       userId: import.meta.env.VITE_DEFAULT_USER_ID || '',
       authSessionId: '',
       authUserCode: '',
@@ -73,7 +70,6 @@ export const useSettingsStore = create<SettingsState>()(
 
       setServerUrl: (url) => set({ serverUrl: url }),
       setAccessServiceUrl: (url) => set({ accessServiceUrl: url.trim() }),
-      setMqttGatewayUrl: (url) => set({ mqttGatewayUrl: url }),
       setUserId: (id) => set({ userId: id }),
       setAuthState: (patch) => set((state) => ({ ...state, ...patch })),
       resetAuthState: () =>

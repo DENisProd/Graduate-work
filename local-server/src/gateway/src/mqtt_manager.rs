@@ -2,10 +2,11 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use local_server_application::{
-    ports::{MqttClient, PhysicalDeviceRepository, ZigbeeRepository},
+    ports::{MqttClient, ModbusRepository, PhysicalDeviceRepository, ZigbeeRepository},
     services::ZigbeeRealtimeService,
     DomainError,
 };
+use local_server_core::entities::scan_log::ScanLog;
 use local_server_infrastructure::{run_ingestion, ModbusGateway, RumqttcClient};
 use tokio::sync::{Mutex, RwLock};
 
@@ -15,6 +16,8 @@ pub struct RuntimeMqttManager {
     phys_repo: Arc<dyn PhysicalDeviceRepository>,
     realtime_svc: Arc<ZigbeeRealtimeService>,
     modbus_gateway: Arc<ModbusGateway>,
+    modbus_repo: Arc<dyn ModbusRepository>,
+    scan_log: ScanLog,
     current_url: RwLock<Option<String>>,
     client: RwLock<Option<Arc<RumqttcClient>>>,
     ingestion_task: Mutex<Option<tokio::task::JoinHandle<()>>>,
@@ -28,6 +31,8 @@ impl RuntimeMqttManager {
         phys_repo: Arc<dyn PhysicalDeviceRepository>,
         realtime_svc: Arc<ZigbeeRealtimeService>,
         modbus_gateway: Arc<ModbusGateway>,
+        modbus_repo: Arc<dyn ModbusRepository>,
+        scan_log: ScanLog,
     ) -> Self {
         Self {
             topic_prefix,
@@ -35,6 +40,8 @@ impl RuntimeMqttManager {
             phys_repo,
             realtime_svc,
             modbus_gateway,
+            modbus_repo,
+            scan_log,
             current_url: RwLock::new(None),
             client: RwLock::new(None),
             ingestion_task: Mutex::new(None),
@@ -63,6 +70,8 @@ impl RuntimeMqttManager {
             self.realtime_svc.clone(),
             self.topic_prefix.clone(),
             Some(self.modbus_gateway.clone()),
+            self.modbus_repo.clone(),
+            self.scan_log.clone(),
         ));
 
         if let Some(task) = self.ingestion_task.lock().await.take() {

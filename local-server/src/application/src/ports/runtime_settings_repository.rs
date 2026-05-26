@@ -4,7 +4,6 @@ use local_server_core::DomainError;
 
 #[derive(Debug, Clone, Default)]
 pub struct RuntimeSettings {
-    pub mqtt_gateway_url: Option<String>,
     pub access_service_url: Option<String>,
     pub auth_session_id: Option<String>,
     pub auth_status: Option<String>,
@@ -17,7 +16,6 @@ pub struct RuntimeSettings {
 #[async_trait]
 pub trait RuntimeSettingsRepository: Send + Sync {
     async fn load(&self) -> Result<RuntimeSettings, DomainError>;
-    async fn set_mqtt_gateway_url(&self, value: Option<&str>) -> Result<(), DomainError>;
     async fn set_access_service_url(&self, value: Option<&str>) -> Result<(), DomainError>;
     async fn save_auth_session(
         &self,

@@ -7,6 +7,7 @@ import { AppModule } from './app.module';
 import { loadGatewayConfig } from './config/gateway.config';
 import { ProxyService } from './proxy/proxy.service';
 
+// cwd = backend/apps/api-gateway/ (cd'd by start script)
 loadEnv({ path: join(process.cwd(), '../../.env') });
 // Allow local override
 loadEnv({ path: join(process.cwd(), '.env') });
@@ -54,6 +55,7 @@ async function bootstrap() {
   await app.listen(config.port);
   console.log(`API Gateway running on http://localhost:${config.port}`);
   console.log(`CORS origins: ${config.corsOrigins.join(', ')}`);
+  console.log(`MQTT broker proxied at /api/mqtt → ${config.mqttBrokerUrl}`);
 }
 
 bootstrap();

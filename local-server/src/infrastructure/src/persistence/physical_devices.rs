@@ -437,8 +437,8 @@ impl PhysicalDeviceRepository for SqlitePhysicalDeviceRepo {
                  description = COALESCE(?, description), \
                  house_id = COALESCE(?, house_id), \
                  room_id = COALESCE(?, room_id), \
-                 device_id = COALESCE(?, device_id), \
-                 device_category_id = COALESCE(?, device_category_id), \
+                 device_id = COALESCE((SELECT id FROM devices WHERE id = ?), device_id), \
+                 device_category_id = COALESCE((SELECT id FROM device_categories WHERE id = ?), device_category_id), \
                  manufacturer_name = COALESCE(?, manufacturer_name), \
                  model = COALESCE(?, model), \
                  friendly_name = COALESCE(?, friendly_name), \
@@ -478,7 +478,10 @@ impl PhysicalDeviceRepository for SqlitePhysicalDeviceRepo {
                   device_id, device_category_id, protocol_address, \
                   manufacturer_name, model, friendly_name, firmware_version, \
                   created_at, updated_at) \
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                 VALUES (?, ?, ?, ?, ?, ?, \
+                         (SELECT id FROM devices WHERE id = ?), \
+                         (SELECT id FROM device_categories WHERE id = ?), \
+                         ?, ?, ?, ?, ?, ?, ?)",
             )
             .bind(&id_str)
             .bind(cloud_id)

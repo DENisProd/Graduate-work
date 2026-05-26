@@ -26,6 +26,7 @@ pub struct MemberResponse {
     pub id: String,
     pub house_id: String,
     pub user_id: String,
+    pub external_user_id: Option<String>,
     pub joined_at: String,
     pub removed_at: Option<String>,
 }
@@ -36,6 +37,7 @@ impl From<HouseMember> for MemberResponse {
             id: m.id,
             house_id: m.house_id,
             user_id: m.user_id,
+            external_user_id: m.external_user_id,
             joined_at: m.joined_at.to_rfc3339(),
             removed_at: m.removed_at.map(|t| t.to_rfc3339()),
         }

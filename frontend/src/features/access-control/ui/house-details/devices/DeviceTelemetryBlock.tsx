@@ -2,9 +2,7 @@
 
 import { formatDateTime } from '@/lib/utils';
 import type { ZigbeeStateWire } from '@/types/api';
-import type { useTranslation } from '@/hooks';
-
-type DevicesTabTranslate = ReturnType<typeof useTranslation>['t'];
+import { useTranslation } from '@/hooks';
 
 function payloadBool(payload: Record<string, unknown>, key: string): boolean | null {
   const v = payload[key];
@@ -41,14 +39,11 @@ function BatteryIcon({ level }: { level: number }) {
 export function DeviceTelemetryBlock({
   live,
   socketConnected,
-  t,
-  locale,
 }: {
   live: ZigbeeStateWire | undefined;
   socketConnected: boolean;
-  t: DevicesTabTranslate;
-  locale: string;
 }) {
+  const { t, locale } = useTranslation();
   const m = live?.metrics;
   const payload = live?.payload ?? {};
 

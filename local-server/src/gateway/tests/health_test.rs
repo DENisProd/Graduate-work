@@ -33,9 +33,6 @@ impl RuntimeSettingsRepository for NoopSettingsRepo {
     async fn load(&self) -> Result<RuntimeSettings, DomainError> {
         Ok(RuntimeSettings::default())
     }
-    async fn set_mqtt_gateway_url(&self, _value: Option<&str>) -> Result<(), DomainError> {
-        Ok(())
-    }
     async fn set_access_service_url(&self, _value: Option<&str>) -> Result<(), DomainError> {
         Ok(())
     }

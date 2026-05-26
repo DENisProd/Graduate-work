@@ -21,7 +21,7 @@ impl ReqwestCloudAuthClient {
     }
 
     fn url(base: &str, path: &str) -> String {
-        format!("{}/api/v1{}", base.trim_end_matches('/'), path)
+        format!("{}/api/access/v1{}", base.trim_end_matches('/'), path)
     }
 }
 
@@ -65,15 +65,17 @@ impl CloudAuthClient for ReqwestCloudAuthClient {
         access_service_url: &str,
         callback_url: Option<&str>,
     ) -> Result<AuthSessionStartResult, DomainError> {
+        let url = Self::url(access_service_url, "/device-auth/sessions");
+        tracing::info!(url = %url, "start_session → POST");
         let res = self
             .http
-            .post(Self::url(access_service_url, "/device-auth/sessions"))
+            .post(&url)
             .json(&StartSessionRequest {
                 callback_url: callback_url.map(str::to_string),
             })
             .send()
             .await
-            .map_err(|e| DomainError::DependencyUnavailable(format!("access-service start_session: {e}")))?;
+            .map_err(|e| DomainError::DependencyUnavailable(format!("access-service start_session {url}: {e}")))?;
 
         let status = res.status();
         if !status.is_success() {
@@ -102,15 +104,14 @@ impl CloudAuthClient for ReqwestCloudAuthClient {
         access_service_url: &str,
         session_id: &str,
     ) -> Result<AuthPollResult, DomainError> {
+        let url = Self::url(access_service_url, &format!("/device-auth/sessions/{session_id}/poll"));
+        tracing::debug!(url = %url, "poll_session → GET");
         let res = self
             .http
-            .get(Self::url(
-                access_service_url,
-                &format!("/device-auth/sessions/{session_id}/poll"),
-            ))
+            .get(&url)
             .send()
             .await
-            .map_err(|e| DomainError::DependencyUnavailable(format!("access-service poll_session: {e}")))?;
+            .map_err(|e| DomainError::DependencyUnavailable(format!("access-service poll_session {url}: {e}")))?;
 
         let status = res.status();
         if !status.is_success() {
@@ -146,9 +147,11 @@ impl CloudAuthClient for ReqwestCloudAuthClient {
         access_service_url: &str,
         args: CompleteAuthArgs,
     ) -> Result<(), DomainError> {
+        let url = Self::url(access_service_url, "/device-auth/confirm");
+        tracing::info!(url = %url, "complete_session → POST");
         let res = self
             .http
-            .post(Self::url(access_service_url, "/device-auth/confirm"))
+            .post(&url)
             .json(&CompleteSessionRequest {
                 user_code: args.user_code,
                 external_user_id: args.external_user_id,
@@ -156,7 +159,7 @@ impl CloudAuthClient for ReqwestCloudAuthClient {
             })
             .send()
             .await
-            .map_err(|e| DomainError::DependencyUnavailable(format!("access-service complete_session: {e}")))?;
+            .map_err(|e| DomainError::DependencyUnavailable(format!("access-service complete_session {url}: {e}")))?;
 
         let status = res.status();
         if !status.is_success() {
@@ -173,15 +176,14 @@ impl CloudAuthClient for ReqwestCloudAuthClient {
         access_service_url: &str,
         session_id: &str,
     ) -> Result<(), DomainError> {
+        let url = Self::url(access_service_url, &format!("/device-auth/sessions/{session_id}/logout"));
+        tracing::info!(url = %url, "logout_session → POST");
         let res = self
             .http
-            .post(Self::url(
-                access_service_url,
-                &format!("/device-auth/sessions/{session_id}/logout"),
-            ))
+            .post(&url)
             .send()
             .await
-            .map_err(|e| DomainError::DependencyUnavailable(format!("access-service logout_session: {e}")))?;
+            .map_err(|e| DomainError::DependencyUnavailable(format!("access-service logout_session {url}: {e}")))?;
 
         let status = res.status();
         if !status.is_success() {

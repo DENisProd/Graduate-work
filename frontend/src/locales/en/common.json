@@ -610,7 +610,21 @@
         "removeDeviceConfirmTitle": "Remove device?",
         "removeDeviceConfirmText": "This will permanently delete the device from the system and remove it from the Zigbee coordinator. All telemetry history will also be deleted. This action cannot be undone.",
         "removeDeviceSuccess": "Device removed from system",
-        "removeDeviceError": "Failed to remove device"
+        "removeDeviceError": "Failed to remove device",
+        "localServer": {
+          "panelTitle": "Connected local-server",
+          "empty": "No authorized local-server instances yet.",
+          "defaultDisplayName": "Local user",
+          "sessionMeta": "session {{sessionId}} · code {{userCode}}",
+          "logoutFrontend": "Logout frontend",
+          "logout": "Logout local-server",
+          "logoutSuccess": "Local-server session logged out",
+          "logoutError": "Failed to logout local-server session"
+        },
+        "serviceUnavailable": {
+          "title": "Scenario/device service is unavailable",
+          "description": "Failed to load devices and/or telemetry."
+        }
       },
       "scenarioEditor": {
         "titleCreate": "Create scenario",

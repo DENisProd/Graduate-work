@@ -6,11 +6,20 @@ use serde_json::Value;
 use tokio::sync::broadcast;
 
 use local_server_application::{
-    ports::{PhysicalDeviceRepository, ZigbeeRepository},
-    ports::physical_device_repository::UpsertFromBridgeCmd,
+    ports::{
+        ModbusRepository,
+        PhysicalDeviceRepository,
+        ZigbeeRepository,
+        modbus_repository::{CreateModbusDeviceCmd, CreateModbusRegisterCmd},
+        physical_device_repository::UpsertFromBridgeCmd,
+    },
     services::ZigbeeRealtimeService,
 };
-use local_server_core::entities::zigbee::{PairingEvent, ZigbeeDeviceState, ZigbeeMetrics};
+use local_server_core::entities::{
+    modbus::RegisterType,
+    scan_log::{ScanLog, ScanLogDevice, ScanLogEntry, SCAN_LOG_CAPACITY},
+    zigbee::{PairingEvent, ZigbeeDeviceState, ZigbeeMetrics},
+};
 
 use super::client::MqttMessage;
 use super::modbus_gateway::ModbusGateway;
@@ -40,13 +49,15 @@ pub async fn run_ingestion(
     realtime_svc: Arc<ZigbeeRealtimeService>,
     prefix: String,
     modbus_gateway: Option<Arc<ModbusGateway>>,
+    modbus_repo: Arc<dyn ModbusRepository>,
+    scan_log: ScanLog,
 ) {
     tracing::info!(prefix = %prefix, "MQTT ingestion started");
     let mut state = IngestState::default();
     loop {
         match rx.recv().await {
             Ok(msg) => {
-                // Route modbus responses before the zigbee prefix check.
+                // Route modbus topics before the zigbee prefix check.
                 if msg.topic == "modbus/response" {
                     tracing::info!(
                         bytes = msg.payload.len(),
@@ -57,6 +68,10 @@ pub async fn run_ingestion(
                     } else {
                         tracing::warn!("modbus: received modbus/response but gateway is None");
                     }
+                    continue;
+                }
+                if msg.topic == "modbus/discovered" {
+                    handle_modbus_discovered(&msg.payload, &modbus_repo, &scan_log).await;
                     continue;
                 }
                 handle_message(
@@ -440,4 +455,285 @@ fn parse_bool(v: &Value, keys: &[&str]) -> Option<bool> {
         }
     }
     None
+}
+
+/// Handle `modbus/discovered` — auto-register new Modbus devices found by the bridge scan.
+///
+/// For each discovered slave that is not yet in the DB, creates a ModbusDevice entry
+/// and two default writable coil registers (channel 1 at address 0, channel 2 at address 1),
+/// which covers the most common case of a two-channel relay.
+async fn handle_modbus_discovered(
+    payload: &[u8],
+    modbus_repo: &Arc<dyn ModbusRepository>,
+    scan_log: &ScanLog,
+) {
+    let v: Value = match serde_json::from_slice(payload) {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::warn!(error = %e, "modbus/discovered: invalid JSON payload");
+            return;
+        }
+    };
+
+    let discovered = match v["discovered"].as_array() {
+        Some(arr) => arr.clone(),
+        None => return,
+    };
+
+    if discovered.is_empty() {
+        tracing::info!("modbus/discovered: scan found no devices on the bus");
+        return;
+    }
+
+    let existing = match modbus_repo.list_devices().await {
+        Ok(devs) => devs,
+        Err(e) => {
+            tracing::warn!(error = %e, "modbus/discovered: cannot load existing devices");
+            return;
+        }
+    };
+
+    let mut registered = 0usize;
+    let mut log_devices: Vec<ScanLogDevice> = Vec::new();
+    for entry in &discovered {
+        let slave_id = match entry["slave_id"].as_i64() {
+            Some(id) => id,
+            None => continue,
+        };
+        let baud_rate = entry["baud_rate"].as_u64().unwrap_or(9600);
+
+        let coils_preview    = entry["coils"].as_u64().unwrap_or(0) as u16;
+        let discrete_preview = entry["discrete_inputs"].as_u64().unwrap_or(0) as u16;
+        let holding_preview  = entry["holding_registers"].as_u64().unwrap_or(0) as u16;
+        let input_preview    = entry["input_registers"].as_u64().unwrap_or(0) as u16;
+
+        let is_new = !existing.iter().any(|d| d.slave_id == slave_id);
+        if !is_new {
+            tracing::debug!(slave_id, "modbus/discovered: already registered, skipping");
+            log_devices.push(ScanLogDevice {
+                slave_id,
+                baud_rate: baud_rate as u64,
+                coils: coils_preview,
+                discrete_inputs: discrete_preview,
+                holding_registers: holding_preview,
+                input_registers: input_preview,
+                is_new: false,
+                name: existing
+                    .iter()
+                    .find(|d| d.slave_id == slave_id)
+                    .map(|d| d.name.clone())
+                    .unwrap_or_default(),
+            });
+            continue;
+        }
+
+        let device_name = classify_device_name(slave_id, coils_preview, discrete_preview, holding_preview, input_preview);
+
+        let device = match modbus_repo
+            .create_device(CreateModbusDeviceCmd {
+                name: device_name,
+                slave_id,
+                description: Some(format!(
+                    "Автоматически обнаружено. Скорость: {} бод. Coil: {}, Discrete: {}, Holding: {}, Input: {}",
+                    baud_rate, coils_preview, discrete_preview, holding_preview, input_preview,
+                )),
+                enabled: true,
+            })
+            .await
+        {
+            Ok(d) => d,
+            Err(e) => {
+                tracing::warn!(slave_id, error = %e, "modbus/discovered: failed to create device");
+                continue;
+            }
+        };
+
+        let coils    = entry["coils"].as_u64().unwrap_or(0) as u16;
+        let discrete = entry["discrete_inputs"].as_u64().unwrap_or(0) as u16;
+        let holding  = entry["holding_registers"].as_u64().unwrap_or(0) as u16;
+        let input    = entry["input_registers"].as_u64().unwrap_or(0) as u16;
+
+        tracing::info!(
+            slave_id, baud_rate, device_id = %device.id,
+            coils, discrete, holding, input,
+            "modbus/discovered: device auto-registered"
+        );
+
+        log_devices.push(ScanLogDevice {
+            slave_id,
+            baud_rate: baud_rate as u64,
+            coils,
+            discrete_inputs: discrete,
+            holding_registers: holding,
+            input_registers: input,
+            is_new: true,
+            name: device.name.clone(),
+        });
+
+        // Create registers based on what the device actually supports.
+        auto_create_registers(modbus_repo, device.id, slave_id, coils, discrete, holding, input).await;
+
+        registered += 1;
+    }
+
+    tracing::info!(
+        found = discovered.len(),
+        registered,
+        "modbus/discovered: auto-registration complete",
+    );
+
+    // Write to scan log
+    let entry = ScanLogEntry {
+        timestamp: Utc::now(),
+        found: discovered.len(),
+        registered,
+        devices: log_devices,
+    };
+    if let Ok(mut log) = scan_log.lock() {
+        log.push_front(entry);
+        if log.len() > SCAN_LOG_CAPACITY {
+            log.pop_back();
+        }
+    }
+}
+
+/// Pick a human-readable device name based on which register types it supports.
+fn classify_device_name(slave_id: i64, coils: u16, discrete: u16, holding: u16, input: u16) -> String {
+    let has_digital_out = coils > 0;
+    let has_digital_in  = discrete > 0;
+    let has_analog_out  = holding > 0;
+    let has_analog_in   = input > 0;
+
+    let kind = match (has_digital_out, has_digital_in, has_analog_out, has_analog_in) {
+        (true,  false, false, false) => "Реле",
+        (true,  true,  false, false) => "Реле с входами",
+        (false, false, true,  false) => "Регулятор",
+        (false, false, false, true)  => "Датчик",
+        (false, false, true,  true)  => "Датчик",
+        (true,  false, true,  false) => "Устройство управления",
+        _                            => "Устройство Modbus",
+    };
+
+    format!("{} (slave {})", kind, slave_id)
+}
+
+/// Create registers appropriate for what the device actually responded to.
+async fn auto_create_registers(
+    modbus_repo: &Arc<dyn ModbusRepository>,
+    device_id: uuid::Uuid,
+    slave_id: i64,
+    coils: u16,
+    discrete: u16,
+    holding: u16,
+    input: u16,
+) {
+    // Coil registers — one per channel (writable digital output)
+    for i in 0..coils {
+        let name = if coils == 1 {
+            "Канал".to_string()
+        } else {
+            format!("Канал {}", i + 1)
+        };
+        if let Err(e) = modbus_repo
+            .create_register(CreateModbusRegisterCmd {
+                device_id,
+                name,
+                register_type: RegisterType::Coil,
+                address: i as i64,
+                count: 1,
+                unit: None,
+                scale_factor: 1.0,
+                offset: 0.0,
+                writable: true,
+            })
+            .await
+        {
+            tracing::warn!(slave_id, coil = i, error = %e, "modbus/discovered: failed to create coil register");
+        }
+    }
+
+    // Discrete input registers — one per input (read-only digital)
+    for i in 0..discrete {
+        let name = if discrete == 1 {
+            "Вход".to_string()
+        } else {
+            format!("Вход {}", i + 1)
+        };
+        if let Err(e) = modbus_repo
+            .create_register(CreateModbusRegisterCmd {
+                device_id,
+                name,
+                register_type: RegisterType::Discrete,
+                address: i as i64,
+                count: 1,
+                unit: None,
+                scale_factor: 1.0,
+                offset: 0.0,
+                writable: false,
+            })
+            .await
+        {
+            tracing::warn!(slave_id, discrete = i, error = %e, "modbus/discovered: failed to create discrete register");
+        }
+    }
+
+    // Holding registers — one block for all (read/write 16-bit)
+    if holding > 0 {
+        if let Err(e) = modbus_repo
+            .create_register(CreateModbusRegisterCmd {
+                device_id,
+                name: "Holding registers".to_string(),
+                register_type: RegisterType::Holding,
+                address: 0,
+                count: holding as i64,
+                unit: None,
+                scale_factor: 1.0,
+                offset: 0.0,
+                writable: true,
+            })
+            .await
+        {
+            tracing::warn!(slave_id, error = %e, "modbus/discovered: failed to create holding register");
+        }
+    }
+
+    // Input registers — one block for all (read-only 16-bit, sensors)
+    if input > 0 {
+        if let Err(e) = modbus_repo
+            .create_register(CreateModbusRegisterCmd {
+                device_id,
+                name: "Измерения".to_string(),
+                register_type: RegisterType::Input,
+                address: 0,
+                count: input as i64,
+                unit: None,
+                scale_factor: 1.0,
+                offset: 0.0,
+                writable: false,
+            })
+            .await
+        {
+            tracing::warn!(slave_id, error = %e, "modbus/discovered: failed to create input register");
+        }
+    }
+
+    // If nothing was detected, fall back to 2 coil registers (most common case)
+    if coils == 0 && discrete == 0 && holding == 0 && input == 0 {
+        tracing::warn!(slave_id, "modbus/discovered: no capabilities detected, creating 2 default coil registers");
+        for i in 0..2u16 {
+            let _ = modbus_repo
+                .create_register(CreateModbusRegisterCmd {
+                    device_id,
+                    name: format!("Канал {}", i + 1),
+                    register_type: RegisterType::Coil,
+                    address: i as i64,
+                    count: 1,
+                    unit: None,
+                    scale_factor: 1.0,
+                    offset: 0.0,
+                    writable: true,
+                })
+                .await;
+        }
+    }
 }

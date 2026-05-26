@@ -96,7 +96,6 @@ export function SettingsPage() {
   const queryClient = useQueryClient()
   const {
     serverUrl,
-    mqttGatewayUrl,
     userId,
     theme,
     authSessionId,
@@ -110,7 +109,6 @@ export function SettingsPage() {
     isAuthPolling,
     setServerUrl,
     setAccessServiceUrl,
-    setMqttGatewayUrl,
     setUserId,
     resetAuthState,
     setAuthState,
@@ -118,7 +116,6 @@ export function SettingsPage() {
   } = useSettingsStore()
 
   const [urlDraft, setUrlDraft] = useState(serverUrl)
-  const [mqttDraft, setMqttDraft] = useState(mqttGatewayUrl)
   const [accessServiceUrlDraft, setAccessServiceUrlDraft] = useState('http://localhost:8085')
   const [userIdDraft, setUserIdDraft] = useState(userId)
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('idle')
@@ -133,10 +130,6 @@ export function SettingsPage() {
 
   useEffect(() => {
     if (!runtimeSettings) return
-    if (runtimeSettings.mqttGatewayUrl) {
-      setMqttDraft(runtimeSettings.mqttGatewayUrl)
-      setMqttGatewayUrl(runtimeSettings.mqttGatewayUrl)
-    }
     if (runtimeSettings.accessServiceUrl) {
       setAccessServiceUrlDraft(runtimeSettings.accessServiceUrl)
       setAccessServiceUrl(runtimeSettings.accessServiceUrl)
@@ -149,7 +142,7 @@ export function SettingsPage() {
       authDisplayName: runtimeSettings.authDisplayName ?? '',
       authExpiresAt: runtimeSettings.authExpiresAt ?? '',
     })
-  }, [runtimeSettings, setAuthState, setMqttGatewayUrl, setAccessServiceUrl])
+  }, [runtimeSettings, setAuthState, setAccessServiceUrl])
 
   const handleSaveUrl = () => {
     setServerUrl(urlDraft)
@@ -178,10 +171,8 @@ export function SettingsPage() {
 
   const handleSaveGateway = async () => {
     const updated = await updateRuntimeSettings({
-      mqttGatewayUrl: mqttDraft,
       accessServiceUrl: accessServiceUrlDraft,
     })
-    setMqttGatewayUrl(mqttDraft)
     if (updated.accessServiceUrl) {
       setAccessServiceUrl(updated.accessServiceUrl)
     }
@@ -344,22 +335,32 @@ export function SettingsPage() {
       <section>
         <SectionTitle>{t('settings.gateway')}</SectionTitle>
         <Card>
-          <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
+          <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
             {t('settings.gatewayHint')}
           </p>
-          <div className="space-y-2">
-            <Input
-              value={mqttDraft}
-              onChange={setMqttDraft}
-              placeholder="mqtt://localhost:1883"
-            />
-            <Input
-              value={accessServiceUrlDraft}
-              onChange={setAccessServiceUrlDraft}
-              placeholder="http://localhost:8085"
-            />
+          <div className="space-y-4">
+            {runtimeSettings?.mqttUrl && (
+              <div>
+                <p className="mb-1 text-xs font-medium text-slate-600 dark:text-slate-400">
+                  MQTT
+                </p>
+                <p className="font-mono text-xs text-slate-500 dark:text-slate-400">
+                  {runtimeSettings.mqttUrl}
+                </p>
+              </div>
+            )}
+            <div>
+              <p className="mb-1 text-xs font-medium text-slate-600 dark:text-slate-400">
+                Access Service URL
+              </p>
+              <Input
+                value={accessServiceUrlDraft}
+                onChange={setAccessServiceUrlDraft}
+                placeholder="http://localhost:8085"
+              />
+            </div>
           </div>
-          <div className="mt-3">
+          <div className="mt-4">
             <Button onClick={() => void handleSaveGateway()}>{t('settings.saveGateway')}</Button>
           </div>
         </Card>

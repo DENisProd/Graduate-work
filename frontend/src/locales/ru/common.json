@@ -612,7 +612,21 @@
         "removeDeviceConfirmTitle": "Удалить устройство?",
         "removeDeviceConfirmText": "Устройство будет полностью удалено из системы и отвязано от Zigbee-координатора. Вся история телеметрии тоже будет удалена. Это действие необратимо.",
         "removeDeviceSuccess": "Устройство удалено из системы",
-        "removeDeviceError": "Не удалось удалить устройство"
+        "removeDeviceError": "Не удалось удалить устройство",
+        "localServer": {
+          "panelTitle": "Подключённый local-server",
+          "empty": "Нет авторизованных экземпляров local-server.",
+          "defaultDisplayName": "Локальный пользователь",
+          "sessionMeta": "сессия {{sessionId}} · код {{userCode}}",
+          "logoutFrontend": "Выйти из фронтенда",
+          "logout": "Выйти из local-server",
+          "logoutSuccess": "Сессия local-server завершена",
+          "logoutError": "Не удалось завершить сессию local-server"
+        },
+        "serviceUnavailable": {
+          "title": "Сервис устройств/сценариев недоступен",
+          "description": "Не удалось загрузить список устройств и/или телеметрию."
+        }
       },
       "scenarioEditor": {
         "titleCreate": "Создание сценария",

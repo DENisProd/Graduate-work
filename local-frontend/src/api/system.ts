@@ -14,7 +14,7 @@ export interface SyncStatus {
 }
 
 export interface RuntimeSettingsResponse {
-  mqttGatewayUrl: string | null
+  mqttUrl: string | null
   accessServiceUrl: string
   mqttConnected: boolean
   authSessionId: string | null
@@ -26,7 +26,6 @@ export interface RuntimeSettingsResponse {
 }
 
 export interface UpdateRuntimeSettingsRequest {
-  mqttGatewayUrl?: string | null
   accessServiceUrl?: string | null
 }
 

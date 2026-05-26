@@ -17,6 +17,7 @@ export class ProxyService {
       scenario: config.scenarioServiceUrl,
       access: config.accessServiceUrl,
       devices: config.deviceServiceUrl,
+      mqtt: config.mqttBrokerUrl,
     };
 
     for (const route of UPSTREAM_ROUTES) {
@@ -50,27 +51,53 @@ export class ProxyService {
   }
 
   private createProxy(
-    prefix: string,
+    _prefix: string,
     target: string,
     pathRewrite?: Record<string, string>,
   ): RequestHandler {
+    // Do NOT pass a path filter here — NestJS strips req.url before middleware
+    // runs, so http-proxy-middleware's internal filter would never match.
+    // Routing is already handled by resolve() using req.originalUrl.
+    const timings = new WeakMap<object, number>();
+
     const options: Options = {
       target,
       changeOrigin: true,
       pathRewrite,
       onError: (err, req, res) => {
-        this.logger.error(`Proxy error → ${target}: ${err.message}`);
+        this.logger.error(
+          `${(req as Request).method} ${getRequestPathname(req as Request)} → ${target} ERROR: ${err.message}`,
+        );
         if (typeof (res as any).status === 'function') {
           (res as Response).status(502).json({ message: `Upstream unavailable: ${err.message}` });
         }
       },
       onProxyReq: (proxyReq, req) => {
+        timings.set(req, Date.now());
         proxyReq.setHeader('X-Forwarded-Host', (req as Request).hostname);
+
+        // Body-parser consumes the stream before this middleware runs.
+        // Re-write the parsed body so the upstream receives the correct payload.
+        const body = (req as Request).body as unknown;
+        if (body !== undefined && body !== null && typeof body === 'object' && Object.keys(body as object).length > 0) {
+          const raw = JSON.stringify(body);
+          proxyReq.setHeader('Content-Type', 'application/json');
+          proxyReq.setHeader('Content-Length', Buffer.byteLength(raw));
+          proxyReq.write(raw);
+        }
+
         this.logger.log(
-          `${(req as Request).method} ${getRequestPathname(req as Request)} → ${target}${proxyReq.path}`,
+          `→ ${(req as Request).method} ${getRequestPathname(req as Request)} proxy to ${target}${proxyReq.path}`,
+        );
+      },
+      onProxyRes: (proxyRes, req) => {
+        const ms = Date.now() - (timings.get(req) ?? Date.now());
+        timings.delete(req);
+        this.logger.log(
+          `← ${(req as Request).method} ${getRequestPathname(req as Request)} ${proxyRes.statusCode} [${ms}ms]`,
         );
       },
     };
-    return createProxyMiddleware(prefix, options);
+    return createProxyMiddleware(options);
   }
 }

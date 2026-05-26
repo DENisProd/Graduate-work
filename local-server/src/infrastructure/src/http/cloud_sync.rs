@@ -7,26 +7,22 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone)]
 pub struct ReqwestCloudSyncClient {
     http: reqwest::Client,
+    api_key: String,
 }
 
 impl ReqwestCloudSyncClient {
-    pub fn new() -> Self {
+    pub fn new(api_key: String) -> Self {
         Self {
             http: reqwest::Client::builder()
                 .timeout(std::time::Duration::from_secs(15))
                 .build()
                 .expect("reqwest client should build"),
+            api_key,
         }
     }
 
     fn url(base: &str, path: &str) -> String {
-        format!("{}/api/v1{}", base.trim_end_matches('/'), path)
-    }
-}
-
-impl Default for ReqwestCloudSyncClient {
-    fn default() -> Self {
-        Self::new()
+        format!("{}/api/access/v1{}", base.trim_end_matches('/'), path)
     }
 }
 
@@ -78,6 +74,7 @@ impl CloudSyncClient for ReqwestCloudSyncClient {
         let res = self
             .http
             .get(&url)
+            .bearer_auth(&self.api_key)
             .header("X-User-Id", user_id)
             .send()
             .await
@@ -119,6 +116,7 @@ impl CloudSyncClient for ReqwestCloudSyncClient {
         let res = self
             .http
             .get(&url)
+            .bearer_auth(&self.api_key)
             .send()
             .await
             .map_err(|e| DomainError::DependencyUnavailable(format!("fetch_house_rooms: {e}")))?;
@@ -156,6 +154,7 @@ impl CloudSyncClient for ReqwestCloudSyncClient {
         let res = self
             .http
             .get(&url)
+            .bearer_auth(&self.api_key)
             .send()
             .await
             .map_err(|e| DomainError::DependencyUnavailable(format!("fetch_house_members: {e}")))?;

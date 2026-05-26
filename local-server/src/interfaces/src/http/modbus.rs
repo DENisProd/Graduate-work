@@ -13,6 +13,7 @@ use local_server_application::ports::{ModbusBridgePort, MqttClient};
 use local_server_core::entities::modbus::{
     ModbusDevice, ModbusRegister, ModbusRegisterState, RegisterType,
 };
+use local_server_core::entities::scan_log::{ScanLog, ScanLogEntry};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -25,6 +26,7 @@ pub struct ModbusHttpState {
     pub repo: Arc<dyn ModbusRepository>,
     pub gateway: Arc<dyn ModbusBridgePort>,
     pub mqtt: Arc<dyn MqttClient>,
+    pub scan_log: ScanLog,
 }
 
 // ─── Response DTOs ────────────────────────────────────────────────────────────
@@ -408,14 +410,33 @@ async fn get_device_state(
     Ok(Json(states.into_iter().map(Into::into).collect()))
 }
 
+// ─── Scan log ─────────────────────────────────────────────────────────────────
+
+async fn get_scan_log(
+    State(s): State<ModbusHttpState>,
+) -> Json<Vec<ScanLogEntry>> {
+    let log = s.scan_log.lock().unwrap();
+    Json(log.iter().cloned().collect())
+}
+
+async fn trigger_scan(
+    State(s): State<ModbusHttpState>,
+) -> Result<StatusCode, AppError> {
+    let payload = serde_json::json!({"action": "scan_bus"});
+    let bytes = serde_json::to_vec(&payload).unwrap();
+    s.mqtt.publish("modbus/command", &bytes).await?;
+    Ok(StatusCode::ACCEPTED)
+}
+
 // ─── Router ───────────────────────────────────────────────────────────────────
 
 pub fn router(
     repo: Arc<dyn ModbusRepository>,
     gateway: Arc<dyn ModbusBridgePort>,
     mqtt: Arc<dyn MqttClient>,
+    scan_log: ScanLog,
 ) -> Router {
-    let state = ModbusHttpState { repo, gateway, mqtt };
+    let state = ModbusHttpState { repo, gateway, mqtt, scan_log };
 
     Router::new()
         // devices
@@ -434,5 +455,8 @@ pub fn router(
         // latest cached state for all registers of a device
         .route("/modbus/devices/:id/state",
             get(get_device_state))
+        // scan log + trigger
+        .route("/modbus/scan-log", get(get_scan_log))
+        .route("/modbus/scan", post(trigger_scan))
         .with_state(state)
 }

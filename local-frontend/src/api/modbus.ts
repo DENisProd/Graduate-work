@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { ModbusDevice, ModbusRegister, ModbusRegisterState } from '@/types'
+import type { ModbusDevice, ModbusRegister, ModbusRegisterState, ScanLogEntry } from '@/types'
 
 // ─── Devices ──────────────────────────────────────────────────────────────────
 
@@ -93,4 +93,15 @@ export async function getDeviceState(deviceId: string): Promise<ModbusRegisterSt
     `/api/v1/modbus/devices/${deviceId}/state`,
   )
   return data
+}
+
+// ─── Scan ──────────────────────────────────────────────────────────────────────
+
+export async function getScanLog(): Promise<ScanLogEntry[]> {
+  const { data } = await api.get<ScanLogEntry[]>('/api/v1/modbus/scan-log')
+  return data
+}
+
+export async function triggerScan(): Promise<void> {
+  await api.post('/api/v1/modbus/scan')
 }

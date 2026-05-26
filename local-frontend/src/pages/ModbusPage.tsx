@@ -14,7 +14,7 @@ import {
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/hooks/useI18n'
-import type { ModbusDevice, ModbusRegister, ModbusRegisterState } from '@/types'
+import type { ModbusDevice, ModbusRegister, ModbusRegisterState, ScanLogEntry } from '@/types'
 import {
   listModbusDevices,
   createModbusDevice,
@@ -25,6 +25,8 @@ import {
   readModbusRegister,
   writeModbusRegister,
   getDeviceState,
+  getScanLog,
+  triggerScan,
 } from '@/api/modbus'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -654,6 +656,136 @@ function RegistersPanel({
   )
 }
 
+// ─── Scan Log ─────────────────────────────────────────────────────────────────
+
+function ScanLogEntryRow({
+  entry,
+  t,
+  dateLocale,
+}: {
+  entry: ScanLogEntry
+  t: (key: string, vars?: Record<string, string | number | undefined>) => string
+  dateLocale: Locale
+}) {
+  return (
+    <div className="rounded-lg border border-slate-100 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+      <div className="mb-2 flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+        <span>{formatTs(entry.timestamp, dateLocale)}</span>
+        <span>{t('modbus.scanFound', { count: entry.found })}</span>
+        <span className="text-emerald-600 dark:text-emerald-400">
+          {t('modbus.scanRegistered', { count: entry.registered })}
+        </span>
+      </div>
+      {entry.devices.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-slate-400">
+                <th className="pb-1 pr-4 text-left font-medium">{t('modbus.scanColName')}</th>
+                <th className="pb-1 pr-4 text-left font-medium">{t('modbus.scanColSlaveId')}</th>
+                <th className="pb-1 pr-4 text-left font-medium">{t('modbus.scanColBaud')}</th>
+                <th className="pb-1 pr-4 text-left font-medium">{t('modbus.scanColRegs')}</th>
+                <th className="pb-1 text-left font-medium">{t('modbus.scanColStatus')}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {entry.devices.map((dev) => {
+                const regParts = [
+                  dev.coils > 0 && `C:${dev.coils}`,
+                  dev.discreteInputs > 0 && `DI:${dev.discreteInputs}`,
+                  dev.holdingRegisters > 0 && `HR:${dev.holdingRegisters}`,
+                  dev.inputRegisters > 0 && `IR:${dev.inputRegisters}`,
+                ].filter(Boolean)
+                return (
+                  <tr key={`${dev.slaveId}-${dev.baudRate}`}>
+                    <td className="py-1 pr-4 font-medium text-slate-800 dark:text-slate-200">
+                      {dev.name}
+                    </td>
+                    <td className="py-1 pr-4 font-mono text-slate-600 dark:text-slate-400">
+                      {dev.slaveId}
+                    </td>
+                    <td className="py-1 pr-4 font-mono text-slate-600 dark:text-slate-400">
+                      {dev.baudRate}
+                    </td>
+                    <td className="py-1 pr-4 text-slate-500 dark:text-slate-400">
+                      {regParts.length > 0 ? regParts.join(' ') : '—'}
+                    </td>
+                    <td className="py-1">
+                      {dev.isNew ? (
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                          {t('modbus.scanNew')}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ScanLogPanel({
+  t,
+  dateLocale,
+}: {
+  t: (key: string, vars?: Record<string, string | number | undefined>) => string
+  dateLocale: Locale
+}) {
+  const queryClient = useQueryClient()
+
+  const { data: log = [] } = useQuery({
+    queryKey: ['modbus-scan-log'],
+    queryFn: getScanLog,
+    refetchInterval: 10_000,
+  })
+
+  const scanMutation = useMutation({
+    mutationFn: triggerScan,
+    onSuccess: () => {
+      toast.success(t('modbus.toastScanTriggered'))
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ['modbus-scan-log'] }), 8_000)
+    },
+    onError: () => toast.error(t('modbus.toastScanFailed')),
+  })
+
+  return (
+    <div className="shrink-0 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+          {t('modbus.scanLog')}
+        </h2>
+        <button
+          onClick={() => scanMutation.mutate()}
+          disabled={scanMutation.isPending}
+          className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
+        >
+          <RefreshCw className={cn('h-3.5 w-3.5', scanMutation.isPending && 'animate-spin')} />
+          {scanMutation.isPending ? t('modbus.scanning') : t('modbus.scan')}
+        </button>
+      </div>
+
+      {log.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-4 text-center">
+          <p className="text-sm text-slate-500 dark:text-slate-400">{t('modbus.scanEmpty')}</p>
+          <p className="mt-1 text-xs text-slate-400">{t('modbus.scanEmptyHint')}</p>
+        </div>
+      ) : (
+        <div className="max-h-56 space-y-2 overflow-y-auto">
+          {[...log].reverse().map((entry, i) => (
+            <ScanLogEntryRow key={i} entry={entry} t={t} dateLocale={dateLocale} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export function ModbusPage() {
@@ -682,7 +814,8 @@ export function ModbusPage() {
   const selectedDevice = devices.find((d) => d.id === selectedDeviceId) ?? null
 
   return (
-    <div className="flex h-full gap-4">
+    <div className="flex h-full flex-col gap-4">
+      <div className="flex min-h-0 flex-1 gap-4">
       {/* Device list sidebar */}
       <div className="flex w-72 shrink-0 flex-col gap-3">
         <div className="flex items-center justify-between">
@@ -806,6 +939,9 @@ export function ModbusPage() {
           t={t}
         />
       )}
+      </div>
+
+      <ScanLogPanel t={t} dateLocale={dateLocale} />
     </div>
   )
 }

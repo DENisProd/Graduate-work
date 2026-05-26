@@ -115,6 +115,8 @@ pub struct HouseMember {
     pub id: String,
     pub house_id: String,
     pub user_id: String,
+    /// Cloud-side user identifier — populated when joined with the users table.
+    pub external_user_id: Option<String>,
     pub joined_at: DateTime<Utc>,
     pub removed_at: Option<DateTime<Utc>>,
 }

@@ -27,7 +27,6 @@ pub async fn run_delta_puller(
     cloud: Arc<dyn CloudSyncClient>,
     interval_secs: u64,
     cloud_api_url: Arc<dyn CloudSyncUrlProvider>,
-    _cloud_api_key: String,
     user_id_provider: Arc<dyn UserIdProvider>,
 ) {
     loop {

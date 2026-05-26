@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use async_trait::async_trait;
-use rumqttc::{AsyncClient, Event, EventLoop, MqttOptions, Packet, QoS};
+use rumqttc::{AsyncClient, Event, EventLoop, MqttOptions, Packet, QoS, Transport};
 use tokio::sync::{broadcast, watch};
 
 use local_server_application::ports::MqttClient;
@@ -29,13 +29,16 @@ impl RumqttcClient {
         mqtt_url: &str,
         topic_prefix: &str,
     ) -> Result<Arc<Self>, anyhow::Error> {
-        let (host, port) = parse_mqtt_url(mqtt_url)?;
+        let (host, port, transport) = parse_mqtt_url(mqtt_url)?;
         let client_id = format!("local-server-{}", uuid::Uuid::new_v4());
 
         let mut opts = MqttOptions::new(&client_id, &host, port);
         opts.set_keep_alive(Duration::from_secs(30));
         opts.set_clean_session(true);
         opts.set_max_packet_size(256 * 1024, 256 * 1024);
+        if let Some(t) = transport {
+            opts.set_transport(t);
+        }
 
         let (inner, eventloop) = AsyncClient::new(opts, 128);
         let (msg_tx, _) = broadcast::channel::<MqttMessage>(256);
@@ -61,6 +64,11 @@ impl RumqttcClient {
             .subscribe("modbus/response", QoS::AtLeastOnce)
             .await
             .map_err(|e| anyhow::anyhow!("MQTT subscribe modbus/response: {e}"))?;
+        client
+            .inner
+            .subscribe("modbus/discovered", QoS::AtLeastOnce)
+            .await
+            .map_err(|e| anyhow::anyhow!("MQTT subscribe modbus/discovered: {e}"))?;
 
         // Spawn the event loop driver in the background
         let tx = client.msg_tx.clone();
@@ -71,6 +79,7 @@ impl RumqttcClient {
             inner2,
             subscribe_topic,
             shutdown_rx,
+            mqtt_url.to_owned(),
         ));
 
         tracing::info!(host = %host, port, prefix = topic_prefix, "MQTT connected");
@@ -96,6 +105,7 @@ async fn run_eventloop(
     client: AsyncClient,
     subscribe_topic: String,
     mut shutdown_rx: watch::Receiver<bool>,
+    broker_url: String,
 ) {
     let mut backoff = 1u64;
     loop {
@@ -109,9 +119,10 @@ async fn run_eventloop(
             ev = eventloop.poll() => match ev {
             Ok(Event::Incoming(Packet::ConnAck(_))) => {
                 backoff = 1;
-                tracing::info!("MQTT reconnected, re-subscribing");
+                tracing::info!(broker = %broker_url, "MQTT reconnected, re-subscribing");
                 client.subscribe(&subscribe_topic, QoS::AtLeastOnce).await.ok();
                 client.subscribe("modbus/response", QoS::AtLeastOnce).await.ok();
+                client.subscribe("modbus/discovered", QoS::AtLeastOnce).await.ok();
             }
             Ok(Event::Incoming(Packet::Publish(p))) => {
                 let msg = MqttMessage { topic: p.topic.clone(), payload: p.payload.to_vec() };
@@ -119,7 +130,7 @@ async fn run_eventloop(
             }
             Ok(_) => {}
             Err(e) => {
-                tracing::warn!(error = %e, backoff_secs = backoff, "MQTT error, will retry");
+                tracing::warn!(broker = %broker_url, error = %e, backoff_secs = backoff, "MQTT error, will retry");
                 tokio::time::sleep(Duration::from_secs(backoff)).await;
                 backoff = (backoff * 2).min(60);
             }
@@ -152,16 +163,34 @@ impl MqttClient for RumqttcClient {
     }
 }
 
-fn parse_mqtt_url(url: &str) -> Result<(String, u16), anyhow::Error> {
+fn parse_mqtt_url(url: &str) -> Result<(String, u16, Option<Transport>), anyhow::Error> {
+    if url.starts_with("ws://") || url.starts_with("wss://") {
+        // Pass the full URL as host so rumqttc constructs the correct WS request.
+        // rumqttc detects a full URI in broker_addr and uses it verbatim.
+        let is_tls = url.starts_with("wss://");
+        let stripped = url
+            .strip_prefix("wss://")
+            .or_else(|| url.strip_prefix("ws://"))
+            .unwrap_or(url);
+        let host_port = stripped.split('/').next().unwrap_or(stripped);
+        let (_, port_str) = host_port.split_once(':').unwrap_or((host_port, "80"));
+        let port: u16 = port_str.parse().unwrap_or(80);
+        let transport = if is_tls {
+            Transport::Wss(Default::default())
+        } else {
+            Transport::Ws
+        };
+        return Ok((url.to_owned(), port, Some(transport)));
+    }
+
     let stripped = url
         .strip_prefix("mqtts://")
         .or_else(|| url.strip_prefix("mqtt://"))
         .unwrap_or(url);
-    // strip any trailing path
     let host_port = stripped.split('/').next().unwrap_or(stripped);
     let (host, port_str) = host_port
         .split_once(':')
         .unwrap_or((host_port, "1883"));
     let port: u16 = port_str.parse().unwrap_or(1883);
-    Ok((host.to_owned(), port))
+    Ok((host.to_owned(), port, None))
 }

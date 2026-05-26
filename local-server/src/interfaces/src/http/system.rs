@@ -251,7 +251,7 @@ async fn trigger_sync(
 #[derive(Debug, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RuntimeSettingsResponse {
-    pub mqtt_gateway_url: Option<String>,
+    pub mqtt_url: Option<String>,
     pub access_service_url: String,
     pub mqtt_connected: bool,
     pub auth_session_id: Option<String>,
@@ -273,7 +273,6 @@ pub struct SyncStatusResponse {
 #[derive(Debug, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateRuntimeSettingsRequest {
-    pub mqtt_gateway_url: Option<String>,
     pub access_service_url: Option<String>,
 }
 
@@ -327,13 +326,6 @@ fn normalize_opt(value: Option<String>) -> Option<String> {
     })
 }
 
-fn validate_mqtt_url(url: &str) -> Result<(), AppError> {
-    if url.starts_with("mqtt://") || url.starts_with("mqtts://") {
-        return Ok(());
-    }
-    Err(DomainError::Validation("mqttGatewayUrl must start with mqtt:// or mqtts://".into()).into())
-}
-
 fn resolve_access_service_url(
     settings_url: Option<String>,
     default_url: &str,
@@ -345,11 +337,8 @@ async fn get_settings(
     State(state): State<HttpAppState>,
 ) -> Result<Json<RuntimeSettingsResponse>, AppError> {
     let settings = state.runtime_settings.load().await?;
-    let mqtt_gateway_url = settings
-        .mqtt_gateway_url
-        .or(state.mqtt.current_url().await);
     Ok(Json(RuntimeSettingsResponse {
-        mqtt_gateway_url,
+        mqtt_url: state.mqtt.current_url().await,
         access_service_url: resolve_access_service_url(
             settings.access_service_url,
             &state.default_access_service_url,
@@ -368,16 +357,6 @@ async fn patch_settings(
     State(state): State<HttpAppState>,
     Json(body): Json<UpdateRuntimeSettingsRequest>,
 ) -> Result<Json<RuntimeSettingsResponse>, AppError> {
-    let mqtt_gateway_url = normalize_opt(body.mqtt_gateway_url);
-    if let Some(ref url) = mqtt_gateway_url {
-        validate_mqtt_url(url)?;
-    }
-    state
-        .runtime_settings
-        .set_mqtt_gateway_url(mqtt_gateway_url.as_deref())
-        .await?;
-    state.mqtt.reconfigure(mqtt_gateway_url.as_deref()).await?;
-
     let access_service_url = normalize_opt(body.access_service_url);
     if let Some(ref url) = access_service_url {
         if !url.starts_with("http://") && !url.starts_with("https://") {
@@ -442,6 +421,20 @@ async fn auth_status(
     let session_id = settings
         .auth_session_id
         .ok_or_else(|| DomainError::Validation("No active auth session. Call /system/auth/start first".into()))?;
+
+    // Once authorized, serve from SQLite — no need to poll the cloud on every call.
+    // Cloud sessions are ephemeral (in-memory on access-service); the SQLite state
+    // is the source of truth for long-lived device pairing.
+    if settings.auth_status.as_deref() == Some("authorized") {
+        return Ok(Json(AuthStatusResponse {
+            auth_session_id: session_id,
+            status: "authorized".to_string(),
+            auth_code: settings.auth_code,
+            external_user_id: settings.auth_external_user_id,
+            display_name: settings.auth_display_name,
+        }));
+    }
+
     let access_service_url =
         resolve_access_service_url(settings.access_service_url, &state.default_access_service_url);
     let polled = state

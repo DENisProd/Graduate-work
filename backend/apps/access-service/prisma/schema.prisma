@@ -320,6 +320,27 @@ model HouseInvitation {
 }
 
 ////////////////////////////////////////////////////////////
+// DEVICE AUTH SESSIONS
+////////////////////////////////////////////////////////////
+
+model DeviceAuthSession {
+  id             String    @id @default(uuid())
+  userCode       String    @unique @map("user_code")
+  callbackUrl    String?   @map("callback_url")
+  status         String    @default("pending")
+  authCode       String?   @map("auth_code")
+  externalUserId String?   @map("external_user_id")
+  displayName    String?   @map("display_name")
+  authorizedAt   DateTime? @map("authorized_at")
+  lastPolledAt   DateTime? @map("last_polled_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  expiresAt      DateTime  @map("expires_at")
+
+  @@index([externalUserId])
+  @@map("device_auth_sessions")
+}
+
+////////////////////////////////////////////////////////////
 // AUDIT LOG
 ////////////////////////////////////////////////////////////
 

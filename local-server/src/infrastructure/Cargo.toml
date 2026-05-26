@@ -22,7 +22,7 @@ thiserror   = { workspace = true }
 tracing     = { workspace = true }
 chrono      = { workspace = true }
 uuid        = { workspace = true }
-rumqttc     = "0.24"
+rumqttc     = { version = "0.24", features = ["websocket"] }
 dashmap     = "6"
 anyhow      = { workspace = true }
 reqwest     = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }

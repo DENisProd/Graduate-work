@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import type { useTranslation } from '@/hooks';
+import { useTranslation } from '@/hooks';
 import { useToast } from '@/components/shared';
 import { zigbeeDevicesApi } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
@@ -18,8 +18,6 @@ import {
 import { connectivityFromLastOnline, connectivityLabel } from '@/lib/device-connectivity';
 import { TelemetryFlashOverlay, useTelemetryPulseKey } from './TelemetryFlashOverlay';
 import { DeviceTelemetryBlock } from './DeviceTelemetryBlock';
-
-type DevicesTabTranslate = ReturnType<typeof useTranslation>['t'];
 
 function zigbeeModel(device: ZigbeeDeviceListItem): string | null {
   return device.modelId ?? device.model ?? null;
@@ -39,19 +37,16 @@ export function DeviceListCard({
   houseId,
   live,
   isSocketConnected,
-  locale,
-  t,
   onRemoved,
 }: {
   device: ZigbeeDeviceListItem;
   houseId: string;
   live: ZigbeeStateWire | undefined;
   isSocketConnected: boolean;
-  locale: string;
-  t: DevicesTabTranslate;
   onRemoved: (id: string) => void;
 }) {
   const router = useRouter();
+  const { t, locale } = useTranslation();
   const { showToast } = useToast();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -299,12 +294,7 @@ export function DeviceListCard({
           </div>
         ) : null}
         {showTelemetry ? (
-          <DeviceTelemetryBlock
-            live={live}
-            socketConnected={isSocketConnected}
-            t={t}
-            locale={locale}
-          />
+          <DeviceTelemetryBlock live={live} socketConnected={isSocketConnected} />
         ) : null}
       </CardContent>
     </Card>

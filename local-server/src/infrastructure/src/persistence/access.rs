@@ -177,7 +177,10 @@ impl AccessRepository for SqliteAccessRepo {
 
     async fn find_member(&self, id: &str) -> Result<Option<HouseMember>, DomainError> {
         let row = sqlx::query(
-            "SELECT id, house_id, user_id, joined_at, removed_at FROM house_members WHERE id = ?",
+            "SELECT hm.id, hm.house_id, hm.user_id, u.external_user_id, hm.joined_at, hm.removed_at \
+             FROM house_members hm \
+             LEFT JOIN users u ON u.id = hm.user_id \
+             WHERE hm.id = ?",
         )
         .bind(id)
         .fetch_optional(&self.pool)
@@ -188,6 +191,7 @@ impl AccessRepository for SqliteAccessRepo {
             id: r.get("id"),
             house_id: r.get("house_id"),
             user_id: r.get("user_id"),
+            external_user_id: r.get("external_user_id"),
             joined_at: parse_dt(&r.get::<String, _>("joined_at")),
             removed_at: opt_dt(r.get("removed_at")),
         }))
@@ -199,7 +203,7 @@ impl AccessRepository for SqliteAccessRepo {
         house_id: &str,
     ) -> Result<Option<HouseMember>, DomainError> {
         let row = sqlx::query(
-            "SELECT hm.id, hm.house_id, hm.user_id, hm.joined_at, hm.removed_at \
+            "SELECT hm.id, hm.house_id, hm.user_id, u.external_user_id, hm.joined_at, hm.removed_at \
              FROM house_members hm \
              JOIN users u ON u.id = hm.user_id \
              WHERE u.external_user_id = ? AND hm.house_id = ? AND hm.removed_at IS NULL",
@@ -214,6 +218,7 @@ impl AccessRepository for SqliteAccessRepo {
             id: r.get("id"),
             house_id: r.get("house_id"),
             user_id: r.get("user_id"),
+            external_user_id: r.get("external_user_id"),
             joined_at: parse_dt(&r.get::<String, _>("joined_at")),
             removed_at: opt_dt(r.get("removed_at")),
         }))
@@ -221,8 +226,10 @@ impl AccessRepository for SqliteAccessRepo {
 
     async fn list_members(&self, house_id: &str) -> Result<Vec<HouseMember>, DomainError> {
         let rows = sqlx::query(
-            "SELECT id, house_id, user_id, joined_at, removed_at \
-             FROM house_members WHERE house_id = ? AND removed_at IS NULL ORDER BY joined_at ASC",
+            "SELECT hm.id, hm.house_id, hm.user_id, u.external_user_id, hm.joined_at, hm.removed_at \
+             FROM house_members hm \
+             LEFT JOIN users u ON u.id = hm.user_id \
+             WHERE hm.house_id = ? AND hm.removed_at IS NULL ORDER BY hm.joined_at ASC",
         )
         .bind(house_id)
         .fetch_all(&self.pool)
@@ -235,6 +242,7 @@ impl AccessRepository for SqliteAccessRepo {
                 id: r.get("id"),
                 house_id: r.get("house_id"),
                 user_id: r.get("user_id"),
+                external_user_id: r.get("external_user_id"),
                 joined_at: parse_dt(&r.get::<String, _>("joined_at")),
                 removed_at: opt_dt(r.get("removed_at")),
             })
@@ -271,8 +279,10 @@ impl AccessRepository for SqliteAccessRepo {
 
         // Re-fetch the actual row (id may differ on conflict)
         let row = sqlx::query(
-            "SELECT id, house_id, user_id, joined_at, removed_at \
-             FROM house_members WHERE house_id = ? AND user_id = ?",
+            "SELECT hm.id, hm.house_id, hm.user_id, u.external_user_id, hm.joined_at, hm.removed_at \
+             FROM house_members hm \
+             LEFT JOIN users u ON u.id = hm.user_id \
+             WHERE hm.house_id = ? AND hm.user_id = ?",
         )
         .bind(&cmd.house_id)
         .bind(&cmd.external_user_id)
@@ -284,6 +294,7 @@ impl AccessRepository for SqliteAccessRepo {
             id: row.get("id"),
             house_id: row.get("house_id"),
             user_id: row.get("user_id"),
+            external_user_id: row.get("external_user_id"),
             joined_at: parse_dt(&row.get::<String, _>("joined_at")),
             removed_at: opt_dt(row.get("removed_at")),
         })

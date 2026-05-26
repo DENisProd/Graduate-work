@@ -93,7 +93,7 @@ fn default_max_connections() -> u32 { 5 }
 fn default_busy_timeout_ms() -> u32 { 5_000 }
 fn default_shutdown_secs() -> u64 { 10 }
 fn default_mqtt_prefix() -> String { "zigbee2mqtt".into() }
-fn default_access_service_url() -> String { "http://localhost:8085".into() }
-fn default_cloud_sync_url() -> String { "http://localhost:8085".into() }
+fn default_access_service_url() -> String { "http://localhost:8086".into() }
+fn default_cloud_sync_url() -> String { "http://localhost:8086".into() }
 fn default_sync_interval_secs() -> u64 { 300 }
-fn default_scenario_service_url() -> String { "http://localhost:3001".into() }
+fn default_scenario_service_url() -> String { "http://localhost:8095".into() }

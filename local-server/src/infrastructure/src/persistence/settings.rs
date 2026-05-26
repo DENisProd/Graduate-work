@@ -4,7 +4,6 @@ use local_server_application::ports::{RuntimeSettings, RuntimeSettingsRepository
 use local_server_core::DomainError;
 use sqlx::SqlitePool;
 
-const KEY_MQTT_GATEWAY_URL: &str = "mqtt_gateway_url";
 const KEY_ACCESS_SERVICE_URL: &str = "access_service_url";
 const KEY_AUTH_SESSION_ID: &str = "auth_session_id";
 const KEY_AUTH_STATUS: &str = "auth_status";
@@ -60,7 +59,6 @@ fn db_err(e: sqlx::Error) -> DomainError {
 impl RuntimeSettingsRepository for SqliteRuntimeSettingsRepo {
     async fn load(&self) -> Result<RuntimeSettings, DomainError> {
         Ok(RuntimeSettings {
-            mqtt_gateway_url: self.get_value(KEY_MQTT_GATEWAY_URL).await?,
             access_service_url: self.get_value(KEY_ACCESS_SERVICE_URL).await?,
             auth_session_id: self.get_value(KEY_AUTH_SESSION_ID).await?,
             auth_status: self.get_value(KEY_AUTH_STATUS).await?,
@@ -69,10 +67,6 @@ impl RuntimeSettingsRepository for SqliteRuntimeSettingsRepo {
             auth_display_name: self.get_value(KEY_AUTH_DISPLAY_NAME).await?,
             auth_expires_at: self.get_value(KEY_AUTH_EXPIRES_AT).await?,
         })
-    }
-
-    async fn set_mqtt_gateway_url(&self, value: Option<&str>) -> Result<(), DomainError> {
-        self.set_value(KEY_MQTT_GATEWAY_URL, value).await
     }
 
     async fn set_access_service_url(&self, value: Option<&str>) -> Result<(), DomainError> {

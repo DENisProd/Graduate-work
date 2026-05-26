@@ -1,68 +1,55 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { PrismaService } from '../../prisma/prisma.service';
 
-type DeviceAuthStatus = 'pending' | 'authorized' | 'denied' | 'expired';
-
-interface DeviceAuthSession {
-  id: string;
-  userCode: string;
-  callbackUrl?: string;
-  createdAt: Date;
-  expiresAt: Date;
-  lastPolledAt?: Date;
-  pollInterval: number;
-  status: DeviceAuthStatus;
-  authCode?: string;
-  externalUserId?: string;
-  displayName?: string;
-  authorizedAt?: Date;
-}
+const PENDING_TTL_SEC = 300;
+const AUTHORIZED_TTL_DAYS = 30;
 
 @Injectable()
 export class DeviceAuthService {
-  private readonly sessions = new Map<string, DeviceAuthSession>();
-  private readonly userCodeIndex = new Map<string, string>();
-  private readonly expiresInSec = 300;
   private readonly pollIntervalSec = 3;
   private readonly verificationUrlBase =
     process.env.DEVICE_AUTH_VERIFICATION_URL?.trim() || 'http://localhost:3000/device-auth';
 
-  createSession(callbackUrl?: string) {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async createSession(callbackUrl?: string) {
     const id = randomUUID();
     const userCode = this.generateUserCode();
-    const createdAt = new Date();
-    const expiresAt = new Date(createdAt.getTime() + this.expiresInSec * 1000);
-    const session: DeviceAuthSession = {
-      id,
-      userCode,
-      callbackUrl,
-      createdAt,
-      expiresAt,
-      pollInterval: this.pollIntervalSec,
-      status: 'pending',
-    };
-    this.sessions.set(id, session);
-    this.userCodeIndex.set(userCode, id);
-    const verificationUrl = this.buildVerificationUrl(userCode, id);
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + PENDING_TTL_SEC * 1000);
+
+    await this.prisma.deviceAuthSession.create({
+      data: { id, userCode, callbackUrl, status: 'pending', expiresAt },
+    });
+
     return {
       authSessionId: id,
       userCode,
-      verificationUrl,
-      expiresIn: this.expiresInSec,
+      verificationUrl: this.buildVerificationUrl(userCode, id),
+      expiresIn: PENDING_TTL_SEC,
       pollInterval: this.pollIntervalSec,
     };
   }
 
-  pollSession(sessionId: string) {
-    const session = this.getSession(sessionId);
-    this.markExpiredIfNeeded(session);
-    session.lastPolledAt = new Date();
-    this.sessions.set(session.id, session);
+  async pollSession(sessionId: string) {
+    const session = await this.findOrThrow(sessionId);
+
+    let status = session.status;
+    if (session.status === 'pending' && session.expiresAt.getTime() < Date.now()) {
+      status = 'expired';
+    }
+
+    await this.prisma.deviceAuthSession.update({
+      where: { id: sessionId },
+      data: { lastPolledAt: new Date(), ...(status === 'expired' ? { status } : {}) },
+    });
+
     return {
-      status: session.status,
-      authCode: session.status === 'authorized' ? session.authCode : undefined,
-      externalUserId: session.status === 'authorized' ? session.externalUserId : undefined,
-      displayName: session.status === 'authorized' ? session.displayName : undefined,
+      status,
+      authCode: status === 'authorized' ? session.authCode : undefined,
+      externalUserId: status === 'authorized' ? session.externalUserId : undefined,
+      displayName: status === 'authorized' ? session.displayName : undefined,
     };
   }
 
@@ -71,23 +58,29 @@ export class DeviceAuthService {
     externalUserId: string,
     displayName?: string,
   ): Promise<void> {
-    const sessionId = this.userCodeIndex.get(userCode);
-    if (!sessionId) {
-      throw new NotFoundException('Сессия авторизации не найдена по userCode');
-    }
-    const session = this.getSession(sessionId);
-    this.markExpiredIfNeeded(session);
-    if (session.status !== 'pending') {
-      throw new BadRequestException(`Сессия в статусе ${session.status}, завершение невозможно`);
+    const session = await this.prisma.deviceAuthSession.findUnique({ where: { userCode } });
+    if (!session) throw new NotFoundException('Сессия авторизации не найдена по userCode');
+
+    const isExpired = session.status === 'pending' && session.expiresAt.getTime() < Date.now();
+    const effectiveStatus = isExpired ? 'expired' : session.status;
+    if (effectiveStatus !== 'pending') {
+      throw new BadRequestException(`Сессия в статусе ${effectiveStatus}, завершение невозможно`);
     }
 
     const authCode = randomUUID();
-    session.status = 'authorized';
-    session.authCode = authCode;
-    session.externalUserId = externalUserId;
-    session.displayName = displayName;
-    session.authorizedAt = new Date();
-    this.sessions.set(session.id, session);
+    const authorizedExpiresAt = new Date(Date.now() + AUTHORIZED_TTL_DAYS * 24 * 3600 * 1000);
+
+    await this.prisma.deviceAuthSession.update({
+      where: { id: session.id },
+      data: {
+        status: 'authorized',
+        authCode,
+        externalUserId,
+        displayName,
+        authorizedAt: new Date(),
+        expiresAt: authorizedExpiresAt,
+      },
+    });
 
     if (session.callbackUrl) {
       await this.sendCallback(session.callbackUrl, {
@@ -96,56 +89,49 @@ export class DeviceAuthService {
         authCode,
         externalUserId,
         displayName,
+        expiresAt: authorizedExpiresAt.toISOString(),
       });
     }
   }
 
-  listConnectedServers(externalUserId: string) {
-    return Array.from(this.sessions.values())
-      .filter((session) => session.status === 'authorized' && session.externalUserId === externalUserId)
-      .map((session) => ({
-        id: session.id,
-        status: session.status,
-        userCode: session.userCode,
-        displayName: session.displayName,
-        externalUserId: session.externalUserId,
-        authorizedAt: session.authorizedAt?.toISOString() ?? null,
-        lastSeenAt: session.lastPolledAt?.toISOString() ?? null,
-      }))
-      .sort((a, b) => {
-        const aa = a.authorizedAt ? new Date(a.authorizedAt).getTime() : 0;
-        const bb = b.authorizedAt ? new Date(b.authorizedAt).getTime() : 0;
-        return bb - aa;
-      });
+  async listConnectedServers(externalUserId: string) {
+    const sessions = await this.prisma.deviceAuthSession.findMany({
+      where: { externalUserId, status: 'authorized', expiresAt: { gt: new Date() } },
+      orderBy: { authorizedAt: 'desc' },
+    });
+
+    return sessions.map((s) => ({
+      id: s.id,
+      status: s.status,
+      userCode: s.userCode,
+      displayName: s.displayName,
+      externalUserId: s.externalUserId,
+      authorizedAt: s.authorizedAt?.toISOString() ?? null,
+      lastSeenAt: s.lastPolledAt?.toISOString() ?? null,
+    }));
   }
 
-  logoutSession(sessionId: string) {
-    const session = this.getSession(sessionId);
-    session.status = 'denied';
-    session.authCode = undefined;
-    this.sessions.set(session.id, session);
-    return { status: session.status };
+  async logoutSession(sessionId: string) {
+    const session = await this.findOrThrow(sessionId);
+    await this.prisma.deviceAuthSession.update({
+      where: { id: session.id },
+      data: { status: 'denied', authCode: null },
+    });
+    return { status: 'denied' };
   }
 
-  private getSession(sessionId: string): DeviceAuthSession {
-    const session = this.sessions.get(sessionId);
-    if (!session) {
-      throw new NotFoundException(`Сессия авторизации ${sessionId} не найдена`);
-    }
+  private async findOrThrow(sessionId: string) {
+    const session = await this.prisma.deviceAuthSession.findUnique({ where: { id: sessionId } });
+    if (!session) throw new NotFoundException(`Сессия авторизации ${sessionId} не найдена`);
     return session;
   }
 
-  private markExpiredIfNeeded(session: DeviceAuthSession): void {
-    if (session.status === 'pending' && session.expiresAt.getTime() < Date.now()) {
-      session.status = 'expired';
-      this.sessions.set(session.id, session);
-    }
-  }
-
   private generateUserCode(): string {
-    return Math.random().toString(36).slice(2, 6).toUpperCase()
-      + '-'
-      + Math.random().toString(36).slice(2, 6).toUpperCase();
+    return (
+      Math.random().toString(36).slice(2, 6).toUpperCase() +
+      '-' +
+      Math.random().toString(36).slice(2, 6).toUpperCase()
+    );
   }
 
   private async sendCallback(url: string, payload: unknown): Promise<void> {
@@ -156,12 +142,9 @@ export class DeviceAuthService {
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
-        // Callback is best-effort for NAT setups, so we only log.
-        // eslint-disable-next-line no-console
         console.warn(`device-auth callback failed: ${res.status} ${res.statusText}`);
       }
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.warn('device-auth callback error', error);
     }
   }

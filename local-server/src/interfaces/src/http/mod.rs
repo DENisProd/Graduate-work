@@ -11,7 +11,9 @@ use local_server_application::{
     services::{AccessEvaluator, ScenarioEngine},
 };
 use local_server_application::ports::ScenarioRepository;
+use local_server_core::entities::scan_log::ScanLog;
 use serde::Serialize;
+use tower_http::classify::ServerErrorsFailureClass;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
@@ -128,6 +130,7 @@ pub fn router(
     widget_dashboard_repo: Arc<dyn WidgetDashboardRepository>,
     modbus_repo: Arc<dyn ModbusRepository>,
     modbus_gateway: Arc<dyn ModbusBridgePort>,
+    scan_log: ScanLog,
 ) -> Router {
     let cors = build_cors_layer();
     Router::new()
@@ -147,10 +150,31 @@ pub fn router(
                 .merge(scenario_executions::router(scenario_exec_repo, scenario_engine))
                 .merge(access::router(access_repo, evaluator))
                 .merge(widget_dashboards::router(widget_dashboard_repo))
-                .merge(modbus::router(modbus_repo, modbus_gateway, mqtt_client)),
+                .merge(modbus::router(modbus_repo, modbus_gateway, mqtt_client, scan_log)),
         )
         .merge(SwaggerUi::new("/docs").url("/api-docs/openapi.json", ApiDoc::openapi()))
-        .layer(TraceLayer::new_for_http())
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(|req: &axum::http::Request<axum::body::Body>| {
+                    tracing::info_span!(
+                        "http_request",
+                        method = %req.method(),
+                        uri = %req.uri(),
+                    )
+                })
+                .on_failure(
+                    |err: ServerErrorsFailureClass,
+                     latency: std::time::Duration,
+                     span: &tracing::Span| {
+                        let _enter = span.enter();
+                        tracing::error!(
+                            classification = %err,
+                            latency = ?latency,
+                            "response failed",
+                        );
+                    },
+                ),
+        )
         .layer(cors)
 }
 

@@ -77,12 +77,16 @@ async fn main() -> anyhow::Result<()> {
     .await
     .context("initialising SQLite pool")?;
 
-    let state = AppState::new(pool, cfg.mqtt_topic_prefix.clone());
+    let state = AppState::new(pool, cfg.mqtt_topic_prefix.clone(), cfg.cloud_sync_api_key.clone());
 
+    // Local broker (ZIGBEE_MQTT_URL) takes priority; otherwise derive ws:// from the
+    // configured gateway URL (runtime setting → env fallback).
     let saved_settings = state.runtime_settings_repo.load().await?;
-    let effective_mqtt_url = saved_settings
-        .mqtt_gateway_url
-        .or(cfg.mqtt_url.clone());
+    let gateway_url = saved_settings.access_service_url
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(|| cfg.cloud_sync_api_url.clone());
+    let effective_mqtt_url = cfg.mqtt_url.clone()
+        .or_else(|| derive_mqtt_ws_url(&gateway_url));
     if let Err(e) = state
         .mqtt_manager
         .reconfigure(effective_mqtt_url.as_deref())
@@ -133,13 +137,12 @@ async fn main() -> anyhow::Result<()> {
             settings: state.runtime_settings_repo.clone(),
             fallback: cfg.cloud_sync_api_url.clone(),
         }) as Arc<dyn CloudSyncUrlProvider>;
-        let key = cfg.cloud_sync_api_key.clone();
         let interval = cfg.sync_interval_secs;
         let user_id_provider = Arc::new(RuntimeSettingsUserIdProvider {
             settings: state.runtime_settings_repo.clone(),
         }) as Arc<dyn UserIdProvider>;
         tokio::spawn(async move {
-            run_delta_puller(access_sync, cloud, interval, url_provider, key, user_id_provider).await;
+            run_delta_puller(access_sync, cloud, interval, url_provider, user_id_provider).await;
         });
     }
 
@@ -201,6 +204,7 @@ async fn main() -> anyhow::Result<()> {
         state.widget_dashboard_repo.clone(),
         state.modbus_repo.clone(),
         state.modbus_bridge.clone(),
+        state.scan_log.clone(),
     );
 
     let app = websocket::apply_to_router(
@@ -233,11 +237,25 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Convert API gateway HTTP URL to MQTT-over-WebSocket URL.
+/// `http://host:port` → `ws://host:port/api/mqtt`
+/// `https://host:port` → `wss://host:port/api/mqtt`
+fn derive_mqtt_ws_url(cloud_url: &str) -> Option<String> {
+    let base = cloud_url.trim().trim_end_matches('/');
+    if base.starts_with("https://") {
+        Some(format!("{}/api/mqtt", base.replacen("https://", "wss://", 1)))
+    } else if base.starts_with("http://") {
+        Some(format!("{}/api/mqtt", base.replacen("http://", "ws://", 1)))
+    } else {
+        None
+    }
+}
+
 fn init_tracing() {
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     tracing_subscriber::registry()
         .with(filter)
-        .with(fmt::layer().json().with_current_span(false))
+        .with(fmt::layer().json().with_current_span(true))
         .init();
 }
 

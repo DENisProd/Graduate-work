@@ -23,7 +23,7 @@ impl ReqwestCloudWidgetDashboardClient {
     }
 
     fn url(base: &str, path: &str) -> String {
-        format!("{}/api/v1{}", base.trim_end_matches('/'), path)
+        format!("{}/v1{}", base.trim_end_matches('/'), path)
     }
 }
 

@@ -169,6 +169,24 @@ export interface ModbusRegisterState {
   timestamp: string
 }
 
+export interface ScanLogDevice {
+  slaveId: number
+  baudRate: number
+  coils: number
+  discreteInputs: number
+  holdingRegisters: number
+  inputRegisters: number
+  isNew: boolean
+  name: string
+}
+
+export interface ScanLogEntry {
+  timestamp: string
+  found: number
+  registered: number
+  devices: ScanLogDevice[]
+}
+
 export interface House {
   id: string
   name: string

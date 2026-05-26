@@ -9,6 +9,8 @@ import {
   Server,
   ChevronUp,
   Activity,
+  Users,
+  DoorOpen,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/hooks/useI18n'
@@ -45,6 +47,8 @@ export function Sidebar() {
         { to: '/devices', labelKey: 'nav.devices' as const, icon: Cpu, end: false as const },
         { to: '/scenarios', labelKey: 'nav.scenarios' as const, icon: Workflow, end: false as const },
         { to: '/modbus', labelKey: 'nav.modbus' as const, icon: Activity, end: false as const },
+        { to: '/users', labelKey: 'nav.users' as const, icon: Users, end: false as const },
+        { to: '/rooms', labelKey: 'nav.rooms' as const, icon: DoorOpen, end: false as const },
         { to: '/settings', labelKey: 'nav.settings' as const, icon: Settings, end: false as const },
       ] as const,
     [],
