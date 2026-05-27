@@ -1,0 +1,3 @@
+FROM quay.io/keycloak/keycloak:latest
+
+COPY ./themes/domovoy /opt/keycloak/themes/domovoy

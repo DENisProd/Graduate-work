@@ -5,6 +5,10 @@
   "enabled": true,
   "sslRequired": "none",
   "registrationAllowed": true,
+  "internationalizationEnabled": true,
+  "supportedLocales": ["ru", "en"],
+  "defaultLocale": "ru",
+  "loginTheme": "domovoy",
   "clients": [
     {
       "clientId": "smart-home-app",

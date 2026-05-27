@@ -1,0 +1,13 @@
+{
+  "name": "keycloak-theme-src",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "build": "tailwindcss -i ./src/input.css -o ../keycloak/themes/domovoy/login/resources/css/theme.css --minify",
+    "dev": "tailwindcss -i ./src/input.css -o ../keycloak/themes/domovoy/login/resources/css/theme.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.17",
+    "tailwindcss": "^4.1.17"
+  }
+}
