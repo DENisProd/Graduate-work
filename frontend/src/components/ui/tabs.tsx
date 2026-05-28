@@ -7,6 +7,7 @@ import {
   TabsList as AnimatedTabsList,
   TabsTrigger as AnimatedTabsTrigger,
   TabsContent as AnimatedTabsContent,
+  TabsContents as AnimatedTabsContents,
 } from "@/components/animate-ui/components/radix/tabs"
 import { cn } from "@/lib/utils"
 
@@ -64,4 +65,10 @@ function TabsContent({
   )
 }
 
-export { Tabs, TabsList, TabsTrigger, TabsContent }
+function TabsContents({
+  ...props
+}: React.ComponentProps<typeof AnimatedTabsContents>) {
+  return <AnimatedTabsContents {...props} />
+}
+
+export { Tabs, TabsList, TabsTrigger, TabsContent, TabsContents }

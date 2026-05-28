@@ -60,6 +60,7 @@ services:
       JAVA_OPTS_APPEND: >-
         -Xms128m -Xmx512m
         -XX:MaxMetaspaceSize=256m
+    # Realm import runs once per fresh data dir; after realm-export.json TTL changes: docker rm -f smart-home-keycloak && docker compose up -d keycloak
     command: ["start-dev", "--import-realm"]
     mem_limit: 768m
     volumes:

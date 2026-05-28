@@ -331,12 +331,14 @@ model DeviceAuthSession {
   authCode       String?   @map("auth_code")
   externalUserId String?   @map("external_user_id")
   displayName    String?   @map("display_name")
+  serialNumber   String?   @map("serial_number")
   authorizedAt   DateTime? @map("authorized_at")
   lastPolledAt   DateTime? @map("last_polled_at")
   createdAt      DateTime  @default(now()) @map("created_at")
   expiresAt      DateTime  @map("expires_at")
 
   @@index([externalUserId])
+  @@index([serialNumber])
   @@map("device_auth_sessions")
 }
 

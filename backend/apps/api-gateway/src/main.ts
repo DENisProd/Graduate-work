@@ -1,16 +1,16 @@
 import 'reflect-metadata';
 import { join } from 'path';
+import * as http from 'http';
 import { config as loadEnv } from 'dotenv';
 import { NestFactory } from '@nestjs/core';
-import * as httpProxy from 'http-proxy';
 import { AppModule } from './app.module';
 import { loadGatewayConfig } from './config/gateway.config';
 import { ProxyService } from './proxy/proxy.service';
 
 // cwd = backend/apps/api-gateway/ (cd'd by start script)
 loadEnv({ path: join(process.cwd(), '../../.env') });
-// Allow local override
-loadEnv({ path: join(process.cwd(), '.env') });
+// Local .env takes priority over root backend/.env
+loadEnv({ path: join(process.cwd(), '.env'), override: true });
 
 async function bootstrap() {
   const config = loadGatewayConfig();
@@ -26,30 +26,101 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // ── WebSocket proxy (Socket.IO) ──────────────────────────────────────────
-  // http-proxy-middleware v2 does not support upgrade events in NestJS/Express
-  // directly, so we attach a raw http-proxy to the underlying HTTP server.
-  const wsProxyServer = httpProxy.createProxyServer({ ws: true, changeOrigin: true });
-  wsProxyServer.on('error', (err, _req, socket) => {
-    console.error('[WS proxy error]', err.message);
-    if (socket && typeof (socket as any).destroy === 'function') {
-      (socket as any).destroy();
-    }
-  });
-
   const proxyService = app.get(ProxyService);
 
+  // ── WebSocket proxy (Socket.IO) ──────────────────────────────────────────
+  // Uses http.request() with the 'upgrade' event — same HTTP client path that
+  // already handles regular REST calls successfully. Avoids the low-level
+  // net.connect() / socket-pipe approach used by http-proxy which can be
+  // unreliable in some runtimes (Bun).
   const httpServer = app.getHttpServer();
-  httpServer.on('upgrade', (req, socket, head) => {
-    // Find the target for this WS path
-    const entry = proxyService.wsProxies.find(({ prefix }) =>
-      (req.url ?? '').startsWith(prefix),
-    );
-    if (entry) {
-      wsProxyServer.ws(req, socket, head, { target: entry.target });
-    } else {
+
+  httpServer.on('upgrade', (req: http.IncomingMessage, socket: any, head: Buffer) => {
+    const url = req.url ?? '';
+    const entry = proxyService.wsProxies.find(({ prefix }) => url.startsWith(prefix));
+
+    if (!entry) {
       socket.destroy();
+      return;
     }
+
+    socket.on('error', (err: Error) => {
+      console.error('[WS] client socket error:', err.message);
+    });
+
+    let targetUrl: URL;
+    try {
+      targetUrl = new URL(entry.target);
+    } catch {
+      console.error('[WS] invalid target URL:', entry.target);
+      socket.destroy();
+      return;
+    }
+
+    const reqHeaders = { ...req.headers };
+    // Replace Host with the upstream host so the backend doesn't reject it
+    reqHeaders.host = targetUrl.host;
+
+    const proxyReq = http.request({
+      hostname: targetUrl.hostname,
+      port: Number(targetUrl.port) || 80,
+      path: url,
+      method: req.method ?? 'GET',
+      headers: reqHeaders,
+    });
+
+    proxyReq.on('upgrade', (proxyRes, proxySocket, proxyHead) => {
+      // Forward 101 + response headers back to the browser
+      let head101 = 'HTTP/1.1 101 Switching Protocols\r\n';
+      for (const [k, v] of Object.entries(proxyRes.headers)) {
+        const values = Array.isArray(v) ? v : [v];
+        for (const val of values) {
+          if (val !== undefined) head101 += `${k}: ${val}\r\n`;
+        }
+      }
+      head101 += '\r\n';
+
+      try {
+        socket.write(head101);
+      } catch {
+        proxySocket.destroy();
+        return;
+      }
+
+      // Flush any buffered bytes
+      if (proxyHead?.length) socket.write(proxyHead);
+      if (head?.length) proxySocket.write(head);
+
+      proxySocket.on('error', (err: Error) => {
+        console.error('[WS] upstream socket error:', err.message);
+        socket.destroy();
+      });
+      socket.on('error', (err: Error) => {
+        console.error('[WS] client socket error (pipe):', err.message);
+        proxySocket.destroy();
+      });
+
+      proxySocket.on('end', () => { try { socket.end(); } catch {} });
+      socket.on('end', () => { try { proxySocket.end(); } catch {} });
+      proxySocket.on('close', () => { try { socket.destroy(); } catch {} });
+      socket.on('close', () => { try { proxySocket.destroy(); } catch {} });
+
+      proxySocket.pipe(socket);
+      socket.pipe(proxySocket);
+    });
+
+    proxyReq.on('response', (proxyRes) => {
+      // Upstream returned a non-101 (e.g. CORS rejection) — report and close
+      console.error('[WS] upstream non-101 response:', proxyRes.statusCode);
+      socket.destroy();
+    });
+
+    proxyReq.on('error', (err) => {
+      console.error('[WS] upstream connect error:', err.message);
+      socket.destroy();
+    });
+
+    proxyReq.end();
   });
 
   await app.listen(config.port);

@@ -1,0 +1,169 @@
+/* Landing — premium accents from Domovoy palette (primary, brand-teal, brand-secondary) */
+
+.landing-mesh-indigo {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(ellipse 90% 55% at 0% -5%, color-mix(in oklab, var(--primary) 11%, transparent), transparent 58%),
+    radial-gradient(ellipse 70% 45% at 100% 0%, color-mix(in oklab, var(--brand-teal) 7%, transparent), transparent 52%);
+}
+
+.landing-mesh-teal {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 100% 10%, color-mix(in oklab, var(--brand-teal) 10%, transparent), transparent 55%),
+    radial-gradient(ellipse 60% 40% at 0% 80%, color-mix(in oklab, var(--primary) 6%, transparent), transparent 50%);
+}
+
+.landing-mesh-hearth {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(ellipse 75% 48% at 50% 100%, color-mix(in oklab, var(--brand-secondary) 9%, transparent), transparent 58%),
+    radial-gradient(ellipse 55% 35% at 10% 20%, color-mix(in oklab, var(--primary) 5%, transparent), transparent 48%);
+}
+
+.landing-gradient-text {
+  background: linear-gradient(
+    128deg,
+    var(--primary) 0%,
+    color-mix(in oklab, var(--brand-teal) 88%, var(--primary)) 48%,
+    color-mix(in oklab, var(--brand-secondary) 75%, var(--primary)) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.landing-eyebrow {
+  border: 1px solid color-mix(in oklab, var(--primary) 22%, var(--border));
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--primary) 7%, var(--card)),
+    color-mix(in oklab, var(--brand-teal) 5%, var(--card))
+  );
+  color: color-mix(in oklab, var(--primary) 72%, var(--foreground));
+}
+
+.dark .landing-eyebrow {
+  color: color-mix(in oklab, var(--primary) 88%, var(--foreground));
+}
+
+.landing-section-kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--primary) 65%, var(--muted-foreground));
+}
+
+.landing-section-kicker::before {
+  content: '';
+  width: 1.75rem;
+  height: 2px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, var(--primary), var(--brand-teal));
+}
+
+.landing-card-surface {
+  border: 1px solid color-mix(in oklab, var(--border) 88%, var(--primary) 12%);
+  background: linear-gradient(
+    165deg,
+    color-mix(in oklab, var(--card) 96%, var(--primary) 4%) 0%,
+    var(--card) 42%,
+    color-mix(in oklab, var(--card) 98%, var(--brand-teal) 2%) 100%
+  );
+  box-shadow: var(--shadow-sm);
+}
+
+.landing-card-solution {
+  border: 1px solid color-mix(in oklab, var(--primary) 28%, var(--border));
+  background: linear-gradient(
+    145deg,
+    color-mix(in oklab, var(--primary) 9%, var(--card)) 0%,
+    color-mix(in oklab, var(--brand-teal) 5%, var(--card)) 48%,
+    color-mix(in oklab, var(--brand-secondary) 4%, var(--card)) 100%
+  );
+  box-shadow:
+    var(--shadow-md),
+    0 0 0 1px color-mix(in oklab, var(--primary) 6%, transparent) inset;
+}
+
+.landing-card-accent-top::before {
+  content: '';
+  position: absolute;
+  inset-inline: 1.25rem;
+  top: 0;
+  height: 2px;
+  border-radius: 0 0 4px 4px;
+  background: var(--landing-accent-line, linear-gradient(90deg, var(--primary), var(--brand-teal)));
+  opacity: 0.85;
+}
+
+.landing-icon-indigo {
+  border: 1px solid color-mix(in oklab, var(--primary) 24%, transparent);
+  background: linear-gradient(
+    145deg,
+    color-mix(in oklab, var(--primary) 14%, var(--background)),
+    color-mix(in oklab, var(--primary) 6%, var(--card))
+  );
+  color: var(--primary);
+}
+
+.landing-icon-teal {
+  border: 1px solid color-mix(in oklab, var(--brand-teal) 28%, transparent);
+  background: linear-gradient(
+    145deg,
+    color-mix(in oklab, var(--brand-teal) 14%, var(--background)),
+    color-mix(in oklab, var(--brand-teal) 6%, var(--card))
+  );
+  color: var(--brand-teal);
+}
+
+.landing-icon-hearth {
+  border: 1px solid color-mix(in oklab, var(--brand-secondary) 30%, transparent);
+  background: linear-gradient(
+    145deg,
+    color-mix(in oklab, var(--brand-secondary) 16%, var(--background)),
+    color-mix(in oklab, var(--brand-secondary) 7%, var(--card))
+  );
+  color: var(--brand-secondary);
+}
+
+.landing-stats-panel {
+  border: 1px solid color-mix(in oklab, var(--primary) 22%, var(--border));
+  background: linear-gradient(
+    155deg,
+    color-mix(in oklab, var(--card) 92%, var(--primary) 8%) 0%,
+    var(--card) 40%,
+    color-mix(in oklab, var(--card) 94%, var(--brand-teal) 6%) 100%
+  );
+  box-shadow:
+    var(--shadow-lg),
+    0 24px 48px -28px color-mix(in oklab, var(--primary) 35%, transparent);
+}
+
+.landing-progress-fill {
+  background: linear-gradient(
+    90deg,
+    var(--primary) 0%,
+    color-mix(in oklab, var(--brand-teal) 90%, var(--primary)) 55%,
+    var(--brand-secondary) 100%
+  );
+}
+
+.landing-arch-connector {
+  background: linear-gradient(90deg, var(--primary), var(--brand-teal), var(--brand-secondary));
+  opacity: 0.35;
+}
+
+.landing-use-case-num {
+  background: linear-gradient(
+    145deg,
+    color-mix(in oklab, var(--primary) 16%, var(--card)),
+    color-mix(in oklab, var(--brand-teal) 10%, var(--card))
+  );
+  color: var(--primary);
+  border: 1px solid color-mix(in oklab, var(--primary) 20%, transparent);
+}

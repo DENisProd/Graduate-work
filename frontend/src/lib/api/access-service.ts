@@ -48,6 +48,7 @@ export interface ConnectedLocalServerItem {
   status: 'pending' | 'authorized' | 'denied' | 'expired';
   userCode: string;
   displayName?: string;
+  serialNumber?: string | null;
   externalUserId?: string;
   authorizedAt?: string | null;
   lastSeenAt?: string | null;

@@ -386,7 +386,11 @@ async fn start_auth(
         .map(|base| format!("{}/api/v1/system/auth/callback", base.trim_end_matches('/')));
     let started = state
         .cloud_auth
-        .start_session(&access_service_url, callback_url.as_deref())
+        .start_session(
+            &access_service_url,
+            callback_url.as_deref(),
+            state.serial_number.as_deref(),
+        )
         .await?;
     let expires_at = chrono::Utc::now()
         .checked_add_signed(chrono::Duration::seconds(started.expires_in as i64))

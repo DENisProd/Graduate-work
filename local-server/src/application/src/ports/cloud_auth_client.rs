@@ -36,6 +36,7 @@ pub trait CloudAuthClient: Send + Sync {
         &self,
         access_service_url: &str,
         callback_url: Option<&str>,
+        serial_number: Option<&str>,
     ) -> Result<AuthSessionStartResult, DomainError>;
     async fn poll_session(
         &self,

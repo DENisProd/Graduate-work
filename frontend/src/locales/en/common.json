@@ -212,58 +212,195 @@
   },
   "landing": {
     "hero": {
-      "badge": "Smart property management platform",
-      "title": "Turn homes and apartments into a smart ecosystem with transparent control",
-      "description": "Manage devices, automations, and access from a single console. Improve guest comfort, reduce costs, and keep security in check.",
-      "ctaDashboard": "Open Dashboard",
-      "ctaAdmin": "Go to Admin Panel"
+      "badge": "Hybrid smart home platform",
+      "titleBefore": "A smart home that ",
+      "titleHighlight": "keeps working",
+      "titleAfter": " — online or offline",
+      "description": "Domovoy combines cloud and an on-site server: manage Zigbee and Modbus, grant permissions down to a single device function, and run multiple sites from one account — without industrial SCADA budgets.",
+      "ctaDashboard": "Open dashboard",
+      "ctaAdmin": "Admin panel"
+    },
+    "problem": {
+      "title": "Why common platforms fall short",
+      "description": "Cloud ecosystems, DIY hubs, and SCADA each solve part of the puzzle — not the full stack small businesses and country homes need.",
+      "marketTitle": "What the market offers today",
+      "marketItems": {
+        "cloud": "Cloud services stop when the internet drops",
+        "diy": "Home Assistant fits one home — no granular rights or multi-site control",
+        "scada": "Industrial SCADA is overkill for a café, office, or cottage"
+      },
+      "solutionTitle": "What Domovoy delivers",
+      "solutionItems": {
+        "hybrid": "Hybrid mode: the edge server keeps the site running; the cloud keeps the big picture",
+        "access": "RBAC + ABAC: permissions down to device functions, expiry dates, deny wins over allow",
+        "protocols": "Zigbee and Modbus RTU/TCP together — no vendor lock-in"
+      }
     },
     "features": {
-      "title": "Full control of your smart property",
-      "description": "Magister connects devices, spaces, and users into one management system so you can scale without chaos.",
+      "title": "Built for operations, not slide decks",
+      "description": "From the device catalog to scenarios and access control — one platform instead of a patchwork of apps.",
       "items": {
-        "unified": {
-          "title": "Unified control center",
-          "description": "All devices, rooms, and scenarios in one interface with fast search."
+        "hybrid": {
+          "title": "Works without the internet",
+          "description": "The on-site server keeps controlling devices; when connectivity returns, changes sync to the cloud."
         },
         "access": {
-          "title": "Flexible access rights",
-          "description": "Configure roles for guests, staff, and administrators with precise control."
+          "title": "Permissions per device function",
+          "description": "Security sees cameras, staff control lighting in their zone, guests only what you allow. Explicit deny always wins."
         },
-        "analytics": {
-          "title": "Real-time analytics",
-          "description": "Collect metrics, track device status, and optimize resource use."
+        "protocols": {
+          "title": "Zigbee and Modbus together",
+          "description": "Sensors, sockets, HVAC, and industrial gear in one loop — without closed ecosystems."
+        },
+        "multisite": {
+          "title": "Many sites, one account",
+          "description": "Cottage, office, and retail location under one login — no account switching."
+        },
+        "realtime": {
+          "title": "Live device status",
+          "description": "Telemetry via MQTT and Socket.IO: the floor plan shows what is on and where something failed."
+        },
+        "ai": {
+          "title": "AI scenarios on your network",
+          "description": "A local model suggests automations from your device mix — data never leaves your infrastructure."
+        }
+      }
+    },
+    "audiences": {
+      "title": "Who Domovoy is for",
+      "description": "For teams that cannot afford SCADA but outgrow boxed clouds and DIY hubs.",
+      "items": {
+        "home": {
+          "title": "Country homes and cottages",
+          "description": "Stay autonomous on unstable internet; family and staff get different permission sets."
+        },
+        "office": {
+          "title": "Small business offices",
+          "description": "Coworkings and small teams: zones, staff roles, climate and lighting."
+        },
+        "retail": {
+          "title": "Retail and services",
+          "description": "Cafés, salons, shops: energy use, guest comfort, and security in one place."
+        },
+        "warehouse": {
+          "title": "Warehouses and light industry",
+          "description": "Modbus for industrial equipment without deploying full SCADA."
+        }
+      }
+    },
+    "architecture": {
+      "title": "Three layers — one interface",
+      "description": "The same web client talks to cloud and local server: switching modes does not break familiar screens.",
+      "layers": {
+        "cloud": {
+          "title": "Cloud",
+          "description": "Access and automation microservices, PostgreSQL, MongoDB, Keycloak — scale and central control."
+        },
+        "edge": {
+          "title": "Local server",
+          "description": "Rust, SQLite, Zigbee2MQTT and Modbus on site — control regardless of link quality."
+        },
+        "client": {
+          "title": "Web app",
+          "description": "Next.js, Konva floor plans, scenarios and dashboards with real-time updates."
+        }
+      }
+    },
+    "useCases": {
+      "title": "How it works day to day",
+      "description": "Typical flows the architecture was designed around.",
+      "items": {
+        "onboard": {
+          "title": "Add a device — assign rights",
+          "description": "An admin places hardware in a room and grants staff access only to the functions they need."
+        },
+        "floorplan": {
+          "title": "Floor plan, not just a list",
+          "description": "Live status on the layout — lighting and climate in a couple of clicks."
+        },
+        "offline": {
+          "title": "Internet down — site still runs",
+          "description": "The local server keeps processing commands; operations do not stall."
+        },
+        "sync": {
+          "title": "Back online — data catches up",
+          "description": "Queued changes sync to the cloud automatically; every site stays current."
+        },
+        "ai": {
+          "title": "AI suggests a scenario",
+          "description": "From connected devices — ready automation like “lights off when the last person leaves.”"
+        },
+        "multisite": {
+          "title": "All sites in one window",
+          "description": "Switch between homes and locations without new logins or lost context."
         }
       }
     },
     "valueProps": {
-      "title": "All scenarios and devices in one view",
-      "description": "Respond to events quickly, track statuses, and manage access without switching systems.",
+      "title": "Reliability and economics that matter",
+      "description": "Smart building management can cut electricity use by 20–30% — Domovoy helps you get there without an army of integrators.",
       "items": {
         "scale": {
-          "title": "Scale without friction",
-          "description": "Support dozens of properties and thousands of devices without losing speed."
+          "title": "Many sites, no chaos",
+          "description": "Typical scale: up to 10 locations and hundreds of devices per account, with one access policy."
         },
         "integration": {
-          "title": "Easy integration",
-          "description": "Connect new devices and automations in minutes."
+          "title": "Catalog instead of manual wiring",
+          "description": "Type → category → device → function: new hardware is matched by model and manufacturer."
         },
         "security": {
-          "title": "Transparent security",
-          "description": "Logs, alerts, and action history are available in one click."
+          "title": "Security by default",
+          "description": "Keycloak, effective-permission cache, and ABAC policies — predictable rules, not “everyone is admin.”"
         }
       }
     },
     "stats": {
-      "statusLabel": "System status",
-      "statusValue": "Stable operation",
-      "activeDevicesLabel": "Active devices",
-      "activeDevicesValue": "1,248",
-      "responseTimeLabel": "Average response time",
-      "responseTimeValue": "1.3 s",
-      "automationLabel": "Automation level",
-      "automationValue": "92%",
-      "cta": "Try it now"
+      "statusLabel": "Operating mode",
+      "statusValue": "Cloud + edge node",
+      "activeDevicesLabel": "Energy savings potential",
+      "activeDevicesValue": "up to 30%",
+      "responseTimeLabel": "Sync after offline",
+      "responseTimeValue": "~90 sec",
+      "automationLabel": "AI scenarios",
+      "automationValue": "on-prem, no external LLM",
+      "cta": "Start with the dashboard"
+    }
+  },
+  "footer": {
+    "description": "Domovoy is a smart home platform for managing devices, automations, and access from a single console.",
+    "copyright": "© {{year}} Domovoy. All rights reserved.",
+    "sections": {
+      "product": {
+        "title": "Product",
+        "links": {
+          "dashboard": "Dashboard",
+          "admin": "Admin Panel",
+          "features": "Features",
+          "capabilities": "Capabilities"
+        }
+      },
+      "platform": {
+        "title": "Platform",
+        "links": {
+          "home": "Home",
+          "deviceAuth": "Device authorization",
+          "settings": "Settings",
+          "profile": "Profile"
+        }
+      },
+      "resources": {
+        "title": "Resources",
+        "links": {
+          "about": "About the system",
+          "invite": "Invitations",
+          "adminDevices": "Device catalog",
+          "accessControl": "Access control"
+        }
+      }
+    },
+    "legal": {
+      "terms": "Terms of Use",
+      "privacy": "Privacy Policy"
     }
   },
   "admin": {
@@ -649,6 +786,7 @@
           "deviceBadge": "local-server",
           "cardDescription": "Authorized local-server instance",
           "sessionMeta": "session {{sessionId}} · code {{userCode}}",
+          "serialNumber": "SN: {{value}}",
           "lastSeenAt": "last seen: {{value}}",
           "detailsTitle": "Local-server",
           "actionsTitle": "Local-server session",

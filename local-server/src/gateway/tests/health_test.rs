@@ -62,6 +62,7 @@ impl CloudAuthClient for NoopCloudAuth {
         &self,
         _access_service_url: &str,
         _callback_url: Option<&str>,
+        _serial_number: Option<&str>,
     ) -> Result<AuthSessionStartResult, DomainError> {
         Err(DomainError::DependencyUnavailable("not used in health test".into()))
     }
@@ -152,6 +153,7 @@ async fn health_endpoint_reports_db_ok() {
         cloud_auth: Arc::new(NoopCloudAuth) as Arc<dyn CloudAuthClient>,
         default_access_service_url: "http://localhost:8085".to_string(),
         public_base_url: None,
+        serial_number: None,
     };
 
     let response = http::router(

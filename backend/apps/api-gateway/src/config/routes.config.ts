@@ -30,4 +30,4 @@ export const UPSTREAM_ROUTES: UpstreamRoute[] = [
   },
 ];
 
-export const PUBLIC_PREFIXES = ['/health','/api/v1/system/auth/','/api/access/v1/device-auth/'];
+export const PUBLIC_PREFIXES = ['/health', '/api/v1/system/auth/', '/api/access/v1/device-auth/', '/socket.io'];

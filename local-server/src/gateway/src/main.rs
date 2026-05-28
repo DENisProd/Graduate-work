@@ -190,6 +190,7 @@ async fn main() -> anyhow::Result<()> {
             cfg.access_service_url.clone(),
             cfg.local_server_public_url.clone(),
             cfg.scenario_service_url.clone(),
+            cfg.serial_number.clone(),
         ),
         state.device_repo.clone(),
         state.phys_repo.clone(),

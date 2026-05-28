@@ -93,7 +93,13 @@ export class ZigbeeService {
   }
 
   async upsertDevice(input: UpsertZigbeeDeviceInput) {
+    this.logger.debug(
+      `[upsertDevice] START ieeeAddr=${input.ieeeAddr} model=${input.modelId ?? '?'} capabilities=[${(input.capabilities ?? []).join(', ')}]`,
+    );
     const device = await this.devices.upsertByIeeeAddr(input);
+    this.logger.debug(
+      `[upsertDevice] upserted id=${device.id} ieeeAddr=${device.ieeeAddr} existing deviceId=${device.deviceId ?? 'null'}`,
+    );
     await this.enrichDeviceCatalogLinks(device, input);
     return this.devices
       .findByIeeeAddr(device.ieeeAddr)
@@ -104,28 +110,51 @@ export class ZigbeeService {
     device: ZigbeeDevice,
     input: UpsertZigbeeDeviceInput,
   ): Promise<void> {
+    const model = input.modelId ?? device.modelId;
+    const manufacturer = input.manufacturerName ?? device.manufacturerName;
+    this.logger.log(
+      `[catalog-enrich] START ieeeAddr=${device.ieeeAddr} model=${model ?? '?'} manufacturer=${manufacturer ?? '?'}`,
+    );
     try {
       const synced = await this.catalogService.syncWithCatalog({
-        manufacturerName: input.manufacturerName ?? device.manufacturerName,
-        model: input.modelId ?? device.modelId,
+        manufacturerName: manufacturer,
+        model,
         definition: input.definition ?? device.definition,
         friendlyName: input.friendlyName ?? device.friendlyName,
         ieeeAddr: input.ieeeAddr ?? device.ieeeAddr,
       });
 
-      if (!synced.deviceId || !synced.deviceCategoryId) return;
+      this.logger.log(
+        `[catalog-enrich] syncWithCatalog result: deviceTypeId=${synced.deviceTypeId ?? 'null'} deviceId=${synced.deviceId ?? 'null'} deviceCategoryId=${synced.deviceCategoryId ?? 'null'}`,
+      );
+
+      if (!synced.deviceId || !synced.deviceCategoryId) {
+        this.logger.warn(
+          `[catalog-enrich] SKIP ieeeAddr=${device.ieeeAddr}: catalog returned no deviceId or deviceCategoryId`,
+        );
+        return;
+      }
       if (
         device.deviceId === synced.deviceId &&
         device.deviceCategoryId === synced.deviceCategoryId
       ) {
+        this.logger.debug(
+          `[catalog-enrich] NO CHANGE ieeeAddr=${device.ieeeAddr}: catalog IDs already up-to-date (deviceId=${synced.deviceId}, deviceCategoryId=${synced.deviceCategoryId})`,
+        );
         return;
       }
 
+      this.logger.log(
+        `[catalog-enrich] SAVING ieeeAddr=${device.ieeeAddr}: deviceId=${synced.deviceId} deviceCategoryId=${synced.deviceCategoryId}`,
+      );
       await this.devices.upsertByIeeeAddr({
         ieeeAddr: device.ieeeAddr,
         deviceId: synced.deviceId,
         deviceCategoryId: synced.deviceCategoryId,
       });
+      this.logger.log(
+        `[catalog-enrich] DONE ieeeAddr=${device.ieeeAddr}: catalog IDs persisted`,
+      );
     } catch (error) {
       // Catalog links are best-effort and must not break Zigbee ingestion.
       const message = error instanceof Error ? error.message : String(error);

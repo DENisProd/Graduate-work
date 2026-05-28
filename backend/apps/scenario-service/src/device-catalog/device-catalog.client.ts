@@ -169,20 +169,42 @@ export class DeviceCatalogClient {
     });
   }
 
-  ensureCatalog(
+  async ensureCatalog(
     payload: EnsureCatalogPayload,
   ): Promise<EnsureCatalogResult | null> {
-    return this.post<EnsureCatalogResult>(
+    this.logger.log(
+      `[ensureCatalog] → POST ${this.baseUrl}/api/access/v1/integration/catalog/ensure | typeCode=${payload.deviceTypeCode} categoryCode=${payload.deviceCategoryCode} deviceCode=${payload.deviceCode}`,
+    );
+    const result = await this.post<EnsureCatalogResult>(
       '/api/access/v1/integration/catalog/ensure',
       payload,
     );
+    if (result) {
+      this.logger.log(
+        `[ensureCatalog] ← OK deviceId=${result.deviceId} deviceCategoryId=${result.deviceCategoryId} categoryCreated=${result.created.category} deviceCreated=${result.created.device}`,
+      );
+    } else {
+      this.logger.warn(`[ensureCatalog] ← returned null (POST failed or non-2xx)`);
+    }
+    return result;
   }
 
-  findFunctionsByDeviceId(
+  async findFunctionsByDeviceId(
     deviceId: number,
   ): Promise<CatalogDeviceFunction[] | null> {
-    return this.get<CatalogDeviceFunction[]>(
+    this.logger.log(
+      `[findFunctionsByDeviceId] → GET ${this.baseUrl}/api/access/v1/device-functions/by-device/${deviceId}/all`,
+    );
+    const result = await this.get<CatalogDeviceFunction[]>(
       `/api/access/v1/device-functions/by-device/${encodeURIComponent(String(deviceId))}/all`,
     );
+    if (result) {
+      this.logger.log(
+        `[findFunctionsByDeviceId] ← OK ${result.length} functions: [${result.map((f) => f.code).join(', ')}]`,
+      );
+    } else {
+      this.logger.warn(`[findFunctionsByDeviceId] ← returned null for deviceId=${deviceId}`);
+    }
+    return result;
   }
 }

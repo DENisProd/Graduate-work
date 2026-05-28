@@ -44,6 +44,11 @@ pub struct Config {
     /// Scenario-service base URL used for two-way scenario sync.
     #[serde(default = "default_scenario_service_url")]
     pub scenario_service_url: String,
+    /// Stable hardware identifier for this device (e.g. MAC address or UUID).
+    /// Set via `LOCAL_SERVER_SERIAL` env var. Used by the backend to deduplicate
+    /// sessions across restarts, so only one entry appears in the UI.
+    #[serde(default)]
+    pub serial_number: Option<String>,
 }
 
 impl Config {
@@ -81,6 +86,9 @@ impl Config {
         }
         if let Ok(v) = std::env::var("SCENARIO_SERVICE_URL") {
             builder = builder.set_override("scenario_service_url", v)?;
+        }
+        if let Ok(v) = std::env::var("LOCAL_SERVER_SERIAL") {
+            builder = builder.set_override("serial_number", v)?;
         }
 
         Ok(builder.build()?.try_deserialize::<Self>()?)

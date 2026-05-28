@@ -9,6 +9,11 @@ class CreateDeviceAuthSessionDto {
   @IsOptional()
   @IsString()
   callbackUrl?: string;
+
+  @ApiProperty({ required: false, example: 'SN-00:11:22:33:44:55', description: 'Stable hardware serial number for deduplication' })
+  @IsOptional()
+  @IsString()
+  serialNumber?: string;
 }
 
 class CompleteDeviceAuthDto {
@@ -32,7 +37,7 @@ export class DeviceAuthController {
   @Post('sessions')
   @ApiOperation({ summary: 'Start local-server device authorization session' })
   createSession(@Body() dto: CreateDeviceAuthSessionDto) {
-    return this.deviceAuthService.createSession(dto.callbackUrl);
+    return this.deviceAuthService.createSession(dto.callbackUrl, dto.serialNumber);
   }
 
   @Get('sessions/:sessionId/poll')
