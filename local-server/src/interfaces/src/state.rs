@@ -42,4 +42,6 @@ pub struct HttpAppState {
     pub widget_dashboard_repo: Arc<dyn WidgetDashboardRepository>,
     /// Base URL for scenario-service REST calls.
     pub scenario_service_url: String,
+    /// Stable hardware serial number for this device (used in auth session dedup).
+    pub serial_number: Option<String>,
 }

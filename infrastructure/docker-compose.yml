@@ -68,6 +68,8 @@ services:
         "--spi-theme--cache-themes=false",
         "--spi-theme--cache-templates=false"
       ]
+    # Realm import runs once per fresh data dir; after realm-export.json TTL changes: docker rm -f smart-home-keycloak && docker compose up -d keycloak
+    command: ["start-dev", "--import-realm"]
     mem_limit: 768m
     volumes:
       - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json

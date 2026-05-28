@@ -13,14 +13,14 @@ export class DeviceAuthService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async createSession(callbackUrl?: string) {
+  async createSession(callbackUrl?: string, serialNumber?: string) {
     const id = randomUUID();
     const userCode = this.generateUserCode();
     const now = new Date();
     const expiresAt = new Date(now.getTime() + PENDING_TTL_SEC * 1000);
 
     await this.prisma.deviceAuthSession.create({
-      data: { id, userCode, callbackUrl, status: 'pending', expiresAt },
+      data: { id, userCode, callbackUrl, serialNumber, status: 'pending', expiresAt },
     });
 
     return {
@@ -100,11 +100,22 @@ export class DeviceAuthService {
       orderBy: { authorizedAt: 'desc' },
     });
 
-    return sessions.map((s) => ({
+    // Deduplicate by serialNumber — keep the most recently authorized session per serial.
+    // Sessions without a serial number are never deduplicated.
+    const seen = new Set<string>();
+    const deduped = sessions.filter((s) => {
+      if (!s.serialNumber) return true;
+      if (seen.has(s.serialNumber)) return false;
+      seen.add(s.serialNumber);
+      return true;
+    });
+
+    return deduped.map((s) => ({
       id: s.id,
       status: s.status,
       userCode: s.userCode,
       displayName: s.displayName,
+      serialNumber: s.serialNumber ?? null,
       externalUserId: s.externalUserId,
       authorizedAt: s.authorizedAt?.toISOString() ?? null,
       lastSeenAt: s.lastPolledAt?.toISOString() ?? null,

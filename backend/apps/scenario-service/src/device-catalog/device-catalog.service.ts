@@ -61,12 +61,19 @@ export class DeviceCatalogService {
     friendlyName?: string | null;
     ieeeAddr?: string | null;
   }): Promise<DeviceCatalogSyncResult> {
+    this.logger.log(
+      `[syncWithCatalog] START ieeeAddr=${input.ieeeAddr ?? '?'} model=${input.model ?? '?'} manufacturer=${input.manufacturerName ?? '?'}`,
+    );
+
     const modelFromDefinition =
       typeof input.definition?.model === 'string'
         ? input.definition.model
         : null;
     const model = modelFromDefinition?.trim() || input.model?.trim() || null;
     if (!model && !input.ieeeAddr?.trim()) {
+      this.logger.warn(
+        `[syncWithCatalog] SKIP: no model and no ieeeAddr — cannot build device code`,
+      );
       return { deviceTypeId: null, deviceId: null, deviceCategoryId: null };
     }
 
@@ -81,7 +88,13 @@ export class DeviceCatalogService {
       definition: input.definition ?? null,
       ieeeAddr: input.ieeeAddr,
     });
+
+    this.logger.log(
+      `[syncWithCatalog] codes built: categoryCode=${categoryCode} deviceCode=${deviceCode ?? 'null'}`,
+    );
+
     if (!deviceCode) {
+      this.logger.warn(`[syncWithCatalog] SKIP: deviceCode could not be built`);
       return { deviceTypeId: null, deviceId: null, deviceCategoryId: null };
     }
 
@@ -93,6 +106,11 @@ export class DeviceCatalogService {
       deviceCode,
     );
 
+    this.logger.debug(
+      `[syncWithCatalog] fallback names: category="${fallbackCategoryName}" device="${fallbackDeviceName}"`,
+    );
+
+    this.logger.debug(`[syncWithCatalog] running LLM enrichment for model=${model ?? '?'}`);
     const llmResult = await this.enrichWithLlm({
       model,
       manufacturerName: input.manufacturerName,
@@ -102,7 +120,18 @@ export class DeviceCatalogService {
       friendlyName: input.friendlyName,
     });
 
+    if (llmResult) {
+      this.logger.log(
+        `[syncWithCatalog] LLM result: category="${llmResult.category.en.name}" device="${llmResult.device.en.name}" functions=${llmResult.functions.length}`,
+      );
+    } else {
+      this.logger.debug(`[syncWithCatalog] LLM enrichment returned null, using fallback names`);
+    }
+
     try {
+      this.logger.log(
+        `[syncWithCatalog] calling ensureCatalog → POST /api/access/v1/integration/catalog/ensure deviceTypeCode=ZIGBEE categoryCode=${categoryCode} deviceCode=${deviceCode}`,
+      );
       const ensured = await this.client.ensureCatalog({
         deviceTypeCode: ZIGBEE_TYPE_CODE,
         deviceCategoryCode: categoryCode,
@@ -136,25 +165,32 @@ export class DeviceCatalogService {
       });
 
       if (!ensured) {
+        this.logger.warn(
+          `[syncWithCatalog] ensureCatalog returned null for deviceCode=${deviceCode}`,
+        );
         return { deviceTypeId: null, deviceId: null, deviceCategoryId: null };
       }
 
-      if (ensured.created.category || ensured.created.device) {
-        this.logger.log(
-          `Catalog ensured for code=${deviceCode}: categoryCreated=${ensured.created.category}, deviceCreated=${ensured.created.device}`,
-        );
-      }
+      this.logger.log(
+        `[syncWithCatalog] ensureCatalog response: deviceId=${ensured.deviceId} deviceCategoryId=${ensured.deviceCategoryId} categoryCreated=${ensured.created.category} deviceCreated=${ensured.created.device}`,
+      );
 
       if (
         ensured.created.device &&
         llmResult &&
         llmResult.functions.length > 0
       ) {
+        this.logger.log(
+          `[syncWithCatalog] new device created — creating ${llmResult.functions.length} functions via LLM result`,
+        );
         await this.createFunctions(ensured.deviceId, llmResult.functions);
       }
 
       const zigbeeType =
         await this.client.findDeviceTypeByCode(ZIGBEE_TYPE_CODE);
+      this.logger.log(
+        `[syncWithCatalog] DONE deviceTypeId=${zigbeeType?.id ?? 'null'} deviceId=${ensured.deviceId} deviceCategoryId=${ensured.deviceCategoryId}`,
+      );
       return {
         deviceTypeId: zigbeeType?.id ?? null,
         deviceId: ensured.deviceId,

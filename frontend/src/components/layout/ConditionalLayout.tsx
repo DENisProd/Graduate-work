@@ -2,7 +2,8 @@
 
 import { usePathname } from 'next/navigation';
 import { SharedElementTransition } from 'react-aria-components';
-import { Header, Footer } from '@/components/layout';
+import { Header } from '@/components/layout';
+import { Footer7 } from '@/components/ui/footer-7';
 
 export function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -17,7 +18,7 @@ export function ConditionalLayout({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-screen flex-col">
         <Header />
         <main className="flex-1">{children}</main>
-        <Footer />
+        <Footer7 />
       </div>
     </SharedElementTransition>
   );

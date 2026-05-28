@@ -163,6 +163,7 @@ impl AppState {
         default_access_service_url: String,
         public_base_url: Option<String>,
         scenario_service_url: String,
+        serial_number: Option<String>,
     ) -> HttpAppState {
         HttpAppState {
             version,
@@ -179,6 +180,7 @@ impl AppState {
             scenario_repo: self.scenario_repo.clone(),
             widget_dashboard_repo: self.widget_dashboard_repo.clone(),
             scenario_service_url,
+            serial_number,
         }
     }
 }

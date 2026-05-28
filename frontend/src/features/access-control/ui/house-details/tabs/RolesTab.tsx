@@ -6,7 +6,7 @@ import { AppButton } from '@/components/ui/app-button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Dialog,
   DialogContent,
@@ -71,6 +71,26 @@ const SUBJECT_LABELS: Record<CreatePolicyRequestDto['subjectType'], string> = {
   USER: 'Для пользователя',
 };
 
+const RESOURCE_TYPE_LABELS: Record<string, string> = {
+  HOUSE: 'Дом',
+  ROOM: 'Комната',
+  DEVICE: 'Устройство',
+  DEVICE_FUNCTION: 'Функция устройства',
+  SCENE: 'Сцена',
+  GROUP: 'Группа',
+  AUTOMATION: 'Автоматизация',
+};
+
+const VALID_PARENT_TYPES: Record<CreateResourceRequestDto['type'], string[]> = {
+  HOUSE: [],
+  ROOM: ['HOUSE'],
+  DEVICE: ['ROOM'],
+  DEVICE_FUNCTION: ['DEVICE'],
+  SCENE: ['HOUSE', 'ROOM'],
+  GROUP: ['HOUSE', 'ROOM'],
+  AUTOMATION: ['HOUSE', 'ROOM'],
+};
+
 export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabProps) {
   const { t } = useTranslation();
   const { showToast } = useToast();
@@ -92,7 +112,6 @@ export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabPr
   const [resourcesFlat, setResourcesFlat] = useState<Array<{ id: string; type: string; name?: string; path: string }>>([]);
   const [resourcesLoading, setResourcesLoading] = useState(false);
   const [resourceName, setResourceName] = useState('');
-  const [resourceExternalId, setResourceExternalId] = useState('');
   const [resourceType, setResourceType] = useState<CreateResourceRequestDto['type']>('ROOM');
   const [resourceParentId, setResourceParentId] = useState('');
   const [resourceCreating, setResourceCreating] = useState(false);
@@ -101,10 +120,10 @@ export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabPr
   const [policySubjectType, setPolicySubjectType] = useState<CreatePolicyRequestDto['subjectType']>('ANYONE');
   const [policySubjectId, setPolicySubjectId] = useState('');
   const [policyResourceId, setPolicyResourceId] = useState('');
-  const [policyPriority, setPolicyPriority] = useState('100');
-  const [policyCondition, setPolicyCondition] = useState('');
-  const [policyConditionError, setPolicyConditionError] = useState<string | null>(null);
+  const [conditionTimeFrom, setConditionTimeFrom] = useState('');
+  const [conditionTimeTo, setConditionTimeTo] = useState('');
   const [policyCreating, setPolicyCreating] = useState(false);
+  const [houseMembers, setHouseMembers] = useState<Array<{ id: string; name?: string }>>([]);
 
   const loadRoles = useCallback(
     async (signal?: AbortSignal) => {
@@ -153,12 +172,14 @@ export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabPr
           setRoleMemberPreviews({});
           return;
         }
+        const membersList: Array<{ id: string; name?: string }> = [];
         for (const m of items as Array<Record<string, unknown>>) {
           const rolesArr = m.roles;
-          if (!Array.isArray(rolesArr)) continue;
           const memberId = typeof m.id === 'string' ? m.id : String(m.id ?? '');
           const name = typeof m.userDisplayName === 'string' ? m.userDisplayName : undefined;
           const avatarUrl = typeof m.userAvatarUrl === 'string' ? m.userAvatarUrl : undefined;
+          if (memberId) membersList.push({ id: memberId, name });
+          if (!Array.isArray(rolesArr)) continue;
           for (const mr of rolesArr as Array<Record<string, unknown>>) {
             const roleId = typeof mr.roleId === 'string' ? mr.roleId : String(mr.roleId ?? '');
             if (!roleId) continue;
@@ -171,6 +192,7 @@ export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabPr
         }
         setRoleMemberCounts(counts);
         setRoleMemberPreviews(previews);
+        setHouseMembers(membersList);
       } catch {
         if (!signal?.aborted) {
           setRoleMemberCounts({});
@@ -295,6 +317,11 @@ export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabPr
     [resourcesFlat]
   );
 
+  const validParentResources = useMemo(() => {
+    const allowed = VALID_PARENT_TYPES[resourceType] ?? [];
+    return resourcesFlat.filter((r) => allowed.includes(r.type));
+  }, [resourcesFlat, resourceType]);
+
   if (activeTab !== 'roles') return null;
 
   const handleCreateRole = async (data: HouseRoleCreateRequest) => {
@@ -332,11 +359,9 @@ export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabPr
         type: resourceType,
         parentId: resourceParentId,
         ...(resourceName.trim() ? { name: resourceName.trim() } : {}),
-        ...(resourceExternalId.trim() ? { externalId: resourceExternalId.trim() } : {}),
       });
       await loadHouseAbacContext(houseId);
       setResourceName('');
-      setResourceExternalId('');
       showToast('Ресурс успешно создан', 'success');
     } catch {
       showToast(t('common.error'), 'error');
@@ -348,18 +373,10 @@ export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabPr
   const handleCreatePolicy = async () => {
     if (!houseId || !policyName.trim() || !policyResourceId) return;
     setPolicyCreating(true);
-    setPolicyConditionError(null);
     try {
-      let parsedCondition: Record<string, unknown> | undefined;
-      if (policyCondition.trim()) {
-        try {
-          parsedCondition = JSON.parse(policyCondition) as Record<string, unknown>;
-        } catch {
-          setPolicyConditionError('Условие должно быть валидным JSON');
-          setPolicyCreating(false);
-          return;
-        }
-      }
+      const condition: Record<string, unknown> = {};
+      if (conditionTimeFrom) condition.timeFrom = conditionTimeFrom;
+      if (conditionTimeTo) condition.timeTo = conditionTimeTo;
       await houseRolesApi.createPolicy({
         name: policyName.trim(),
         effect: policyEffect,
@@ -368,14 +385,14 @@ export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabPr
           ? { subjectId: policySubjectId.trim() }
           : {}),
         resourceId: policyResourceId,
-        priority: Number(policyPriority) || 100,
-        ...(parsedCondition ? { condition: parsedCondition } : {}),
+        priority: 100,
+        ...(Object.keys(condition).length > 0 ? { condition } : {}),
       });
       await loadHouseAbacContext(houseId);
       setPolicyName('');
-      setPolicyCondition('');
+      setConditionTimeFrom('');
+      setConditionTimeTo('');
       setPolicySubjectId('');
-      setPolicyPriority('100');
       showToast('Политика успешно создана', 'success');
     } catch {
       showToast(t('common.error'), 'error');
@@ -385,89 +402,92 @@ export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabPr
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-foreground">
-          {t('admin.accessControl.roles')}
-        </h3>
+    <Tabs defaultValue="roles">
+      <TabsList>
+        <TabsTrigger value="roles" className="data-[state=active]:text-background">{t('admin.accessControl.roles')}</TabsTrigger>
+        <TabsTrigger value="policies" className="data-[state=active]:text-background">Политики</TabsTrigger>
+        <TabsTrigger value="resources" className="data-[state=active]:text-background">Ресурсы</TabsTrigger>
+      </TabsList>
+
+      {/* ── Роли ── */}
+      <TabsContent value="roles" className="mt-4 min-h-[280px] space-y-4">
         {canEditRoles && (
-          <AppButton
-            size="sm"
-            onClick={() => setCreateRoleModalOpen(true)}
-            disabled={!houseId}
-          >
-            <Plus className="size-4" />
-            {t('admin.accessControl.createRole')}
-          </AppButton>
-        )}
-      </div>
-      {loading && roles.length === 0 ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent" />
-        </div>
-      ) : error ? (
-        <div className="space-y-3 rounded-xl border border-border bg-card p-8 text-center">
-          <p className="text-sm text-muted-foreground">{error}</p>
-          <AppButton variant="secondary" size="sm" onClick={() => loadRoles()}>
-            {t('admin.retry')}
-          </AppButton>
-        </div>
-      ) : roles.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card p-8 text-center">
-          <p className="text-sm font-medium text-foreground">
-            {t('admin.accessControl.noRoles')}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t('admin.accessControl.noRolesDescription')}
-          </p>
-          {canEditRoles && (
-            <AppButton
-              className="mt-4"
-              size="sm"
-              onClick={() => setCreateRoleModalOpen(true)}
-              disabled={!houseId}
-            >
+          <div className="flex justify-end">
+            <AppButton size="sm" onClick={() => setCreateRoleModalOpen(true)} disabled={!houseId}>
               <Plus className="size-4" />
               {t('admin.accessControl.createRole')}
             </AppButton>
-          )}
-        </div>
-      ) : (
-        <div className="grid gap-6 lg:grid-cols-[1fr,minmax(280px,360px)]">
-          <div>
-            <RolesTable
-              roles={sortedRoles}
-              selectedRoleId={selectedRole?.id ?? null}
-              canEditRoles={canEditRoles}
-              roleMemberCounts={roleMemberCounts}
-              roleMemberPreviews={roleMemberPreviews}
-              onSelectRole={setSelectedRole}
-              onEditRole={setEditRole}
-              onDeleteRole={setDeleteRole}
-            />
-            {loading && (
-              <div className="mt-3 flex items-center justify-center">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent" />
-              </div>
+          </div>
+        )}
+        {loading && roles.length === 0 ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent" />
+          </div>
+        ) : error ? (
+          <div className="space-y-3 rounded-xl border border-border bg-card p-8 text-center">
+            <p className="text-sm text-muted-foreground">{error}</p>
+            <AppButton variant="secondary" size="sm" onClick={() => loadRoles()}>
+              {t('admin.retry')}
+            </AppButton>
+          </div>
+        ) : roles.length === 0 ? (
+          <div className="rounded-xl border border-border bg-card p-8 text-center">
+            <p className="text-sm font-medium text-foreground">
+              {t('admin.accessControl.noRoles')}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t('admin.accessControl.noRolesDescription')}
+            </p>
+            {canEditRoles && (
+              <AppButton
+                className="mt-4"
+                size="sm"
+                onClick={() => setCreateRoleModalOpen(true)}
+                disabled={!houseId}
+              >
+                <Plus className="size-4" />
+                {t('admin.accessControl.createRole')}
+              </AppButton>
             )}
           </div>
+        ) : (
+          <div className="grid gap-6 lg:grid-cols-[1fr,minmax(280px,360px)]">
+            <div>
+              <RolesTable
+                roles={sortedRoles}
+                selectedRoleId={selectedRole?.id ?? null}
+                canEditRoles={canEditRoles}
+                roleMemberCounts={roleMemberCounts}
+                roleMemberPreviews={roleMemberPreviews}
+                onSelectRole={setSelectedRole}
+                onEditRole={setEditRole}
+                onDeleteRole={setDeleteRole}
+              />
+              {loading && (
+                <div className="mt-3 flex items-center justify-center">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent" />
+                </div>
+              )}
+            </div>
+            {selectedRole && (
+              <RoleDetailsPanel
+                selectedRole={selectedRole}
+                policiesLoading={policiesLoading}
+                resourcesLoading={resourcesLoading}
+                roleMembersLoading={roleMembersLoading}
+                roleMembers={roleMembers}
+                relatedPolicies={relatedPolicies}
+                relatedResources={relatedResources}
+              />
+            )}
+          </div>
+        )}
+      </TabsContent>
 
-          {selectedRole && (
-            <RoleDetailsPanel
-              selectedRole={selectedRole}
-              policiesLoading={policiesLoading}
-              resourcesLoading={resourcesLoading}
-              roleMembersLoading={roleMembersLoading}
-              roleMembers={roleMembers}
-              relatedPolicies={relatedPolicies}
-              relatedResources={relatedResources}
-            />
-          )}
-        </div>
-      )}
-      <div className="grid gap-4 xl:grid-cols-2">
+      {/* ── Политики ── */}
+      <TabsContent value="policies" className="mt-4">
         <div className="rounded-xl border border-border bg-card p-4">
-          <h4 className="text-sm font-semibold text-foreground">Политики доступа (ABAC)</h4>
+          <h4 className="text-sm font-semibold text-foreground">Политики доступа</h4>
           <p className="mt-1 text-xs text-muted-foreground">
             Создайте правило: кому, на какой ресурс и с каким типом доступа.
           </p>
@@ -490,17 +510,12 @@ export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabPr
                   ))}
                 </SelectContent>
               </Select>
-              <Input
-                type="number"
-                placeholder="Приоритет (меньше = важнее)"
-                value={policyPriority}
-                onChange={(event) => setPolicyPriority(event.target.value)}
-              />
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2">
               <Select
                 value={policySubjectType}
-                onValueChange={(value: CreatePolicyRequestDto['subjectType']) => setPolicySubjectType(value)}
+                onValueChange={(value: CreatePolicyRequestDto['subjectType']) => {
+                  setPolicySubjectType(value);
+                  setPolicySubjectId('');
+                }}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Для кого правило" />
@@ -513,13 +528,35 @@ export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabPr
                   ))}
                 </SelectContent>
               </Select>
-              <Input
-                placeholder="ID пользователя / роли / участника"
-                value={policySubjectId}
-                onChange={(event) => setPolicySubjectId(event.target.value)}
-                disabled={policySubjectType === 'ANYONE'}
-              />
             </div>
+            {policySubjectType === 'ROLE' && (
+              <Select value={policySubjectId} onValueChange={setPolicySubjectId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Выберите роль" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roles.map((role) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      {role.name ?? role.code ?? role.id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {(policySubjectType === 'MEMBER' || policySubjectType === 'USER') && (
+              <Select value={policySubjectId} onValueChange={setPolicySubjectId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Выберите участника" />
+                </SelectTrigger>
+                <SelectContent>
+                  {houseMembers.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.name ?? member.id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <Select value={policyResourceId} onValueChange={setPolicyResourceId}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Выберите ресурс" />
@@ -527,23 +564,29 @@ export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabPr
               <SelectContent>
                 {resourcesFlat.map((resource) => (
                   <SelectItem key={resource.id} value={resource.id}>
-                    {resource.path} ({resource.type})
+                    {resource.path} ({RESOURCE_TYPE_LABELS[resource.type] ?? resource.type})
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Textarea
-              placeholder='Условие (необязательно), JSON. Пример: {"timeFrom":"08:00","timeTo":"23:00"}'
-              value={policyCondition}
-              onChange={(event) => {
-                setPolicyCondition(event.target.value);
-                if (policyConditionError) setPolicyConditionError(null);
-              }}
-              rows={3}
-            />
-            {policyConditionError && (
-              <p className="text-xs text-destructive">{policyConditionError}</p>
-            )}
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div>
+                <p className="mb-1 text-xs text-muted-foreground">Активно с (необязательно)</p>
+                <Input
+                  type="time"
+                  value={conditionTimeFrom}
+                  onChange={(event) => setConditionTimeFrom(event.target.value)}
+                />
+              </div>
+              <div>
+                <p className="mb-1 text-xs text-muted-foreground">Активно до (необязательно)</p>
+                <Input
+                  type="time"
+                  value={conditionTimeTo}
+                  onChange={(event) => setConditionTimeTo(event.target.value)}
+                />
+              </div>
+            </div>
             <AppButton
               size="sm"
               onClick={handleCreatePolicy}
@@ -563,41 +606,59 @@ export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabPr
               <p className="mt-2 text-xs text-muted-foreground">{t('admin.noData')}</p>
             ) : (
               <div className="mt-2 space-y-2">
-                {sortedPolicies.map((policy) => (
-                  <div key={policy.id} className="rounded-md border border-border p-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-medium text-foreground">{policy.name ?? policy.id}</span>
-                      <Badge variant="outline">
-                        {policy.effect && policy.effect in EFFECT_LABELS
-                          ? EFFECT_LABELS[policy.effect as CreatePolicyRequestDto['effect']]
-                          : policy.effect ?? 'Не задано'}
-                      </Badge>
-                      <Badge variant="secondary">
-                        {policy.subjectType && policy.subjectType in SUBJECT_LABELS
-                          ? SUBJECT_LABELS[policy.subjectType as CreatePolicyRequestDto['subjectType']]
-                          : policy.subjectType ?? 'Не задано'}
-                      </Badge>
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Ресурс:{' '}
-                      {policy.resourceId
-                        ? (resourcesById.get(policy.resourceId)?.path ?? policy.resourceId)
-                        : '—'}
-                      {' '}· Приоритет: {policy.priority ?? '—'}
-                    </p>
-                    {policy.subjectId && (
+                {sortedPolicies.map((policy) => {
+                  let subjectName: string | undefined;
+                  if (policy.subjectType === 'ROLE') {
+                    const role = roles.find((r) => r.id === policy.subjectId);
+                    subjectName = role ? (role.name ?? role.code) : policy.subjectId;
+                  } else if (policy.subjectType === 'MEMBER' || policy.subjectType === 'USER') {
+                    const member = houseMembers.find((m) => m.id === policy.subjectId);
+                    subjectName = member?.name ?? policy.subjectId;
+                  }
+                  const timeFrom = policy.condition?.timeFrom as string | undefined;
+                  const timeTo = policy.condition?.timeTo as string | undefined;
+                  return (
+                    <div key={policy.id} className="rounded-md border border-border p-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-medium text-foreground">{policy.name ?? '—'}</span>
+                        <Badge variant="outline">
+                          {policy.effect && policy.effect in EFFECT_LABELS
+                            ? EFFECT_LABELS[policy.effect as CreatePolicyRequestDto['effect']]
+                            : policy.effect ?? 'Не задано'}
+                        </Badge>
+                        <Badge variant="secondary">
+                          {policy.subjectType && policy.subjectType in SUBJECT_LABELS
+                            ? SUBJECT_LABELS[policy.subjectType as CreatePolicyRequestDto['subjectType']]
+                            : policy.subjectType ?? 'Не задано'}
+                        </Badge>
+                      </div>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        Кому: {policy.subjectId}
+                        Ресурс:{' '}
+                        {policy.resourceId
+                          ? (resourcesById.get(policy.resourceId)?.path ?? '—')
+                          : '—'}
                       </p>
-                    )}
-                  </div>
-                ))}
+                      {subjectName && (
+                        <p className="mt-0.5 text-xs text-muted-foreground">Кому: {subjectName}</p>
+                      )}
+                      {(timeFrom ?? timeTo) && (
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          Время: {timeFrom ?? '...'} — {timeTo ?? '...'}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
         </div>
+      </TabsContent>
+
+      {/* ── Ресурсы ── */}
+      <TabsContent value="resources" className="mt-4">
         <div className="rounded-xl border border-border bg-card p-4">
-          <h4 className="text-sm font-semibold text-foreground">Ресурсы дома (ABAC)</h4>
+          <h4 className="text-sm font-semibold text-foreground">Ресурсы дома</h4>
           <p className="mt-1 text-xs text-muted-foreground">
             Добавьте ресурс в дерево дома, чтобы к нему можно было привязать политику.
           </p>
@@ -607,33 +668,38 @@ export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabPr
               value={resourceName}
               onChange={(event) => setResourceName(event.target.value)}
             />
-            <div className="grid gap-2 sm:grid-cols-2">
-              <Select value={resourceType} onValueChange={(value: CreateResourceRequestDto['type']) => setResourceType(value)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Тип ресурса" />
-                </SelectTrigger>
-                <SelectContent>
-                  {RESOURCE_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input
-                placeholder="Внешний ID (необязательно)"
-                value={resourceExternalId}
-                onChange={(event) => setResourceExternalId(event.target.value)}
-              />
-            </div>
-            <Select value={resourceParentId} onValueChange={setResourceParentId}>
+            <Select
+              value={resourceType}
+              onValueChange={(value: CreateResourceRequestDto['type']) => {
+                setResourceType(value);
+                setResourceParentId('');
+              }}
+            >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Родительский ресурс" />
+                <SelectValue placeholder="Тип ресурса" />
               </SelectTrigger>
               <SelectContent>
-                {resourcesFlat.map((resource) => (
+                {RESOURCE_TYPES.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {RESOURCE_TYPE_LABELS[type] ?? type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={resourceParentId} onValueChange={setResourceParentId}>
+              <SelectTrigger className="w-full">
+                <SelectValue
+                  placeholder={
+                    validParentResources.length === 0
+                      ? 'Нет подходящих родительских ресурсов'
+                      : 'Выберите родительский ресурс'
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {validParentResources.map((resource) => (
                   <SelectItem key={resource.id} value={resource.id}>
-                    {resource.path} ({resource.type})
+                    {resource.path} ({RESOURCE_TYPE_LABELS[resource.type] ?? resource.type})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -660,17 +726,16 @@ export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabPr
                 {resourcesFlat.map((resource) => (
                   <div key={resource.id} className="rounded-md border border-border p-2">
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline">{resource.type}</Badge>
+                      <Badge variant="outline">{RESOURCE_TYPE_LABELS[resource.type] ?? resource.type}</Badge>
                       <span className="text-xs text-foreground">{resource.path}</span>
                     </div>
-                    <p className="mt-1 text-xs text-muted-foreground">id: {resource.id}</p>
                   </div>
                 ))}
               </div>
             )}
           </div>
         </div>
-      </div>
+      </TabsContent>
       <CreateRoleModal
         isOpen={createRoleModalOpen}
         onOpenChange={setCreateRoleModalOpen}
@@ -705,6 +770,6 @@ export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabPr
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </Tabs>
   );
 }

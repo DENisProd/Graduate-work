@@ -29,6 +29,7 @@ impl ReqwestCloudAuthClient {
 #[serde(rename_all = "camelCase")]
 struct StartSessionRequest {
     callback_url: Option<String>,
+    serial_number: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -64,14 +65,16 @@ impl CloudAuthClient for ReqwestCloudAuthClient {
         &self,
         access_service_url: &str,
         callback_url: Option<&str>,
+        serial_number: Option<&str>,
     ) -> Result<AuthSessionStartResult, DomainError> {
         let url = Self::url(access_service_url, "/device-auth/sessions");
-        tracing::info!(url = %url, "start_session → POST");
+        tracing::info!(url = %url, serial_number = ?serial_number, "start_session → POST");
         let res = self
             .http
             .post(&url)
             .json(&StartSessionRequest {
                 callback_url: callback_url.map(str::to_string),
+                serial_number: serial_number.map(str::to_string),
             })
             .send()
             .await

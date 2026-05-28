@@ -9,6 +9,18 @@
   "supportedLocales": ["ru", "en"],
   "defaultLocale": "ru",
   "loginTheme": "domovoy",
+  "defaultSignatureAlgorithm": "RS256",
+  "revokeRefreshToken": false,
+  "refreshTokenMaxReuse": 0,
+  "accessTokenLifespan": 900,
+  "accessTokenLifespanForImplicitFlow": 900,
+  "ssoSessionIdleTimeout": 604800,
+  "ssoSessionMaxLifespan": 2592000,
+  "clientSessionIdleTimeout": 0,
+  "clientSessionMaxLifespan": 0,
+  "accessCodeLifespan": 60,
+  "accessCodeLifespanUserAction": 300,
+  "accessCodeLifespanLogin": 1800,
   "clients": [
     {
       "clientId": "smart-home-app",
@@ -19,7 +31,12 @@
         "http://localhost:8081/*",
         "http://localhost:3000/*"
       ],
-      "webOrigins": ["+"]
+      "webOrigins": ["+"],
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "attributes": {
+        "access.token.lifespan": "900"
+      }
     }
   ],
   "users": [

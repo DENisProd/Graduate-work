@@ -54,6 +54,13 @@ export function LocalServerDeviceCard({ server, detailsPathPrefix }: LocalServer
             userCode: server.userCode,
           })}
         </p>
+        {server.serialNumber ? (
+          <p className="truncate font-mono text-xs">
+            {t('admin.accessControl.connectedDevices.localServer.serialNumber', {
+              value: server.serialNumber,
+            })}
+          </p>
+        ) : null}
         {server.lastSeenAt ? (
           <p className="truncate text-xs">
             {t('admin.accessControl.connectedDevices.localServer.lastSeenAt', {

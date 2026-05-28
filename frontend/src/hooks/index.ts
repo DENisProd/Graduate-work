@@ -1,3 +1,4 @@
+export { useLandingGsap } from './use-landing-gsap';
 export { useTheme } from './use-theme';
 export { useLanguage, useTranslation } from './use-language';
 export { useCurrentUserId } from './use-current-user-id';
