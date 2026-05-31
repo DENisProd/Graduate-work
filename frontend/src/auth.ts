@@ -46,12 +46,12 @@ async function refreshKeycloakToken(refreshToken: string): Promise<{
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
-    Keycloak({
-      authorization: {
-        params: { prompt: 'login' },
-      },
-    }),
+    Keycloak(),
   ],
+  pages: {
+    signIn: '/auth/signin',
+    error: '/auth/error',
+  },
   callbacks: {
     authorized({ auth }) {
       return !!auth;
@@ -122,9 +122,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       return token;
     },
-  },
-  pages: {
-    signIn: "/api/auth/signin",
   },
   session: {
     strategy: "jwt",

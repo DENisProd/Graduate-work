@@ -10,6 +10,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { UserId } from '../common/decorators/user-id.decorator';
 import {
   ApiTags,
   ApiOperation,
@@ -67,8 +68,8 @@ export class HousesController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Создать дом' })
   @ApiCreatedResponse({ type: HouseResponseDto })
-  async create(@Body() dto: HouseRequestDto) {
-    const house = await this.housesService.create(dto);
+  async create(@Body() dto: HouseRequestDto, @UserId() userId: string) {
+    const house = await this.housesService.create(dto, userId);
     return toHouseResponse(house);
   }
 

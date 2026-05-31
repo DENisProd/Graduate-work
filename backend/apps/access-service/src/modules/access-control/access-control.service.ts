@@ -207,7 +207,7 @@ export class AccessControlService {
     return { content: content as RightWithRelations[], total };
   }
 
-  async checkAccess(dto: AccessCheckRequestDto): Promise<AccessCheckResponseDto> {
+  async checkAccess(dto: AccessCheckRequestDto & { userId: string }): Promise<AccessCheckResponseDto> {
     const resource = await this.prisma.resource.findUnique({ where: { id: dto.resourceId } });
     if (!resource) throw new ResourceNotFoundException('Ресурс', 'id', dto.resourceId);
 

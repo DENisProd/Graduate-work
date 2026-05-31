@@ -12,7 +12,7 @@ export default async function DashboardLayoutWrapper({
   const session = await auth();
 
   if (!session?.user) {
-    redirect('/api/auth/signin?callbackUrl=/dashboard');
+    redirect('/auth/signin?callbackUrl=/dashboard');
   }
 
   const accessHealthy = await isAccessServiceHealthy();

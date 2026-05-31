@@ -240,7 +240,6 @@ export type InvitationStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'REVOKED' |
 
 export interface HouseRequest {
   name: string;
-  ownerId: string;
   avatarUrl?: string;
   address?: string;
 }

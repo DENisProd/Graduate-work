@@ -292,11 +292,9 @@ export function ScenarioEditor(props: {
         };
 
         if (mode === 'create') {
-          const creatorId = currentUserId ?? 'system';
           await scenariosApi.create({
             ...basePayload,
-            creatorId,
-            houseId: draft.spaceId, // пока бек хранит houseId отдельно — кладём spaceId
+            houseId: draft.spaceId,
           });
           showToast(t('admin.messages.createSuccess'), 'success');
           baselineRef.current = JSON.stringify(draft);

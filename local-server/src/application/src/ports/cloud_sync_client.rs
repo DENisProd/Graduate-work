@@ -48,6 +48,31 @@ pub struct RemoteHouseRole {
     pub house_id: String,
 }
 
+/// A resource record fetched from access-service (flattened from the tree).
+#[derive(Debug, Clone)]
+pub struct RemoteResource {
+    pub id: String,
+    pub r#type: String,
+    pub name: Option<String>,
+    pub external_id: Option<String>,
+    pub path: String,
+    pub depth: i32,
+    pub house_id: String,
+    pub parent_id: Option<String>,
+}
+
+/// An access right record fetched from access-service for a user.
+/// `house_member_id` is the cloud member ID (may differ from local ID).
+#[derive(Debug, Clone)]
+pub struct RemoteAccessRight {
+    pub id: String,
+    pub resource_id: String,
+    pub house_member_id: Option<String>,
+    pub role_id: Option<String>,
+    pub access_right_type: String,
+    pub expires_at: Option<String>,
+}
+
 /// Result of a full pull sync cycle.
 #[derive(Debug, Clone, Default)]
 pub struct SyncPullReport {
@@ -99,6 +124,21 @@ pub trait CloudSyncClient: Send + Sync {
         base_url: &str,
         house_id: &str,
     ) -> Result<Vec<RemoteHouseRole>, DomainError>;
+
+    /// Fetch all resources for a house as a flat list (tree is flattened depth-first).
+    async fn fetch_house_resources(
+        &self,
+        base_url: &str,
+        house_id: &str,
+    ) -> Result<Vec<RemoteResource>, DomainError>;
+
+    /// Fetch all access rights for a user (direct + via roles) from the cloud.
+    /// The `user_id` is the external (Keycloak) UUID.
+    async fn fetch_user_access_rights(
+        &self,
+        base_url: &str,
+        user_id: &str,
+    ) -> Result<Vec<RemoteAccessRight>, DomainError>;
 
     /// Push a batch of local mutations to the cloud ingest endpoint.
     async fn ingest(

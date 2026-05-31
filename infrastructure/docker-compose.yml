@@ -68,40 +68,40 @@ services:
         "--spi-theme--cache-themes=false",
         "--spi-theme--cache-templates=false"
       ]
-    # Realm import runs once per fresh data dir; after realm-export.json TTL changes: docker rm -f smart-home-keycloak && docker compose up -d keycloak
-    command: ["start-dev", "--import-realm"]
     mem_limit: 768m
     volumes:
+      - keycloak_data:/opt/keycloak/data
       - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json
+      - ./keycloak/themes/domovoy:/opt/keycloak/themes/domovoy
     env_file:
       - ../backend/.env
 
   # Ollama — локальный LLM-сервер (CPU-only по умолчанию)
   # Для NVIDIA GPU: добавить deploy.resources.reservations.devices (см. комментарий ниже)
-  ollama:
-    image: ollama/ollama:latest
-    container_name: smart-home-ollama
-    ports:
-      - "${OLLAMA_PORT:-11434}:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    healthcheck:
-      test: ["CMD-SHELL", "ollama list || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-    restart: unless-stopped
-    env_file:
-      - ../backend/.env
-    # GPU (NVIDIA, только если установлен NVIDIA Container Toolkit + WSL2):
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: smart-home-ollama
+  #   ports:
+  #     - "${OLLAMA_PORT:-11434}:11434"
+  #   volumes:
+  #     - ollama_data:/root/.ollama
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "ollama list || exit 1"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 60s
+  #   restart: unless-stopped
+  #   env_file:
+  #     - ../backend/.env
+  #   # GPU (NVIDIA, только если установлен NVIDIA Container Toolkit + WSL2):
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: 1
+  #             capabilities: [gpu]
 
   # EMQX — central MQTT broker (Community Edition 5.7.0)
   # Dashboard: http://localhost:18083  (default admin / see EMQX_DASHBOARD__DEFAULT_PASSWORD)
@@ -132,22 +132,23 @@ services:
       start_period: 30s
 
   # Скачивает модель при первом запуске (идемпотентно — при повторном запуске просто проверяет)
-  ollama-pull:
-    image: ollama/ollama:latest
-    container_name: smart-home-ollama-pull
-    depends_on:
-      ollama:
-        condition: service_healthy
-    environment:
-      OLLAMA_HOST: http://ollama:11434
-    entrypoint: ["ollama", "pull", "qwen2.5:3b"]
-    restart: "no"
+  # ollama-pull:
+  #   image: ollama/ollama:latest
+  #   container_name: smart-home-ollama-pull
+  #   depends_on:
+  #     ollama:
+  #       condition: service_healthy
+  #   environment:
+  #     OLLAMA_HOST: http://ollama:11434
+  #   entrypoint: ["ollama", "pull", "qwen2.5:3b"]
+  #   restart: "no"
 
 volumes:
   pg_data:
   nginx_logs:
   mongodb_data:
   redis_data:
+  keycloak_data:
   ollama_data:
   emqx_data:
   emqx_log:

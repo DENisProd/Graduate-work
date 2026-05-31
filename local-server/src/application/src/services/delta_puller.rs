@@ -57,20 +57,27 @@ pub async fn run_delta_puller(
         let mark = now.to_rfc3339();
         access_sync.mark_pulled("houses", &mark).await.ok();
 
-        // Full pull: rooms per house
-        let mut room_count = 0usize;
+        // Full pull: all resources per house (rooms, devices, device functions, pages, …).
+        // This supersedes the rooms-only sync and brings page resources into the local DB.
+        let mut resource_count = 0usize;
         for house in &houses {
-            match cloud.fetch_house_rooms(&access_url, &house.id).await {
-                Ok(rooms) => {
-                    room_count += rooms.len();
-                    access_sync.upsert_rooms(&house.id, &rooms).await.ok();
+            match cloud.fetch_house_resources(&access_url, &house.id).await {
+                Ok(resources) => {
+                    resource_count += resources.len();
+                    access_sync.upsert_resources(&house.id, &resources).await.ok();
                 }
                 Err(e) => {
-                    tracing::warn!(error = %e, house_id = %house.id, "delta_puller: fetch_house_rooms failed");
+                    tracing::warn!(error = %e, house_id = %house.id, "delta_puller: fetch_house_resources failed");
+                    // Fall back to rooms-only sync so existing functionality is preserved.
+                    if let Ok(rooms) = cloud.fetch_house_rooms(&access_url, &house.id).await {
+                        resource_count += rooms.len();
+                        access_sync.upsert_rooms(&house.id, &rooms).await.ok();
+                    }
                 }
             }
         }
         access_sync.mark_pulled("rooms", &mark).await.ok();
+        access_sync.mark_pulled("resources", &mark).await.ok();
 
         // Full pull: roles per house
         let mut role_count = 0usize;
@@ -105,11 +112,25 @@ pub async fn run_delta_puller(
         }
         access_sync.mark_pulled("members", &mark).await.ok();
 
+        // Full pull: access rights for the current user (direct + via roles).
+        let mut access_rights_count = 0usize;
+        match cloud.fetch_user_access_rights(&access_url, &user_id).await {
+            Ok(rights) => {
+                access_rights_count = rights.len();
+                access_sync.upsert_access_rights(&user_id, &rights).await.ok();
+            }
+            Err(e) => {
+                tracing::warn!(error = %e, "delta_puller: fetch_user_access_rights failed");
+            }
+        }
+        access_sync.mark_pulled("access_rights", &mark).await.ok();
+
         tracing::info!(
             houses = house_count,
-            rooms = room_count,
+            resources = resource_count,
             roles = role_count,
             members = member_count,
+            access_rights = access_rights_count,
             "delta_puller: pull complete"
         );
 

@@ -6,7 +6,85 @@
     "profile": "Profile",
     "mockLoginTitle": "Log in (mock)",
     "enterUserId": "Enter user ID",
-    "alreadyInHouse": "You are already in the house"
+    "alreadyInHouse": "You are already in the house",
+    "signInPage": {
+      "title": "Sign in to Domovoy",
+      "subtitle": "Use your Keycloak account to access the dashboard and platform services.",
+      "continue": "Continue with Keycloak",
+      "helper": "You will be redirected to the authorization page."
+    },
+    "signInErrors": {
+      "hint": "Sign-in could not be completed",
+      "badge": "Auth",
+      "aria": "Authentication error illustration",
+      "tryAgain": "Try again",
+      "tryAgainHint": "Sign in again through Keycloak",
+      "configuration": {
+        "title": "Server error",
+        "subtitle": "There is a problem with the server configuration. Check the settings or contact an administrator.",
+        "engLine": "Server Error"
+      },
+      "accessDenied": {
+        "title": "Access denied",
+        "subtitle": "You do not have permission to sign in to this application.",
+        "engLine": "Access Denied"
+      },
+      "verification": {
+        "title": "Verification failed",
+        "subtitle": "The sign-in link is invalid or has already been used.",
+        "engLine": "Verification Failed"
+      },
+      "oauthSignin": {
+        "title": "Sign-in error",
+        "subtitle": "Could not start authorization with the provider.",
+        "engLine": "OAuth Sign-in"
+      },
+      "oauthCallback": {
+        "title": "Sign-in error",
+        "subtitle": "Could not complete authorization. Please try signing in again.",
+        "engLine": "OAuth Callback"
+      },
+      "oauthCreateAccount": {
+        "title": "Account error",
+        "subtitle": "Could not create an account through the authorization provider.",
+        "engLine": "Account Creation"
+      },
+      "emailCreateAccount": {
+        "title": "Account error",
+        "subtitle": "Could not create an account with this email.",
+        "engLine": "Email Account"
+      },
+      "callback": {
+        "title": "Sign-in error",
+        "subtitle": "An error occurred while processing the authorization response.",
+        "engLine": "Callback Error"
+      },
+      "oauthAccountNotLinked": {
+        "title": "Account not linked",
+        "subtitle": "This email is already associated with a different sign-in method.",
+        "engLine": "Account Not Linked"
+      },
+      "emailSignin": {
+        "title": "Sign-in error",
+        "subtitle": "Could not send or verify the sign-in email.",
+        "engLine": "Email Sign-in"
+      },
+      "credentialsSignin": {
+        "title": "Invalid credentials",
+        "subtitle": "The username or password you entered is incorrect.",
+        "engLine": "Invalid Credentials"
+      },
+      "sessionRequired": {
+        "title": "Sign-in required",
+        "subtitle": "You need to sign in to access this page.",
+        "engLine": "Session Required"
+      },
+      "default": {
+        "title": "Sign-in error",
+        "subtitle": "Something went wrong during authorization. Please try signing in again.",
+        "engLine": "Sign-in Error"
+      }
+    }
   },
   "invite": {
     "redirecting": "Redirecting...",

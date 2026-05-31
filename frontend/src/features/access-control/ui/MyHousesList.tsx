@@ -56,7 +56,7 @@ export function MyHousesList({
   }, [load]);
 
   const saveHouse = async (payload: HouseRequest) => {
-    const data: HouseRequest = { ...payload, ownerId: payload.ownerId };
+    const data: HouseRequest = { ...payload };
     if (editingHouse) {
       await housesApi.update(editingHouse.id, data);
     } else {
@@ -180,7 +180,6 @@ export function MyHousesList({
           isOpen={houseFormOpen}
           onOpenChange={setHouseFormOpen}
           initialValues={editingHouse ?? undefined}
-          initialOwnerId={currentUserId}
           onSubmit={saveHouse}
         />
       )}

@@ -133,8 +133,8 @@ export class AccessControlController {
   @Post('check')
   @ApiOperation({ summary: 'Проверить права доступа' })
   @ApiOkResponse({ type: AccessCheckResponseDto })
-  async checkAccess(@Body() dto: AccessCheckRequestDto) {
-    return this.accessControlService.checkAccess(dto);
+  async checkAccess(@Body() dto: AccessCheckRequestDto, @UserId() userId: string) {
+    return this.accessControlService.checkAccess({ ...dto, userId });
   }
 
   @Post('cleanup/expired')

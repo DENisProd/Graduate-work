@@ -8,6 +8,7 @@ import {
   Delete,
   Query,
 } from '@nestjs/common';
+import { UserId } from '../common/decorators/user-id.decorator';
 import {
   ApiTags,
   ApiOperation,
@@ -41,7 +42,7 @@ export class ScenarioController {
   @ApiBody({
     schema: {
       type: 'object',
-      required: ['name', 'status', 'creatorId', 'houseId', 'definition'],
+      required: ['name', 'status', 'houseId', 'definition'],
       properties: {
         name: { type: 'string', maxLength: 255 },
         description: { type: 'string', maxLength: 2000 },
@@ -50,7 +51,6 @@ export class ScenarioController {
           enum: Object.values(ScenarioStatus),
           default: ScenarioStatus.OFFLINE,
         },
-        creatorId: { type: 'string', maxLength: 255 },
         houseId: { type: 'string', maxLength: 255 },
         definition: {
           type: 'object',
@@ -68,7 +68,6 @@ export class ScenarioController {
           name: 'Утро',
           description: 'Включить свет и климат утром',
           status: ScenarioStatus.ONLINE,
-          creatorId: 'user_1',
           houseId: 'house_123',
           definition: scenarioDefinitionExampleHome,
         },
@@ -79,7 +78,6 @@ export class ScenarioController {
           name: 'Переговорка: движение → свет',
           description: 'Включить свет при движении в рабочее время',
           status: ScenarioStatus.ONLINE,
-          creatorId: 'user_2',
           houseId: 'office_77',
           definition: scenarioDefinitionExampleOffice,
         },
@@ -92,8 +90,8 @@ export class ScenarioController {
     type: ScenarioResponseDto,
   })
   @ApiResponse({ status: 400, description: 'Ошибка валидации' })
-  create(@Body() dto: CreateScenarioDto) {
-    return this.service.create(dto);
+  create(@Body() dto: CreateScenarioDto, @UserId() creatorId: string) {
+    return this.service.create({ ...dto, creatorId });
   }
 
   @Get()

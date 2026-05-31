@@ -1,7 +1,8 @@
 use async_trait::async_trait;
 use chrono::Utc;
 use local_server_application::ports::{
-    AccessSyncRepository, RemoteHouse, RemoteHouseMember, RemoteHouseRole, RemoteRoom, SyncStatus,
+    AccessSyncRepository, RemoteAccessRight, RemoteHouse, RemoteHouseMember, RemoteHouseRole,
+    RemoteResource, RemoteRoom, SyncStatus,
 };
 use local_server_core::DomainError;
 use sqlx::SqlitePool;
@@ -264,13 +265,16 @@ ON CONFLICT(id) DO UPDATE SET
     ) -> Result<(), DomainError> {
         let now = Utc::now().to_rfc3339();
         for m in members {
-            // Ensure the user row exists (users.id = external_user_id in this schema).
+            // Ensure the user row exists and keep display_name up-to-date.
             sqlx::query(
-                "INSERT INTO users(id, external_user_id, created_at) VALUES(?,?,?) \
-                 ON CONFLICT(id) DO NOTHING",
+                "INSERT INTO users(id, external_user_id, display_name, created_at) \
+                 VALUES(?,?,?,?) \
+                 ON CONFLICT(id) DO UPDATE SET \
+                   display_name = COALESCE(excluded.display_name, display_name)",
             )
             .bind(&m.user_id)
             .bind(&m.user_id)
+            .bind(&m.user_display_name)
             .bind(&now)
             .execute(&self.pool)
             .await
@@ -335,8 +339,6 @@ ON CONFLICT(house_id, user_id) DO UPDATE SET
     }
 
     async fn list_rooms(&self, house_id: &str) -> Result<Vec<RemoteRoom>, DomainError> {
-        // `name` was added via migration 007 — use runtime query to avoid
-        // SQLx compile-time schema mismatch on older dev databases.
         let rows = sqlx::query(
             "SELECT id, name, house_id FROM resources WHERE house_id = ? AND type = 'ROOM' ORDER BY path ASC",
         )
@@ -358,5 +360,129 @@ ON CONFLICT(house_id, user_id) DO UPDATE SET
                 }
             })
             .collect())
+    }
+
+    async fn upsert_resources(
+        &self,
+        _house_id: &str,
+        resources: &[RemoteResource],
+    ) -> Result<(), DomainError> {
+        // Insert in ascending depth order so parent rows always exist before children.
+        let mut sorted: Vec<&RemoteResource> = resources.iter().collect();
+        sorted.sort_by_key(|r| r.depth);
+
+        for r in sorted {
+            sqlx::query(
+                r#"
+INSERT INTO resources(id, type, name, external_id, path, depth, house_id, parent_id)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET
+  type      = excluded.type,
+  name      = excluded.name,
+  path      = excluded.path,
+  house_id  = excluded.house_id,
+  parent_id = excluded.parent_id
+"#,
+            )
+            .bind(&r.id)
+            .bind(&r.r#type)
+            .bind(&r.name)
+            .bind(&r.external_id)
+            .bind(&r.path)
+            .bind(r.depth as i64)
+            .bind(&r.house_id)
+            .bind(&r.parent_id)
+            .execute(&self.pool)
+            .await
+            .map_err(db_err)?;
+        }
+        Ok(())
+    }
+
+    async fn upsert_access_rights(
+        &self,
+        user_external_id: &str,
+        rights: &[RemoteAccessRight],
+    ) -> Result<(), DomainError> {
+        let now = Utc::now().to_rfc3339();
+
+        for r in rights {
+            // Resolve cloud member ID → local house_members.id via cloud_house_members.
+            let local_member_id: Option<String> = if let Some(cloud_member_id) = &r.house_member_id
+            {
+                sqlx::query_scalar(
+                    r#"
+SELECT hm.id
+FROM   house_members hm
+JOIN   cloud_house_members chm
+       ON  chm.user_id  = hm.user_id
+       AND chm.house_id = hm.house_id
+WHERE  chm.id = ?
+LIMIT  1
+"#,
+                )
+                .bind(cloud_member_id)
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(db_err)?
+                .flatten()
+            } else {
+                None
+            };
+
+            // Resolve role_id — use cloud role ID directly (synced via upsert_rbac_roles).
+            let role_id = r.role_id.as_deref();
+
+            // Skip if neither side can be resolved locally.
+            if local_member_id.is_none() && role_id.is_none() {
+                tracing::debug!(
+                    right_id = %r.id,
+                    user = %user_external_id,
+                    "upsert_access_rights: skipping right with unresolvable member/role"
+                );
+                continue;
+            }
+
+            // Check the target resource is known locally (it may not be synced yet).
+            let resource_exists: bool = sqlx::query_scalar(
+                "SELECT COUNT(*) FROM resources WHERE id = ?",
+            )
+            .bind(&r.resource_id)
+            .fetch_one(&self.pool)
+            .await
+            .map_err(db_err)
+            .map(|c: i64| c > 0)
+            .unwrap_or(false);
+
+            if !resource_exists {
+                tracing::debug!(
+                    right_id = %r.id,
+                    resource_id = %r.resource_id,
+                    "upsert_access_rights: skipping right for unknown resource"
+                );
+                continue;
+            }
+
+            sqlx::query(
+                r#"
+INSERT INTO access_rights(id, access_right_type, resource_id, house_member_id, role_id, created_at)
+VALUES (?, ?, ?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET
+  access_right_type = excluded.access_right_type,
+  house_member_id   = excluded.house_member_id,
+  role_id           = excluded.role_id
+"#,
+            )
+            .bind(&r.id)
+            .bind(&r.access_right_type)
+            .bind(&r.resource_id)
+            .bind(&local_member_id)
+            .bind(role_id)
+            .bind(&now)
+            .execute(&self.pool)
+            .await
+            .map_err(db_err)?;
+        }
+        Ok(())
     }
 }

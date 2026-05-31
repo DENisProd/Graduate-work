@@ -49,7 +49,6 @@ export function AccessControlAdmin() {
   const [editingHouseId, setEditingHouseId] = useState<number | null>(null);
   const [houseForm, setHouseForm] = useState<HouseRequest>({
     name: '',
-    ownerId: '',
     avatarUrl: '',
     address: '',
   });
@@ -127,16 +126,12 @@ export function AccessControlAdmin() {
 
   const saveHouse = async () => {
     try {
-      const payload: HouseRequest = {
-        ...houseForm,
-        ownerId: houseForm.ownerId,
-      };
       if (editingHouseId) {
-        await housesApi.update(editingHouseId, payload);
+        await housesApi.update(editingHouseId, houseForm);
       } else {
-        await housesApi.create(payload);
+        await housesApi.create(houseForm);
       }
-      setHouseForm({ name: '', ownerId: '', avatarUrl: '', address: '' });
+      setHouseForm({ name: '', avatarUrl: '', address: '' });
       setEditingHouseId(null);
       updateStatus(t('common.success'));
       if (housesOwnerId) {
@@ -152,7 +147,6 @@ export function AccessControlAdmin() {
     setEditingHouseId(house.id);
     setHouseForm({
       name: house.name,
-      ownerId: house.ownerId,
       avatarUrl: house.avatarUrl || '',
       address: house.address || '',
     });
@@ -426,13 +420,6 @@ export function AccessControlAdmin() {
               onChange={(e) => setHouseForm((prev) => ({ ...prev, name: e.target.value }))}
             />
             <LabeledInput
-              label={t('admin.accessControl.ownerId')}
-              value={houseForm.ownerId}
-              onChange={(e) =>
-                setHouseForm((prev) => ({ ...prev, ownerId: e.target.value }))
-              }
-            />
-            <LabeledInput
               label="Avatar URL"
               value={houseForm.avatarUrl || ''}
               onChange={(e) => setHouseForm((prev) => ({ ...prev, avatarUrl: e.target.value }))}
@@ -452,7 +439,7 @@ export function AccessControlAdmin() {
                 variant="secondary"
                 onPress={() => {
                   setEditingHouseId(null);
-                  setHouseForm({ name: '', ownerId: '', avatarUrl: '', address: '' });
+                  setHouseForm({ name: '', avatarUrl: '', address: '' });
                 }}
               >
                 {t('admin.clear')}

@@ -10,6 +10,7 @@ import {
   Query,
   Logger,
 } from '@nestjs/common';
+import { UserId } from '../common/decorators/user-id.decorator';
 import { ApiTags, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { WidgetDashboardService } from './widget-dashboard.service';
 
@@ -22,10 +23,10 @@ export class WidgetDashboardController {
   @Post()
   @ApiOperation({ summary: 'Создать дашборд виджетов' })
   create(
+    @UserId() userId: string,
     @Body()
     body: {
       houseId: string;
-      userId: string;
       name: string;
       isDefault?: boolean;
       layouts?: Record<string, unknown>;
@@ -33,9 +34,9 @@ export class WidgetDashboardController {
     },
   ) {
     this.logger.log(
-      `POST /widget-dashboards houseId=${body.houseId} userId=${body.userId} widgets=${body.widgets?.length ?? 0}`,
+      `POST /widget-dashboards houseId=${body.houseId} userId=${userId} widgets=${body.widgets?.length ?? 0}`,
     );
-    return this.service.create(body);
+    return this.service.create({ ...body, userId });
   }
 
   @Get()

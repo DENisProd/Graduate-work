@@ -6,7 +6,7 @@ export default async function ProfileRoute() {
   const session = await auth();
 
   if (!session?.user) {
-    redirect('/api/auth/signin?callbackUrl=/profile');
+    redirect('/auth/signin?callbackUrl=/profile');
   }
 
   const user = {

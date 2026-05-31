@@ -6,7 +6,85 @@
     "profile": "Профиль",
     "mockLoginTitle": "Вход (мок)",
     "enterUserId": "Введите ID пользователя",
-    "alreadyInHouse": "Вы уже в доме"
+    "alreadyInHouse": "Вы уже в доме",
+    "signInPage": {
+      "title": "Вход в Домовой",
+      "subtitle": "Используйте аккаунт Keycloak, чтобы войти в панель управления и сервисы платформы.",
+      "continue": "Продолжить через Keycloak",
+      "helper": "После нажатия вы будете перенаправлены на страницу авторизации."
+    },
+    "signInErrors": {
+      "hint": "Не удалось выполнить вход",
+      "badge": "Auth",
+      "aria": "Иллюстрация ошибки авторизации",
+      "tryAgain": "Попробовать снова",
+      "tryAgainHint": "Повторить вход через Keycloak",
+      "configuration": {
+        "title": "Ошибка сервера",
+        "subtitle": "Проблема с конфигурацией сервера авторизации. Проверьте настройки или обратитесь к администратору.",
+        "engLine": "Server Error"
+      },
+      "accessDenied": {
+        "title": "Доступ запрещён",
+        "subtitle": "У вас нет прав для входа в это приложение.",
+        "engLine": "Access Denied"
+      },
+      "verification": {
+        "title": "Ошибка подтверждения",
+        "subtitle": "Ссылка для входа недействительна или уже использована.",
+        "engLine": "Verification Failed"
+      },
+      "oauthSignin": {
+        "title": "Ошибка входа",
+        "subtitle": "Не удалось начать авторизацию через провайдера.",
+        "engLine": "OAuth Sign-in"
+      },
+      "oauthCallback": {
+        "title": "Ошибка входа",
+        "subtitle": "Не удалось завершить авторизацию. Попробуйте войти снова.",
+        "engLine": "OAuth Callback"
+      },
+      "oauthCreateAccount": {
+        "title": "Ошибка аккаунта",
+        "subtitle": "Не удалось создать аккаунт через провайдера авторизации.",
+        "engLine": "Account Creation"
+      },
+      "emailCreateAccount": {
+        "title": "Ошибка аккаунта",
+        "subtitle": "Не удалось создать аккаунт по email.",
+        "engLine": "Email Account"
+      },
+      "callback": {
+        "title": "Ошибка входа",
+        "subtitle": "Произошла ошибка при обработке ответа от сервера авторизации.",
+        "engLine": "Callback Error"
+      },
+      "oauthAccountNotLinked": {
+        "title": "Аккаунт не связан",
+        "subtitle": "Этот email уже используется с другим способом входа.",
+        "engLine": "Account Not Linked"
+      },
+      "emailSignin": {
+        "title": "Ошибка входа",
+        "subtitle": "Не удалось отправить или проверить email для входа.",
+        "engLine": "Email Sign-in"
+      },
+      "credentialsSignin": {
+        "title": "Неверные данные",
+        "subtitle": "Логин или пароль указаны неверно.",
+        "engLine": "Invalid Credentials"
+      },
+      "sessionRequired": {
+        "title": "Требуется вход",
+        "subtitle": "Для доступа к этой странице нужно войти в аккаунт.",
+        "engLine": "Session Required"
+      },
+      "default": {
+        "title": "Ошибка входа",
+        "subtitle": "Что-то пошло не так при авторизации. Попробуйте войти снова.",
+        "engLine": "Sign-in Error"
+      }
+    }
   },
   "invite": {
     "redirecting": "Перенаправление...",

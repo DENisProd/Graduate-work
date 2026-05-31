@@ -3,8 +3,8 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use local_server_application::ports::{
-    CloudSyncClient, RemoteHouse, RemoteHouseMember, RemoteHouseRole, RemoteRoom,
-    RuntimeSettingsRepository, SyncEntry,
+    CloudSyncClient, RemoteAccessRight, RemoteHouse, RemoteHouseMember, RemoteHouseRole,
+    RemoteResource, RemoteRoom, RuntimeSettingsRepository, SyncEntry,
 };
 use local_server_core::DomainError;
 use serde::{Deserialize, Serialize};
@@ -112,6 +112,61 @@ struct HouseMemberDto {
     joined_at: String,
     #[serde(default)]
     roles: Vec<MemberRoleBriefDto>,
+}
+
+// ── resource tree response shape ──────────────────────────────────────────────
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ResourceTreeNodeDto {
+    id: String,
+    house_id: String,
+    #[serde(rename = "type")]
+    resource_type: String,
+    name: Option<String>,
+    external_id: Option<String>,
+    parent_id: Option<String>,
+    path: String,
+    depth: i32,
+    #[serde(default)]
+    children: Vec<ResourceTreeNodeDto>,
+}
+
+impl ResourceTreeNodeDto {
+    fn flatten(self) -> Vec<RemoteResource> {
+        let mut out = Vec::new();
+        Self::collect(self, &mut out);
+        out
+    }
+
+    fn collect(node: ResourceTreeNodeDto, out: &mut Vec<RemoteResource>) {
+        out.push(RemoteResource {
+            id: node.id,
+            r#type: node.resource_type,
+            name: node.name,
+            external_id: node.external_id,
+            path: node.path,
+            depth: node.depth,
+            house_id: node.house_id,
+            parent_id: node.parent_id,
+        });
+        for child in node.children {
+            Self::collect(child, out);
+        }
+    }
+}
+
+// ── access right response shape ───────────────────────────────────────────────
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AccessRightDto {
+    id: String,
+    resource_id: String,
+    house_member_id: Option<String>,
+    role_id: Option<String>,
+    access_right_type: String,
+    expires_at: Option<String>,
 }
 
 // ── trait impl ────────────────────────────────────────────────────────────────
@@ -278,6 +333,84 @@ impl CloudSyncClient for ReqwestCloudSyncClient {
                 priority: d.priority,
                 is_system: d.is_system,
                 house_id: d.house_id,
+            })
+            .collect())
+    }
+
+    async fn fetch_house_resources(
+        &self,
+        base_url: &str,
+        house_id: &str,
+    ) -> Result<Vec<RemoteResource>, DomainError> {
+        let url = Self::url(base_url, &format!("/houses/{house_id}/resources/tree"));
+        let token = self.bearer_token().await;
+        let res = self
+            .http
+            .get(&url)
+            .bearer_auth(&token)
+            .send()
+            .await
+            .map_err(|e| {
+                DomainError::DependencyUnavailable(format!("fetch_house_resources: {e}"))
+            })?;
+
+        let status = res.status();
+        if !status.is_success() {
+            let body = res.text().await.unwrap_or_default();
+            return Err(DomainError::DependencyUnavailable(format!(
+                "access-service resources {status}: {body}"
+            )));
+        }
+
+        let nodes = res
+            .json::<Vec<ResourceTreeNodeDto>>()
+            .await
+            .map_err(|e| DomainError::Internal(format!("parse resources: {e}")))?;
+
+        let flat = nodes.into_iter().flat_map(|n| n.flatten()).collect();
+        Ok(flat)
+    }
+
+    async fn fetch_user_access_rights(
+        &self,
+        base_url: &str,
+        user_id: &str,
+    ) -> Result<Vec<RemoteAccessRight>, DomainError> {
+        let url = Self::url(base_url, &format!("/access-rights/user/{user_id}"));
+        let token = self.bearer_token().await;
+        let res = self
+            .http
+            .get(&url)
+            .bearer_auth(&token)
+            .header("X-User-Id", user_id)
+            .send()
+            .await
+            .map_err(|e| {
+                DomainError::DependencyUnavailable(format!("fetch_user_access_rights: {e}"))
+            })?;
+
+        let status = res.status();
+        if !status.is_success() {
+            let body = res.text().await.unwrap_or_default();
+            return Err(DomainError::DependencyUnavailable(format!(
+                "access-service access-rights {status}: {body}"
+            )));
+        }
+
+        let dtos = res
+            .json::<Vec<AccessRightDto>>()
+            .await
+            .map_err(|e| DomainError::Internal(format!("parse access rights: {e}")))?;
+
+        Ok(dtos
+            .into_iter()
+            .map(|d| RemoteAccessRight {
+                id: d.id,
+                resource_id: d.resource_id,
+                house_member_id: d.house_member_id,
+                role_id: d.role_id,
+                access_right_type: d.access_right_type,
+                expires_at: d.expires_at,
             })
             .collect())
     }

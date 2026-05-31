@@ -5,6 +5,7 @@ import {
   Param,
   Post,
 } from '@nestjs/common';
+import { UserId } from '../common/decorators/user-id.decorator';
 import {
   ApiBody,
   ApiOperation,
@@ -24,27 +25,15 @@ export class ScenarioEngineController {
   @HttpCode(202)
   @ApiOperation({ summary: 'Запустить сценарий вручную (MANUAL trigger)' })
   @ApiParam({ name: 'id', description: 'ObjectId сценария' })
-  @ApiBody({
-    required: false,
-    schema: {
-      type: 'object',
-      properties: {
-        initiatorId: {
-          type: 'string',
-          description: 'ID пользователя, запускающего сценарий',
-        },
-      },
-    },
-  })
   @ApiResponse({ status: 202, schema: { example: { executionId: 'abc123' } } })
   @ApiResponse({ status: 400, description: 'Сценарий неактивен или занят' })
   @ApiResponse({ status: 404, description: 'Сценарий не найден' })
   triggerManual(
     @Param() params: unknown,
-    @Body() body: { initiatorId?: string },
+    @UserId() initiatorId: string,
   ) {
     const { id } = idParamSchema.parse(params);
-    return this.engine.fireManual(id, body?.initiatorId);
+    return this.engine.fireManual(id, initiatorId);
   }
 
   @Post('scenarios/webhook/:token')

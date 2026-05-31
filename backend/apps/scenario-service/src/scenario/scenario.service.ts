@@ -10,7 +10,7 @@ import type {
 export class ScenarioService {
   constructor(private readonly repository: ScenarioRepository) {}
 
-  async create(data: CreateScenarioInput) {
+  async create(data: CreateScenarioInput & { creatorId: string }) {
     return this.repository.create(data);
   }
 

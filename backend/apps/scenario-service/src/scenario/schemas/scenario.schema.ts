@@ -8,7 +8,6 @@ export const createScenarioSchema = z.object({
   name: z.string().min(1).max(255),
   description: z.string().max(2000).optional(),
   status: scenarioStatusSchema.default(ScenarioStatus.OFFLINE),
-  creatorId: z.string().min(1).max(255),
   houseId: z.string().min(1).max(255),
   /**
    * Полноценное определение сценария (триггеры/условия/действия/контекст).

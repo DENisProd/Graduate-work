@@ -1,19 +1,14 @@
 <#import "template.ftl" as layout>
+
 <#import "user-profile-commons.ftl" as userProfileCommons>
-<#assign properties = properties + {
-    "kcFormClass": "kc-form",
-    "kcFormGroupClass": "kc-field",
-    "kcLabelWrapperClass": "kc-label-wrap",
-    "kcLabelClass": "kc-label",
-    "kcInputWrapperClass": "kc-input-wrap",
-    "kcInputClass": "kc-input",
-    "kcInputHelperTextBeforeClass": "kc-field-help",
-    "kcInputHelperTextAfterClass": "kc-field-help",
-    "kcInputErrorMessageClass": "kc-field-error"
-}>
-<@layout.registrationLayout displayMessage=messagesPerField.exists('global') displayInfo=true displayRequiredFields=true; section>
+
+<@layout.registrationLayout displayMessage=messagesPerField.exists('global') displayInfo=false displayRequiredFields=true; section>
+
     <#if section = "header">
         ${msg("registerTitle")}
+    <div class="kc-form-nav">
+        <a class="kc-back-link" href="${url.loginUrl}">${msg("backToLogin")}</a>
+    </div>
     <#elseif section = "form">
         <form id="kc-register-form" class="kc-form" action="${url.registrationAction}" method="post">
             <@userProfileCommons.userProfileFormFields; callback, attribute>
@@ -150,9 +145,7 @@
                 </div>
             </#if>
 
-            <div class="kc-options kc-options-stack">
-                <a class="kc-alt-link" href="${url.loginUrl}">${msg("backToLogin")}</a>
-            </div>
+
 
             <#if recaptchaRequired?? && !(recaptchaVisible!false)>
                 <script>
@@ -177,12 +170,18 @@
                         <span class="kc-submit-label">${msg("doRegister")}</span>
                     </button>
                 </div>
+
             </#if>
+
+
+
+            <p class="kc-consent-text">
+
+                ${kcSanitize(msg("domovoyRegistrationConsent"))?no_esc}
+
+            </p>
+
         </form>
-    <#elseif section = "info">
-        <span>
-            ${msg("backToLogin")}:
-            <a href="${url.loginUrl}">${msg("doLogIn")}</a>
-        </span>
+
     </#if>
 </@layout.registrationLayout>

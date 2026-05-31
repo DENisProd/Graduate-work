@@ -61,7 +61,7 @@ export class AccessEvaluatorService {
     return { allowed: false };
   }
 
-  async check(dto: AccessCheckDto): Promise<Decision> {
+  async check(dto: AccessCheckDto & { userId: string }): Promise<Decision> {
     const resource = await this.resourcesService.findById(dto.resourceId);
     const user = await this.usersService.findByExternalUserId(dto.userId);
 
@@ -162,7 +162,7 @@ export class AccessEvaluatorService {
   }
 
   /** Проверка доступа к функции устройства по deviceFunctionId. Возвращает allow/deny. */
-  async checkByDeviceFunction(dto: AccessCheckByDeviceDto): Promise<{ allow: boolean; deny: boolean }> {
+  async checkByDeviceFunction(dto: AccessCheckByDeviceDto & { userId: string }): Promise<{ allow: boolean; deny: boolean }> {
     const resource = await this.resourcesService.findDeviceFunctionByExternalOrId(dto.deviceFunctionId);
     const decision = await this.check({
       userId: dto.userId,

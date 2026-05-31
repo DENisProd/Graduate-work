@@ -122,7 +122,6 @@ export function HouseWidgetsSection({
       } else {
         let created = await widgetDashboardsApi.create({
           houseId,
-          userId: currentUserId,
           name: t('dashboard.widgets.title'),
           isDefault: true,
         });

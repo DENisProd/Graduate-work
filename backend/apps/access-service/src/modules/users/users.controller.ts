@@ -11,6 +11,7 @@ import { ApiTags, ApiOperation, ApiCreatedResponse, ApiOkResponse, ApiParam } fr
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
+import { UserId } from '../common/decorators/user-id.decorator';
 
 function toResponse(u: { id: string; externalUserId: string; avatarUrl: string | null; createdAt: Date }): UserResponseDto {
   return {
@@ -33,8 +34,8 @@ export class UsersController {
     description: 'Идемпотентно по `userId`: при существующем внешнем ID возвращается существующая запись.',
   })
   @ApiCreatedResponse({ type: UserResponseDto, description: 'Пользователь создан или найден' })
-  async create(@Body() dto: CreateUserDto): Promise<UserResponseDto> {
-    const user = await this.usersService.findOrCreateByExternalUserId(dto.userId, dto.avatarUrl);
+  async create(@Body() dto: CreateUserDto, @UserId() userId: string): Promise<UserResponseDto> {
+    const user = await this.usersService.findOrCreateByExternalUserId(userId, dto.avatarUrl);
     return toResponse(user);
   }
 

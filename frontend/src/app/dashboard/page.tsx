@@ -108,7 +108,7 @@ export default function DashboardPage() {
   const saveHouse = async (payload: HouseRequest) => {
     if (!currentUserId) return;
 
-    const data: HouseRequest = { ...payload, ownerId: payload.ownerId || currentUserId };
+    const data: HouseRequest = { ...payload };
     if (editingHouse) {
       await housesApi.update(editingHouse.id, data);
     } else {
@@ -283,7 +283,6 @@ export default function DashboardPage() {
           isOpen={houseFormOpen}
           onOpenChange={setHouseFormOpen}
           initialValues={editingHouse ?? undefined}
-          initialOwnerId={currentUserId}
           onSubmit={saveHouse}
         />
       )}

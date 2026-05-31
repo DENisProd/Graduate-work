@@ -72,8 +72,8 @@ export class HousesService {
     return { content: content as HouseWithOwner[], total };
   }
 
-  async create(dto: HouseRequestDto): Promise<HouseWithOwner> {
-    const owner = await this.userService.findOrCreateByUserId(dto.ownerId);
+  async create(dto: HouseRequestDto, ownerId: string): Promise<HouseWithOwner> {
+    const owner = await this.userService.findOrCreateByUserId(ownerId);
     const house = await this.prisma.house.create({
       data: {
         name: dto.name,

@@ -8,6 +8,10 @@ pub enum ResourceType {
     Room,
     Device,
     DeviceFunction,
+    Page,
+    Scene,
+    Group,
+    Automation,
 }
 
 impl ResourceType {
@@ -17,6 +21,10 @@ impl ResourceType {
             ResourceType::Room => "ROOM",
             ResourceType::Device => "DEVICE",
             ResourceType::DeviceFunction => "DEVICE_FUNCTION",
+            ResourceType::Page => "PAGE",
+            ResourceType::Scene => "SCENE",
+            ResourceType::Group => "GROUP",
+            ResourceType::Automation => "AUTOMATION",
         }
     }
 }
@@ -29,6 +37,10 @@ impl std::str::FromStr for ResourceType {
             "ROOM" => Ok(ResourceType::Room),
             "DEVICE" => Ok(ResourceType::Device),
             "DEVICE_FUNCTION" => Ok(ResourceType::DeviceFunction),
+            "PAGE" => Ok(ResourceType::Page),
+            "SCENE" => Ok(ResourceType::Scene),
+            "GROUP" => Ok(ResourceType::Group),
+            "AUTOMATION" => Ok(ResourceType::Automation),
             other => Err(format!("unknown resource type: {other}")),
         }
     }

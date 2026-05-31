@@ -1,4 +1,5 @@
 import { Body, Controller, Post } from '@nestjs/common';
+import { UserId } from '../common/decorators/user-id.decorator';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AccessEvaluatorService } from './access-evaluator.service';
 import { AccessCheckDto } from './dto/access-check.dto';
@@ -18,8 +19,8 @@ export class AccessEvaluatorController {
   })
   @ApiBody({ type: AccessCheckDto })
   @ApiOkResponse({ type: AccessDecisionResponseDto })
-  async check(@Body() dto: AccessCheckDto): Promise<AccessDecisionResponseDto> {
-    return this.accessEvaluatorService.check(dto);
+  async check(@Body() dto: AccessCheckDto, @UserId() userId: string): Promise<AccessDecisionResponseDto> {
+    return this.accessEvaluatorService.check({ ...dto, userId });
   }
 
   @Post('access-check')
@@ -29,8 +30,8 @@ export class AccessEvaluatorController {
   })
   @ApiBody({ type: AccessCheckByDeviceDto })
   @ApiOkResponse({ type: DeviceAccessCheckResponseDto })
-  async checkByDevice(@Body() dto: AccessCheckByDeviceDto): Promise<DeviceAccessCheckResponseDto> {
-    return this.accessEvaluatorService.checkByDeviceFunction(dto);
+  async checkByDevice(@Body() dto: AccessCheckByDeviceDto, @UserId() userId: string): Promise<DeviceAccessCheckResponseDto> {
+    return this.accessEvaluatorService.checkByDeviceFunction({ ...dto, userId });
   }
 }
 

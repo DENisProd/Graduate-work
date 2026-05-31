@@ -284,7 +284,6 @@ export const widgetDashboardsApi = {
 
   create: (dto: {
     houseId: string;
-    userId: string;
     name: string;
     isDefault?: boolean;
   }): Promise<import('@/features/widget-dashboard/types/widget.types').WidgetDashboard> =>

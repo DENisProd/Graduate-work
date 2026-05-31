@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Param, Post, UnauthorizedException } from '@nestjs/common';
 import { ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
 import { IsOptional, IsString, IsUUID } from 'class-validator';
 import { DeviceAuthService } from './device-auth.service';
@@ -67,5 +67,15 @@ export class DeviceAuthController {
       dto.displayName,
     );
     return { status: 'ok' };
+  }
+
+  @Post('validate-token')
+  @ApiOperation({ summary: 'Validate a device auth_code Bearer token issued during device authorization' })
+  async validateToken(@Headers('authorization') authHeader: string) {
+    const token = authHeader?.replace(/^Bearer\s+/i, '').trim();
+    if (!token) throw new UnauthorizedException('No token provided');
+    const result = await this.deviceAuthService.validateToken(token);
+    if (!result.valid) throw new UnauthorizedException('Invalid or expired device token');
+    return result;
   }
 }

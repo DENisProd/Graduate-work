@@ -2,7 +2,9 @@ use async_trait::async_trait;
 
 use local_server_core::DomainError;
 
-use super::cloud_sync_client::{RemoteHouse, RemoteHouseMember, RemoteHouseRole, RemoteRoom};
+use super::cloud_sync_client::{
+    RemoteAccessRight, RemoteHouse, RemoteHouseMember, RemoteHouseRole, RemoteResource, RemoteRoom,
+};
 
 /// Sync status read from the local DB.
 #[derive(Debug, Clone)]
@@ -67,5 +69,21 @@ pub trait AccessSyncRepository: Send + Sync {
         &self,
         house_id: &str,
         members: &[RemoteHouseMember],
+    ) -> Result<(), DomainError>;
+
+    /// Bulk upsert resources (any type) for a house pulled from access-service.
+    /// Inserts in ascending depth order to satisfy parent-before-child FK ordering.
+    async fn upsert_resources(
+        &self,
+        house_id: &str,
+        resources: &[RemoteResource],
+    ) -> Result<(), DomainError>;
+
+    /// Upsert access rights pulled from the cloud for a given external user.
+    /// Cloud member IDs are resolved to local `house_members.id` via `cloud_house_members`.
+    async fn upsert_access_rights(
+        &self,
+        user_external_id: &str,
+        rights: &[RemoteAccessRight],
     ) -> Result<(), DomainError>;
 }

@@ -12,7 +12,7 @@ export default async function AdminLayoutWrapper({
   const session = await auth();
 
   // if (!session?.user) {
-  //   redirect('/api/auth/signin?callbackUrl=/admin');
+  //   redirect('/auth/signin?callbackUrl=/admin');
   // }
 
   const accessHealthy = await isAccessServiceHealthy();

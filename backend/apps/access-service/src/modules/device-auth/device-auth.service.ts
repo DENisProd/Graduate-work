@@ -122,6 +122,22 @@ export class DeviceAuthService {
     }));
   }
 
+  async validateToken(authCode: string): Promise<{ valid: boolean; externalUserId?: string; displayName?: string }> {
+    const session = await this.prisma.deviceAuthSession.findFirst({
+      where: { authCode, status: 'authorized', expiresAt: { gt: new Date() } },
+    });
+    if (!session) return { valid: false };
+    await this.prisma.deviceAuthSession.update({
+      where: { id: session.id },
+      data: { lastPolledAt: new Date() },
+    });
+    return {
+      valid: true,
+      externalUserId: session.externalUserId ?? undefined,
+      displayName: session.displayName ?? undefined,
+    };
+  }
+
   async logoutSession(sessionId: string) {
     const session = await this.findOrThrow(sessionId);
     await this.prisma.deviceAuthSession.update({

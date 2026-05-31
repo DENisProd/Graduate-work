@@ -29,7 +29,10 @@ pub use cloud_physical_device_client::{
 pub use cloud_scenario_client::{
     CloudScenarioClient, CreateCloudScenarioCmd, RemoteScenario,
 };
-pub use cloud_sync_client::{CloudSyncClient, RemoteHouse, RemoteHouseMember, RemoteHouseRole, RemoteRoom, SyncEntry, SyncPullReport};
+pub use cloud_sync_client::{
+    CloudSyncClient, RemoteAccessRight, RemoteHouse, RemoteHouseMember, RemoteHouseRole,
+    RemoteResource, RemoteRoom, SyncEntry, SyncPullReport,
+};
 pub use cloud_widget_dashboard_client::{
     CloudWidgetDashboardClient, CreateCloudWidgetDashboardCmd, RemoteWidgetDashboard,
 };

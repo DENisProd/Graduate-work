@@ -30,6 +30,7 @@ enum ResourceType {
   ROOM
   DEVICE
   DEVICE_FUNCTION
+  PAGE
   SCENE
   GROUP
   AUTOMATION

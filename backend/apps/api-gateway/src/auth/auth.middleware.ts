@@ -7,10 +7,16 @@ import { GATEWAY_CONFIG, type GatewayConfig } from '../config/gateway.config';
 import { PUBLIC_PREFIXES } from '../config/routes.config';
 import { getRequestPathname } from '../proxy/request-path';
 
+interface DeviceCacheEntry {
+  externalUserId: string;
+  expiresAt: number;
+}
+
 @Injectable()
 export class AuthMiddleware implements NestMiddleware {
   private readonly logger = new Logger(AuthMiddleware.name);
   private jwksClient: JwksClient | null = null;
+  private readonly deviceTokenCache = new Map<string, DeviceCacheEntry>();
 
   constructor(@Inject(GATEWAY_CONFIG) private readonly config: GatewayConfig) {
     if (config.keycloakIssuer) {
@@ -55,7 +61,40 @@ export class AuthMiddleware implements NestMiddleware {
       next();
     } catch (err) {
       this.logger.warn(`JWT validation failed: ${(err as Error).message}`);
+
+      // Fallback: validate as device auth_code (UUID Bearer token from local server)
+      const deviceUser = await this.tryDeviceToken(token);
+      if (deviceUser) {
+        req.headers['x-user-id'] = deviceUser.externalUserId;
+        return next();
+      }
+
       return res.status(401).json({ message: 'Invalid or expired token' });
+    }
+  }
+
+  private async tryDeviceToken(token: string): Promise<{ externalUserId: string } | null> {
+    // Check in-process cache (60-second TTL) to avoid a DB round-trip on every request
+    const cached = this.deviceTokenCache.get(token);
+    if (cached) {
+      if (Date.now() < cached.expiresAt) return { externalUserId: cached.externalUserId };
+      this.deviceTokenCache.delete(token);
+    }
+
+    try {
+      const url = `${this.config.accessServiceUrl}/api/access/v1/device-auth/validate-token`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return null;
+      const data = await res.json() as { valid: boolean; externalUserId?: string };
+      if (!data.valid || !data.externalUserId) return null;
+
+      this.deviceTokenCache.set(token, { externalUserId: data.externalUserId, expiresAt: Date.now() + 60_000 });
+      return { externalUserId: data.externalUserId };
+    } catch {
+      return null;
     }
   }
 

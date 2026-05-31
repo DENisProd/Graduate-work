@@ -83,7 +83,7 @@ function DeviceAuthContent() {
             <div className="rounded-md border border-border bg-surface-2 px-3 py-2 text-sm text-foreground/80">
               <p>{t('deviceAuth.signInRequired')}</p>
               <Link
-                href={`/api/auth/signin?callbackUrl=${encodeURIComponent('/device-auth' + (params?.toString() ? `?${params.toString()}` : ''))}`}
+                href={`/auth/signin?callbackUrl=${encodeURIComponent('/device-auth' + (params?.toString() ? `?${params.toString()}` : ''))}`}
                 className="mt-2 inline-block text-primary underline"
               >
                 {t('common.signIn')}

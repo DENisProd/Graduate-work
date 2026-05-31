@@ -4,6 +4,7 @@
 <html lang="${lang}"<#if realm.internationalizationEnabled> dir="${(locale.rtl)?then('rtl','ltr')}"</#if>>
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <#if properties.meta?has_content>
         <#list properties.meta?split(' ') as meta>
@@ -84,12 +85,12 @@
                 <div class="kc-auth-layout">
                     <div class="kc-auth-topbar">
                         <div class="kc-auth-brandline">
-                            <div class="kc-wordmark">
+                            <a class="kc-wordmark" href="https://home.darksecrets.ru">
                                 <span class="kc-wordmark-icon">
                                     <img src="${url.resourcesPath}/img/logo.svg" alt="" />
                                 </span>
-                                <span class="kc-wordmark-text">${kcSanitize(realm.displayNameHtml!'Домовой')?no_esc}</span>
-                            </div>
+                                <span class="kc-wordmark-text">Домовой</span>
+                            </a>
                         </div>
                         <div class="kc-header-actions">
                             <#if realm.internationalizationEnabled && locale.supported?size gt 1>

@@ -105,11 +105,10 @@ export function AccessControlHouses() {
   };
 
   const saveHouse = async (payload: HouseRequest) => {
-    const data: HouseRequest = { ...payload, ownerId: payload.ownerId };
     if (editingHouse) {
-      await housesApi.update(editingHouse.id, data);
+      await housesApi.update(editingHouse.id, payload);
     } else {
-      await housesApi.create(data);
+      await housesApi.create(payload);
     }
     setEditingHouse(null);
     await load(page, pageSize, appliedOwnerId);
