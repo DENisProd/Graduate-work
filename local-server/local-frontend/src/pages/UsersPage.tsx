@@ -36,11 +36,9 @@ function useLocalHouse() {
 function MemberRoleBadges({
   member,
   allRoles,
-  houseId,
 }: {
   member: LocalMember
   allRoles: LocalRole[]
-  houseId: string
 }) {
   const { t } = useI18n()
   const qc = useQueryClient()
@@ -311,7 +309,7 @@ function MembersTab({ houseId }: { houseId: string }) {
                     {format(parseISO(member.joinedAt), 'dd MMM yyyy')}
                   </td>
                   <td className="px-4 py-3">
-                    <MemberRoleBadges member={member} allRoles={allRoles} houseId={houseId} />
+                    <MemberRoleBadges member={member} allRoles={allRoles} />
                   </td>
                   <td className="px-4 py-3">
                     <button

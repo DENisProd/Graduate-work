@@ -29,6 +29,7 @@ export function loadGatewayConfig(): GatewayConfig {
     corsOrigins: parseCorsOrigins(process.env.GATEWAY_CORS_ORIGINS, [
       'http://localhost:3000',
       'http://localhost:5173',
+      'http://localhost',
     ]),
   };
 }

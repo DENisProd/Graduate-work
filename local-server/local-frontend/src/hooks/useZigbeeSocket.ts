@@ -2,11 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { io, type Socket } from 'socket.io-client'
 import { useSettingsStore } from '@/stores/settings.store'
 import { useDeviceStatesStore } from '@/stores/device-states.store'
+import { resolveServerUrl } from '@/lib/server-url'
 import type { ZigbeeState } from '@/types'
 
 const sockets = new Map<string, Socket>()
 
-function getSocket(serverUrl: string): Socket {
+function getSocket(rawServerUrl: string): Socket {
+  const serverUrl = resolveServerUrl(rawServerUrl)
   if (sockets.has(serverUrl)) return sockets.get(serverUrl)!
 
   const socket = io(`${serverUrl}/zigbee`, {

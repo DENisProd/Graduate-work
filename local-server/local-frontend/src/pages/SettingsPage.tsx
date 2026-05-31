@@ -305,7 +305,7 @@ export function SettingsPage() {
             <Input
               value={urlDraft}
               onChange={setUrlDraft}
-              placeholder="http://localhost:8080"
+              placeholder={window.location.origin}
               className="flex-1"
             />
             <Button variant="secondary" onClick={handleTestConnection} disabled={connectionStatus === 'checking'}>

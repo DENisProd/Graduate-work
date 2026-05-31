@@ -23,6 +23,7 @@ async function bootstrap() {
     'http://localhost:3000',
     'http://localhost:5173',
     'http://localhost:8080',
+    'http://localhost',
   ]);
 
   const app = await NestFactory.create(AppModule);

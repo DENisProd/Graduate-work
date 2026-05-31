@@ -1,0 +1,38 @@
+1780225522: mosquitto version 2.1.2 starting
+1780225522: Config loaded from /mosquitto/config/mosquitto.conf.
+1780225522: Bridge support available.
+1780225522: Persistence support available.
+1780225522: TLS support available.
+1780225522: TLS-PSK support available.
+1780225522: Websockets support available.
+1780225522: Opening ipv4 listen socket on port 1883.
+1780225522: Opening ipv6 listen socket on port 1883.
+1780225522: mosquitto version 2.1.2 running
+1780227323: Saving in-memory database to /mosquitto/data//mosquitto.db.
+1780227778: mosquitto version 2.1.2 terminating
+1780227778: Saving in-memory database to /mosquitto/data//mosquitto.db.
+1780228174: mosquitto version 2.1.2 starting
+1780228174: Config loaded from /mosquitto/config/mosquitto.conf.
+1780228174: Bridge support available.
+1780228174: Persistence support available.
+1780228174: TLS support available.
+1780228174: TLS-PSK support available.
+1780228174: Websockets support available.
+1780228174: Opening ipv4 listen socket on port 1883.
+1780228174: Opening ipv6 listen socket on port 1883.
+1780228174: mosquitto version 2.1.2 running
+1780228299: New connection from 172.30.0.4:39088 on port 1883.
+1780228299: New client connected from 172.30.0.4:39088 as local-server-25880702-a21d-49f7-bf7d-f201542a2c3a (p4, c1, k30).
+1780228646: Client local-server-25880702-a21d-49f7-bf7d-f201542a2c3a [172.30.0.4:39088] disconnected: connection closed by client.
+1780228647: New connection from 172.30.0.4:40142 on port 1883.
+1780228647: New client connected from 172.30.0.4:40142 as local-server-b6d98dc5-702d-42a9-b65a-05d38022ede2 (p4, c1, k30).
+1780228744: Client local-server-b6d98dc5-702d-42a9-b65a-05d38022ede2 [172.30.0.4:40142] disconnected: connection closed by client.
+1780228745: New connection from 172.30.0.3:53974 on port 1883.
+1780228745: New client connected from 172.30.0.3:53974 as local-server-6f8f12ba-2d8b-4dce-bd9d-601c7aae9b09 (p4, c1, k30).
+1780229975: Saving in-memory database to /mosquitto/data//mosquitto.db.
+1780231776: Saving in-memory database to /mosquitto/data//mosquitto.db.
+1780233576: Saving in-memory database to /mosquitto/data//mosquitto.db.
+1780245031: Saving in-memory database to /mosquitto/data//mosquitto.db.
+1780246832: Saving in-memory database to /mosquitto/data//mosquitto.db.
+1780247795: mosquitto version 2.1.2 terminating
+1780247795: Saving in-memory database to /mosquitto/data//mosquitto.db.

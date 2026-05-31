@@ -198,9 +198,9 @@ export function ScenariosPage() {
   const [filterScenarioId, setFilterScenarioId] = useState('')
   const [execPage, setExecPage] = useState(0)
 
-  const { data: scenarios = [], isPending: scenariosLoading } = useQuery({
+  const { data: scenarios = [], isPending: scenariosLoading } = useQuery<Scenario[]>({
     queryKey: ['scenarios'],
-    queryFn: listScenarios,
+    queryFn: () => listScenarios(),
   })
 
   const { data: execsPage, isPending: execsLoading } = useQuery({

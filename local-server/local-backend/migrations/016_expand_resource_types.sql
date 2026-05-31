@@ -22,7 +22,8 @@ CREATE TABLE resources_v2 (
   ))
 );
 
-INSERT INTO resources_v2 SELECT * FROM resources;
+INSERT INTO resources_v2 (id, type, name, external_id, path, depth, house_id, parent_id)
+SELECT id, type, NULL, external_id, path, depth, house_id, parent_id FROM resources;
 
 DROP TABLE resources;
 

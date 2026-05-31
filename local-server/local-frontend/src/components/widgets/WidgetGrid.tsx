@@ -39,7 +39,7 @@ function readPayload(
   key: string,
 ): unknown {
   if (!state) return null
-  if (key in state) return (state as Record<string, unknown>)[key]
+  if (key in state) return (state as unknown as Record<string, unknown>)[key]
   return state.payload?.[key] ?? null
 }
 

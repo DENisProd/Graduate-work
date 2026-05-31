@@ -35,13 +35,13 @@ RUN mkdir -p \
 COPY src        ./src
 COPY migrations ./migrations
 
-# The stub build above compiles minimal `lib.rs` files for workspace members. After
-# swapping in real sources, Cargo can incorrectly reuse those rlibs; drop their
-# artifacts so the final link sees the full public API (ports, persistence, …).
-RUN cargo clean -p local-server-core \
-        -p local-server-application \
-        -p local-server-infrastructure \
-        -p local-server-interfaces && \
+# The stub build above compiles minimal sources for workspace members. After
+# swapping in real sources, drop workspace artifacts so Cargo cannot reuse stub
+# rlibs or the empty `fn main(){}` binary (cargo clean -p is unreliable here).
+RUN rm -rf target/release/deps/liblocal_server_* \
+           target/release/deps/local_server-* \
+           target/release/.fingerprint/local-server-* \
+           target/release/local-server && \
     cargo build --release --bin local-server
 
 # ── Runtime stage ─────────────────────────────────────────────────────────────

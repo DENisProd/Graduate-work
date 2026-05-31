@@ -3,7 +3,6 @@ import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard,
   Cpu,
-  Library,
   Workflow,
   Settings,
   Server,

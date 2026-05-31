@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { AppLocale } from '@/i18n/messages'
+import { migrateLegacyServerUrl, normalizeServerUrl, resolveServerUrl } from '@/lib/server-url'
 
 function browserDefaultLocale(): AppLocale {
   if (typeof navigator === 'undefined') return 'en'
@@ -51,7 +52,7 @@ interface SettingsState {
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
-      serverUrl: import.meta.env.VITE_LOCAL_SERVER_URL || 'http://localhost:8080',
+      serverUrl: resolveServerUrl(),
       accessServiceUrl: (import.meta.env.VITE_ACCESS_SERVICE_URL as string | undefined)?.trim() || '',
       userId: import.meta.env.VITE_DEFAULT_USER_ID || '',
       authSessionId: '',
@@ -68,8 +69,8 @@ export const useSettingsStore = create<SettingsState>()(
       theme: 'light',
       locale: browserDefaultLocale(),
 
-      setServerUrl: (url) => set({ serverUrl: url }),
-      setAccessServiceUrl: (url) => set({ accessServiceUrl: url.trim() }),
+      setServerUrl: (url) => set({ serverUrl: normalizeServerUrl(url) }),
+      setAccessServiceUrl: (url) => set({ accessServiceUrl: normalizeServerUrl(url) }),
       setUserId: (id) => set({ userId: id }),
       setAuthState: (patch) => set((state) => ({ ...state, ...patch })),
       resetAuthState: () =>
@@ -102,6 +103,16 @@ export const useSettingsStore = create<SettingsState>()(
       name: 'local-frontend-settings',
       onRehydrateStorage: () => (state) => {
         if (!state) return
+        const migrated = migrateLegacyServerUrl(state.serverUrl)
+        if (migrated !== state.serverUrl) {
+          useSettingsStore.setState({ serverUrl: migrated })
+        }
+        if (state.accessServiceUrl?.trim()) {
+          const migratedAccess = migrateLegacyServerUrl(state.accessServiceUrl)
+          if (migratedAccess !== state.accessServiceUrl) {
+            useSettingsStore.setState({ accessServiceUrl: migratedAccess })
+          }
+        }
         const loc = state.locale === 'ru' || state.locale === 'en' ? state.locale : browserDefaultLocale()
         document.documentElement.lang = loc === 'ru' ? 'ru' : 'en'
         if (state.locale !== loc) {
