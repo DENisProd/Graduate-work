@@ -3,6 +3,7 @@
 import { useRef, type ComponentProps, type CSSProperties } from 'react';
 import Link from 'next/link';
 import {
+  ArrowRight,
   Bot,
   Briefcase,
   Building2,
@@ -10,6 +11,8 @@ import {
   Home,
   KeyRound,
   Layers,
+  Lightbulb,
+  Lock,
   Map,
   Monitor,
   Radio,
@@ -18,8 +21,10 @@ import {
   Shield,
   Sparkles,
   Store,
+  Thermometer,
   UserPlus,
   Warehouse,
+  Wifi,
   WifiOff,
   Zap,
   type LucideIcon,
@@ -31,6 +36,8 @@ import { AuroraBackground } from '@/components/ui/aurora-background';
 import { ThemeInitializer } from '@/components/shared';
 import { useLandingGsap, useTranslation } from '@/hooks';
 import { cn } from '@/lib/utils';
+
+type TranslateFn = ReturnType<typeof useTranslation>['t'];
 
 type FeatureKey =
   | 'hybrid'
@@ -117,16 +124,26 @@ const valuePropKeys: ValuePropKey[] = ['scale', 'integration', 'security'];
 const problemMarketKeys = ['cloud', 'diy', 'scada'] as const;
 const problemSolutionKeys = ['hybrid', 'access', 'protocols'] as const;
 
-function SectionAccentBar({ className }: { className?: string }) {
-  return (
-    <div
-      className={cn(
-        'h-0.5 w-9 rounded-full bg-gradient-to-r from-primary via-[var(--brand-teal)] to-[var(--brand-secondary)]/70',
-        className,
-      )}
-      aria-hidden
-    />
-  );
+const techStack = [
+  { label: 'Zigbee2MQTT', dot: 'indigo' },
+  { label: 'MQTT', dot: 'indigo' },
+  { label: 'Modbus RTU/TCP', dot: 'teal' },
+  { label: 'PostgreSQL', dot: 'teal' },
+  { label: 'MongoDB', dot: 'hearth' },
+  { label: 'Keycloak', dot: 'hearth' },
+  { label: 'NestJS', dot: 'indigo' },
+  { label: 'Next.js', dot: 'teal' },
+  { label: 'Socket.IO', dot: 'hearth' },
+] as const;
+
+const dotClass: Record<string, string> = {
+  indigo: 'bg-primary',
+  teal: 'bg-[var(--brand-teal)]',
+  hearth: 'bg-[var(--brand-secondary)]',
+};
+
+function SectionKicker({ label, className }: { label: string; className?: string }) {
+  return <p className={cn('landing-section-kicker', className)}>{label}</p>;
 }
 
 function AccentCard({
@@ -154,6 +171,146 @@ function AccentCard({
   );
 }
 
+function LandingHeader({ t }: { t: TranslateFn }) {
+  return (
+    <header className="landing-header">
+      <div className="container flex h-14 items-center justify-between">
+        <Link href="/" className="group flex items-center gap-2.5">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-[11px] font-bold text-primary-foreground transition-opacity group-hover:opacity-85">
+            Д
+          </span>
+          <span className="font-semibold tracking-tight">{t('header.title')}</span>
+        </Link>
+
+        <nav className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">
+          <Link href="#why" className="transition-colors hover:text-foreground">
+            {t('landing.nav.why')}
+          </Link>
+          <Link href="#features" className="transition-colors hover:text-foreground">
+            {t('landing.nav.features')}
+          </Link>
+          <Link href="#architecture" className="transition-colors hover:text-foreground">
+            {t('landing.nav.architecture')}
+          </Link>
+        </nav>
+
+        <div className="flex items-center gap-2">
+          <Button asChild variant="ghost" size="sm" className="hidden text-sm sm:inline-flex">
+            <Link href="/dashboard">{t('landing.nav.ctaSecondary')}</Link>
+          </Button>
+          <Button asChild size="sm" className="text-sm shadow-sm shadow-primary/20">
+            <Link href="/dashboard">{t('landing.nav.cta')}</Link>
+          </Button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function DeviceStatusMockup() {
+  return (
+    <div className="landing-hero-mockup">
+      <div className="landing-hero-mockup-header">
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--brand-teal)]" />
+          <span className="text-xs font-semibold text-foreground">Домовой</span>
+          <span className="rounded-full border border-[var(--brand-teal)]/25 bg-[var(--brand-teal)]/10 px-1.5 py-0.5 text-[10px] font-medium text-[var(--brand-teal)]">
+            Online
+          </span>
+        </div>
+        <span className="text-[11px] text-muted-foreground">3 объекта</span>
+      </div>
+
+      <div className="space-y-2 p-3">
+        <div className="landing-hero-mockup-row">
+          <div className="flex items-center gap-2">
+            <Lightbulb className="h-3.5 w-3.5 text-[var(--brand-secondary)]" />
+            <span className="text-xs text-foreground/80">Свет в гостиной</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--brand-secondary)]" />
+            <span className="text-xs font-medium text-[var(--brand-secondary)]">Вкл</span>
+          </div>
+        </div>
+
+        <div className="landing-hero-mockup-row">
+          <div className="flex items-center gap-2">
+            <Thermometer className="h-3.5 w-3.5 text-primary" />
+            <span className="text-xs text-foreground/80">Климат</span>
+          </div>
+          <span className="text-xs font-semibold text-primary">21 °C</span>
+        </div>
+
+        <div className="landing-hero-mockup-row">
+          <div className="flex items-center gap-2">
+            <Lock className="h-3.5 w-3.5 text-[var(--brand-teal)]" />
+            <span className="text-xs text-foreground/80">Входная дверь</span>
+          </div>
+          <span className="text-xs font-medium text-[var(--brand-teal)]">Заперта</span>
+        </div>
+
+        <div className="landing-hero-mockup-row">
+          <div className="flex items-center gap-2">
+            <Wifi className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">Zigbee-сеть</span>
+          </div>
+          <span className="text-[11px] text-muted-foreground">12 устройств</span>
+        </div>
+      </div>
+
+      <div className="space-y-2 border-t border-[var(--border)]/40 px-3 py-2.5">
+        <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+          <span>Автоматизации</span>
+          <span className="font-medium text-[var(--brand-secondary)]">4 активных</span>
+        </div>
+        <div className="h-1.5 overflow-hidden rounded-full bg-muted/60">
+          <div className="h-full w-[72%] rounded-full bg-gradient-to-r from-primary via-[var(--brand-teal)] to-[var(--brand-secondary)]" />
+        </div>
+      </div>
+
+      <div className="landing-hero-mockup-footer">
+        <RefreshCw className="h-3 w-3 shrink-0 text-muted-foreground" />
+        <span className="text-[10px] text-muted-foreground">Обновлено 3с назад</span>
+        <span className="text-[10px] text-muted-foreground">·</span>
+        <span className="text-[10px] font-medium text-[var(--brand-teal)]">Локальный сервер</span>
+      </div>
+    </div>
+  );
+}
+
+function LandingCTA({ t }: { t: TranslateFn }) {
+  return (
+    <section className="landing-cta-section">
+      <div className="container">
+        <div className="mx-auto max-w-2xl space-y-6 text-center">
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            {t('landing.cta.title')}
+          </h2>
+          <p className="text-base text-muted-foreground sm:text-lg">
+            {t('landing.cta.description')}
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <Button asChild size="lg" className="shadow-md shadow-primary/20">
+              <Link href="/dashboard">
+                {t('landing.cta.primary')}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              size="lg"
+              className="border-primary/20 bg-primary/[0.04] hover:bg-primary/8"
+            >
+              <Link href="/admin">{t('landing.cta.secondary')}</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function LandingPage() {
   const { t, ready } = useTranslation();
   const pageRef = useRef<HTMLDivElement>(null);
@@ -172,40 +329,48 @@ export default function LandingPage() {
     <>
       <ThemeInitializer />
       <div ref={pageRef} className="min-h-screen bg-background text-foreground">
+        {/* <LandingHeader t={t} /> */}
+
         <AuroraBackground className="w-full">
           <section className="relative w-full overflow-hidden">
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/[0.04] via-transparent to-background" />
-            <div className="container relative z-10 py-2 lg:py-4">
-              <div className="max-w-3xl -translate-y-14 space-y-6">
-                <span
-                  data-hero-item
-                  className="landing-eyebrow inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-medium uppercase tracking-widest"
-                >
-                  {t('landing.hero.badge')}
-                </span>
-                <h1
-                  data-hero-item
-                  className="text-4xl font-semibold leading-tight md:text-5xl lg:text-6xl"
-                >
-                  <span className="text-foreground">{t('landing.hero.titleBefore')}</span>
-                  <span className="landing-gradient-text">{t('landing.hero.titleHighlight')}</span>
-                  <span className="text-foreground">{t('landing.hero.titleAfter')}</span>
-                </h1>
-                <p data-hero-item className="text-base text-muted-foreground md:text-lg">
-                  {t('landing.hero.description')}
-                </p>
-                <div data-hero-item className="flex flex-wrap gap-3">
-                  <Button asChild size="lg" className="shadow-md shadow-primary/15">
-                    <Link href="/dashboard">{t('landing.hero.ctaDashboard')}</Link>
-                  </Button>
-                  <Button
-                    asChild
-                    variant="secondary"
-                    size="lg"
-                    className="border-primary/15 bg-primary/[0.06] hover:bg-primary/10"
+            <div className="container relative z-10 pb-20 pt-12 lg:pb-64 lg:pt-50">
+              <div className="grid items-center gap-12 lg:grid-cols-[1fr_400px]">
+                <div className="max-w-2xl space-y-7">
+                  <h1
+                    data-hero-item
+                    className="text-5xl font-bold leading-[1.07] tracking-tight sm:text-6xl lg:text-7xl"
                   >
-                    <Link href="/admin">{t('landing.hero.ctaAdmin')}</Link>
-                  </Button>
+                    <span className="text-foreground">{t('landing.hero.titleBefore')}</span>
+                    <span className="landing-gradient-text">{t('landing.hero.titleHighlight')}</span>
+                    <span className="text-foreground">{t('landing.hero.titleAfter')}</span>
+                  </h1>
+                  <p
+                    data-hero-item
+                    className="max-w-xl text-base text-muted-foreground md:text-lg"
+                  >
+                    {t('landing.hero.description')}
+                  </p>
+                  <div data-hero-item className="flex flex-wrap gap-3">
+                    <Button asChild size="lg" className="shadow-md shadow-primary/20">
+                      <Link href="/dashboard">
+                        {t('landing.hero.ctaDashboard')}
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button
+                      asChild
+                      variant="secondary"
+                      size="lg"
+                      className="border-primary/15 bg-primary/[0.06] hover:bg-primary/10"
+                    >
+                      <Link href="/admin">{t('landing.hero.ctaAdmin')}</Link>
+                    </Button>
+                  </div>
+                </div>
+
+                <div data-hero-item className="flex justify-center lg:justify-end">
+                  <DeviceStatusMockup />
                 </div>
               </div>
             </div>
@@ -219,8 +384,10 @@ export default function LandingPage() {
         >
           <div className="container space-y-10">
             <div data-section-header className="max-w-2xl space-y-3">
-              <SectionAccentBar />
-              <h2 className="text-3xl font-semibold">{t('landing.problem.title')}</h2>
+              <SectionKicker label={t('landing.nav.why')} />
+              <h2 className="text-3xl font-bold tracking-tight">
+                {t('landing.problem.title')}
+              </h2>
               <p className="text-muted-foreground">{t('landing.problem.description')}</p>
             </div>
             <div className="grid gap-6 lg:grid-cols-2">
@@ -228,14 +395,16 @@ export default function LandingPage() {
                 data-problem-card
                 className="landing-card-surface border-border/80 bg-card/95"
               >
-                <CardHeader>
-                  <CardTitle className="text-lg">{t('landing.problem.marketTitle')}</CardTitle>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-semibold">
+                    {t('landing.problem.marketTitle')}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ul className="space-y-4">
+                  <ul className="space-y-3.5">
                     {problemMarketKeys.map((key) => (
                       <li key={key} className="flex gap-3 text-sm text-muted-foreground">
-                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/50" />
+                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/40" />
                         {t(`landing.problem.marketItems.${key}`)}
                       </li>
                     ))}
@@ -243,13 +412,13 @@ export default function LandingPage() {
                 </CardContent>
               </Card>
               <Card data-problem-card className="landing-card-solution">
-                <CardHeader>
-                  <CardTitle className="text-lg landing-gradient-text">
+                <CardHeader className="pb-3">
+                  <CardTitle className="landing-gradient-text text-base font-semibold">
                     {t('landing.problem.solutionTitle')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ul className="space-y-4">
+                  <ul className="space-y-3.5">
                     {problemSolutionKeys.map((key) => (
                       <li key={key} className="flex gap-3 text-sm text-foreground/90">
                         <Shield className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-teal)]" />
@@ -266,8 +435,10 @@ export default function LandingPage() {
         <section id="features" data-landing-section className="scroll-mt-20 py-20">
           <div className="container space-y-10">
             <div data-section-header className="max-w-2xl space-y-3">
-              <SectionAccentBar />
-              <h2 className="text-3xl font-semibold">{t('landing.features.title')}</h2>
+              <SectionKicker label={t('landing.nav.features')} />
+              <h2 className="text-3xl font-bold tracking-tight">
+                {t('landing.features.title')}
+              </h2>
               <p className="text-muted-foreground">{t('landing.features.description')}</p>
             </div>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -287,10 +458,10 @@ export default function LandingPage() {
                       >
                         <Icon className="h-5 w-5" />
                       </div>
-                      <CardTitle className="text-lg">
+                      <CardTitle className="text-base font-semibold">
                         {t(`landing.features.items.${key}.title`)}
                       </CardTitle>
-                      <CardDescription>
+                      <CardDescription className="text-sm leading-relaxed">
                         {t(`landing.features.items.${key}.description`)}
                       </CardDescription>
                     </div>
@@ -308,8 +479,10 @@ export default function LandingPage() {
         >
           <div className="container space-y-10">
             <div data-section-header className="max-w-2xl space-y-3">
-              <SectionAccentBar />
-              <h2 className="text-3xl font-semibold">{t('landing.audiences.title')}</h2>
+              <SectionKicker label={t('landing.nav.features')} />
+              <h2 className="text-3xl font-bold tracking-tight">
+                {t('landing.audiences.title')}
+              </h2>
               <p className="text-muted-foreground">{t('landing.audiences.description')}</p>
             </div>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -331,8 +504,10 @@ export default function LandingPage() {
                       >
                         <Icon className="h-5 w-5" />
                       </div>
-                      <p className="font-semibold">{t(`landing.audiences.items.${key}.title`)}</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm font-semibold">
+                        {t(`landing.audiences.items.${key}.title`)}
+                      </p>
+                      <p className="text-sm leading-relaxed text-muted-foreground">
                         {t(`landing.audiences.items.${key}.description`)}
                       </p>
                     </CardContent>
@@ -346,8 +521,10 @@ export default function LandingPage() {
         <section id="architecture" data-landing-section className="scroll-mt-20 py-20">
           <div className="container space-y-10">
             <div data-section-header className="max-w-2xl space-y-3">
-              <SectionAccentBar />
-              <h2 className="text-3xl font-semibold">{t('landing.architecture.title')}</h2>
+              <SectionKicker label={t('landing.nav.architecture')} />
+              <h2 className="text-3xl font-bold tracking-tight">
+                {t('landing.architecture.title')}
+              </h2>
               <p className="text-muted-foreground">{t('landing.architecture.description')}</p>
             </div>
             <div className="grid gap-6 md:grid-cols-3">
@@ -369,10 +546,10 @@ export default function LandingPage() {
                       >
                         <Icon className="h-6 w-6" />
                       </div>
-                      <p className="text-lg font-semibold">
+                      <p className="font-semibold">
                         {t(`landing.architecture.layers.${key}.title`)}
                       </p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm leading-relaxed text-muted-foreground">
                         {t(`landing.architecture.layers.${key}.description`)}
                       </p>
                     </CardContent>
@@ -390,8 +567,10 @@ export default function LandingPage() {
         >
           <div className="container space-y-10">
             <div data-section-header className="max-w-2xl space-y-3">
-              <SectionAccentBar />
-              <h2 className="text-3xl font-semibold">{t('landing.useCases.title')}</h2>
+              <SectionKicker label={t('landing.nav.features')} />
+              <h2 className="text-3xl font-bold tracking-tight">
+                {t('landing.useCases.title')}
+              </h2>
               <p className="text-muted-foreground">{t('landing.useCases.description')}</p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -406,14 +585,14 @@ export default function LandingPage() {
                     className="transition-colors hover:border-primary/25"
                   >
                     <CardContent className="flex gap-4 p-5">
-                      <span className="landing-use-case-num flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
+                      <span className="landing-use-case-num flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
                         {index + 1}
                       </span>
-                      <div className="space-y-2">
+                      <div className="space-y-1.5">
                         <div className="flex items-center gap-2">
                           <Icon
                             className={cn(
-                              'h-4 w-4',
+                              'h-3.5 w-3.5 shrink-0',
                               accent === 'indigo' && 'text-primary',
                               accent === 'teal' && 'text-[var(--brand-teal)]',
                               accent === 'hearth' && 'text-[var(--brand-secondary)]',
@@ -423,7 +602,7 @@ export default function LandingPage() {
                             {t(`landing.useCases.items.${key}.title`)}
                           </p>
                         </div>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm leading-relaxed text-muted-foreground">
                           {t(`landing.useCases.items.${key}.description`)}
                         </p>
                       </div>
@@ -440,11 +619,13 @@ export default function LandingPage() {
           data-landing-section
           className="landing-mesh-indigo scroll-mt-20 py-20"
         >
-          <div className="container grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-            <div className="space-y-4">
+          <div className="container grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+            <div className="space-y-6">
               <div data-section-header className="space-y-4">
-                <SectionAccentBar />
-                <h2 className="text-3xl font-semibold">{t('landing.valueProps.title')}</h2>
+                <SectionKicker label={t('landing.nav.why')} />
+                <h2 className="text-3xl font-bold tracking-tight">
+                  {t('landing.valueProps.title')}
+                </h2>
                 <p className="text-muted-foreground">{t('landing.valueProps.description')}</p>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -459,7 +640,7 @@ export default function LandingPage() {
                       <p className="text-sm font-semibold">
                         {t(`landing.valueProps.items.${key}.title`)}
                       </p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm leading-relaxed text-muted-foreground">
                         {t(`landing.valueProps.items.${key}.description`)}
                       </p>
                     </CardContent>
@@ -467,45 +648,50 @@ export default function LandingPage() {
                 ))}
               </div>
             </div>
-            <div data-stats-panel className="landing-stats-panel rounded-3xl p-8">
-              <div className="space-y-4">
+            <div data-stats-panel className="landing-stats-panel rounded-2xl p-8">
+              <div className="space-y-5">
                 <div data-stat-row className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">{t('landing.stats.statusLabel')}</span>
                   <span className="font-medium text-primary">{t('landing.stats.statusValue')}</span>
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-muted/80">
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/70">
                   <div
                     data-landing-progress
-                    className="landing-progress-fill h-2 w-full rounded-full"
+                    className="landing-progress-fill h-1.5 w-full rounded-full"
                   />
                 </div>
-                <div className="grid gap-3 text-sm text-muted-foreground">
+                <div className="space-y-3 text-sm text-muted-foreground">
                   <div data-stat-row className="flex items-center justify-between gap-4">
                     <span>{t('landing.stats.activeDevicesLabel')}</span>
-                    <span className="shrink-0 font-medium text-[var(--brand-teal)]">
+                    <span className="shrink-0 font-semibold text-[var(--brand-teal)]">
                       {t('landing.stats.activeDevicesValue')}
                     </span>
                   </div>
                   <div data-stat-row className="flex items-center justify-between gap-4">
                     <span>{t('landing.stats.responseTimeLabel')}</span>
-                    <span className="shrink-0 font-medium text-foreground">
+                    <span className="shrink-0 font-semibold text-foreground">
                       {t('landing.stats.responseTimeValue')}
                     </span>
                   </div>
                   <div data-stat-row className="flex items-center justify-between gap-4">
                     <span>{t('landing.stats.automationLabel')}</span>
-                    <span className="shrink-0 text-right font-medium text-[var(--brand-secondary)]">
+                    <span className="shrink-0 text-right font-semibold text-[var(--brand-secondary)]">
                       {t('landing.stats.automationValue')}
                     </span>
                   </div>
                 </div>
                 <Button data-reveal asChild className="w-full shadow-md shadow-primary/20" size="lg">
-                  <Link href="/dashboard">{t('landing.stats.cta')}</Link>
+                  <Link href="/dashboard">
+                    {t('landing.stats.cta')}
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
                 </Button>
               </div>
             </div>
           </div>
         </section>
+
+        <LandingCTA t={t} />
       </div>
     </>
   );

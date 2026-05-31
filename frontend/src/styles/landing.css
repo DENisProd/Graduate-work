@@ -167,3 +167,106 @@
   color: var(--primary);
   border: 1px solid color-mix(in oklab, var(--primary) 20%, transparent);
 }
+
+/* ─── Header ──────────────────────────────────────────────────────────── */
+
+.landing-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  height: 3.5rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 65%, transparent);
+  background: color-mix(in oklab, var(--background) 82%, transparent);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+}
+
+/* ─── Hero mockup card ────────────────────────────────────────────────── */
+
+.landing-hero-mockup {
+  width: 100%;
+  max-width: 400px;
+  border-radius: 1.25rem;
+  border: 1px solid color-mix(in oklab, var(--primary) 18%, var(--border));
+  background: linear-gradient(
+    155deg,
+    color-mix(in oklab, var(--card) 93%, var(--primary) 7%) 0%,
+    var(--card) 48%,
+    color-mix(in oklab, var(--card) 96%, var(--brand-teal) 4%) 100%
+  );
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--primary) 5%, transparent) inset,
+    0 24px 64px -16px color-mix(in oklab, var(--foreground) 14%, transparent),
+    0 0 80px -20px color-mix(in oklab, var(--primary) 22%, transparent);
+  overflow: hidden;
+}
+
+.landing-hero-mockup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1.125rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 55%, transparent);
+  background: color-mix(in oklab, var(--background) 35%, transparent);
+}
+
+.landing-hero-mockup-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  background: color-mix(in oklab, var(--background) 45%, transparent);
+  border: 1px solid color-mix(in oklab, var(--border) 38%, transparent);
+}
+
+.landing-hero-mockup-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.125rem;
+  border-top: 1px solid color-mix(in oklab, var(--border) 55%, transparent);
+  background: color-mix(in oklab, var(--background) 35%, transparent);
+}
+
+/* ─── CTA section ─────────────────────────────────────────────────────── */
+
+.landing-cta-section {
+  padding-top: 6rem;
+  padding-bottom: 6rem;
+  border-top: 1px solid color-mix(in oklab, var(--primary) 10%, var(--border));
+  background-color: var(--background);
+  background-image:
+    radial-gradient(ellipse 90% 65% at 50% 0%, color-mix(in oklab, var(--primary) 9%, transparent), transparent 62%),
+    radial-gradient(ellipse 60% 40% at 80% 100%, color-mix(in oklab, var(--brand-teal) 5%, transparent), transparent 55%);
+}
+
+/* ─── Footer ──────────────────────────────────────────────────────────── */
+
+.landing-footer {
+  border-top: 1px solid color-mix(in oklab, var(--border) 75%, transparent);
+  background: color-mix(in oklab, var(--background) 98%, var(--card) 2%);
+}
+
+/* ─── Tech stack chip ─────────────────────────────────────────────────── */
+
+.landing-tech-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.3125rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1px solid color-mix(in oklab, var(--border) 70%, var(--primary) 30%);
+  background: color-mix(in oklab, var(--card) 80%, var(--primary) 4%);
+  color: var(--muted-foreground);
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.landing-tech-chip:hover {
+  border-color: color-mix(in oklab, var(--primary) 40%, var(--border));
+  color: var(--foreground);
+}

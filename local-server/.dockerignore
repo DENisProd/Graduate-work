@@ -1,33 +1,13 @@
-# Rust build artifacts
-target/
+# Rust build artifacts (each service uses its own context, but belt-and-suspenders)
+**/target
 
-# SQLite runtime data
-data/
-*.db
-*.db-journal
-*.db-wal
-*.db-shm
+# JS deps and previous build output
+local-frontend/node_modules
+local-frontend/dist
 
-# Git
-.git/
-.gitignore
-
-# Environment & local config
-.env
-.env.local
-config/local.toml
-
-# IDE / editors
-.idea/
-.vscode/
-.claude/
-
-# Docker (avoid recursive context)
-Dockerfile
-.dockerignore
-docker-compose.yml
-docker-compose.*.yml
-
-# Docs
-*.md
-README*
+# Not needed for caddy build context
+local-backend
+modbus-mqtt-bridge
+mosquitto
+zigbee2mqtt
+.git

@@ -1,18 +1,21 @@
-# Node
-node_modules/
-dist/
+# Rust build artifacts
+target/
 
-# Environment
-.env
-.env.local
+# SQLite runtime data
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
 
 # Git
 .git/
 .gitignore
 
-# Logs
-*.log
-npm-debug.log*
+# Environment & local config
+.env
+.env.local
+config/local.toml
 
 # IDE / editors
 .idea/

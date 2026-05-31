@@ -212,7 +212,7 @@
     "dangerZone": "Danger zone"
   },
   "home": {
-    "title": "Smart Home System",
+    "title": "Domovoy",
     "subtitle": "Control your home with ease",
     "description": "Welcome to your smart home dashboard. Manage all your devices and rooms from one place."
   },
@@ -442,6 +442,19 @@
       "automationLabel": "AI scenarios",
       "automationValue": "on-prem, no external LLM",
       "cta": "Start with the dashboard"
+    },
+    "nav": {
+      "why": "Why",
+      "features": "Features",
+      "architecture": "Architecture",
+      "cta": "Open App",
+      "ctaSecondary": "Sign In"
+    },
+    "cta": {
+      "title": "Ready to bring your smart home to the next level?",
+      "description": "Open the dashboard and connect your first site — or explore the device catalog and configure access policies.",
+      "primary": "Open Dashboard",
+      "secondary": "Admin Panel"
     }
   },
   "footer": {
