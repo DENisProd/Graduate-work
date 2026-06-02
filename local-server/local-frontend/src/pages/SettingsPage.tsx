@@ -296,43 +296,6 @@ export function SettingsPage() {
       <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{t('settings.title')}</h1>
 
       <section>
-        <SectionTitle>{t('settings.connection')}</SectionTitle>
-        <Card>
-          <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
-            {t('settings.connectionHint')}
-          </p>
-          <div className="flex gap-2">
-            <Input
-              value={urlDraft}
-              onChange={setUrlDraft}
-              placeholder={window.location.origin}
-              className="flex-1"
-            />
-            <Button variant="secondary" onClick={handleTestConnection} disabled={connectionStatus === 'checking'}>
-              {connectionStatus === 'checking' && (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              )}
-              {t('common.test')}
-            </Button>
-            <Button onClick={handleSaveUrl}>{t('common.save')}</Button>
-          </div>
-
-          {connectionStatus === 'ok' && (
-            <div className="mt-3 flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
-              <CheckCircle className="h-4 w-4" />
-              {t('settings.connectedVersion', { version: connectionVersion })}
-            </div>
-          )}
-          {connectionStatus === 'error' && (
-            <div className="mt-3 flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
-              <XCircle className="h-4 w-4" />
-              {t('settings.connectionFailed')}
-            </div>
-          )}
-        </Card>
-      </section>
-
-      <section>
         <SectionTitle>{t('settings.gateway')}</SectionTitle>
         <Card>
           <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
@@ -362,24 +325,6 @@ export function SettingsPage() {
           </div>
           <div className="mt-4">
             <Button onClick={() => void handleSaveGateway()}>{t('settings.saveGateway')}</Button>
-          </div>
-        </Card>
-      </section>
-
-      <section>
-        <SectionTitle>{t('settings.identity')}</SectionTitle>
-        <Card>
-          <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
-            {t('settings.identityHint')}
-          </p>
-          <div className="flex gap-2">
-            <Input
-              value={userIdDraft}
-              onChange={setUserIdDraft}
-              placeholder="00000000-0000-0000-0000-000000000000"
-              className="flex-1 font-mono text-xs"
-            />
-            <Button onClick={handleSaveUserId}>{t('common.save')}</Button>
           </div>
         </Card>
       </section>

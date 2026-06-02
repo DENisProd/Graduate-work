@@ -12,6 +12,8 @@ export type WidgetType =
   | 'SLIDER_CONTROL'
   | 'DEVICE_HERO'
   | 'MINI_LINE_CHART'
+  | 'MODBUS_REGISTER_VALUE'
+  | 'MODBUS_REGISTER_CONTROL'
 
 export interface WidgetInstance {
   id: string

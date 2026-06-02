@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format, parseISO, differenceInMilliseconds } from 'date-fns'
-import { Plus, Play, Pencil, Trash2, X, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Play, Pencil, Trash2, X, AlertTriangle, ChevronLeft, ChevronRight, Settings, ClipboardList } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/hooks/useI18n'
@@ -294,7 +294,7 @@ export function ScenariosPage() {
             </div>
           ) : scenarios.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 text-center">
-              <div className="mb-4 text-5xl">⚙️</div>
+              <Settings className="mb-4 h-12 w-12 text-slate-400 dark:text-slate-600" />
               <p className="font-semibold text-slate-700 dark:text-slate-300">{t('scenarios.emptyTitle')}</p>
               <p className="mt-1 text-sm text-slate-400">
                 {t('scenarios.emptySubtitle')}
@@ -396,7 +396,7 @@ export function ScenariosPage() {
             </div>
           ) : executions.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="mb-3 text-4xl">📋</div>
+              <ClipboardList className="mb-3 h-10 w-10 text-slate-400 dark:text-slate-600" />
               <p className="text-sm text-slate-400">{t('scenarios.historyEmpty')}</p>
             </div>
           ) : (

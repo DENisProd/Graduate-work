@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { format, parseISO } from 'date-fns'
-import { Thermometer, Droplets, BatteryMedium, Wifi, Sun, Eye, Palette } from 'lucide-react'
+import { Thermometer, Droplets, BatteryMedium, Wifi, Sun, Eye, Palette, ClipboardList } from 'lucide-react'
 import { useI18n } from '@/hooks/useI18n'
 import { getZigbeeStates, getDeviceLogs } from '@/api/zigbee'
 import type { ZigbeeDevice, ZigbeeState } from '@/types'
@@ -289,7 +289,7 @@ function Dash() {
 function Empty({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="mb-3 text-4xl">📋</div>
+      <ClipboardList className="mb-3 h-10 w-10 text-slate-400 dark:text-slate-600" />
       <p className="text-sm text-slate-500 dark:text-slate-400">{children}</p>
     </div>
   )

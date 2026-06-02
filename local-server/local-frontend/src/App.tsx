@@ -8,7 +8,6 @@ import { ScenarioEditorPage } from '@/pages/ScenarioEditorPage'
 import { HousesPage } from '@/pages/HousesPage'
 import { UsersPage } from '@/pages/UsersPage'
 import { RoomsPage } from '@/pages/RoomsPage'
-import { ModbusPage } from '@/pages/ModbusPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 
 export function App() {
@@ -24,7 +23,6 @@ export function App() {
         <Route path="houses" element={<HousesPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="rooms" element={<RoomsPage />} />
-        <Route path="modbus" element={<ModbusPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
     </Routes>

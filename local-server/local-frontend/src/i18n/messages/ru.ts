@@ -82,12 +82,19 @@ export const ru = {
     deviceOne: '{{count}} устройство',
     deviceMany: '{{count}} устройств',
   },
+  devices: {
+    colProtocol: 'Протокол',
+    colAddress: 'Адрес',
+    colStatus: 'Статус',
+    disabled: 'Отключено',
+  },
   zigbee: {
-    title: 'Zigbee-устройства',
+    title: 'Устройства',
     syncFromBridge: 'Синхронизировать с мостом',
     tabDevices: 'Устройства',
     tabStates: 'Состояния',
     tabLogs: 'Журнал',
+    tabModbus: 'Modbus',
     deleteTitle: 'Удалить устройство?',
     deleteBody:
       'Удалить {{name}} из сети Zigbee. Это действие необратимо.',

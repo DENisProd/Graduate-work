@@ -3,8 +3,9 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import {
   Zap, ToggleRight, MousePointerClick,
   Wifi, WifiOff, Activity, Lightbulb, Fan, Lock,
-  Camera, Loader2, AlertCircle, Thermometer,
+  Camera, Loader2, AlertCircle, Thermometer, RefreshCw,
 } from 'lucide-react'
+import { readModbusRegister, writeModbusRegister } from '@/api/modbus'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { getPhysicalDevice } from '@/api/physical-devices'
@@ -720,6 +721,136 @@ function MiniLineChartWidget({ config }: { config: Record<string, unknown> }) {
   )
 }
 
+// ── MODBUS_REGISTER_VALUE ─────────────────────────────────────────────────────
+
+function ModbusRegisterValueWidget({ config }: { config: Record<string, unknown> }) {
+  const deviceId = config.modbusDeviceId as string | undefined
+  const registerId = config.modbusRegisterId as string | undefined
+  const label = config.label as string | undefined
+  const unit = config.unit as string | undefined
+  const accent = String(config.accent ?? 'green')
+
+  const strokeColor =
+    accent === 'blue' ? '#3b82f6' : accent === 'amber' ? '#f59e0b' : accent === 'red' ? '#ef4444' : '#10b981'
+
+  const { data, isFetching, refetch } = useQuery({
+    queryKey: ['modbus-reg', deviceId, registerId],
+    queryFn: () => readModbusRegister(deviceId!, registerId!),
+    enabled: !!deviceId && !!registerId,
+    refetchInterval: Number(config.refreshInterval ?? 30) * 1000,
+    staleTime: 5_000,
+  })
+
+  const value = data?.scaledValues?.[0] ?? null
+  const formatted = value != null ? value.toFixed(2) : '—'
+
+  return (
+    <Shell>
+      <div className="flex h-full flex-col items-center justify-center gap-1 px-3 py-3">
+        {label && (
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</p>
+        )}
+        <div className="flex items-end gap-1">
+          <span className="text-4xl font-bold tabular-nums text-slate-900 dark:text-slate-100" style={{ color: value != null ? strokeColor : undefined }}>
+            {formatted}
+          </span>
+          {unit && <span className="mb-1 text-lg text-slate-400">{unit}</span>}
+        </div>
+        <button
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className="mt-1 rounded-md p-1 text-slate-400 hover:text-slate-600 disabled:opacity-50 dark:hover:text-slate-300"
+        >
+          <RefreshCw className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')} />
+        </button>
+      </div>
+    </Shell>
+  )
+}
+
+// ── MODBUS_REGISTER_CONTROL ───────────────────────────────────────────────────
+
+function ModbusRegisterControlWidget({ config }: { config: Record<string, unknown> }) {
+  const deviceId = config.modbusDeviceId as string | undefined
+  const registerId = config.modbusRegisterId as string | undefined
+  const label = config.label as string | undefined
+  const controlType = String(config.controlType ?? 'coil')
+
+  const [numericValue, setNumericValue] = useState<string>('')
+
+  const { data, refetch } = useQuery({
+    queryKey: ['modbus-reg', deviceId, registerId],
+    queryFn: () => readModbusRegister(deviceId!, registerId!),
+    enabled: !!deviceId && !!registerId,
+    staleTime: 10_000,
+  })
+
+  const currentCoil = (data?.rawValues?.[0] ?? 0) !== 0
+
+  const writeMutation = useMutation({
+    mutationFn: (body: { coil?: boolean; value?: number }) =>
+      writeModbusRegister(deviceId!, registerId!, body),
+    onSuccess: () => refetch(),
+    onError: () => toast.error('Write failed'),
+  })
+
+  const canWrite = !!deviceId && !!registerId
+
+  return (
+    <Shell>
+      <div className="flex h-full flex-col items-center justify-center gap-3 px-4">
+        {label && (
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</p>
+        )}
+        {controlType === 'coil' ? (
+          <>
+            <ToggleRight
+              className={cn('h-8 w-8', currentCoil ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600')}
+            />
+            <button
+              onClick={() => { if (canWrite) writeMutation.mutate({ coil: !currentCoil }) }}
+              disabled={writeMutation.isPending || !canWrite}
+              className={cn(
+                'relative h-7 w-12 rounded-full transition-colors disabled:opacity-50',
+                currentCoil ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600',
+              )}
+            >
+              <span
+                className={cn(
+                  'absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all',
+                  currentCoil ? 'left-6' : 'left-1',
+                )}
+              />
+            </button>
+          </>
+        ) : (
+          <div className="flex w-full flex-col gap-2">
+            <input
+              type="number"
+              value={numericValue}
+              onChange={(e) => setNumericValue(e.target.value)}
+              placeholder={data?.scaledValues?.[0]?.toFixed(2) ?? '0'}
+              disabled={!canWrite}
+              className="w-full rounded-lg border border-slate-200 bg-transparent px-3 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-slate-700 dark:text-slate-100"
+            />
+            <button
+              onClick={() => {
+                const v = parseFloat(numericValue)
+                if (!isNaN(v) && canWrite) { writeMutation.mutate({ value: v }); setNumericValue('') }
+              }}
+              disabled={writeMutation.isPending || !canWrite || numericValue === ''}
+              className="flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {writeMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              Write
+            </button>
+          </div>
+        )}
+      </div>
+    </Shell>
+  )
+}
+
 // ── Widget dispatcher ─────────────────────────────────────────────────────────
 
 function WidgetRenderer({ widget }: { widget: WidgetInstance }) {
@@ -734,7 +865,9 @@ function WidgetRenderer({ widget }: { widget: WidgetInstance }) {
     case 'CIRCULAR_PROGRESS': return <CircularProgressWidget config={widget.config} />
     case 'SLIDER_CONTROL':    return <SliderControlWidget config={widget.config} />
     case 'DEVICE_HERO':       return <DeviceHeroWidget config={widget.config} />
-    case 'MINI_LINE_CHART':   return <MiniLineChartWidget config={widget.config} />
+    case 'MINI_LINE_CHART':         return <MiniLineChartWidget config={widget.config} />
+    case 'MODBUS_REGISTER_VALUE':   return <ModbusRegisterValueWidget config={widget.config} />
+    case 'MODBUS_REGISTER_CONTROL': return <ModbusRegisterControlWidget config={widget.config} />
     default:
       return (
         <Shell>

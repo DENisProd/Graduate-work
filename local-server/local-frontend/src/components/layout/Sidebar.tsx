@@ -7,7 +7,6 @@ import {
   Settings,
   Server,
   ChevronUp,
-  Activity,
   Users,
   DoorOpen,
 } from 'lucide-react'
@@ -45,7 +44,6 @@ export function Sidebar() {
         { to: '/', labelKey: 'nav.dashboard' as const, icon: LayoutDashboard, end: true as const },
         { to: '/devices', labelKey: 'nav.devices' as const, icon: Cpu, end: false as const },
         { to: '/scenarios', labelKey: 'nav.scenarios' as const, icon: Workflow, end: false as const },
-        { to: '/modbus', labelKey: 'nav.modbus' as const, icon: Activity, end: false as const },
         { to: '/users', labelKey: 'nav.users' as const, icon: Users, end: false as const },
         { to: '/rooms', labelKey: 'nav.rooms' as const, icon: DoorOpen, end: false as const },
         { to: '/settings', labelKey: 'nav.settings' as const, icon: Settings, end: false as const },

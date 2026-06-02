@@ -6,19 +6,16 @@ import {
   Plus,
   Trash2,
   RefreshCw,
-  ChevronRight,
-  CheckCircle2,
-  XCircle,
   PencilLine,
+  ClipboardList,
+  Radio,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/hooks/useI18n'
 import type { ModbusDevice, ModbusRegister, ModbusRegisterState, ScanLogEntry } from '@/types'
 import {
-  listModbusDevices,
   createModbusDevice,
-  deleteModbusDevice,
   listModbusRegisters,
   createModbusRegister,
   deleteModbusRegister,
@@ -94,7 +91,7 @@ function ConfirmDialog({
 
 // ─── Add Device Modal ─────────────────────────────────────────────────────────
 
-function AddDeviceModal({
+export function AddDeviceModal({
   onClose,
   onSuccess,
   t,
@@ -457,7 +454,7 @@ function WriteRegisterModal({
 
 // ─── Registers panel ──────────────────────────────────────────────────────────
 
-function RegistersPanel({
+export function RegistersPanel({
   device,
   t,
   dateLocale,
@@ -536,7 +533,7 @@ function RegistersPanel({
         </div>
       ) : registers.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="mb-2 text-3xl">📋</div>
+          <ClipboardList className="mb-2 h-8 w-8 text-slate-400 dark:text-slate-600" />
           <p className="font-medium text-slate-700 dark:text-slate-300">{t('modbus.emptyRegisters')}</p>
           <p className="mt-1 text-xs text-slate-400">{t('modbus.emptyRegistersHint')}</p>
         </div>
@@ -786,162 +783,9 @@ function ScanLogPanel({
   )
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// ─── Modbus Tab (scan log only — devices are in the unified Devices list) ─────
 
-export function ModbusPage() {
+export function ModbusTab() {
   const { t, dateLocale } = useI18n()
-  const queryClient = useQueryClient()
-  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null)
-  const [showAddDevice, setShowAddDevice] = useState(false)
-  const [pendingDeleteDevice, setPendingDeleteDevice] = useState<ModbusDevice | null>(null)
-
-  const { data: devices = [], isPending, isError } = useQuery({
-    queryKey: ['modbus-devices'],
-    queryFn: listModbusDevices,
-  })
-
-  const deleteDeviceMutation = useMutation({
-    mutationFn: (device: ModbusDevice) => deleteModbusDevice(device.id),
-    onSuccess: (_, deleted) => {
-      toast.success(t('modbus.toastDeviceDeleted'))
-      setPendingDeleteDevice(null)
-      if (selectedDeviceId === deleted.id) setSelectedDeviceId(null)
-      queryClient.invalidateQueries({ queryKey: ['modbus-devices'] })
-    },
-    onError: () => toast.error(t('modbus.toastDeviceDeleteFailed')),
-  })
-
-  const selectedDevice = devices.find((d) => d.id === selectedDeviceId) ?? null
-
-  return (
-    <div className="flex h-full flex-col gap-4">
-      <div className="flex min-h-0 flex-1 gap-4">
-      {/* Device list sidebar */}
-      <div className="flex w-72 shrink-0 flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
-            {t('modbus.title')}
-          </h1>
-          <button
-            onClick={() => setShowAddDevice(true)}
-            className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            {t('modbus.addDevice')}
-          </button>
-        </div>
-
-        {isError && (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
-            {t('modbus.loadError')}
-          </div>
-        )}
-
-        {isPending ? (
-          <div className="space-y-2">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-14 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-800" />
-            ))}
-          </div>
-        ) : devices.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="mb-2 text-3xl">🔌</div>
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('modbus.emptyTitle')}</p>
-            <p className="mt-1 text-xs text-slate-400">{t('modbus.emptyHint')}</p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-1.5">
-            {devices.map((device) => (
-              <button
-                key={device.id}
-                onClick={() => setSelectedDeviceId(device.id)}
-                className={cn(
-                  'group flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors',
-                  selectedDeviceId === device.id
-                    ? 'border-blue-300 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20'
-                    : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700 dark:hover:bg-slate-900',
-                )}
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">
-                      {device.name}
-                    </span>
-                    {device.enabled ? (
-                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
-                    ) : (
-                      <XCircle className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                    )}
-                  </div>
-                  <div className="mt-0.5 flex items-center gap-2">
-                    <span className="text-xs text-slate-500 dark:text-slate-400">
-                      slave {device.slaveId}
-                    </span>
-                    {device.description && (
-                      <span className="truncate text-xs text-slate-400 dark:text-slate-500">
-                        · {device.description}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setPendingDeleteDevice(device)
-                    }}
-                    title={t('common.delete')}
-                    className="rounded-md p-1 text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                  <ChevronRight
-                    className={cn(
-                      'h-4 w-4 text-slate-400 transition-colors',
-                      selectedDeviceId === device.id && 'text-blue-500',
-                    )}
-                  />
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Register detail panel */}
-      <div className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
-        {selectedDevice ? (
-          <RegistersPanel device={selectedDevice} t={t} dateLocale={dateLocale} />
-        ) : (
-          <div className="flex h-full items-center justify-center text-center">
-            <div>
-              <div className="mb-2 text-4xl">📡</div>
-              <p className="text-sm text-slate-500 dark:text-slate-400">{t('modbus.selectDevice')}</p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {showAddDevice && (
-        <AddDeviceModal
-          onClose={() => setShowAddDevice(false)}
-          onSuccess={() => queryClient.invalidateQueries({ queryKey: ['modbus-devices'] })}
-          t={t}
-        />
-      )}
-
-      {pendingDeleteDevice && (
-        <ConfirmDialog
-          title={t('modbus.deleteDeviceTitle')}
-          body={t('modbus.deleteDeviceBody', { name: pendingDeleteDevice.name })}
-          onConfirm={() => deleteDeviceMutation.mutate(pendingDeleteDevice)}
-          onCancel={() => setPendingDeleteDevice(null)}
-          t={t}
-        />
-      )}
-      </div>
-
-      <ScanLogPanel t={t} dateLocale={dateLocale} />
-    </div>
-  )
+  return <ScanLogPanel t={t} dateLocale={dateLocale} />
 }

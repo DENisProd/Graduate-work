@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Plus, ChevronLeft, ChevronRight, Wifi, WifiOff } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight, Wifi, WifiOff, Radio } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/hooks/useI18n'
 import { listPhysicalDevices } from '@/api/physical-devices'
@@ -112,7 +112,7 @@ export function PhysicalDevicesPage() {
         </div>
       ) : devices.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="mb-3 text-4xl">📡</div>
+          <Radio className="mb-3 h-10 w-10 text-slate-400 dark:text-slate-600" />
           <p className="font-medium text-slate-700 dark:text-slate-300">{t('physicalDevices.emptyTitle')}</p>
           <p className="mt-1 text-sm text-slate-400">
             {houseId || roomId ? t('physicalDevices.emptyFiltered') : t('physicalDevices.emptyHint')}

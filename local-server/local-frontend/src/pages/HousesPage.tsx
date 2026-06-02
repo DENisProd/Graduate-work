@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Home, MapPin, Plus, Trash2, X, Loader2 } from 'lucide-react'
+import { Home, MapPin, Plus, Trash2, X, Loader2, KeyRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/hooks/useI18n'
@@ -170,7 +170,7 @@ export function HousesPage() {
   if (!userId) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
-        <div className="mb-3 text-4xl">🔑</div>
+        <KeyRound className="mb-3 h-10 w-10 text-slate-400 dark:text-slate-600" />
         <p className="font-medium text-slate-700 dark:text-slate-300">{t('houses.noUserTitle')}</p>
         <p className="mt-1 text-sm text-slate-400">{t('houses.noUserHint')}</p>
       </div>
@@ -207,7 +207,7 @@ export function HousesPage() {
         </div>
       ) : houses.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="mb-4 text-5xl">🏠</div>
+          <Home className="mb-4 h-12 w-12 text-slate-400 dark:text-slate-600" />
           <p className="font-semibold text-slate-700 dark:text-slate-300">{t('houses.emptyTitle')}</p>
           <p className="mt-1 max-w-md text-sm text-slate-400">{t('houses.emptyHint')}</p>
         </div>

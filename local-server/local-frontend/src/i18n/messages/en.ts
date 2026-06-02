@@ -80,12 +80,19 @@ export const en = {
     deviceOne: '{{count}} device',
     deviceMany: '{{count}} devices',
   },
+  devices: {
+    colProtocol: 'Protocol',
+    colAddress: 'Address',
+    colStatus: 'Status',
+    disabled: 'Disabled',
+  },
   zigbee: {
-    title: 'Zigbee Devices',
+    title: 'Devices',
     syncFromBridge: 'Sync from Bridge',
     tabDevices: 'Devices',
     tabStates: 'States',
     tabLogs: 'Logs',
+    tabModbus: 'Modbus',
     deleteTitle: 'Delete device?',
     deleteBody:
       'Remove {{name}} from Zigbee network. This cannot be undone.',
