@@ -60,8 +60,6 @@ export class ModbusService {
     private readonly gateway: ModbusGatewayService,
   ) {}
 
-  // ─── Devices ──────────────────────────────────────────────────────────────
-
   async listDevices(): Promise<ModbusDeviceResponseDto[]> {
     return (await this.repo.listDevices()).map(mapDevice);
   }
@@ -81,8 +79,6 @@ export class ModbusService {
     if (!doc) throw new NotFoundException(`Modbus device ${id} not found`);
     await this.repo.deleteDevice(id);
   }
-
-  // ─── Registers ────────────────────────────────────────────────────────────
 
   async listRegisters(deviceId: string): Promise<ModbusRegisterResponseDto[]> {
     await this.getDevice(deviceId);
@@ -105,8 +101,6 @@ export class ModbusService {
     }
     await this.repo.deleteRegister(registerId);
   }
-
-  // ─── Read / Write ─────────────────────────────────────────────────────────
 
   async readRegister(
     deviceId: string,
@@ -174,8 +168,6 @@ export class ModbusService {
       coil: dto.coil,
     });
   }
-
-  // ─── State ────────────────────────────────────────────────────────────────
 
   async getDeviceStates(deviceId: string): Promise<ModbusRegisterStateResponseDto[]> {
     await this.getDevice(deviceId);

@@ -23,8 +23,6 @@ import {
 export class ModbusController {
   constructor(private readonly service: ModbusService) {}
 
-  // ─── Devices ──────────────────────────────────────────────────────────────
-
   @Get('devices')
   @ApiOperation({ summary: 'List modbus devices' })
   @ApiResponse({ status: 200, type: [ModbusDeviceResponseDto] })
@@ -55,8 +53,6 @@ export class ModbusController {
   deleteDevice(@Param('id') id: string): Promise<void> {
     return this.service.deleteDevice(id);
   }
-
-  // ─── Registers ────────────────────────────────────────────────────────────
 
   @Get('devices/:id/registers')
   @ApiOperation({ summary: 'List registers for device' })
@@ -90,8 +86,6 @@ export class ModbusController {
     return this.service.deleteRegister(id, regId);
   }
 
-  // ─── Read / Write ─────────────────────────────────────────────────────────
-
   @Post('devices/:id/registers/:regId/read')
   @ApiOperation({ summary: 'Read register via MQTT bridge' })
   @ApiParam({ name: 'id' })
@@ -117,8 +111,6 @@ export class ModbusController {
   ): Promise<void> {
     return this.service.writeRegister(id, regId, dto);
   }
-
-  // ─── State ────────────────────────────────────────────────────────────────
 
   @Get('devices/:id/state')
   @ApiOperation({ summary: 'Get cached state for all registers of a device' })

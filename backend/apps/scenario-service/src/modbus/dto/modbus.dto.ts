@@ -2,8 +2,6 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsBoolean, IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import type { RegisterType } from '../../mongo/schemas/modbus-register.mongo';
 
-// ─── Device DTOs ─────────────────────────────────────────────────────────────
-
 export class CreateModbusDeviceDto {
   @ApiProperty() @IsString() name: string;
   @ApiProperty() @IsNumber() @Min(1) slaveId: number;
@@ -20,8 +18,6 @@ export class ModbusDeviceResponseDto {
   @ApiProperty() createdAt: string;
   @ApiProperty() updatedAt: string;
 }
-
-// ─── Register DTOs ────────────────────────────────────────────────────────────
 
 export class CreateModbusRegisterDto {
   @ApiProperty() @IsString() name: string;
@@ -52,16 +48,12 @@ export class ModbusRegisterResponseDto {
   @ApiProperty() updatedAt: string;
 }
 
-// ─── State DTOs ───────────────────────────────────────────────────────────────
-
 export class ModbusRegisterStateResponseDto {
   @ApiProperty() registerId: string;
   @ApiProperty({ type: [Number] }) rawValues: number[];
   @ApiProperty({ type: [Number] }) scaledValues: number[];
   @ApiProperty() timestamp: string;
 }
-
-// ─── Write DTOs ───────────────────────────────────────────────────────────────
 
 export class WriteModbusRegisterDto {
   @ApiPropertyOptional() @IsNumber() @IsOptional() value?: number;

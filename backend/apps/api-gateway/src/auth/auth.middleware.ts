@@ -24,7 +24,7 @@ export class AuthMiddleware implements NestMiddleware {
         jwksUri: `${config.keycloakIssuer}/protocol/openid-connect/certs`,
         cache: true,
         cacheMaxEntries: 10,
-        cacheMaxAge: 10 * 60 * 1000, // 10 min
+        cacheMaxAge: 10 * 60 * 1000,
         rateLimit: true,
       });
     } else {

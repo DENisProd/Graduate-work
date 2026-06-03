@@ -68,7 +68,6 @@ async function bootstrap() {
     });
 
     proxyReq.on('upgrade', (proxyRes, proxySocket, proxyHead) => {
-      // Forward 101 + response headers back to the browser
       let head101 = 'HTTP/1.1 101 Switching Protocols\r\n';
       for (const [k, v] of Object.entries(proxyRes.headers)) {
         const values = Array.isArray(v) ? v : [v];

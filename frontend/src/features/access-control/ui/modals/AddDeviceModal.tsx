@@ -30,7 +30,6 @@ function formatTime(s: number) {
   return `${pad2(s / 60)}:${pad2(s % 60)}`;
 }
 
-// --- Device status icon ---
 function StatusIcon({ status }: { status: PairingDevice['status'] }) {
   if (status === 'joining' || status === 'interviewing') {
     return (
@@ -44,7 +43,6 @@ function StatusIcon({ status }: { status: PairingDevice['status'] }) {
       </svg>
     );
   }
-  // failed
   return (
     <svg className="h-4 w-4 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -52,7 +50,6 @@ function StatusIcon({ status }: { status: PairingDevice['status'] }) {
   );
 }
 
-// --- Main modal ---
 export function AddDeviceModal({
   isOpen,
   onOpenChange,
@@ -82,7 +79,6 @@ export function AddDeviceModal({
     houseId,
   });
 
-  // Load devices already connected to this house to hide them from pairing list.
   useEffect(() => {
     if (!isOpen || !houseId) return;
     let cancelled = false;
@@ -135,7 +131,6 @@ export function AddDeviceModal({
     };
   }, [isOpen, houseId]);
 
-  // Clear local state when modal closes (stop() is handled by handleOpenChange)
   useEffect(() => {
     if (!isOpen && isActive) {
       clearDevices();
@@ -144,7 +139,6 @@ export function AddDeviceModal({
     }
   }, [isOpen, isActive, clearDevices]);
 
-  // Reset wizard state when opening
   useEffect(() => {
     if (!isOpen) return;
     setStep(1);
@@ -214,7 +208,6 @@ export function AddDeviceModal({
     setDeviceName(fallback);
     setStep(2);
 
-    // Load categories lazily
     try {
       setCategoriesError(null);
       const all = await deviceCategoriesApi.getAll();
@@ -263,7 +256,6 @@ export function AddDeviceModal({
         </DialogHeader>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden">
-          {/* Step header */}
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span className="font-medium text-foreground">
               {step === 1
@@ -283,14 +275,12 @@ export function AddDeviceModal({
             )}
           </div>
 
-          {/* Not connected warning */}
           {!isSocketConnected && (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-xs text-amber-700 dark:text-amber-400">
               {t('admin.accessControl.pairing.noSocket')}
             </div>
           )}
 
-          {/* STEP 1 */}
           {step === 1 && !isActive && devices.length === 0 && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
@@ -316,10 +306,8 @@ export function AddDeviceModal({
             </div>
           )}
 
-          {/* Active pairing state — timer + stop button; hidden once time runs out */}
           {step === 1 && isActive && (
             <div className="space-y-3">
-              {/* Timer bar */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span className="font-medium text-foreground">
@@ -346,7 +334,6 @@ export function AddDeviceModal({
             </div>
           )}
 
-          {/* Discovered devices list */}
           {step === 1 && visibleDevices.length > 0 && (
             <div className="space-y-2">
               <p className="text-xs font-medium text-foreground">
@@ -402,7 +389,6 @@ export function AddDeviceModal({
             </div>
           )}
 
-          {/* Empty state while active */}
           {step === 1 && isActive && devices.length === 0 && (
             <div className="flex flex-col items-center gap-2 py-6 text-center">
               <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -412,7 +398,6 @@ export function AddDeviceModal({
             </div>
           )}
 
-          {/* STEP 2: details */}
           {step === 2 && selected && (
             <div className="space-y-4">
               <div className="rounded-lg border border-border bg-card p-3">
@@ -468,7 +453,6 @@ export function AddDeviceModal({
             </div>
           )}
 
-          {/* STEP 3: scenarios placeholder */}
           {step === 3 && (
             <div className="space-y-4">
               <div className="rounded-lg border border-border bg-card p-3 text-sm text-muted-foreground">

@@ -265,7 +265,6 @@ ON CONFLICT(id) DO UPDATE SET
     ) -> Result<(), DomainError> {
         let now = Utc::now().to_rfc3339();
         for m in members {
-            // Ensure the user row exists and keep display_name up-to-date.
             sqlx::query(
                 "INSERT INTO users(id, external_user_id, display_name, created_at) \
                  VALUES(?,?,?,?) \
@@ -280,7 +279,6 @@ ON CONFLICT(id) DO UPDATE SET
             .await
             .map_err(db_err)?;
 
-            // Upsert the RBAC house_member row, using the cloud member ID as PK.
             sqlx::query(
                 r#"
 INSERT INTO house_members(id, house_id, user_id, joined_at)
@@ -313,7 +311,6 @@ ON CONFLICT(house_id, user_id) DO UPDATE SET
                 None => continue,
             };
 
-            // Replace role assignments with the cloud state.
             sqlx::query("DELETE FROM house_member_roles WHERE house_member_id = ?")
                 .bind(&local_id)
                 .execute(&self.pool)
@@ -407,7 +404,6 @@ ON CONFLICT(id) DO UPDATE SET
         let now = Utc::now().to_rfc3339();
 
         for r in rights {
-            // Resolve cloud member ID → local house_members.id via cloud_house_members.
             let local_member_id: Option<String> = if let Some(cloud_member_id) = &r.house_member_id
             {
                 sqlx::query_scalar(
@@ -430,10 +426,8 @@ LIMIT  1
                 None
             };
 
-            // Resolve role_id — use cloud role ID directly (synced via upsert_rbac_roles).
             let role_id = r.role_id.as_deref();
 
-            // Skip if neither side can be resolved locally.
             if local_member_id.is_none() && role_id.is_none() {
                 tracing::debug!(
                     right_id = %r.id,

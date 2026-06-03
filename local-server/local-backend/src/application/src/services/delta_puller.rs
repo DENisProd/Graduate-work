@@ -49,8 +49,6 @@ pub async fn run_delta_puller(
         let mark = now.to_rfc3339();
         access_sync.mark_pulled("houses", &mark).await.ok();
 
-        // Full pull: all resources per house (rooms, devices, device functions, pages, …).
-        // This supersedes the rooms-only sync and brings page resources into the local DB.
         let mut resource_count = 0usize;
         for house in &houses {
             match cloud.fetch_house_resources(&access_url, &house.id).await {

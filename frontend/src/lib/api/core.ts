@@ -30,7 +30,6 @@ function getCurrentLocale(): string {
       return parsed?.state?.locale || 'en';
     }
   } catch {
-    // fallback
   }
   return 'en';
 }
@@ -100,7 +99,6 @@ export async function apiCall<T>(endpoint: string, options?: ApiCallOptions): Pr
           }
         }
       } catch {
-        // ignore parse errors
       }
 
       const message = errorData['message'];

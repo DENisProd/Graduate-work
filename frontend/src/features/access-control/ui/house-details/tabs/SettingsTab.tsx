@@ -96,7 +96,6 @@ export function SettingsTab({ houseId, canManage = true }: SettingsTabProps) {
         setLoadState('idle');
       } catch (error) {
         if (signal?.aborted) return;
-        // If config is not created yet, show empty form (not an error).
         if (error instanceof ApiError && error.status === 404) {
           setServerConfig(null);
           hydrateDraft(null);
@@ -120,7 +119,6 @@ export function SettingsTab({ houseId, canManage = true }: SettingsTabProps) {
   const isValid = useMemo(() => {
     const url = draft.mqttUrl.trim();
     if (!url) return false;
-    // allow mqtt://, ws://, wss:// and bare host:port (mqtt client will accept some variants)
     return true;
   }, [draft.mqttUrl]);
 

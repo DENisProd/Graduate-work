@@ -106,7 +106,6 @@ export function DeviceFunctionsAdmin({
   }, [propDeviceId]);
 
   useEffect(() => {
-    // Only load functions when selectedDeviceId changes if propDeviceId is not provided
     if (!propDeviceId && selectedDeviceId) {
       loadFunctions(selectedDeviceId);
     } else if (!propDeviceId && !selectedDeviceId) {
@@ -185,7 +184,6 @@ export function DeviceFunctionsAdmin({
   };
 
   const handleSubmit = async () => {
-    // Валидация
     if (!formData.code.trim()) {
       showToast(t('admin.messages.createError'), 'error');
       return;

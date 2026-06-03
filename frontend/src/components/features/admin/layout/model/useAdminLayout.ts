@@ -138,7 +138,6 @@ export function useAdminLayout() {
 
   const isFullWidthPage = pathname.includes('/room-planner');
 
-  // Automatically collapse sidebar on full-width pages if not already collapsed
   useEffect(() => {
     if (isFullWidthPage && !sidebarCollapsed) {
       setSidebarCollapsed(true);

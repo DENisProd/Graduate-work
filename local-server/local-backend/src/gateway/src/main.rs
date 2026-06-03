@@ -82,8 +82,6 @@ impl ScenarioServiceUrlProvider for RuntimeSettingsScenarioUrlProvider {
 async fn main() -> anyhow::Result<()> {
     init_tracing();
 
-    // Load `.env` for local development. This is a no-op in environments where
-    // the file is absent (e.g. Docker/prod), and env vars still take precedence.
     let _ = dotenvy::dotenv();
 
     let cfg = Config::from_env().context("loading configuration")?;
@@ -109,8 +107,6 @@ async fn main() -> anyhow::Result<()> {
 
     let state = AppState::new(pool, cfg.mqtt_topic_prefix.clone(), cfg.cloud_sync_api_key.clone());
 
-    // Local broker (ZIGBEE_MQTT_URL) takes priority; otherwise derive ws:// from the
-    // configured gateway URL (runtime setting → env fallback).
     let saved_settings = state.runtime_settings_repo.load().await?;
     let gateway_url = saved_settings.access_service_url
         .filter(|s| !s.trim().is_empty())

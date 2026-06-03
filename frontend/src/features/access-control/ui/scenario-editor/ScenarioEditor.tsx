@@ -171,7 +171,6 @@ export function ScenarioEditor(props: {
     const nextDef: ScenarioDefinitionV1 = {
       ...prev.definition,
       scope: {
-        // Scope kind is not user-editable in UI.
         kind: prev.definition.scope.kind,
         spaceId: prev.spaceId,
       },
@@ -319,20 +318,17 @@ export function ScenarioEditor(props: {
 
   const saveFromGraph = useCallback(
     async (opts?: { enableAfterSave?: boolean }) => {
-      // Convert graph -> definition, then reuse existing save logic.
       const nextDef = graphToDefinition({ nodes: graphNodes, edges: graphEdges, base: draft.definition });
       setDraft((prev) => ({
         ...prev,
         definition: nextDef,
         jsonText: JSON.stringify(nextDef, null, 2),
       }));
-      // Validate + persist using same backend rules
       await save(opts);
     },
     [draft.definition, graphEdges, graphNodes, save]
   );
 
-  // When user opens Graph tab, show current scenario definition as a graph
   useEffect(() => {
     if (viewMode !== 'graph') return;
     const graph = definitionToGraph(draft.definition, { houseId, locale });
@@ -510,7 +506,6 @@ export function ScenarioEditor(props: {
                 <Button
                   variant="secondary"
                   onClick={() => {
-                    // Templates
                     const tpl =
                       draft.definition.scope.kind === 'HOUSE'
                         ? ({

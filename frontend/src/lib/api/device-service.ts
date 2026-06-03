@@ -281,7 +281,6 @@ export const devicesApi = {
         );
   },
 
-  /** Hard delete — admin only */
   delete: (id: number): Promise<void> =>
     USE_MOCKS
       ? Promise.resolve()
@@ -290,7 +289,6 @@ export const devicesApi = {
           () => Promise.resolve(),
         ),
 
-  /** Soft delete (deactivate) — public endpoint */
   deactivate: (id: number): Promise<void> =>
     accessApiCall(`/v1/devices/${id}`, { method: 'PATCH' }),
 };

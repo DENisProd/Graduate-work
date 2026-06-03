@@ -23,7 +23,6 @@ function getCurrentLocale(): string {
       return parsed?.state?.locale || 'en';
     }
   } catch {
-    // ignore
   }
   return 'en';
 }
@@ -100,7 +99,6 @@ export async function accessServiceRequest<T>(
           }
         }
       } catch {
-        // ignore
       }
       const message = errorData['message'];
       const err = errorData['error'];

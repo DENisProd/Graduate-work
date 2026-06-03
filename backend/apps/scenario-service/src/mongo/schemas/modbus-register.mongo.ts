@@ -3,8 +3,6 @@ import type { HydratedDocument } from 'mongoose';
 
 export type RegisterType = 'holding' | 'input' | 'coil' | 'discrete';
 
-// ─── Register ────────────────────────────────────────────────────────────────
-
 export const MODBUS_REGISTER_MODEL = 'ModbusRegister';
 
 @Schema({
@@ -46,8 +44,6 @@ export class ModbusRegisterModel {
 export type ModbusRegisterDocument = HydratedDocument<ModbusRegisterModel>;
 export const ModbusRegisterSchema = SchemaFactory.createForClass(ModbusRegisterModel);
 ModbusRegisterSchema.index({ deviceId: 1 });
-
-// ─── State ───────────────────────────────────────────────────────────────────
 
 export const MODBUS_REGISTER_STATE_MODEL = 'ModbusRegisterState';
 

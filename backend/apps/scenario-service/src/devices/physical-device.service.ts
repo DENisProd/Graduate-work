@@ -39,8 +39,6 @@ export class PhysicalDeviceService {
   async update(id: string, data: UpdatePhysicalDeviceInput) {
     const existing = await this.findById(id);
 
-    // When a houseId is being assigned for the first time (or forced re-sync),
-    // resolve the abstract device from the catalog using the Zigbee model data.
     const assigningToHouse = data.houseId && data.houseId !== existing.houseId;
     const needsCatalogSync =
       assigningToHouse && !existing.deviceTypeId && !data.deviceTypeId;

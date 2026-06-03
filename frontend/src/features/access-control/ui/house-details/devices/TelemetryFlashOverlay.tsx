@@ -162,7 +162,6 @@ export function TelemetryFlashOverlay({ pulseKey }: { pulseKey: number }) {
     blur.style.setProperty('--tc', primary);
     bg.style.setProperty('--tc', primary);
 
-    // Running ring: snap in, hold through most of the flash, fade out.
     const ringAnim = el.animate(
       [
         { opacity: '0' },
@@ -173,7 +172,6 @@ export function TelemetryFlashOverlay({ pulseKey }: { pulseKey: number }) {
       { duration: TELEMETRY_FLASH_MS, easing: 'ease-in-out', fill: 'forwards' }
     );
 
-    // Background: single soft pulse — rises fast, lingers briefly, then fades.
     const bgAnim = bg.animate(
       [
         { opacity: '0' },

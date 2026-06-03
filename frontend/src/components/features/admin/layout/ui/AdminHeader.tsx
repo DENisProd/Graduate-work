@@ -134,7 +134,6 @@ export function AdminHeader({
   const showBackButton = pathname.includes('/room-planner');
 
   const handleBack = () => {
-    // Navigate back to house details
     const houseId = pathname.match(/\/houses\/([^/]+)\//)?.[1];
     if (houseId) {
       router.push(`/admin/access-control/houses/${encodeURIComponent(houseId)}`);

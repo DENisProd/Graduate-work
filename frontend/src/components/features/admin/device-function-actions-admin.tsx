@@ -204,7 +204,6 @@ export function DeviceFunctionActionsAdmin({
   };
 
   const handleSubmit = async () => {
-    // Валидация
     if (!formData.code.trim()) {
       showToast(t('admin.messages.createError'), 'error');
       return;

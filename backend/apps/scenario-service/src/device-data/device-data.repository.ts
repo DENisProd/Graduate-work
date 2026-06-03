@@ -152,11 +152,6 @@ export class DeviceDataRepository {
       match.capability = { $in: params.capabilities };
     }
 
-    // Convert value to numeric for charting.
-    // Supports:
-    // - BOOLEAN -> 0/1
-    // - NUMBER/FLOAT -> number OR { value: number|string } OR string
-    // - STRING -> ON/OFF/true/false to 1/0 else null
     const numericValue = {
       $switch: {
         branches: [

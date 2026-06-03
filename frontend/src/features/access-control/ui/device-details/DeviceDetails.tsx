@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -261,7 +261,6 @@ function CollapsibleJson({
   );
 }
 
-// ─── Telemetry History ───────────────────────────────────────────────────────
 
 type TimeRange = '1m' | '1h' | '6h' | '24h' | '7d' | 'all';
 
@@ -306,7 +305,6 @@ const TIME_RANGES: Array<{ value: TimeRange; label: string }> = [
   { value: 'all', label: '∞' },
 ];
 
-/** Matches backend DeviceData series `key` / list rows. */
 function deviceDataSeriesKey(capability: string, attribute?: string | null): string {
   return `${capability}:${attribute ?? ''}`;
 }
@@ -351,9 +349,6 @@ function formatHistoryValue(value: unknown, unit?: string | null, type?: string)
   if (typeof value === 'number') {
     return `${type === 'FLOAT' ? value.toFixed(2) : String(value)}${u}`;
   }
-  // Common shapes from backend/generators:
-  // - { value: number|string|boolean, unit?: string }
-  // - { on: boolean }
   if (typeof value === 'object' && !Array.isArray(value)) {
     const o = value as Record<string, unknown>;
     if ('on' in o && typeof o.on === 'boolean') return o.on ? `ON${u}` : `OFF${u}`;
@@ -427,7 +422,6 @@ function downsampleUniform(points: HistoryPoint[], maxPoints: number): HistoryPo
     const p = points[Math.min(n - 1, Math.max(0, idx))];
     if (out.length === 0 || out[out.length - 1].ts !== p.ts) out.push(p);
   }
-  // Ensure last point is included
   const last = points[n - 1];
   if (out[out.length - 1]?.ts !== last.ts) out.push(last);
   return out;
@@ -446,10 +440,6 @@ function compactBinaryTransitions(points: HistoryPoint[]): HistoryPoint[] {
   return out;
 }
 
-/**
- * Convert a series of points into a step-like series by duplicating each value
- * until the next timestamp. This approximates a step curve without extra deps.
- */
 function toStepPoints(points: HistoryPoint[]): HistoryPoint[] {
   if (points.length < 2) return points;
   const out: HistoryPoint[] = [];
@@ -458,7 +448,6 @@ function toStepPoints(points: HistoryPoint[]): HistoryPoint[] {
     const next = points[i + 1];
     out.push(cur);
     if (next) {
-      // Hold current value until just before next sample.
       out.push({ ts: next.ts, value: cur.value });
     }
   }
@@ -587,14 +576,12 @@ function DeviceHistorySection({ deviceId }: { deviceId: string }) {
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [timeRange, setTimeRange] = useState<TimeRange>('24h');
-  /** Selected metric keys (`capability:attribute`); legacy name `selectedCaps` kept for clarity in UI code. */
   const [selectedCaps, setSelectedCaps] = useState<string[]>(['all']);
 
   const [chartSeries, setChartSeries] = useState<DeviceDataSeriesResponse | null>(null);
   const [chartLoading, setChartLoading] = useState(false);
   const [chartLoadingMore, setChartLoadingMore] = useState(false);
 
-  /** API still filters by capability only; derive union from selected metric keys. */
   const capabilitiesForSeriesApi = useMemo(() => {
     if (selectedCaps.includes('all')) return undefined;
     const caps = new Set<string>();
@@ -625,8 +612,6 @@ function DeviceHistorySection({ deviceId }: { deviceId: string }) {
     const title = tx('admin.accessControl.connectedDevices.deviceDetails.history.title');
     return { series, unit, title, from: resp?.from ?? null, to: resp?.to ?? null };
   }, [chartSeries, chartSeriesFiltered, selectedCaps, tx]);
-
-  // Chart data is fetched from backend (/device-data/series) so ranges are formed server-side.
 
   const seriesKeys = useMemo(() => {
     const seen = new Set<string>();
@@ -730,7 +715,6 @@ function DeviceHistorySection({ deviceId }: { deviceId: string }) {
     <div
       className="overflow-hidden rounded-xl border border-border bg-card"
     >
-      {/* Header */}
       <div className="flex items-center gap-2.5 border-b border-border px-5 py-3">
         <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5 shrink-0 text-muted-foreground">
           <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 1.5a5.5 5.5 0 110 11 5.5 5.5 0 010-11zM7.5 4v4.25l3.25 1.95-.75 1.25L6 9V4h1.5z" />
@@ -760,9 +744,7 @@ function DeviceHistorySection({ deviceId }: { deviceId: string }) {
         </button>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-5 py-2.5">
-        {/* Time range pills */}
         <div className="flex items-center gap-0.5">
           {TIME_RANGES.map(({ value, label }) => (
             <button
@@ -823,7 +805,6 @@ function DeviceHistorySection({ deviceId }: { deviceId: string }) {
         )}
       </div>
 
-      {/* Body */}
       {loading ? (
         <div className="flex items-center justify-center py-10">
           <div className="flex flex-col items-center gap-2">
@@ -907,7 +888,6 @@ function DeviceHistorySection({ deviceId }: { deviceId: string }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 
 export function DeviceDetails({ houseId, deviceId, backHref, backLabel }: DeviceDetailsProps) {
   const localServerId = parseLocalServerDeviceId(deviceId);
@@ -1045,7 +1025,6 @@ function PhysicalDeviceDetails({ houseId, deviceId, backHref, backLabel }: Devic
 
   return (
     <div className="space-y-5">
-      {/* Breadcrumb nav */}
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
@@ -1078,7 +1057,6 @@ function PhysicalDeviceDetails({ houseId, deviceId, backHref, backLabel }: Devic
         </button>
       </div>
 
-      {/* Error states */}
       {error === 'forbidden' ? (
         <div className="flex items-center gap-3 rounded-xl border border-red-500/20 bg-red-500/5 px-5 py-4">
           <svg viewBox="0 0 20 20" fill="currentColor" className="size-5 shrink-0 text-red-400">
@@ -1095,10 +1073,8 @@ function PhysicalDeviceDetails({ houseId, deviceId, backHref, backLabel }: Devic
         </div>
       ) : null}
 
-      {/* Hero card */}
       <div className="overflow-hidden rounded-xl border border-border bg-card">
         <div className="flex flex-wrap items-center gap-5 px-6 py-5 sm:flex-nowrap">
-          {/* Device icon */}
           <div
             className="flex size-16 shrink-0 items-center justify-center rounded-2xl border border-border bg-muted/40"
           >
@@ -1111,7 +1087,6 @@ function PhysicalDeviceDetails({ houseId, deviceId, backHref, backLabel }: Devic
             )}
           </div>
 
-          {/* Name & meta */}
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2.5">
               {status && <StatusDot status={status} />}
@@ -1136,7 +1111,6 @@ function PhysicalDeviceDetails({ houseId, deviceId, backHref, backLabel }: Devic
             </div>
           </div>
 
-          {/* Status badge */}
           {statusLabel && (
             <div
               className={`shrink-0 rounded-xl border px-3.5 py-2 text-center ${statusColorClass}`}
@@ -1150,7 +1124,6 @@ function PhysicalDeviceDetails({ houseId, deviceId, backHref, backLabel }: Devic
         </div>
       </div>
 
-      {/* Loading skeleton */}
       {deviceLoading && !device ? (
         <div className="flex items-center justify-center py-16">
           <div className="flex flex-col items-center gap-3">
@@ -1160,10 +1133,8 @@ function PhysicalDeviceDetails({ houseId, deviceId, backHref, backLabel }: Devic
         </div>
       ) : null}
 
-      {/* Main content */}
       {device && !deviceLoading ? (
         <div className="space-y-4">
-          {/* Field groups */}
           {FIELD_GROUPS.map((group) => {
             const entries = group.fields.map((f) => ({
               label: tx(f.labelKey),
@@ -1210,7 +1181,6 @@ function PhysicalDeviceDetails({ houseId, deviceId, backHref, backLabel }: Devic
             );
           })}
 
-          {/* Capabilities */}
           {device.capabilities && device.capabilities.length > 0 ? (
             <div
               className="overflow-hidden rounded-xl border border-border bg-card"
@@ -1234,7 +1204,6 @@ function PhysicalDeviceDetails({ houseId, deviceId, backHref, backLabel }: Devic
             </div>
           ) : null}
 
-          {/* JSON sections */}
           <div className="space-y-3">
             {definitionJson ? (
               <CollapsibleJson
@@ -1262,7 +1231,6 @@ function PhysicalDeviceDetails({ houseId, deviceId, backHref, backLabel }: Devic
             ) : null}
           </div>
 
-          {/* Telemetry history */}
           <DeviceHistorySection deviceId={deviceId} />
         </div>
       ) : null}

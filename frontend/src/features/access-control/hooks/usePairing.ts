@@ -49,7 +49,6 @@ export function usePairing({ enabled, houseId }: UsePairingOptions): UsePairingR
     const unsub = zigbeeTelemetryManager.subscribeConnection(() => {
       const connected = zigbeeTelemetryManager.isConnected();
       setIsConnected(connected);
-      // Re-join pairing room after reconnect only if pairing is active.
       if (connected && activeRef.current) void zigbeeTelemetryManager.watchPairing();
     });
 

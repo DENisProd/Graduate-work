@@ -54,15 +54,12 @@ export function InvitationFormModal({
   const [loading, setLoading] = useState(false);
   const [createdToken, setCreatedToken] = useState<string | null>(null);
 
-  // ── Role mode ──────────────────────────────────────────────────────────────
   const [roleId, setRoleId] = useState('');
   const [roles, setRoles] = useState<HouseRoleResponse[]>([]);
   const [rolesLoading, setRolesLoading] = useState(false);
 
-  // ── Domain permissions mode ────────────────────────────────────────────────
   const [permissions, setPermissions] = useState<InvitationPermission[]>([]);
 
-  // ── Access rights mode ─────────────────────────────────────────────────────
   const [accessRightType, setAccessRightType] = useState<AccessRightType>('ALLOW');
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [deviceFunctionId, setDeviceFunctionId] = useState<string | null>(null);
@@ -82,7 +79,6 @@ export function InvitationFormModal({
     return `${origin}/invite?token=${encodeURIComponent(createdToken)}`;
   }, [createdToken]);
 
-  // Load roles on open
   useEffect(() => {
     if (!isOpen || !houseId) return;
     setRolesLoading(true);
@@ -93,7 +89,6 @@ export function InvitationFormModal({
       .finally(() => setRolesLoading(false));
   }, [isOpen, houseId]);
 
-  // Load devices + rooms when rights tab is opened
   useEffect(() => {
     if (!isOpen || !houseId || mode !== 'rights') return;
     if (devices.length > 0 || resourcesLoading) return;
@@ -106,7 +101,6 @@ export function InvitationFormModal({
       .finally(() => setResourcesLoading(false));
   }, [isOpen, houseId, mode]);
 
-  // Load device functions when device changes
   useEffect(() => {
     if (!deviceId) { setDeviceFunctions([]); setDeviceFunctionId(null); return; }
     deviceFunctionsApi

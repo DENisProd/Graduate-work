@@ -12,8 +12,6 @@ import type {
   ModbusRegisterType,
 } from '@/types/api';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 function formatTs(ts: string | undefined) {
   if (!ts) return '—';
   try {
@@ -46,8 +44,6 @@ function RegisterTypeBadge({ type }: { type: ModbusRegisterType }) {
   );
 }
 
-// ─── Modal overlay ────────────────────────────────────────────────────────────
-
 function ModalOverlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
     <>
@@ -56,8 +52,6 @@ function ModalOverlay({ children, onClose }: { children: React.ReactNode; onClos
     </>
   );
 }
-
-// ─── Confirm Dialog ───────────────────────────────────────────────────────────
 
 function ConfirmDialog({
   title,
@@ -89,8 +83,6 @@ function ConfirmDialog({
     </ModalOverlay>
   );
 }
-
-// ─── Add Device Modal ─────────────────────────────────────────────────────────
 
 function AddDeviceModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
   const [name, setName] = useState('');
@@ -145,8 +137,6 @@ function AddDeviceModal({ onClose, onSuccess }: { onClose: () => void; onSuccess
     </ModalOverlay>
   );
 }
-
-// ─── Add Register Modal ───────────────────────────────────────────────────────
 
 function AddRegisterModal({ deviceId, onClose, onSuccess }: { deviceId: string; onClose: () => void; onSuccess: () => void }) {
   const [name, setName] = useState('');
@@ -230,8 +220,6 @@ function AddRegisterModal({ deviceId, onClose, onSuccess }: { deviceId: string; 
   );
 }
 
-// ─── Write Register Modal ─────────────────────────────────────────────────────
-
 function WriteRegisterModal({ deviceId, register, onClose }: { deviceId: string; register: ModbusRegisterResponse; onClose: () => void }) {
   const [value, setValue] = useState('');
   const [coil, setCoil] = useState(true);
@@ -287,8 +275,6 @@ function WriteRegisterModal({ deviceId, register, onClose }: { deviceId: string;
   );
 }
 
-// ─── Registers panel ──────────────────────────────────────────────────────────
-
 function RegistersPanel({ device }: { device: ModbusDeviceResponse }) {
   const { showToast } = useToast();
   const [showAddRegister, setShowAddRegister] = useState(false);
@@ -316,7 +302,6 @@ function RegistersPanel({ device }: { device: ModbusDeviceResponse }) {
       const data = await modbusApi.getDeviceStates(device.id);
       setStates(data);
     } catch {
-      // silent
     }
   }, [device.id]);
 
@@ -462,8 +447,6 @@ function RegistersPanel({ device }: { device: ModbusDeviceResponse }) {
     </div>
   );
 }
-
-// ─── Main Panel ───────────────────────────────────────────────────────────────
 
 export function ModbusDevicesPanel() {
   const { showToast } = useToast();

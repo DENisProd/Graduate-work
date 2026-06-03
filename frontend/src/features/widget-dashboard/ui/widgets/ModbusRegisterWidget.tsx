@@ -7,8 +7,6 @@ import { modbusApi } from '@/lib/api-client';
 import type { ModbusRegisterValueConfig, ModbusRegisterControlConfig } from '../../types/widget.types';
 import type { ModbusRegisterStateResponse } from '@/types/api';
 
-// ─── Value Widget ──────────────────────────────────────────────────────────────
-
 const ACCENT_VALUE: Record<ModbusRegisterValueConfig['accent'], string> = {
   green: 'text-emerald-600 dark:text-emerald-400',
   blue: 'text-blue-600 dark:text-blue-400',
@@ -91,8 +89,6 @@ export function ModbusRegisterValueWidget({ config }: { config: ModbusRegisterVa
     </div>
   );
 }
-
-// ─── Control Widget ────────────────────────────────────────────────────────────
 
 const ACCENT_CTRL: Record<ModbusRegisterControlConfig['accent'], { ring: string; on: string; off: string }> = {
   green: { ring: 'focus:ring-emerald-500', on: 'bg-emerald-600 hover:bg-emerald-700', off: 'bg-slate-300 hover:bg-slate-400 dark:bg-slate-700' },

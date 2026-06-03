@@ -27,8 +27,6 @@ export class ModbusDeviceRepository {
     private readonly stateModel: Model<ModbusRegisterStateDocument>,
   ) {}
 
-  // ─── Devices ──────────────────────────────────────────────────────────────
-
   async listDevices(): Promise<ModbusDeviceDocument[]> {
     return this.deviceModel.find().sort({ createdAt: 1 }).exec();
   }
@@ -55,8 +53,6 @@ export class ModbusDeviceRepository {
       await this.stateModel.deleteMany({ registerId: { $in: regIds } }).exec();
     }
   }
-
-  // ─── Registers ────────────────────────────────────────────────────────────
 
   async listRegisters(deviceId: string): Promise<ModbusRegisterDocument[]> {
     return this.registerModel.find({ deviceId }).sort({ address: 1 }).exec();
@@ -87,8 +83,6 @@ export class ModbusDeviceRepository {
     await this.registerModel.findByIdAndDelete(id).exec();
     await this.stateModel.deleteOne({ registerId: id }).exec();
   }
-
-  // ─── State ────────────────────────────────────────────────────────────────
 
   async upsertState(
     registerId: string,

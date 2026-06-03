@@ -56,7 +56,7 @@ const GlowCard: React.FC<GlowCardProps> = ({
 
   const getSizeClasses = () => {
     if (customSize) {
-      return ''; // Let className or inline styles handle sizing
+      return '';
     }
     return sizeMap[size];
   };
