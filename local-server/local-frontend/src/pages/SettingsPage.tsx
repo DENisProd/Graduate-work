@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useQueryClient } from '@tanstack/react-query'
-import { CheckCircle, XCircle, Loader2, Sun, Moon } from 'lucide-react'
+import { Sun, Moon } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/hooks/useI18n'
@@ -9,7 +8,6 @@ import { useSettingsStore } from '@/stores/settings.store'
 import {
   completeDeviceAuthorization,
   getDeviceAuthorizationStatus,
-  getHealth,
   getRuntimeSettings,
   logoutDeviceAuthorization,
   startDeviceAuthorization,
@@ -17,8 +15,6 @@ import {
 } from '@/api/system'
 import { OtaPanel } from '@/components/shared/OtaPanel'
 import { SyncStatusPanel } from '@/components/shared/SyncStatusPanel'
-
-type ConnectionStatus = 'idle' | 'checking' | 'ok' | 'error'
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
@@ -93,9 +89,7 @@ function Button({
 
 export function SettingsPage() {
   const { t, locale, setLocale } = useI18n()
-  const queryClient = useQueryClient()
   const {
-    serverUrl,
     userId,
     theme,
     authSessionId,
@@ -107,19 +101,13 @@ export function SettingsPage() {
     authDisplayName,
     authExpiresAt,
     isAuthPolling,
-    setServerUrl,
     setAccessServiceUrl,
-    setUserId,
     resetAuthState,
     setAuthState,
     setTheme,
   } = useSettingsStore()
 
-  const [urlDraft, setUrlDraft] = useState(serverUrl)
   const [accessServiceUrlDraft, setAccessServiceUrlDraft] = useState('http://localhost:8085')
-  const [userIdDraft, setUserIdDraft] = useState(userId)
-  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('idle')
-  const [connectionVersion, setConnectionVersion] = useState<string>('')
   const [authCountdownSec, setAuthCountdownSec] = useState<number | null>(null)
 
   const { data: runtimeSettings } = useQuery({
@@ -143,31 +131,6 @@ export function SettingsPage() {
       authExpiresAt: runtimeSettings.authExpiresAt ?? '',
     })
   }, [runtimeSettings, setAuthState, setAccessServiceUrl])
-
-  const handleSaveUrl = () => {
-    setServerUrl(urlDraft)
-    queryClient.invalidateQueries()
-    toast.success(t('settings.toastServerUrlSaved'))
-  }
-
-  const handleTestConnection = async () => {
-    setConnectionStatus('checking')
-    setConnectionVersion('')
-    try {
-      setServerUrl(urlDraft)
-      const health = await getHealth()
-      setConnectionStatus('ok')
-      setConnectionVersion(health.version)
-    } catch {
-      setConnectionStatus('error')
-    }
-  }
-
-  const handleSaveUserId = () => {
-    setUserId(userIdDraft)
-    queryClient.invalidateQueries()
-    toast.success(t('settings.toastUserIdSaved'))
-  }
 
   const handleSaveGateway = async () => {
     const updated = await updateRuntimeSettings({
@@ -237,17 +200,17 @@ export function SettingsPage() {
       toast.error(t('settings.toastUserCodeRequired'))
       return
     }
-    if (!userIdDraft.trim()) {
+    if (!userId.trim()) {
       toast.error(t('settings.toastUserIdRequired'))
       return
     }
     await completeDeviceAuthorization({
       userCode: authUserCode.trim(),
-      externalUserId: userIdDraft.trim(),
+      externalUserId: userId.trim(),
       displayName: authDisplayName.trim() || undefined,
     })
     setAuthState({
-      authExternalUserId: userIdDraft.trim(),
+      authExternalUserId: userId.trim(),
       authDisplayName: authDisplayName.trim(),
       authStatus: 'pending',
     })

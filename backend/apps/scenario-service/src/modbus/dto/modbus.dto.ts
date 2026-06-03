@@ -1,13 +1,23 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { createZodDto } from 'nestjs-zod';
 import type { RegisterType } from '../../mongo/schemas/modbus-register.mongo';
+import {
+  createModbusDeviceSchema,
+  createModbusRegisterSchema,
+  writeModbusRegisterSchema,
+} from '../schemas/modbus.schema';
 
-export class CreateModbusDeviceDto {
-  @ApiProperty() @IsString() name: string;
-  @ApiProperty() @IsNumber() @Min(1) slaveId: number;
-  @ApiPropertyOptional() @IsString() @IsOptional() description?: string;
-  @ApiPropertyOptional() @IsBoolean() @IsOptional() enabled?: boolean;
-}
+export class CreateModbusDeviceDto extends createZodDto(
+  createModbusDeviceSchema,
+) {}
+
+export class CreateModbusRegisterDto extends createZodDto(
+  createModbusRegisterSchema,
+) {}
+
+export class WriteModbusRegisterDto extends createZodDto(
+  writeModbusRegisterSchema,
+) {}
 
 export class ModbusDeviceResponseDto {
   @ApiProperty() id: string;
@@ -17,20 +27,6 @@ export class ModbusDeviceResponseDto {
   @ApiProperty() enabled: boolean;
   @ApiProperty() createdAt: string;
   @ApiProperty() updatedAt: string;
-}
-
-export class CreateModbusRegisterDto {
-  @ApiProperty() @IsString() name: string;
-  @ApiProperty({ enum: ['holding', 'input', 'coil', 'discrete'] })
-  @IsEnum(['holding', 'input', 'coil', 'discrete'])
-  registerType: RegisterType;
-
-  @ApiProperty() @IsNumber() @Min(0) address: number;
-  @ApiPropertyOptional() @IsNumber() @IsOptional() count?: number;
-  @ApiPropertyOptional() @IsString() @IsOptional() unit?: string;
-  @ApiPropertyOptional() @IsNumber() @IsOptional() scaleFactor?: number;
-  @ApiPropertyOptional() @IsNumber() @IsOptional() offset?: number;
-  @ApiPropertyOptional() @IsBoolean() @IsOptional() writable?: boolean;
 }
 
 export class ModbusRegisterResponseDto {
@@ -53,10 +49,4 @@ export class ModbusRegisterStateResponseDto {
   @ApiProperty({ type: [Number] }) rawValues: number[];
   @ApiProperty({ type: [Number] }) scaledValues: number[];
   @ApiProperty() timestamp: string;
-}
-
-export class WriteModbusRegisterDto {
-  @ApiPropertyOptional() @IsNumber() @IsOptional() value?: number;
-  @ApiPropertyOptional({ type: [Number] }) @IsOptional() values?: number[];
-  @ApiPropertyOptional() @IsBoolean() @IsOptional() coil?: boolean;
 }
