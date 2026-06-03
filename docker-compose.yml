@@ -1,0 +1,217 @@
+# Full-stack cloud deployment.
+# Copy .env.cloud.example → .env and fill in secrets before running.
+#
+# Services exposed to host:
+#   frontend       → http://localhost:3000
+#   api-gateway    → http://localhost:8082
+#   access-service → http://localhost:8086
+#   scenario-service → http://localhost:3001
+#   keycloak       → http://localhost:8080
+#   mqtt dashboard → http://localhost:18083
+#
+# NEXT_PUBLIC_* vars are baked into the frontend JS bundle at build time.
+# To change them, rebuild the frontend image: docker compose build frontend
+
+name: smart-home
+
+services:
+
+  # ── Databases ───────────────────────────────────────────────────────────────
+
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: postgres
+      # vars consumed by init-databases.sh
+      KC_DB_USERNAME: ${KC_DB_USERNAME:-keycloak}
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD:-keycloak}
+      HOME_DB_USERNAME: ${HOME_DB_USERNAME:-home_service}
+      HOME_DB_PASSWORD: ${HOME_DB_PASSWORD:-home_service}
+      DEVICE_DB_USERNAME: ${DEVICE_DB_USERNAME:-devices}
+      DEVICE_DB_PASSWORD: ${DEVICE_DB_PASSWORD:-devices}
+      ROOM_DB_USERNAME: ${ROOM_DB_USERNAME:-room_service}
+      ROOM_DB_PASSWORD: ${ROOM_DB_PASSWORD:-room_service}
+      USER_PROFILE_DB_USERNAME: ${USER_PROFILE_DB_USERNAME:-user_profile}
+      USER_PROFILE_DB_PASSWORD: ${USER_PROFILE_DB_PASSWORD:-user_profile}
+      ACCESS_CONTROL_DB_USERNAME: ${ACCESS_CONTROL_DB_USERNAME:-access_control_service}
+      ACCESS_CONTROL_DB_PASSWORD: ${ACCESS_CONTROL_DB_PASSWORD:-access_control_service}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongodb:
+    image: mongo:latest
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-device_service}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-password}
+      MONGO_INITDB_DATABASE: scenario
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
+  # ── Keycloak ─────────────────────────────────────────────────────────────────
+
+  keycloak:
+    build:
+      context: ./infrastructure/keycloak
+      dockerfile: Dockerfile.keycloak
+    restart: unless-stopped
+    ports:
+      - "${KEYCLOAK_PORT:-8080}:8080"
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      JAVA_OPTS_APPEND: >-
+        -Xms128m -Xmx512m -XX:MaxMetaspaceSize=256m
+    command:
+      - "start-dev"
+      - "--import-realm"
+      - "--spi-theme--static-max-age=-1"
+      - "--spi-theme--cache-themes=false"
+      - "--spi-theme--cache-templates=false"
+    mem_limit: 768m
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+      - ./infrastructure/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+      - ./infrastructure/keycloak/themes/domovoy:/opt/keycloak/themes/domovoy:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── MQTT broker ──────────────────────────────────────────────────────────────
+
+  mqtt-gateway:
+    image: emqx/emqx:5.7.0
+    restart: unless-stopped
+    ports:
+      - "${MQTT_GATEWAY_TCP_PORT:-1883}:1883"
+      - "${MQTT_GATEWAY_DASHBOARD_PORT:-18083}:18083"
+      - "${MQTT_GATEWAY_WS_PORT:-8083}:8083"
+    environment:
+      EMQX_DASHBOARD__DEFAULT_PASSWORD: ${EMQX_DASHBOARD_PASSWORD:-changeme}
+      EMQX_NODE__COOKIE: ${EMQX_NODE__COOKIE:-smart-home-dev-cookie-change-me}
+    volumes:
+      - emqx_data:/opt/emqx/data
+      - emqx_log:/opt/emqx/log
+      - ./infrastructure/emqx/emqx.conf:/opt/emqx/etc/emqx.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/emqx/bin/emqx ctl status | grep -q 'is started'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ── Backend services ─────────────────────────────────────────────────────────
+
+  access-service:
+    build:
+      context: ./backend/apps/access-service
+    restart: unless-stopped
+    ports:
+      - "${ACCESS_SERVICE_PORT:-8086}:8086"
+    environment:
+      ACCESS_CONTROL_DB_URL: >-
+        postgresql://${ACCESS_CONTROL_DB_USERNAME:-access_control_service}:${ACCESS_CONTROL_DB_PASSWORD:-access_control_service}@postgres:5432/access_control_service?schema=public
+      ACCESS_CONTROL_SERVICE_PORT: 8086
+      DEVICE_AUTH_VERIFICATION_URL: ${DEVICE_AUTH_VERIFICATION_URL:-http://localhost:3000/device-auth}
+      ACCESS_CORS_ORIGINS: ${ACCESS_CORS_ORIGINS:-http://localhost:3000,http://localhost:8082}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8086/api/v1/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  scenario-service:
+    build:
+      context: ./backend/apps/scenario-service
+    restart: unless-stopped
+    ports:
+      - "${SCENARIO_SERVICE_PORT:-3001}:3001"
+    environment:
+      SCENARIO_DATABASE_URL: >-
+        mongodb://${MONGO_USERNAME:-device_service}:${MONGO_PASSWORD:-password}@mongodb:27017/scenario?authSource=admin
+      SCENARIO_SERVICE_PORT: 3001
+      CENTRAL_MQTT_URL: ${CENTRAL_MQTT_URL:-mqtt://mqtt-gateway:1883}
+      CENTRAL_MQTT_USERNAME: ${CENTRAL_MQTT_USERNAME:-}
+      CENTRAL_MQTT_PASSWORD: ${CENTRAL_MQTT_PASSWORD:-}
+      SCENARIO_CORS_ORIGINS: ${SCENARIO_CORS_ORIGINS:-http://localhost:3000,http://localhost:8082}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      mqtt-gateway:
+        condition: service_healthy
+
+  api-gateway:
+    build:
+      context: ./backend/apps/api-gateway
+    restart: unless-stopped
+    ports:
+      - "${GATEWAY_PORT:-8082}:8082"
+    environment:
+      GATEWAY_PORT: 8082
+      ACCESS_SERVICE_URL: http://access-service:8086
+      SCENARIO_SERVICE_URL: http://scenario-service:3001
+      KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-http://keycloak:8080/realms/smart-home}
+      GATEWAY_CORS_ORIGINS: ${GATEWAY_CORS_ORIGINS:-http://localhost:3000}
+    depends_on:
+      access-service:
+        condition: service_healthy
+      scenario-service:
+        condition: service_started
+
+  # ── Frontend ─────────────────────────────────────────────────────────────────
+
+  frontend:
+    build:
+      context: ./frontend
+      # NEXT_PUBLIC_* are baked into the bundle at build time — set these to the
+      # URLs that the user's browser can reach (not internal container names).
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8082}
+        NEXT_PUBLIC_ACCESS_API_URL: ${NEXT_PUBLIC_ACCESS_API_URL:-http://localhost:8086}
+        NEXT_PUBLIC_PHYSICAL_DEVICES_API_URL: ${NEXT_PUBLIC_PHYSICAL_DEVICES_API_URL:-http://localhost:3001}
+        NEXT_PUBLIC_USE_MOCKS: ${NEXT_PUBLIC_USE_MOCKS:-false}
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      AUTH_SECRET: ${AUTH_SECRET}
+      AUTH_URL: ${AUTH_URL:-http://localhost:3000}
+      AUTH_KEYCLOAK_ID: ${AUTH_KEYCLOAK_ID}
+      AUTH_KEYCLOAK_SECRET: ${AUTH_KEYCLOAK_SECRET}
+      # Must be reachable from the user's browser for the OAuth redirect.
+      AUTH_KEYCLOAK_ISSUER: ${AUTH_KEYCLOAK_ISSUER:-http://localhost:8080/realms/smart-home}
+    depends_on:
+      - api-gateway
+      - keycloak
+
+volumes:
+  pg_data:
+  mongodb_data:
+  redis_data:
+  keycloak_data:
+  emqx_data:
+  emqx_log:

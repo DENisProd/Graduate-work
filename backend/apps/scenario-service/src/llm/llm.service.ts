@@ -13,12 +13,17 @@ export class LlmService {
   private readonly logger = new Logger(LlmService.name);
   private readonly baseUrl: string;
   private readonly model: string;
+  private readonly enabled: boolean;
 
   constructor(config: ConfigService) {
+    this.enabled = config.get<string>('LLM_ENABLED') === 'true';
     this.baseUrl = (
       config.get<string>('OLLAMA_URL') ?? 'http://localhost:11434'
     ).replace(/\/$/, '');
     this.model = config.get<string>('OLLAMA_MODEL') ?? 'qwen2.5:3b';
+    if (!this.enabled) {
+      this.logger.log('LLM is disabled (LLM_ENABLED != true)');
+    }
   }
 
   async generateJson<T>(
@@ -27,6 +32,8 @@ export class LlmService {
     schema: ZodType<T>,
     maxRetries = 2,
   ): Promise<T | null> {
+    if (!this.enabled) return null;
+
     let lastValidationError = '';
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {

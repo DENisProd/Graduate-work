@@ -1,12 +1,9 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  // Включаем строгий режим React
   reactStrictMode: true,
-
-  // Экспериментальные настройки
+  output: 'standalone',
   experimental: {
-    // Оптимизация импортов
     optimizePackageImports: ['framer-motion'],
   },
 };
