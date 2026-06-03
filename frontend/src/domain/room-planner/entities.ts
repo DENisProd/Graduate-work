@@ -1,4 +1,4 @@
-// Domain entities
+
 
 import type { Point, Wall, Device, Room, DeviceType, DeviceAnchor, Door, Window } from './types';
 
@@ -19,7 +19,6 @@ export class RoomEntity {
     if (wallIndex < 0 || wallIndex >= this.walls.length) return this;
     const newWalls = [...this.walls];
     newWalls.splice(wallIndex, 1);
-    // Also remove doors and windows that were on this wall
     const removedWall = this.walls[wallIndex];
     const wallId = removedWall.id;
     const newDoors = wallId ? this.doors.filter((d) => d.wallId !== wallId) : this.doors;
@@ -30,19 +29,14 @@ export class RoomEntity {
   updateWallPoint(pointIndex: number, newPosition: Point): RoomEntity {
     const newWalls = [...this.walls];
     
-    // Point can be either start of a wall (a) or end of previous wall (b)
-    // We need to update both walls that share this point
     if (pointIndex === 0) {
-      // First point - update first wall's start
       if (newWalls.length > 0) {
         newWalls[0] = { ...newWalls[0], a: newPosition };
       }
     } else if (pointIndex < newWalls.length) {
-      // Middle point - update previous wall's end and current wall's start
       newWalls[pointIndex - 1] = { ...newWalls[pointIndex - 1], b: newPosition };
       newWalls[pointIndex] = { ...newWalls[pointIndex], a: newPosition };
     } else if (pointIndex === newWalls.length) {
-      // Last point - update last wall's end
       newWalls[newWalls.length - 1] = { ...newWalls[newWalls.length - 1], b: newPosition };
     }
     
@@ -123,13 +117,11 @@ export class RoomEntity {
 
   isClosed(): boolean {
     if (this.walls.length < 3) return false;
-    // Check if first and last points are connected
     const firstPoint = this.walls[0].a;
     const lastPoint = this.walls[this.walls.length - 1].b;
     const distance = Math.sqrt(
       Math.pow(firstPoint.x - lastPoint.x, 2) + Math.pow(firstPoint.y - lastPoint.y, 2)
     );
-    // Consider closed if distance is less than 10px
     return distance < 10;
   }
 }

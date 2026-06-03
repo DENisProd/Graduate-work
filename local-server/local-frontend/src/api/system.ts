@@ -72,6 +72,10 @@ export async function getSyncStatus(): Promise<SyncStatus> {
 export interface SyncReport {
   housesUpserted: number
   roomsUpserted: number
+  rolesUpserted?: number
+  membersUpserted?: number
+  scenariosUpserted?: number
+  dashboardsUpserted?: number
 }
 
 export async function triggerSync(): Promise<SyncReport> {

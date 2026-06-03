@@ -1,5 +1,4 @@
-//! Socket.IO `/zigbee` namespace gateway (socketioxide 0.15).
-
+﻿
 mod gateway;
 pub mod protocol;
 
@@ -13,11 +12,6 @@ use local_server_application::{
     services::ZigbeeRealtimeService,
 };
 
-/// Wrap an existing axum `Router` with the Socket.IO layer.
-///
-/// Sets up the `/zigbee` namespace, registers all event handlers, and starts
-/// the background broadcaster tasks. The returned `Router` handles both HTTP
-/// and WebSocket connections.
 pub fn apply_to_router(
     router: Router,
     mqtt: Arc<dyn MqttClient>,

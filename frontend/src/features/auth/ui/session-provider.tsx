@@ -4,7 +4,6 @@ import { SessionProvider, useSession, signOut } from 'next-auth/react';
 import { useEffect, useRef } from 'react';
 import { useUserStore } from '@/store/user-store';
 
-/** Syncs NextAuth session user id into user store so api-client can send X-User-Id. */
 function SessionToUserStoreSync() {
   const { data: session, status } = useSession();
   const setUser = useUserStore((s) => s.setUser);

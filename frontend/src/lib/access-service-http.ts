@@ -1,10 +1,5 @@
 'use client';
 
-/**
- * HTTP к access-сервису (ACCESS_API_BASE_URL) без зависимости от api-client.ts.
- * Нужен для RBAC-запросов из UI без циклических импортов / частичного HMR.
- */
-
 import { env } from '@/config/env.config';
 import { useUserStore } from '@/store/user-store';
 
@@ -61,9 +56,6 @@ function getCurrentUserId(): string | null {
 
 type AccessRequestInit = RequestInit & { signal?: AbortSignal };
 
-/**
- * GET/POST/DELETE к access-сервису (тот же контракт заголовков, что и apiCall + ACCESS_API_BASE_URL).
- */
 export async function accessServiceRequest<T>(
   endpoint: string,
   options?: AccessRequestInit

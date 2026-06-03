@@ -1,4 +1,4 @@
-use async_trait::async_trait;
+﻿use async_trait::async_trait;
 use chrono::Utc;
 use local_server_application::{
     services::{PendingEntry, SyncOutboxRepository},
@@ -51,8 +51,6 @@ impl Default for OutboxWriter {
         Self::new()
     }
 }
-
-// ── SyncOutboxRepository impl ─────────────────────────────────────────────────
 
 pub struct SqliteSyncOutboxRepo {
     pool: SqlitePool,

@@ -13,10 +13,6 @@ export interface HousePermissions {
   loading: boolean;
 }
 
-/**
- * Derives the current user's effective HousePermissions from the already-loaded
- * members list. Owners get all permissions implicitly.
- */
 export function useHousePermissions(): HousePermissions {
   const house = useAccessControlStore((s) => s.house);
   const members = useAccessControlStore((s) => s.members);

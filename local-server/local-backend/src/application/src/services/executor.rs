@@ -1,4 +1,4 @@
-use local_server_core::{DomainError, entities::scenario::ScenarioDefinition};
+﻿use local_server_core::{DomainError, entities::scenario::ScenarioDefinition};
 
 use super::{actions::exec_action, conditions::eval_condition, exec_context::ExecContext};
 

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+﻿use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use dashmap::DashMap;
@@ -29,13 +29,9 @@ pub struct ScenarioEngine {
     zigbee_repo: Arc<dyn ZigbeeRepository>,
     phys_repo: Arc<dyn PhysicalDeviceRepository>,
     scheduler: JobScheduler,
-    /// token → scenario_id
     webhooks: Arc<DashMap<String, Uuid>>,
-    /// scenario_id → last_run instant (debounce)
     debounce: Arc<DashMap<Uuid, Instant>>,
-    /// scenario_id → scheduler job uuid
     cron_jobs: Arc<DashMap<Uuid, Uuid>>,
-    /// in-memory cache of online scenarios
     scenarios: Arc<DashMap<Uuid, Scenario>>,
     mqtt_prefix: String,
 }
@@ -74,7 +70,6 @@ impl ScenarioEngine {
         })
     }
 
-    /// Load all ONLINE scenarios from DB and start listening.
     pub async fn load_and_start(&self) -> Result<(), DomainError> {
         let online = self.repo.find_online().await?;
         let count = online.len();
@@ -88,7 +83,6 @@ impl ScenarioEngine {
         Ok(())
     }
 
-    /// Register a scenario: cache it and activate its triggers.
     pub async fn register(&self, scenario: Scenario) -> Result<(), DomainError> {
         let def: ScenarioDefinition =
             serde_json::from_value(scenario.definition.clone()).map_err(|e| {
@@ -116,7 +110,6 @@ impl ScenarioEngine {
         Ok(())
     }
 
-    /// Deregister a scenario: remove cron jobs, webhook tokens, cache entry.
     pub async fn deregister(&self, id: &Uuid) -> Result<(), DomainError> {
         self.scenarios.remove(id);
 
@@ -132,7 +125,6 @@ impl ScenarioEngine {
         Ok(())
     }
 
-    /// Trigger a scenario manually by ID. Returns the execution record.
     pub async fn trigger_manual(
         &self,
         scenario_id: &Uuid,
@@ -145,7 +137,6 @@ impl ScenarioEngine {
         self.run_scenario(&scenario, TriggerSource::Manual, None).await
     }
 
-    /// Trigger a scenario via its webhook token.
     pub async fn trigger_by_webhook(&self, token: &str) -> Result<(), DomainError> {
         let scenario_id = self
             .webhooks
@@ -163,15 +154,12 @@ impl ScenarioEngine {
         Ok(())
     }
 
-    // ─── Internal helpers ─────────────────────────────────────────────────────
-
     async fn run_scenario(
         &self,
         scenario: &Scenario,
         triggered_by: TriggerSource,
         trigger_data: Option<serde_json::Value>,
     ) -> Result<ScenarioExecution, DomainError> {
-        // Debounce check
         if let Ok(def) =
             serde_json::from_value::<ScenarioDefinition>(scenario.definition.clone())
         {

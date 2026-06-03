@@ -3,13 +3,11 @@ import type { HydratedDocument } from 'mongoose';
 
 export const ZIGBEE_DEVICE_LOG_MODEL = 'ZigbeeDeviceLog';
 
-/** Источник записи лога */
 export enum ZigbeeDeviceLogSource {
   Mqtt = 'mqtt',
   Api = 'api',
 }
 
-/** Тип события в логе устройства */
 export enum ZigbeeDeviceLogKind {
   StateIngest = 'state_ingest',
   BridgeEvent = 'bridge_event',
@@ -43,7 +41,6 @@ export class ZigbeeDeviceLogModel {
   @Prop({ type: String, default: null })
   message?: string | null;
 
-  /** Нормализованные показатели на момент события */
   @Prop({ type: Object, default: null })
   metrics?: {
     state?: string | null;
@@ -56,11 +53,9 @@ export class ZigbeeDeviceLogModel {
     battery?: number | null;
   } | null;
 
-  /** Ключи из сырого payload (без значений — компактно для списков) */
   @Prop({ type: [String], default: [] })
   payloadKeys?: string[];
 
-  /** Ссылка на сохранённое состояние ZigbeeDeviceState (если есть) */
   @Prop({ type: String, default: null })
   stateDocumentId?: string | null;
 

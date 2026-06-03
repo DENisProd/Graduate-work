@@ -189,11 +189,6 @@ export const WIDGET_META_MAP = Object.fromEntries(
   WIDGET_REGISTRY.map((m) => [m.type, m]),
 ) as Record<WidgetType, WidgetMeta>;
 
-/**
- * Ready-to-use templates the user can drop in with a single click.
- * Each template is a fully prefilled widget config; the user is then
- * prompted to bind a device (or, for static templates, just edit labels).
- */
 export const WIDGET_TEMPLATES: WidgetTemplate[] = [
   {
     id: 'tpl.climate-dial',

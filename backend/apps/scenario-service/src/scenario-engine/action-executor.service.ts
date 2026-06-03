@@ -9,10 +9,6 @@ export class ActionExecutorService {
 
   constructor(private readonly zigbee: ZigbeeService) {}
 
-  /**
-   * Executes actions sequentially; DELAY actions suspend the chain.
-   * Throws on the first action failure so the caller can record the error.
-   */
   async executeAll(
     actions: ScenarioAction[],
     houseId: string,
@@ -54,7 +50,6 @@ export class ActionExecutorService {
         break;
 
       case 'NOTIFY':
-        // Notifications are logged; push/email/telegram delivery can be wired here later.
         this.logger.log(
           `[NOTIFY][${action.channel}] ${action.title ?? '—'}: ${action.message}`,
         );

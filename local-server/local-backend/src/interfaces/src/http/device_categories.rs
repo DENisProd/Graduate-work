@@ -1,4 +1,4 @@
-use std::sync::Arc;
+﻿use std::sync::Arc;
 
 use axum::{extract::State, routing::get, Json, Router};
 use local_server_application::ports::device_repository::DeviceRepository;

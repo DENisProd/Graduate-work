@@ -1,5 +1,3 @@
-// Zustand store for room planner
-
 import { create } from 'zustand';
 import type {
   RoomEntity,
@@ -32,7 +30,6 @@ import { debouncedAutosave, LocalStorageService } from '@/infrastructure/room-pl
 const MAX_HISTORY = 20;
 
 interface RoomPlannerState {
-  // State
   houseId: string | null;
   room: RoomEntity;
   catalog: DeviceCatalog;
@@ -45,22 +42,17 @@ interface RoomPlannerState {
   selectedDoorId: string | null;
   selectedWindowId: string | null;
   selectedWallId: string | null;
-  selectedWallPoint: Point | null; // Для режима connect
-  selectedWallPointIndex: number | null; // Индекс выбранной точки стены для перемещения
-  pendingDeviceType: DeviceType | null; // Для добавления устройства по клику
-  pendingWallStart: Point | null; // Начальная точка для нового отрезка стены
-  showMeasurements: boolean; // Показывать ли измерения на стенах
-  showGrid: boolean; // Показывать ли сетку
-  /** Области комнат (инструмент «Разметка комнат») */
+  selectedWallPoint: Point | null;
+  selectedWallPointIndex: number | null;
+  pendingDeviceType: DeviceType | null;
+  pendingWallStart: Point | null;
+  showMeasurements: boolean;
+  showGrid: boolean;
   roomRegions: RoomRegion[];
-  /** Текущий полигон в процессе рисования */
   pendingRegionPoints: Point[];
-  /** Выбранная область комнаты */
   selectedRegionId: string | null;
-  /** Индекс выбранной вершины выбранной области (для удаления) */
   selectedRegionPointIndex: number | null;
 
-  // Actions — разметка комнат
   addRoomRegionPoint: (point: Point) => void;
   closeRoomRegion: () => void;
   cancelRoomRegion: () => void;
@@ -108,7 +100,6 @@ interface RoomPlannerState {
   saveDevicePosition: (deviceId: string) => void;
 }
 
-// Default device catalog
 const defaultCatalog: DeviceCatalog = {
   items: [
     {
@@ -163,7 +154,6 @@ const createSnapshotUseCase = new CreateSnapshotUseCase();
 const restoreSnapshotUseCase = new RestoreSnapshotUseCase();
 
 export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
-  // Initial state
   houseId: null,
   room: createProjectUseCase.execute(),
   catalog: defaultCatalog,
@@ -187,7 +177,6 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
   selectedRegionId: null,
   selectedRegionPointIndex: null,
 
-  // Initialize
   initialize: (houseId: string) => {
     const state = get();
     set({ houseId });
@@ -195,7 +184,6 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
     if (saved) {
       state.loadFromSnapshot(saved);
     } else {
-      // No saved data for this house — start with empty project
       const newRoom = createProjectUseCase.execute();
       set({
         room: newRoom,
@@ -219,7 +207,6 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
     }
   },
 
-  // Execute command
   execute: (command: Command) => {
     const state = get();
     const newRoom = command.execute(state.room);
@@ -227,12 +214,10 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
     state.saveSnapshot();
   },
 
-  // Add wall point
   addWallPoint: (point: Point, fromPoint?: Point) => {
     const state = get();
     console.log('[addWallPoint] Called with:', { point, fromPoint, currentPendingWallStart: state.pendingWallStart });
-    
-    // If fromPoint is provided (connect mode), use it directly
+
     if (fromPoint) {
       console.log('[addWallPoint] Connect mode - creating wall from fromPoint');
       const newRoom = addWallPointUseCase.execute(state.room, point, fromPoint);
@@ -241,30 +226,24 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
       state.saveSnapshot();
       return;
     }
-    
-    // Check if we have a pending start point
+
     if (state.pendingWallStart) {
       console.log('[addWallPoint] Has pendingWallStart, creating wall');
-      // Check if clicking on the same point as pendingWallStart (ignore)
       const distance = Math.sqrt(
         Math.pow(point.x - state.pendingWallStart.x, 2) + Math.pow(point.y - state.pendingWallStart.y, 2)
       );
       if (distance < 1) {
         console.log('[addWallPoint] Clicking on same point, ignoring');
-        // Clicking on exactly the same point, ignore
         return;
       }
-      
-      // Create wall from pending start to current point
+
       const newRoom = addWallPointUseCase.execute(state.room, point, state.pendingWallStart);
       console.log('[addWallPoint] Wall created, clearing pendingWallStart');
-      // CRITICAL: ALWAYS clear pendingWallStart after creating wall to prevent chaining
-      // User must explicitly select start point for each new wall - NO automatic continuation
-      // Clear pendingWallStart FIRST, then update room
+      // CRITICAL: Always clear pendingWallStart after creating a wall — no automatic chaining.
+      // Each wall requires an explicit start point selection.
       set({ pendingWallStart: null, room: newRoom });
       console.log('[addWallPoint] Room updated, pendingWallStart cleared');
       state.saveSnapshot();
-      // Final check - ensure pendingWallStart is still null after snapshot
       const finalState = get();
       console.log('[addWallPoint] Final state check - pendingWallStart:', finalState.pendingWallStart);
       if (finalState.pendingWallStart !== null) {
@@ -272,13 +251,9 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
         set({ pendingWallStart: null });
       }
       console.log('[addWallPoint] Wall creation complete, pendingWallStart should be null');
-      // CRITICAL: Return immediately after creating wall to prevent else block execution
       return;
     }
-    
-    // No pending start - user is selecting the start point for a new wall
-    // This point will become the start of the next wall
-    // BUT: Only set if we're not in the middle of creating a wall (double-click protection)
+
     const currentState = get();
     if (currentState.pendingWallStart === null) {
       console.log('[addWallPoint] No pendingWallStart, setting new start point:', point);
@@ -289,8 +264,7 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
       console.log('[addWallPoint] pendingWallStart already set, ignoring this call (possible double-click)');
     }
   },
-  
-  // Set pending wall start
+
   setPendingWallStart: (point: Point | null) => {
     console.log('[setPendingWallStart] Called with:', point);
     set({ pendingWallStart: point });
@@ -298,17 +272,14 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
     console.log('[setPendingWallStart] After set:', afterSet.pendingWallStart);
   },
 
-  // Set wall edit mode
   setWallEditMode: (mode: 'draw' | 'connect') => {
     set({ wallEditMode: mode, selectedWallPoint: null });
   },
 
-  // Set selected wall point
   setSelectedWallPoint: (point: Point | null) => {
     set({ selectedWallPoint: point });
   },
 
-  // Add door
   addDoor: (door: Door) => {
     const state = get();
     const newRoom = state.room.addDoor(door);
@@ -316,7 +287,6 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
     state.saveSnapshot();
   },
 
-  // Remove door
   removeDoor: (doorId: string) => {
     const state = get();
     const newRoom = state.room.removeDoor(doorId);
@@ -324,7 +294,6 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
     state.saveSnapshot();
   },
 
-  // Add window
   addWindow: (window: Window) => {
     const state = get();
     const newRoom = state.room.addWindow(window);
@@ -332,7 +301,6 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
     state.saveSnapshot();
   },
 
-  // Remove window
   removeWindow: (windowId: string) => {
     const state = get();
     const newRoom = state.room.removeWindow(windowId);
@@ -340,7 +308,6 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
     state.saveSnapshot();
   },
 
-  // Update door
   updateDoor: (doorId: string, updates: Partial<Door>) => {
     const state = get();
     const newRoom = state.room.updateDoor(doorId, updates);
@@ -348,7 +315,6 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
     state.saveSnapshot();
   },
 
-  // Update window
   updateWindow: (windowId: string, updates: Partial<Window>) => {
     const state = get();
     const newRoom = state.room.updateWindow(windowId, updates);
@@ -356,32 +322,26 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
     state.saveSnapshot();
   },
 
-  // Select door
   selectDoor: (doorId: string | null) => {
     set({ selectedDoorId: doorId, selectedWindowId: null, selectedDeviceId: null, selectedWallId: null });
   },
 
-  // Select window
   selectWindow: (windowId: string | null) => {
     set({ selectedWindowId: windowId, selectedDoorId: null, selectedDeviceId: null, selectedWallId: null });
   },
 
-  // Select wall
   selectWall: (wallId: string | null) => {
     set({ selectedWallId: wallId, selectedDoorId: null, selectedWindowId: null, selectedDeviceId: null });
   },
 
-  // Set pending device type (for click-to-place)
   setPendingDeviceType: (type: DeviceType | null) => {
     set({ pendingDeviceType: type });
   },
 
-  // Set selected wall point index
   setSelectedWallPointIndex: (index: number | null) => {
     set({ selectedWallPointIndex: index });
   },
 
-  // Move wall point
   moveWallPoint: (pointIndex: number, newPosition: Point) => {
     const state = get();
     const newRoom = moveWallPointUseCase.execute(state.room, pointIndex, newPosition);
@@ -389,29 +349,25 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
     state.saveSnapshot();
   },
 
-  // Remove wall
   removeWall: (wallIndex: number) => {
     const state = get();
     const wall = state.room.walls[wallIndex];
     const newRoom = removeWallUseCase.execute(state.room, wallIndex);
-    set({ 
+    set({
       room: newRoom,
       selectedWallId: state.selectedWallId === wall?.id ? null : state.selectedWallId
     });
     state.saveSnapshot();
   },
 
-  // Set show measurements
   setShowMeasurements: (show: boolean) => {
     set({ showMeasurements: show });
   },
 
-  // Set show grid
   setShowGrid: (show: boolean) => {
     set({ showGrid: show });
   },
 
-  // Close room
   closeRoom: () => {
     const state = get();
     const newRoom = closeRoomUseCase.execute(state.room);
@@ -419,7 +375,6 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
     state.saveSnapshot();
   },
 
-  // Add device
   addDevice: (type: DeviceType, position: Point, anchor: DeviceAnchor = 'free') => {
     const state = get();
     const newRoom = addDeviceUseCase.execute(state.room, type, position, anchor);
@@ -427,7 +382,6 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
     state.saveSnapshot();
   },
 
-  // Remove device
   removeDevice: (deviceId: string) => {
     const state = get();
     const newRoom = removeDeviceUseCase.execute(state.room, deviceId);
@@ -435,15 +389,13 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
     state.saveSnapshot();
   },
 
-  // Move device
   moveDevice: (deviceId: string, position: Point) => {
     const state = get();
     const newRoom = moveDeviceUseCase.execute(state.room, deviceId, position);
     set({ room: newRoom });
-    // Don't save snapshot on every move - only on drag end
+    // Don't save snapshot on every move — only on drag end
   },
 
-  // Save device position after drag end
   saveDevicePosition: (deviceId: string) => {
     const state = get();
     if (deviceId) {
@@ -453,7 +405,6 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
     state.saveSnapshot();
   },
 
-  // Undo
   undo: () => {
     const state = get();
     if (state.historyIndex > 0) {
@@ -470,7 +421,6 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
     }
   },
 
-  // Redo
   redo: () => {
     const state = get();
     if (state.historyIndex < state.history.length - 1) {
@@ -487,7 +437,6 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
     }
   },
 
-  // Set mode
   setMode: (mode: ProjectMode) => {
     const state = get();
     if (mode === 'walls' && state.mode !== 'walls') {
@@ -501,17 +450,14 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
     }
   },
 
-  // Set zoom
   setZoom: (zoom: number) => {
     set({ zoom: Math.max(50, Math.min(200, zoom)) });
   },
 
-  // Select device
   selectDevice: (deviceId: string | null) => {
     set({ selectedDeviceId: deviceId, selectedDoorId: null, selectedWindowId: null, selectedWallId: null, selectedRegionId: null });
   },
 
-  // Room regions (разметка комнат)
   addRoomRegionPoint: (point: Point) => {
     set((s) => ({ pendingRegionPoints: [...s.pendingRegionPoints, point] }));
   },
@@ -600,13 +546,11 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
     state.saveSnapshot();
   },
 
-  // Export project
   exportProject: () => {
     const state = get();
     return exportProjectUseCase.execute(state.room);
   },
 
-  // Reset
   reset: () => {
     const state = get();
     const newRoom = createProjectUseCase.execute();
@@ -634,7 +578,6 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
     if (state.houseId) LocalStorageService.remove(state.houseId);
   },
 
-  // Load from snapshot
   loadFromSnapshot: (snapshot: ProjectSnapshot) => {
     const restoredRoom = restoreSnapshotUseCase.execute(snapshot);
     set({
@@ -646,27 +589,23 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
     });
   },
 
-  // Save snapshot
   saveSnapshot: () => {
     const state = get();
     const snapshot = createSnapshotUseCase.execute(state.room);
     snapshot.roomRegions = state.roomRegions ?? [];
 
-    // Remove any snapshots after current index (when undoing and then making new changes)
     const newHistory = state.history.slice(0, state.historyIndex + 1);
     newHistory.push(snapshot);
-    
-    // Limit history size
+
     if (newHistory.length > MAX_HISTORY) {
       newHistory.shift();
     }
-    
+
     set({
       history: newHistory,
       historyIndex: newHistory.length - 1,
     });
 
-    // Debounced auto-save to localStorage (per house)
     const { houseId } = get();
     if (houseId) debouncedAutosave(houseId, snapshot);
   },

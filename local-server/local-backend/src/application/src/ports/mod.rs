@@ -1,5 +1,4 @@
-//! Outbound ports — traits implemented by `infrastructure` adapters.
-
+﻿
 pub mod access_repository;
 pub mod access_sync_repository;
 pub mod cloud_auth_client;

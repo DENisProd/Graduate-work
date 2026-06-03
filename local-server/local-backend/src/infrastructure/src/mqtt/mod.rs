@@ -1,5 +1,4 @@
-//! MQTT adapter: `rumqttc`-backed client + Zigbee2MQTT ingestion loop.
-
+﻿
 mod client;
 mod ingest;
 pub mod modbus_gateway;

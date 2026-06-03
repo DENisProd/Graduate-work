@@ -36,7 +36,6 @@ export const viewport = {
   ],
 };
 
-// Скрипт для предотвращения мигания темы при загрузке
 const themeScript = `
   (function() {
     try {
@@ -48,25 +47,21 @@ const themeScript = `
       const root = document.documentElement;
       const html = document.querySelector('html');
       
-      // Удаляем все классы тем
       root.classList.remove('light', 'dark');
       if (html) {
         html.classList.remove('light', 'dark');
       }
       
-      // Добавляем нужный класс
       root.classList.add(resolved);
       if (html) {
         html.classList.add(resolved);
       }
       
-      // Устанавливаем data-theme атрибут
       root.setAttribute('data-theme', resolved);
       if (html) {
         html.setAttribute('data-theme', resolved);
       }
       
-      // Устанавливаем color-scheme
       root.style.colorScheme = resolved;
     } catch (e) {
       const root = document.documentElement;

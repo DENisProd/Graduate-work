@@ -12,7 +12,6 @@ interface MeasurementLayerProps {
 export function MeasurementLayer({ walls, show }: MeasurementLayerProps) {
   if (!show || walls.length === 0) return null;
 
-  // Scale: 1px = 1cm (as per requirements)
   const formatLength = (lengthPx: number): string => {
     const lengthCm = lengthPx;
     if (lengthCm < 100) {
@@ -33,12 +32,10 @@ export function MeasurementLayer({ walls, show }: MeasurementLayerProps) {
         const angleRad = Math.atan2(dy, dx);
         let angle = angleRad * (180 / Math.PI);
         
-        // Normalize angle for text readability
         if (angle >= 90 || angle < -90) {
           angle += 180;
         }
 
-        // Offset measurement line perpendicular to wall
         const perpAngle = angleRad * (180 / Math.PI) + 90;
         const offset = 20;
         const offsetX = Math.cos(perpAngle * Math.PI / 180) * offset;
@@ -46,7 +43,6 @@ export function MeasurementLayer({ walls, show }: MeasurementLayerProps) {
 
         return (
           <Group key={`measurement-${index}`}>
-            {/* Measurement line */}
             <Line
               points={[
                 wall.a.x + offsetX,
@@ -59,7 +55,6 @@ export function MeasurementLayer({ walls, show }: MeasurementLayerProps) {
               dash={[5, 5]}
               listening={false}
             />
-            {/* Measurement text */}
             <Text
               x={centerX + offsetX}
               y={centerY + offsetY - 10}

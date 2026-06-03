@@ -8,12 +8,12 @@ import { domovoyCanvas } from '@/lib/domovoy-canvas-palette';
 interface WallPreviewLayerProps {
   mode: ProjectMode;
   mousePosition: Point | null;
-  lastWallPoint: Point | null; // The last point of the wall chain or pending start
-  selectedWallPoint: Point | null; // Point being moved
-  selectedWallPointIndex: number | null; // Index of point being moved
+  lastWallPoint: Point | null;
+  selectedWallPoint: Point | null;
+  selectedWallPointIndex: number | null;
   walls: Wall[];
   showGrid: boolean;
-  pendingWallStart: Point | null; // Pending start point for new wall
+  pendingWallStart: Point | null;
 }
 
 export function WallPreviewLayer({
@@ -26,11 +26,8 @@ export function WallPreviewLayer({
 
   const gridSize = showGrid ? GRID_SIZE : 1;
 
-  // Case 1: Drawing new wall (walls mode)
   if (mode === 'walls') {
-    // Only show preview if we have a pendingWallStart (user has selected start point)
     if (!pendingWallStart) {
-      // No start point selected yet - just show a small indicator at mouse position
       const snappedPos = snapPoint(mousePosition, gridSize);
       return (
         <Circle
@@ -43,32 +40,25 @@ export function WallPreviewLayer({
         />
       );
     }
-    
-    // Snap the mouse position relative to pendingWallStart
+
     const snappedPos = snapPoint(mousePosition, gridSize, pendingWallStart);
-    
-    // Draw a line from pendingWallStart to the snapped mouse position
+
     return (
       <Group listening={false}>
-        {/* Phantom Wall Line */}
         <Line
           points={[pendingWallStart.x, pendingWallStart.y, snappedPos.x, snappedPos.y]}
           stroke={domovoyCanvas.tealBright}
-          strokeWidth={20} // Same as real wall
+          strokeWidth={20}
           opacity={0.3}
           lineCap="butt"
           dash={[10, 10]}
         />
-        
-        {/* Guide Line (thin) */}
         <Line
           points={[pendingWallStart.x, pendingWallStart.y, snappedPos.x, snappedPos.y]}
           stroke={domovoyCanvas.handleHover}
           strokeWidth={2}
           dash={[5, 5]}
         />
-        
-        {/* Endpoint preview */}
         <Circle
           x={snappedPos.x}
           y={snappedPos.y}
@@ -76,8 +66,6 @@ export function WallPreviewLayer({
           fill={domovoyCanvas.handle}
           listening={false}
         />
-
-        {/* Length Label */}
         <Text
           x={(pendingWallStart.x + snappedPos.x) / 2}
           y={(pendingWallStart.y + snappedPos.y) / 2}

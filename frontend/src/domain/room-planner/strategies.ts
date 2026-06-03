@@ -1,5 +1,3 @@
-// Strategy pattern for snapping
-
 import type { Point, Wall } from './types';
 import { PointVO, WallVO } from './value-objects';
 

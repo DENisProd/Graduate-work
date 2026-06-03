@@ -10,7 +10,6 @@ interface GlowCardProps {
   customSize?: boolean; // When true, ignores size prop and uses width/height or className
 }
 
-/** Hue centers aligned with brand (indigo ~264, hearth orange ~32, spirit teal ~174). */
 const glowColorMap = {
   blue: { base: 264, spread: 72 },
   purple: { base: 285, spread: 56 },
@@ -55,7 +54,6 @@ const GlowCard: React.FC<GlowCardProps> = ({
 
   const { base, spread } = glowColorMap[glowColor];
 
-  // Determine sizing
   const getSizeClasses = () => {
     if (customSize) {
       return ''; // Let className or inline styles handle sizing
@@ -95,7 +93,6 @@ const GlowCard: React.FC<GlowCardProps> = ({
       touchAction: 'none' as const,
     };
 
-    // Add width and height if provided
     if (width !== undefined) {
       baseStyles.width = typeof width === 'number' ? `${width}px` : width;
     }

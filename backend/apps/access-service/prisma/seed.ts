@@ -1,13 +1,3 @@
-/**
- * Seed: Device Catalog
- *
- * Запуск: pnpm run seed  (из apps/access-service/)
- *         или ts-node prisma/seed.ts
- *
- * Идемпотентно — все операции через upsert/connectOrCreate.
- * Безопасно запускать повторно.
- */
-
 import { join } from 'path';
 import { config as loadEnv } from 'dotenv';
 import { PrismaClient } from '@prisma/client';
@@ -21,16 +11,12 @@ if (!url) throw new Error('ACCESS_CONTROL_DB_URL is not set');
 const adapter = new PrismaPg({ connectionString: url });
 const prisma = new PrismaClient({ adapter });
 
-// ─── helpers ────────────────────────────────────────────────────────────────
-
 function tr(ru: string, en: string, description?: string) {
   return [
     { locale: 'ru', name: ru, description: description ?? null },
     { locale: 'en', name: en, description: description ?? null },
   ];
 }
-
-// ─── DATA ───────────────────────────────────────────────────────────────────
 
 const DEVICE_TYPES = [
   { code: 'lighting',    names: tr('Освещение',       'Lighting') },
@@ -41,37 +27,28 @@ const DEVICE_TYPES = [
   { code: 'multimedia',  names: tr('Мультимедиа',     'Multimedia') },
 ];
 
-// categoryCode → typeCode
 const DEVICE_CATEGORIES = [
-  // Освещение
   { code: 'smart_bulb',       typeCode: 'lighting',   names: tr('Умная лампочка',           'Smart Bulb') },
   { code: 'smart_switch',     typeCode: 'lighting',   names: tr('Умный выключатель',        'Smart Switch') },
   { code: 'led_strip',        typeCode: 'lighting',   names: tr('Светодиодная лента',       'LED Strip') },
   { code: 'floor_lamp',       typeCode: 'lighting',   names: tr('Напольный светильник',     'Floor Lamp') },
-  // Климат
   { code: 'thermostat',       typeCode: 'climate',    names: tr('Термостат',                'Thermostat') },
   { code: 'air_conditioner',  typeCode: 'climate',    names: tr('Кондиционер',              'Air Conditioner') },
   { code: 'fan',              typeCode: 'climate',    names: tr('Вентилятор',               'Fan') },
   { code: 'humidifier',       typeCode: 'climate',    names: tr('Увлажнитель',              'Humidifier') },
-  // Безопасность
   { code: 'door_lock',        typeCode: 'security',   names: tr('Умный замок',              'Smart Lock') },
   { code: 'motion_sensor',    typeCode: 'security',   names: tr('Датчик движения',          'Motion Sensor') },
   { code: 'door_sensor',      typeCode: 'security',   names: tr('Датчик двери / окна',      'Door/Window Sensor') },
   { code: 'camera',           typeCode: 'security',   names: tr('IP-камера',                'IP Camera') },
-  // Энергетика
   { code: 'smart_plug',       typeCode: 'energy',     names: tr('Умная розетка',            'Smart Plug') },
   { code: 'energy_meter',     typeCode: 'energy',     names: tr('Счётчик энергии',          'Energy Meter') },
   { code: 'power_strip',      typeCode: 'energy',     names: tr('Управляемый удлинитель',   'Smart Power Strip') },
-  // Датчики
   { code: 'temp_sensor',      typeCode: 'sensors',    names: tr('Датчик температуры',       'Temperature Sensor') },
   { code: 'co2_sensor',       typeCode: 'sensors',    names: tr('Датчик CO₂',               'CO2 Sensor') },
   { code: 'smoke_detector',   typeCode: 'sensors',    names: tr('Датчик дыма',              'Smoke Detector') },
-  // Мультимедиа
   { code: 'smart_speaker',    typeCode: 'multimedia', names: tr('Умная колонка',            'Smart Speaker') },
   { code: 'media_player',     typeCode: 'multimedia', names: tr('Медиаплеер',               'Media Player') },
 ];
-
-// ─── Devices with functions and actions ─────────────────────────────────────
 
 interface ActionDef {
   code: string;
@@ -100,7 +77,6 @@ interface DeviceDef {
 }
 
 const DEVICES: DeviceDef[] = [
-  // ── 1. Philips Hue Color A19 ──────────────────────────────────────────────
   {
     code: 'philips_hue_color_a19',
     categoryCode: 'smart_bulb',
@@ -151,7 +127,6 @@ const DEVICES: DeviceDef[] = [
     ],
   },
 
-  // ── 2. IKEA TRADFRI E27 ───────────────────────────────────────────────────
   {
     code: 'ikea_tradfri_bulb_e27',
     categoryCode: 'smart_bulb',
@@ -194,7 +169,6 @@ const DEVICES: DeviceDef[] = [
     ],
   },
 
-  // ── 3. Xiaomi Aqara Temperature & Humidity Sensor ────────────────────────
   {
     code: 'xiaomi_aqara_temp_hum',
     categoryCode: 'temp_sensor',
@@ -237,7 +211,6 @@ const DEVICES: DeviceDef[] = [
     ],
   },
 
-  // ── 4. Sonoff Mini R2 ─────────────────────────────────────────────────────
   {
     code: 'sonoff_mini_r2',
     categoryCode: 'smart_switch',
@@ -258,7 +231,6 @@ const DEVICES: DeviceDef[] = [
     ],
   },
 
-  // ── 5. Tuya Smart Plug ────────────────────────────────────────────────────
   {
     code: 'tuya_smart_plug_16a',
     categoryCode: 'smart_plug',
@@ -303,7 +275,6 @@ const DEVICES: DeviceDef[] = [
     ],
   },
 
-  // ── 6. Xiaomi Aqara Door Sensor ───────────────────────────────────────────
   {
     code: 'xiaomi_aqara_door_sensor',
     categoryCode: 'door_sensor',
@@ -327,7 +298,6 @@ const DEVICES: DeviceDef[] = [
     ],
   },
 
-  // ── 7. Google Nest Thermostat E ───────────────────────────────────────────
   {
     code: 'google_nest_thermostat_e',
     categoryCode: 'thermostat',
@@ -373,7 +343,6 @@ const DEVICES: DeviceDef[] = [
     ],
   },
 
-  // ── 8. Yeelight LED Strip Pro ─────────────────────────────────────────────
   {
     code: 'yeelight_led_strip_pro',
     categoryCode: 'led_strip',
@@ -423,7 +392,6 @@ const DEVICES: DeviceDef[] = [
     ],
   },
 
-  // ── 9. Xiaomi Mi Motion Sensor ────────────────────────────────────────────
   {
     code: 'xiaomi_mi_motion_sensor',
     categoryCode: 'motion_sensor',
@@ -455,7 +423,6 @@ const DEVICES: DeviceDef[] = [
     ],
   },
 
-  // ── 10. Zigbee CO2 Sensor (generic) ──────────────────────────────────────
   {
     code: 'zigbee_co2_sensor_generic',
     categoryCode: 'co2_sensor',
@@ -491,12 +458,9 @@ const DEVICES: DeviceDef[] = [
   },
 ];
 
-// ─── SEED ────────────────────────────────────────────────────────────────────
-
 async function main() {
   console.log('🌱 Seeding device catalog...\n');
 
-  // 1. Device Types
   console.log('→ Device types');
   const typeIdByCode: Record<string, number> = {};
   for (const dt of DEVICE_TYPES) {
@@ -517,7 +481,6 @@ async function main() {
     console.log(`   ✔ ${dt.code} (id=${record.id})`);
   }
 
-  // 2. Device Categories
   console.log('\n→ Device categories');
   const catIdByCode: Record<string, number> = {};
   for (const dc of DEVICE_CATEGORIES) {
@@ -539,7 +502,6 @@ async function main() {
     console.log(`   ✔ ${dc.code} (id=${record.id})`);
   }
 
-  // 3. Devices + Functions + Actions
   console.log('\n→ Devices');
   for (const dev of DEVICES) {
     const deviceRecord = await prisma.device.upsert({

@@ -1,24 +1,70 @@
+﻿use std::sync::Arc;
+
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use local_server_application::ports::{
-    CloudScenarioClient, CreateCloudScenarioCmd, RemoteScenario,
+    CloudScenarioClient, CreateCloudScenarioCmd, RemoteScenario, RuntimeSettingsRepository,
 };
 use local_server_core::DomainError;
 
 #[derive(Clone)]
 pub struct ReqwestCloudScenarioClient {
     http: reqwest::Client,
+    api_key: String,
+    settings: Option<Arc<dyn RuntimeSettingsRepository>>,
 }
 
 impl ReqwestCloudScenarioClient {
-    pub fn new() -> Self {
+    pub fn new(api_key: String) -> Self {
         Self {
             http: reqwest::Client::builder()
                 .timeout(std::time::Duration::from_secs(15))
                 .build()
                 .expect("reqwest client"),
+            api_key,
+            settings: None,
+        }
+    }
+
+    pub fn with_settings(
+        api_key: String,
+        settings: Arc<dyn RuntimeSettingsRepository>,
+    ) -> Self {
+        Self {
+            http: reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(15))
+                .build()
+                .expect("reqwest client"),
+            api_key,
+            settings: Some(settings),
+        }
+    }
+
+    async fn bearer_token(&self) -> Option<String> {
+        if let Some(repo) = &self.settings {
+            if let Ok(s) = repo.load().await {
+                if let Some(code) = s.auth_code.filter(|c| !c.trim().is_empty()) {
+                    return Some(code);
+                }
+            }
+        }
+        if !self.api_key.trim().is_empty() {
+            return Some(self.api_key.clone());
+        }
+        None
+    }
+
+    fn apply_auth(
+        &self,
+        req: reqwest::RequestBuilder,
+        token: Option<String>,
+    ) -> reqwest::RequestBuilder {
+        if let Some(t) = token {
+            req.bearer_auth(t)
+        } else {
+            req
         }
     }
 
@@ -29,11 +75,9 @@ impl ReqwestCloudScenarioClient {
 
 impl Default for ReqwestCloudScenarioClient {
     fn default() -> Self {
-        Self::new()
+        Self::new(String::new())
     }
 }
-
-// ── scenario-service response DTOs ────────────────────────────────────────────
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -84,19 +128,18 @@ struct CreateScenarioRequest {
     status: String,
 }
 
-// ── trait impl ────────────────────────────────────────────────────────────────
-
 #[async_trait]
 impl CloudScenarioClient for ReqwestCloudScenarioClient {
     async fn list_all(&self, base_url: &str) -> Result<Vec<RemoteScenario>, DomainError> {
         let mut all: Vec<RemoteScenario> = Vec::new();
         let mut page: usize = 1;
 
+        let token = self.bearer_token().await;
+
         loop {
             let url = Self::url(base_url, &format!("/scenarios?page={}&limit=100", page));
             let res = self
-                .http
-                .get(&url)
+                .apply_auth(self.http.get(&url), token.clone())
                 .send()
                 .await
                 .map_err(|e| DomainError::DependencyUnavailable(format!("scenario list: {e}")))?;
@@ -141,10 +184,9 @@ impl CloudScenarioClient for ReqwestCloudScenarioClient {
             status: cmd.status,
         };
 
+        let token = self.bearer_token().await;
         let res = self
-            .http
-            .post(&url)
-            .json(&body)
+            .apply_auth(self.http.post(&url).json(&body), token)
             .send()
             .await
             .map_err(|e| DomainError::DependencyUnavailable(format!("scenario create: {e}")))?;

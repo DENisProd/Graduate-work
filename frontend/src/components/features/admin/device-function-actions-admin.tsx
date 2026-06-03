@@ -642,7 +642,6 @@ export function DeviceFunctionActionsAdmin({
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Modal */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -665,7 +664,6 @@ export function DeviceFunctionActionsAdmin({
         </DialogContent>
       </Dialog>
 
-      {/* Device Selection Modal (when not opened from device page) */}
       {!deviceId && (
         <Dialog open={isDeviceSelectModalOpen} onOpenChange={setIsDeviceSelectModalOpen}>
           <DialogContent className="sm:max-w-md">

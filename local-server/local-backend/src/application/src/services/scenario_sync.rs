@@ -1,4 +1,4 @@
-use std::sync::Arc;
+﻿use std::sync::Arc;
 use std::time::Duration;
 
 use chrono::DateTime;
@@ -13,18 +13,22 @@ use crate::ports::{
     scenario_repository::UpsertFromCloudCmd,
 };
 
-/// Background loop: periodically pulls all scenarios from the cloud
-/// scenario-service (authoritative) into local SQLite, and pushes
-/// locally-created scenarios that have no cloud mapping yet.
+#[async_trait::async_trait]
+pub trait ScenarioServiceUrlProvider: Send + Sync {
+    async fn get(&self) -> String;
+}
+
 pub async fn run_scenario_sync(
     repo: Arc<dyn ScenarioRepository>,
     cloud: Arc<dyn CloudScenarioClient>,
     interval_secs: u64,
-    scenario_service_url: String,
+    scenario_service_url: Arc<dyn ScenarioServiceUrlProvider>,
 ) {
     loop {
-        pull_from_cloud(&repo, &cloud, &scenario_service_url).await;
-        push_local_to_cloud(&repo, &cloud, &scenario_service_url).await;
+        let base_url = scenario_service_url.get().await;
+        tracing::info!(scenario_base = %base_url, "scenario_sync: cycle start");
+        pull_from_cloud(&repo, &cloud, &base_url).await;
+        push_local_to_cloud(&repo, &cloud, &base_url).await;
         tokio::time::sleep(Duration::from_secs(interval_secs)).await;
     }
 }

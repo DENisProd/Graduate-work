@@ -1,4 +1,4 @@
-use async_trait::async_trait;
+﻿use async_trait::async_trait;
 use local_server_core::DomainError;
 
 #[derive(Debug, Clone)]
@@ -34,10 +34,8 @@ pub struct CreateCloudPhysicalDeviceCmd {
 
 #[async_trait]
 pub trait CloudPhysicalDeviceClient: Send + Sync {
-    /// Fetch all physical devices from cloud (handles pagination internally).
     async fn list_all(&self, base_url: &str) -> Result<Vec<RemotePhysicalDevice>, DomainError>;
 
-    /// Create a physical device in the cloud.
     async fn create(
         &self,
         base_url: &str,

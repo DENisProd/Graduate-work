@@ -1,5 +1,3 @@
-// Domain types for Room Planner
-
 export type Point = {
   x: number;
   y: number;
@@ -15,18 +13,18 @@ export type Wall = {
 export type Door = {
   id: string;
   wallId: string;
-  position: number; // Position along wall (0-1)
+  position: number;
   width: number;
   direction: 'left' | 'right' | 'both';
-  name?: string; // Friendly name like "Дверь #1"
+  name?: string;
 };
 
 export type Window = {
   id: string;
   wallId: string;
-  position: number; // Position along wall (0-1)
+  position: number;
   width: number;
-  name?: string; // Friendly name like "Окно #1"
+  name?: string;
 };
 
 export type DeviceType =
@@ -54,19 +52,15 @@ export type Room = {
   windows: Window[];
 };
 
-/** Область комнаты на плане — произвольный полигон (не привязан к стенам) */
 export type RoomRegion = {
   id: string;
-  /** Вершины полигона (замкнутый: последняя соединяется с первой) */
   points: Point[];
-  /** id комнаты дома (HouseRoom) или null */
   houseRoomId: number | string | null;
 };
 
 export type ProjectSnapshot = {
   room: Room;
   timestamp: number;
-  /** Области комнат — рисуются инструментом «Разметка комнат» */
   roomRegions?: RoomRegion[];
 };
 
@@ -82,7 +76,7 @@ export type DeviceCatalog = {
 };
 
 export type ProjectMode = 'walls' | 'devices' | 'select' | 'doors' | 'windows' | 'pan' | 'rooms';
-export type WallEditMode = 'draw' | 'connect'; // draw - новый контур, connect - продолжение от точки
+export type WallEditMode = 'draw' | 'connect';
 
 export type ProjectExport = {
   version: number;

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+﻿use std::sync::Arc;
 
 use axum::{
     extract::{Path, Query, State},
@@ -17,8 +17,6 @@ use local_server_application::{
 use super::error::AppError;
 use crate::websocket::protocol::{CommandPayload, ZigbeeStateDto};
 
-// ─── State ───────────────────────────────────────────────────────────────────
-
 #[derive(Clone)]
 pub struct ZigbeeHttpState {
     pub zigbee_repo: Arc<dyn ZigbeeRepository>,
@@ -26,8 +24,6 @@ pub struct ZigbeeHttpState {
     pub mqtt: Arc<dyn MqttClient>,
     pub prefix: String,
 }
-
-// ─── Response DTOs ────────────────────────────────────────────────────────────
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -69,8 +65,6 @@ impl From<&PhysicalDevice> for ZigbeeDeviceResponse {
     }
 }
 
-// ─── Router ───────────────────────────────────────────────────────────────────
-
 pub fn router(
     zigbee_repo: Arc<dyn ZigbeeRepository>,
     phys_repo: Arc<dyn PhysicalDeviceRepository>,
@@ -79,21 +73,15 @@ pub fn router(
 ) -> Router {
     let state = ZigbeeHttpState { zigbee_repo, phys_repo, mqtt, prefix };
     Router::new()
-        // Device list and sync
         .route("/zigbee/devices", get(list_devices))
         .route("/zigbee/devices/sync-from-bridge", post(sync_from_bridge))
-        // Single device (static before dynamic)
         .route("/zigbee/devices/:ieee", get(get_device).delete(delete_device))
         .route("/zigbee/devices/:ieee/command", post(send_command))
-        // Pairing
         .route("/zigbee/permit-join", post(permit_join))
-        // State history and logs
         .route("/zigbee/states", get(list_states))
         .route("/zigbee/device-logs", get(list_logs))
         .with_state(state)
 }
-
-// ─── Handlers ────────────────────────────────────────────────────────────────
 
 async fn list_devices(
     State(s): State<ZigbeeHttpState>,
@@ -117,7 +105,6 @@ async fn get_device(
 async fn sync_from_bridge(
     State(s): State<ZigbeeHttpState>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    // Request Z2M to republish the retained bridge/devices topic
     let topic = format!("{}/bridge/request/devices", s.prefix);
     s.mqtt.publish(&topic, b"").await.ok();
     Ok(Json(serde_json::json!({})))
@@ -127,7 +114,6 @@ async fn delete_device(
     State(s): State<ZigbeeHttpState>,
     Path(ieee): Path<String>,
 ) -> Result<StatusCode, AppError> {
-    // Send Z2M remove command then remove from local DB
     let topic = format!("{}/bridge/request/device/remove", s.prefix);
     let payload = serde_json::json!({ "id": ieee, "force": false });
     if let Ok(bytes) = serde_json::to_vec(&payload) {

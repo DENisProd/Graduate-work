@@ -178,7 +178,6 @@ export function WidgetDashboard({ dashboard, devices, zigbeeDevices, scenarios }
         widgetDashboardsApi
           .updateLayout(dashboard.id, allLayouts as Record<string, unknown>)
           .catch(() => {
-            // Avoid spamming errors while dragging.
             const now = Date.now();
             if (now - autosaveErrorToastTsRef.current > 6000) {
               autosaveErrorToastTsRef.current = now;

@@ -230,7 +230,6 @@ export default function DashboardNavigation({
   const isCollapsed = state === "collapsed";
   const [openCollapsible, setOpenCollapsible] = useState<string | null>(null);
 
-  // Group consecutive routes sharing the same section label
   const groups: { section: string | undefined; routes: Route[] }[] = [];
   for (const route of routes) {
     const last = groups[groups.length - 1];

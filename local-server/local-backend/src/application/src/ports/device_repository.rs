@@ -1,4 +1,4 @@
-use async_trait::async_trait;
+﻿use async_trait::async_trait;
 use local_server_core::entities::device::{
     Device, DeviceCategory, DeviceDetailed, DeviceFunction, DeviceStatus, DeviceType,
 };

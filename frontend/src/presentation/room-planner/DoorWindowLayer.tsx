@@ -27,22 +27,19 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
   const updateDoor = useRoomPlannerStore((state) => state.updateDoor);
   const updateWindow = useRoomPlannerStore((state) => state.updateWindow);
   const room = useRoomPlannerStore((state) => state.room);
-  
+
   const [resizingDoor, setResizingDoor] = useState<{ id: string; initialWidth: number; initialCenter: { x: number; y: number }; angle: number; initialHandleDistance: number; handle: 'left' | 'right' } | null>(null);
   const [resizingWindow, setResizingWindow] = useState<{ id: string; initialWidth: number; initialCenter: { x: number; y: number }; angle: number; initialHandleDistance: number; handle: 'left' | 'right' } | null>(null);
   const [draggingDoor, setDraggingDoor] = useState<{ id: string; initialPosition: number; wallId: string; lastValidPosition: number } | null>(null);
   const [draggingWindow, setDraggingWindow] = useState<{ id: string; initialPosition: number; wallId: string; lastValidPosition: number } | null>(null);
-  
-  // Refs to store group references for dragBoundFunc
+
   const doorGroupRefs = useRef<Map<string, KonvaGroup>>(new Map());
   const windowGroupRefs = useRef<Map<string, KonvaGroup>>(new Map());
 
-  // Helper function to check if opening width is valid
   const isValidWidth = (opening: { wallId: string; position: number; width: number; id: string }, newWidth: number): boolean => {
     const wall = walls.find(w => w.id === opening.wallId);
     if (!wall) return false;
 
-    // Check if new width fits on the wall
     if (!isValidOpeningPosition(
       wall,
       opening.position,
@@ -53,7 +50,6 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
       return false;
     }
 
-    // Check for overlaps with other openings on the same wall
     const wallLength = Math.sqrt(
       Math.pow(wall.b.x - wall.a.x, 2) + Math.pow(wall.b.y - wall.a.y, 2)
     );
@@ -62,9 +58,8 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
     const newStart = centerDist - halfWidth;
     const newEnd = centerDist + halfWidth;
 
-    // Check doors on the same wall (use room.doors to get current state)
     for (const door of room.doors) {
-      if (door.id === opening.id) continue; // Skip self
+      if (door.id === opening.id) continue;
       if (door.wallId !== opening.wallId) continue;
 
       const doorHalfWidth = door.width / 2;
@@ -72,15 +67,13 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
       const doorStart = doorCenterDist - doorHalfWidth;
       const doorEnd = doorCenterDist + doorHalfWidth;
 
-      // Check if intervals overlap
       if (!(newEnd <= doorStart || newStart >= doorEnd)) {
         return false;
       }
     }
 
-    // Check windows on the same wall (use room.windows to get current state)
     for (const window of room.windows) {
-      if (window.id === opening.id) continue; // Skip self
+      if (window.id === opening.id) continue;
       if (window.wallId !== opening.wallId) continue;
 
       const windowHalfWidth = window.width / 2;
@@ -88,7 +81,6 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
       const windowStart = windowCenterDist - windowHalfWidth;
       const windowEnd = windowCenterDist + windowHalfWidth;
 
-      // Check if intervals overlap
       if (!(newEnd <= windowStart || newStart >= windowEnd)) {
         return false;
       }
@@ -116,15 +108,14 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
     const center = getPointOnWall(wall, door.position);
     const dx = wall.b.x - wall.a.x;
     const dy = wall.b.y - wall.a.y;
-    
-    // Calculate initial handle position relative to center
+
     const doorHalfWidth = door.width / 2;
     const initialHandleDistance = handle === 'left' ? -doorHalfWidth : doorHalfWidth;
-    
-    setResizingDoor({ 
-      id: door.id, 
-      initialWidth: door.width, 
-      initialCenter: center, 
+
+    setResizingDoor({
+      id: door.id,
+      initialWidth: door.width,
+      initialCenter: center,
       angle: Math.atan2(dy, dx),
       initialHandleDistance: initialHandleDistance,
       handle: handle
@@ -142,46 +133,35 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
     const pointerPos = stage.getPointerPosition();
     if (!pointerPos) return;
 
-    // Transform pointer position to world coordinates
     const scale = stage.scaleX();
     const stageX = stage.x();
     const stageY = stage.y();
     const worldX = (pointerPos.x - stageX) / scale;
     const worldY = (pointerPos.y - stageY) / scale;
 
-    // Calculate wall direction
     const dx = wall.b.x - wall.a.x;
     const dy = wall.b.y - wall.a.y;
     const wallLength = Math.sqrt(dx * dx + dy * dy);
     if (wallLength === 0) return;
-    
+
     const wallDirX = dx / wallLength;
     const wallDirY = dy / wallLength;
     const center = resizingDoor.initialCenter;
 
-    // Project pointer position onto wall line
     const relX = worldX - center.x;
     const relY = worldY - center.y;
     const currentHandleDistance = relX * wallDirX + relY * wallDirY;
 
-    // Calculate new width: distance from left handle to right handle
-    // Left handle is at -doorHalfWidth, right handle is at +doorHalfWidth
-    // When dragging left handle, new left position = currentHandleDistance
-    // When dragging right handle, new right position = currentHandleDistance
     let newWidth: number;
     const initialHalfWidth = resizingDoor.initialWidth / 2;
     if (handle === 'left') {
-      // Left handle: new width = distance from new left position to right handle (which stays at +initialHalfWidth)
       newWidth = 2 * (initialHalfWidth - currentHandleDistance);
     } else {
-      // Right handle: new width = distance from left handle (which stays at -initialHalfWidth) to new right position
       newWidth = 2 * (currentHandleDistance - (-initialHalfWidth));
     }
 
-    // Clamp to valid range
     newWidth = Math.max(20, Math.min(500, newWidth));
 
-    // Validate width before updating
     if (isValidWidth(door, newWidth)) {
       updateDoor(door.id, { width: newWidth });
     }
@@ -199,15 +179,14 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
     const center = getPointOnWall(wall, window.position);
     const dx = wall.b.x - wall.a.x;
     const dy = wall.b.y - wall.a.y;
-    
-    // Calculate initial handle position relative to center
+
     const windowHalfWidth = window.width / 2;
     const initialHandleDistance = handle === 'left' ? -windowHalfWidth : windowHalfWidth;
-    
-    setResizingWindow({ 
-      id: window.id, 
-      initialWidth: window.width, 
-      initialCenter: center, 
+
+    setResizingWindow({
+      id: window.id,
+      initialWidth: window.width,
+      initialCenter: center,
       angle: Math.atan2(dy, dx),
       initialHandleDistance: initialHandleDistance,
       handle: handle
@@ -225,46 +204,35 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
     const pointerPos = stage.getPointerPosition();
     if (!pointerPos) return;
 
-    // Transform pointer position to world coordinates
     const scale = stage.scaleX();
     const stageX = stage.x();
     const stageY = stage.y();
     const worldX = (pointerPos.x - stageX) / scale;
     const worldY = (pointerPos.y - stageY) / scale;
 
-    // Calculate wall direction
     const dx = wall.b.x - wall.a.x;
     const dy = wall.b.y - wall.a.y;
     const wallLength = Math.sqrt(dx * dx + dy * dy);
     if (wallLength === 0) return;
-    
+
     const wallDirX = dx / wallLength;
     const wallDirY = dy / wallLength;
     const center = resizingWindow.initialCenter;
 
-    // Project pointer position onto wall line
     const relX = worldX - center.x;
     const relY = worldY - center.y;
     const currentHandleDistance = relX * wallDirX + relY * wallDirY;
 
-    // Calculate new width: distance from left handle to right handle
-    // Left handle is at -windowHalfWidth, right handle is at +windowHalfWidth
-    // When dragging left handle, new left position = currentHandleDistance
-    // When dragging right handle, new right position = currentHandleDistance
     let newWidth: number;
     const initialHalfWidth = resizingWindow.initialWidth / 2;
     if (handle === 'left') {
-      // Left handle: new width = distance from new left position to right handle (which stays at +initialHalfWidth)
       newWidth = 2 * (initialHalfWidth - currentHandleDistance);
     } else {
-      // Right handle: new width = distance from left handle (which stays at -initialHalfWidth) to new right position
       newWidth = 2 * (currentHandleDistance - (-initialHalfWidth));
     }
 
-    // Clamp to valid range
     newWidth = Math.max(20, Math.min(500, newWidth));
 
-    // Validate width before updating
     if (isValidWidth(window, newWidth)) {
       updateWindow(window.id, { width: newWidth });
     }
@@ -276,12 +244,10 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
     setResizingWindow(null);
   };
 
-  // Helper function to check if opening position is valid
   const isValidPosition = (opening: { wallId: string; position: number; width: number; id: string }, newPosition: number): boolean => {
     const wall = walls.find(w => w.id === opening.wallId);
     if (!wall) return false;
 
-    // Check if new position fits on the wall
     if (!isValidOpeningPosition(
       wall,
       newPosition,
@@ -292,7 +258,6 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
       return false;
     }
 
-    // Check for overlaps with other openings on the same wall
     const wallLength = Math.sqrt(
       Math.pow(wall.b.x - wall.a.x, 2) + Math.pow(wall.b.y - wall.a.y, 2)
     );
@@ -301,9 +266,8 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
     const newStart = centerDist - halfWidth;
     const newEnd = centerDist + halfWidth;
 
-    // Check doors on the same wall
     for (const door of room.doors) {
-      if (door.id === opening.id) continue; // Skip self
+      if (door.id === opening.id) continue;
       if (door.wallId !== opening.wallId) continue;
 
       const doorHalfWidth = door.width / 2;
@@ -311,15 +275,13 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
       const doorStart = doorCenterDist - doorHalfWidth;
       const doorEnd = doorCenterDist + doorHalfWidth;
 
-      // Check if intervals overlap
       if (!(newEnd <= doorStart || newStart >= doorEnd)) {
         return false;
       }
     }
 
-    // Check windows on the same wall
     for (const window of room.windows) {
-      if (window.id === opening.id) continue; // Skip self
+      if (window.id === opening.id) continue;
       if (window.wallId !== opening.wallId) continue;
 
       const windowHalfWidth = window.width / 2;
@@ -327,7 +289,6 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
       const windowStart = windowCenterDist - windowHalfWidth;
       const windowEnd = windowCenterDist + windowHalfWidth;
 
-      // Check if intervals overlap
       if (!(newEnd <= windowStart || newStart >= windowEnd)) {
         return false;
       }
@@ -345,20 +306,17 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
     e.cancelBubble = true;
     if (!draggingDoor || draggingDoor.id !== door.id) return;
 
-    // Get current group position (already constrained by dragBoundFunc)
     const group = e.target;
     if (!group) return;
 
     const groupX = group.x();
     const groupY = group.y();
 
-    // Calculate wall direction and length
     const dx = wall.b.x - wall.a.x;
     const dy = wall.b.y - wall.a.y;
     const wallLength = Math.sqrt(dx * dx + dy * dy);
     if (wallLength === 0) return;
 
-    // Calculate position along wall (0-1)
     const relX = groupX - wall.a.x;
     const relY = groupY - wall.a.y;
     const wallDirX = dx / wallLength;
@@ -366,11 +324,9 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
     const distance = relX * wallDirX + relY * wallDirY;
     const newPosition = Math.max(0, Math.min(1, distance / wallLength));
 
-    // Validate position - only track last valid position, don't update store yet
     if (isValidPosition(door, newPosition)) {
       setDraggingDoor({ ...draggingDoor, lastValidPosition: newPosition });
     } else {
-      // If invalid, revert to last valid position
       const lastValidCenter = getPointOnWall(wall, draggingDoor.lastValidPosition);
       group.x(lastValidCenter.x);
       group.y(lastValidCenter.y);
@@ -380,7 +336,6 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
   const handleDoorDragEnd = (door: Door, e: KonvaEventObject<DragEvent>) => {
     e.cancelBubble = true;
     if (draggingDoor && draggingDoor.id === door.id) {
-      // Update position in store only at the end
       updateDoor(door.id, { position: draggingDoor.lastValidPosition });
     }
     setDraggingDoor(null);
@@ -395,20 +350,17 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
     e.cancelBubble = true;
     if (!draggingWindow || draggingWindow.id !== window.id) return;
 
-    // Get current group position (already constrained by dragBoundFunc)
     const group = e.target;
     if (!group) return;
 
     const groupX = group.x();
     const groupY = group.y();
 
-    // Calculate wall direction and length
     const dx = wall.b.x - wall.a.x;
     const dy = wall.b.y - wall.a.y;
     const wallLength = Math.sqrt(dx * dx + dy * dy);
     if (wallLength === 0) return;
 
-    // Calculate position along wall (0-1)
     const relX = groupX - wall.a.x;
     const relY = groupY - wall.a.y;
     const wallDirX = dx / wallLength;
@@ -416,11 +368,9 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
     const distance = relX * wallDirX + relY * wallDirY;
     const newPosition = Math.max(0, Math.min(1, distance / wallLength));
 
-    // Validate position - only track last valid position, don't update store yet
     if (isValidPosition(window, newPosition)) {
       setDraggingWindow({ ...draggingWindow, lastValidPosition: newPosition });
     } else {
-      // If invalid, revert to last valid position
       const lastValidCenter = getPointOnWall(wall, draggingWindow.lastValidPosition);
       group.x(lastValidCenter.x);
       group.y(lastValidCenter.y);
@@ -430,7 +380,6 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
   const handleWindowDragEnd = (window: Window, e: KonvaEventObject<DragEvent>) => {
     e.cancelBubble = true;
     if (draggingWindow && draggingWindow.id === window.id) {
-      // Update position in store only at the end
       updateWindow(window.id, { position: draggingWindow.lastValidPosition });
     }
     setDraggingWindow(null);
@@ -438,14 +387,12 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
 
   return (
     <>
-      {/* Doors */}
       {doors.map((door) => {
         const wall = getWallById(door.wallId);
         if (!wall) return null;
 
-        // Use dragging position if currently dragging, otherwise use door position
-        const currentPosition = draggingDoor && draggingDoor.id === door.id 
-          ? draggingDoor.lastValidPosition 
+        const currentPosition = draggingDoor && draggingDoor.id === door.id
+          ? draggingDoor.lastValidPosition
           : door.position;
         const center = getPointOnWall(wall, currentPosition);
         const dx = wall.b.x - wall.a.x;
@@ -458,7 +405,7 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
         const isSelected = selectedDoorId === door.id;
 
         return (
-          <Group 
+          <Group
             key={door.id}
             ref={(node) => {
               if (node) {
@@ -469,13 +416,11 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
             y={center.y}
             draggable={(mode === 'select' || mode === 'doors') && isSelected}
             dragBoundFunc={(pos) => {
-              // Constrain movement to wall line
               const dx = wall.b.x - wall.a.x;
               const dy = wall.b.y - wall.a.y;
               const wallLength = Math.sqrt(dx * dx + dy * dy);
               if (wallLength === 0) return { x: center.x, y: center.y };
 
-              // Project position onto wall line
               const relX = pos.x - wall.a.x;
               const relY = pos.y - wall.a.y;
               const wallDirX = dx / wallLength;
@@ -483,7 +428,6 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
               const distance = relX * wallDirX + relY * wallDirY;
               const clampedDistance = Math.max(0, Math.min(wallLength, distance));
 
-              // Return position on wall line
               return {
                 x: wall.a.x + wallDirX * clampedDistance,
                 y: wall.a.y + wallDirY * clampedDistance,
@@ -528,7 +472,6 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
               }
             }}
           >
-            {/* Invisible hit area for dragging - covers entire door area including icon */}
             <Rect
               x={-20}
               y={-20}
@@ -539,22 +482,20 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
               offsetX={doorHalfWidth + 20}
               offsetY={wall.thickness / 2 + 20}
             />
-            {/* Door opening (gap in wall) */}
             <Line
               points={[-doorHalfWidth, 0, doorHalfWidth, 0]}
               stroke={domovoyCanvas.primaryMid}
               strokeWidth={wall.thickness}
               lineCap="butt"
-              visible={false} // Hide the background line to avoid "thick/thin" look
+              visible={false} // hides the line to avoid a "thick/thin" visual artifact
               rotation={(angle * 180) / Math.PI}
               listening={false}
             />
-            {/* Door rectangle */}
             <Rect
               x={0}
               y={0}
               width={doorWidth}
-              height={wall.thickness} // Fill wall thickness
+              height={wall.thickness}
               fill={domovoyCanvas.primaryMid}
               opacity={0.7}
               rotation={(angle * 180) / Math.PI}
@@ -562,7 +503,6 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
               offsetY={wall.thickness / 2}
               listening={false}
             />
-            {/* Selection highlight */}
             {isSelected && (
               <>
                 <Rect
@@ -579,7 +519,6 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
                   dash={[5, 5]}
                   listening={false}
                 />
-                {/* Resize handles - positioned perpendicular to wall */}
                 <Circle
                   x={-doorHalfWidth}
                   y={-15}
@@ -615,7 +554,6 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
                     if (stage) {
                       stage.container().style.cursor = 'ew-resize';
                     }
-                    // Highlight on hover
                     const shape = e.target as KonvaShape;
                     shape.fill(domovoyCanvas.handleHover);
                     shape.scale({ x: 1.2, y: 1.2 });
@@ -625,7 +563,6 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
                     if (stage) {
                       stage.container().style.cursor = 'default';
                     }
-                    // Reset on leave
                     const shape = e.target as KonvaShape;
                     shape.fill(domovoyCanvas.handle);
                     shape.scale({ x: 1, y: 1 });
@@ -666,7 +603,6 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
                     if (stage) {
                       stage.container().style.cursor = 'ew-resize';
                     }
-                    // Highlight on hover
                     const shape = e.target as KonvaShape;
                     shape.fill(domovoyCanvas.handleHover);
                     shape.scale({ x: 1.2, y: 1.2 });
@@ -676,7 +612,6 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
                     if (stage) {
                       stage.container().style.cursor = 'default';
                     }
-                    // Reset on leave
                     const shape = e.target as KonvaShape;
                     shape.fill(domovoyCanvas.handle);
                     shape.scale({ x: 1, y: 1 });
@@ -695,14 +630,12 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
         );
       })}
 
-      {/* Windows */}
       {windows.map((window) => {
         const wall = getWallById(window.wallId);
         if (!wall) return null;
 
-        // Use dragging position if currently dragging, otherwise use window position
-        const currentPosition = draggingWindow && draggingWindow.id === window.id 
-          ? draggingWindow.lastValidPosition 
+        const currentPosition = draggingWindow && draggingWindow.id === window.id
+          ? draggingWindow.lastValidPosition
           : window.position;
         const center = getPointOnWall(wall, currentPosition);
         const dx = wall.b.x - wall.a.x;
@@ -715,7 +648,7 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
         const isSelected = selectedWindowId === window.id;
 
         return (
-          <Group 
+          <Group
             key={window.id}
             ref={(node) => {
               if (node) {
@@ -726,13 +659,11 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
             y={center.y}
             draggable={(mode === 'select' || mode === 'windows') && isSelected}
             dragBoundFunc={(pos) => {
-              // Constrain movement to wall line
               const dx = wall.b.x - wall.a.x;
               const dy = wall.b.y - wall.a.y;
               const wallLength = Math.sqrt(dx * dx + dy * dy);
               if (wallLength === 0) return { x: center.x, y: center.y };
 
-              // Project position onto wall line
               const relX = pos.x - wall.a.x;
               const relY = pos.y - wall.a.y;
               const wallDirX = dx / wallLength;
@@ -740,7 +671,6 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
               const distance = relX * wallDirX + relY * wallDirY;
               const clampedDistance = Math.max(0, Math.min(wallLength, distance));
 
-              // Return position on wall line
               return {
                 x: wall.a.x + wallDirX * clampedDistance,
                 y: wall.a.y + wallDirY * clampedDistance,
@@ -785,7 +715,6 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
               }
             }}
           >
-            {/* Invisible hit area for dragging - covers entire window area including icon */}
             <Rect
               x={-20}
               y={-20}
@@ -796,7 +725,6 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
               offsetX={windowHalfWidth + 20}
               offsetY={wall.thickness / 2 + 20}
             />
-            {/* Window opening */}
             <Line
               points={[-windowHalfWidth, 0, windowHalfWidth, 0]}
               stroke={domovoyCanvas.teal}
@@ -806,7 +734,6 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
               rotation={(angle * 180) / Math.PI}
               listening={false}
             />
-            {/* Window frame */}
             <Rect
               x={0}
               y={0}
@@ -819,7 +746,6 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
               offsetY={wall.thickness / 2}
               listening={false}
             />
-            {/* Selection highlight */}
             {isSelected && (
               <>
                 <Rect
@@ -836,7 +762,6 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
                   dash={[5, 5]}
                   listening={false}
                 />
-                {/* Resize handles - positioned perpendicular to wall */}
                 <Circle
                   x={-windowHalfWidth}
                   y={-15}
@@ -872,7 +797,6 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
                     if (stage) {
                       stage.container().style.cursor = 'ew-resize';
                     }
-                    // Highlight on hover
                     const shape = e.target as KonvaShape;
                     shape.fill(domovoyCanvas.handleHover);
                     shape.scale({ x: 1.2, y: 1.2 });
@@ -882,7 +806,6 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
                     if (stage) {
                       stage.container().style.cursor = 'default';
                     }
-                    // Reset on leave
                     const shape = e.target as KonvaShape;
                     shape.fill(domovoyCanvas.handle);
                     shape.scale({ x: 1, y: 1 });
@@ -923,7 +846,6 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
                     if (stage) {
                       stage.container().style.cursor = 'ew-resize';
                     }
-                    // Highlight on hover
                     const shape = e.target as KonvaShape;
                     shape.fill(domovoyCanvas.handleHover);
                     shape.scale({ x: 1.2, y: 1.2 });
@@ -933,7 +855,6 @@ export function DoorWindowLayer({ walls, doors, windows, mode }: DoorWindowLayer
                     if (stage) {
                       stage.container().style.cursor = 'default';
                     }
-                    // Reset on leave
                     const shape = e.target as KonvaShape;
                     shape.fill(domovoyCanvas.handle);
                     shape.scale({ x: 1, y: 1 });

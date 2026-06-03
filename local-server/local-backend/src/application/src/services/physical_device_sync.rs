@@ -1,4 +1,4 @@
-use std::sync::Arc;
+﻿use std::sync::Arc;
 use std::time::Duration;
 
 use chrono::DateTime;
@@ -8,9 +8,6 @@ use crate::ports::{
     UpsertPhysDevFromCloudCmd,
 };
 
-/// Background loop: periodically pulls physical device metadata from the cloud
-/// scenario-service and pushes locally-created Zigbee devices that have no
-/// cloud mapping yet.
 pub async fn run_physical_device_sync(
     repo: Arc<dyn PhysicalDeviceRepository>,
     cloud: Arc<dyn CloudPhysicalDeviceClient>,

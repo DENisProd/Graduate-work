@@ -63,6 +63,10 @@ services:
       LOCAL_SERVER_SERIAL:  ${LOCAL_SERVER_SERIAL:-00:00:00:00:00:00}
       SYNC_INTERVAL_SECS:   ${SYNC_INTERVAL_SECS:-300}
       RUST_LOG:             ${RUST_LOG:-info}
+      # Cloud pull (access + scenarios via api-gateway). Override for dev PC on LAN.
+      ACCESS_SERVICE_URL:   ${ACCESS_SERVICE_URL:-http://host.docker.internal:8050}
+      CLOUD_SYNC_API_URL:   ${CLOUD_SYNC_API_URL:-http://host.docker.internal:8050}
+      SCENARIO_SERVICE_URL: ${SCENARIO_SERVICE_URL:-http://host.docker.internal:8050/api/scenario}
     expose:
       - "8080"
     ports:

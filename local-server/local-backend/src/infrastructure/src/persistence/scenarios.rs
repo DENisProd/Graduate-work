@@ -1,4 +1,4 @@
-use std::str::FromStr;
+﻿use std::str::FromStr;
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -24,8 +24,6 @@ fn parse_dt(s: &str) -> Result<DateTime<Utc>, DomainError> {
         .map(|dt| dt.with_timezone(&Utc))
         .map_err(|e| DomainError::Internal(format!("invalid datetime '{s}': {e}")))
 }
-
-// ─── Scenario repo ─────────────────────────────────────────────────────────────
 
 pub struct SqliteScenarioRepo {
     pool: SqlitePool,
@@ -304,8 +302,6 @@ impl ScenarioRepository for SqliteScenarioRepo {
         Ok(())
     }
 }
-
-// ─── ScenarioExecution repo ────────────────────────────────────────────────────
 
 pub struct SqliteScenarioExecutionRepo {
     pool: SqlitePool,

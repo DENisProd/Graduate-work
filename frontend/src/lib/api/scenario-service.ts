@@ -123,13 +123,11 @@ export const zigbeeDevicesApi = {
 };
 
 export const houseMqttApi = {
-  /** Get MQTT config for a house (without password). */
   get: (houseId: string, options?: { signal?: AbortSignal }): Promise<HouseMqttConfigResponse> =>
     scenarioApi(`/zigbee/house-mqtt/${encodeURIComponent(houseId)}`, {
       signal: options?.signal,
     }),
 
-  /** Upsert MQTT config and reconnect/disconnect accordingly. */
   upsert: (
     houseId: string,
     dto: HouseMqttConfigUpsertRequest,

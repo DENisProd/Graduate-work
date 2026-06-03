@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+﻿use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -95,7 +95,6 @@ impl std::str::FromStr for ExecutionStatus {
     }
 }
 
-/// JSON-serialized scenario DSL (parsed lazily by the engine).
 pub type ScenarioDefinitionJson = serde_json::Value;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -107,7 +106,6 @@ pub struct Scenario {
     pub creator_id: String,
     pub definition: ScenarioDefinitionJson,
     pub status: ScenarioStatus,
-    /// MongoDB ObjectId from scenario-service; None for locally-created scenarios.
     pub cloud_id: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -124,8 +122,6 @@ pub struct ScenarioExecution {
     pub started_at: DateTime<Utc>,
     pub ended_at: Option<DateTime<Utc>>,
 }
-
-// ─── Scenario DSL ──────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScenarioDefinition {

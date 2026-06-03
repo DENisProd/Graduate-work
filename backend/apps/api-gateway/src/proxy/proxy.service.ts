@@ -76,8 +76,6 @@ export class ProxyService {
         timings.set(req, Date.now());
         proxyReq.setHeader('X-Forwarded-Host', (req as Request).hostname);
 
-        // Body-parser consumes the stream before this middleware runs.
-        // Re-write the parsed body so the upstream receives the correct payload.
         const body = (req as Request).body as unknown;
         if (body !== undefined && body !== null && typeof body === 'object' && Object.keys(body as object).length > 0) {
           const raw = JSON.stringify(body);

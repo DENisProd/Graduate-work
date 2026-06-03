@@ -6,10 +6,6 @@ export const DEVICE_DATA_MODEL = 'DeviceData';
 
 @Schema({ collection: 'DeviceData' })
 export class DeviceDataModel {
-  /**
-   * Physical device id (Mongo ObjectId as string).
-   * Stored as string to avoid ObjectId/string mismatches in existing data and queries.
-   */
   @Prop({ required: true, type: String })
   deviceId: string;
 

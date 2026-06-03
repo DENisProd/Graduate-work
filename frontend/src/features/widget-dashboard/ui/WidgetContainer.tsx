@@ -31,7 +31,6 @@ export function WidgetContainer({ widget, editMode, onEdit, onDelete, onDuplicat
 
   return (
     <div className="widget-container relative flex flex-col h-full bg-card border border-border rounded-xl overflow-hidden shadow-sm">
-      {/* Header — shown in edit mode or on hover */}
       <div
         className={`widget-header flex items-center justify-between px-3 py-1.5 border-b border-border text-xs text-muted-foreground ${
           editMode ? 'bg-accent/30' : 'bg-transparent'
@@ -81,7 +80,6 @@ export function WidgetContainer({ widget, editMode, onEdit, onDelete, onDuplicat
           </div>
         )}
       </div>
-      {/* Content */}
       <div className="flex-1 min-h-0 overflow-hidden">
         {children}
       </div>

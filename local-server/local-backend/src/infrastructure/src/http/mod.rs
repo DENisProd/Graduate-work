@@ -1,5 +1,4 @@
-//! Outbound HTTP adapters (reqwest): cloud auth, sync and scenario clients.
-
+﻿
 mod cloud_auth;
 mod cloud_physical_device;
 mod cloud_scenario;

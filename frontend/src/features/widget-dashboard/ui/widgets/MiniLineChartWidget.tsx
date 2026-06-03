@@ -51,8 +51,6 @@ export function MiniLineChartWidget({ config, state }: Props) {
     `${config.physicalDeviceId}:${config.payloadKey}`,
   );
 
-  // Reset buffer when source binding changes (React's "adjusting state from
-  // props" pattern: https://react.dev/learn/you-might-not-need-an-effect).
   const currentKey = `${config.physicalDeviceId}:${config.payloadKey}`;
   if (trackedKey !== currentKey) {
     setTrackedKey(currentKey);
@@ -60,7 +58,6 @@ export function MiniLineChartWidget({ config, state }: Props) {
     setLastTs(null);
   }
 
-  // Append new sample when a fresh telemetry frame arrives.
   if (state) {
     const v = readPayloadValue(state, config.payloadKey);
     const num = typeof v === 'number' ? v : v == null ? null : Number(v);

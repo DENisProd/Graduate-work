@@ -58,12 +58,10 @@ export function PropertyPanel() {
       .catch(() => setHouseRooms([]));
   }, [houseId]);
 
-  // Helper function to check if opening width is valid
   const isValidWidth = (opening: { wallId: string; position: number; width: number; id: string }, newWidth: number, isDoor: boolean): boolean => {
     const wall = room.walls.find(w => w.id === opening.wallId);
     if (!wall) return false;
 
-    // Check if new width fits on the wall
     if (!isValidOpeningPosition(
       wall,
       opening.position,
@@ -74,7 +72,6 @@ export function PropertyPanel() {
       return false;
     }
 
-    // Check for overlaps with other openings on the same wall
     const wallLength = Math.sqrt(
       Math.pow(wall.b.x - wall.a.x, 2) + Math.pow(wall.b.y - wall.a.y, 2)
     );
@@ -83,9 +80,9 @@ export function PropertyPanel() {
     const newStart = centerDist - halfWidth;
     const newEnd = centerDist + halfWidth;
 
-    // Check doors on the same wall
     for (const door of room.doors) {
-      if (door.id === opening.id) continue; // Skip self
+      if (door.id === opening.id) continue;
+
       if (door.wallId !== opening.wallId) continue;
 
       const doorHalfWidth = door.width / 2;
@@ -93,15 +90,13 @@ export function PropertyPanel() {
       const doorStart = doorCenterDist - doorHalfWidth;
       const doorEnd = doorCenterDist + doorHalfWidth;
 
-      // Check if intervals overlap
       if (!(newEnd <= doorStart || newStart >= doorEnd)) {
         return false;
       }
     }
 
-    // Check windows on the same wall
     for (const window of room.windows) {
-      if (window.id === opening.id) continue; // Skip self
+      if (window.id === opening.id) continue;
       if (window.wallId !== opening.wallId) continue;
 
       const windowHalfWidth = window.width / 2;
@@ -109,7 +104,6 @@ export function PropertyPanel() {
       const windowStart = windowCenterDist - windowHalfWidth;
       const windowEnd = windowCenterDist + windowHalfWidth;
 
-      // Check if intervals overlap
       if (!(newEnd <= windowStart || newStart >= windowEnd)) {
         return false;
       }
@@ -275,7 +269,7 @@ export function PropertyPanel() {
     return typeMap[type] || type;
   };
 
-  // Render device properties
+
   if (selectedDevice) {
     return (
       <Card className="w-64 h-full bg-transparent shadow-none border-none">
@@ -334,9 +328,9 @@ export function PropertyPanel() {
     );
   }
 
-  // Render door properties
+
   if (selectedDoor) {
-    // Generate friendly name if not set
+
     const doorIndex = room.doors.findIndex(d => d.id === selectedDoor.id);
     const doorDisplayName =
       selectedDoor.name || t('admin.roomPlanner.doorLabel', { index: doorIndex + 1 });
@@ -422,9 +416,9 @@ export function PropertyPanel() {
     );
   }
 
-  // Render window properties
+
   if (selectedWindow) {
-    // Generate friendly name if not set
+
     const windowIndex = room.windows.findIndex(w => w.id === selectedWindow.id);
     const windowDisplayName =
       selectedWindow.name || t('admin.roomPlanner.windowLabel', { index: windowIndex + 1 });
@@ -510,7 +504,7 @@ export function PropertyPanel() {
     );
   }
 
-  // Render wall properties
+
   if (selectedWall) {
     const wallIndex = room.walls.findIndex(w => w.id === selectedWall.id);
     const wallLength = Math.sqrt(

@@ -1,10 +1,9 @@
-use async_trait::async_trait;
+﻿use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use local_server_core::DomainError;
 
-/// A house record fetched from access-service.
 #[derive(Debug, Clone)]
 pub struct RemoteHouse {
     pub id: String,
@@ -16,7 +15,6 @@ pub struct RemoteHouse {
     pub updated_at: String,
 }
 
-/// A room record fetched from access-service.
 #[derive(Debug, Clone)]
 pub struct RemoteRoom {
     pub id: String,
@@ -25,7 +23,6 @@ pub struct RemoteRoom {
     pub created_at: String,
 }
 
-/// A house member record fetched from access-service.
 #[derive(Debug, Clone)]
 pub struct RemoteHouseMember {
     pub id: String,
@@ -34,11 +31,9 @@ pub struct RemoteHouseMember {
     pub user_display_name: Option<String>,
     pub user_avatar_url: Option<String>,
     pub joined_at: String,
-    /// Cloud role IDs assigned to this member.
     pub role_ids: Vec<String>,
 }
 
-/// A house role record fetched from access-service.
 #[derive(Debug, Clone)]
 pub struct RemoteHouseRole {
     pub id: String,
@@ -48,7 +43,6 @@ pub struct RemoteHouseRole {
     pub house_id: String,
 }
 
-/// A resource record fetched from access-service (flattened from the tree).
 #[derive(Debug, Clone)]
 pub struct RemoteResource {
     pub id: String,
@@ -61,8 +55,6 @@ pub struct RemoteResource {
     pub parent_id: Option<String>,
 }
 
-/// An access right record fetched from access-service for a user.
-/// `house_member_id` is the cloud member ID (may differ from local ID).
 #[derive(Debug, Clone)]
 pub struct RemoteAccessRight {
     pub id: String,
@@ -73,14 +65,12 @@ pub struct RemoteAccessRight {
     pub expires_at: Option<String>,
 }
 
-/// Result of a full pull sync cycle.
 #[derive(Debug, Clone, Default)]
 pub struct SyncPullReport {
     pub houses_upserted: usize,
     pub rooms_upserted: usize,
 }
 
-/// A single record to push/receive during outbox sync.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SyncEntry {
     pub id: String,
@@ -91,56 +81,44 @@ pub struct SyncEntry {
     pub created_at: DateTime<Utc>,
 }
 
-/// Outbound port — fetches reference data from the cloud access-service
-/// and pushes outbox entries to the cloud sync endpoint.
-///
-/// Implemented by `ReqwestCloudSyncClient` in the infrastructure crate.
 #[async_trait]
 pub trait CloudSyncClient: Send + Sync {
-    /// Fetch all houses the given user is a member of or owns.
     async fn fetch_user_houses(
         &self,
         base_url: &str,
         user_id: &str,
     ) -> Result<Vec<RemoteHouse>, DomainError>;
 
-    /// Fetch all rooms belonging to a house.
     async fn fetch_house_rooms(
         &self,
         base_url: &str,
         house_id: &str,
     ) -> Result<Vec<RemoteRoom>, DomainError>;
 
-    /// Fetch all members of a house (includes their role assignments).
     async fn fetch_house_members(
         &self,
         base_url: &str,
         house_id: &str,
     ) -> Result<Vec<RemoteHouseMember>, DomainError>;
 
-    /// Fetch all roles defined for a house.
     async fn fetch_house_roles(
         &self,
         base_url: &str,
         house_id: &str,
     ) -> Result<Vec<RemoteHouseRole>, DomainError>;
 
-    /// Fetch all resources for a house as a flat list (tree is flattened depth-first).
     async fn fetch_house_resources(
         &self,
         base_url: &str,
         house_id: &str,
     ) -> Result<Vec<RemoteResource>, DomainError>;
 
-    /// Fetch all access rights for a user (direct + via roles) from the cloud.
-    /// The `user_id` is the external (Keycloak) UUID.
     async fn fetch_user_access_rights(
         &self,
         base_url: &str,
         user_id: &str,
     ) -> Result<Vec<RemoteAccessRight>, DomainError>;
 
-    /// Push a batch of local mutations to the cloud ingest endpoint.
     async fn ingest(
         &self,
         base_url: &str,
@@ -148,7 +126,6 @@ pub trait CloudSyncClient: Send + Sync {
         entries: Vec<SyncEntry>,
     ) -> Result<(), DomainError>;
 
-    /// Pull incremental changes since a given timestamp.
     async fn delta(
         &self,
         base_url: &str,

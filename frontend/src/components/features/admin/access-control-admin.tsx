@@ -43,7 +43,7 @@ export function AccessControlAdmin() {
 
   const [status, setStatus] = useState<string>('');
 
-  // Houses
+
   const [housesOwnerId, setHousesOwnerId] = useState('');
   const [houses, setHouses] = useState<HouseResponse[]>([]);
   const [editingHouseId, setEditingHouseId] = useState<number | null>(null);
@@ -53,7 +53,7 @@ export function AccessControlAdmin() {
     address: '',
   });
 
-  // House rooms
+
   const [roomsHouseId, setRoomsHouseId] = useState('');
   const [rooms, setRooms] = useState<HouseRoomResponse[]>([]);
   const [roomForm, setRoomForm] = useState<HouseRoomRequest>({
@@ -62,12 +62,12 @@ export function AccessControlAdmin() {
   });
   const [editingRoomId, setEditingRoomId] = useState<number | null>(null);
 
-  // House members
+
   const [membersHouseId, setMembersHouseId] = useState('');
   const [members, setMembers] = useState<HouseMemberResponse[]>([]);
   const [memberUserId, setMemberUserId] = useState('');
 
-  // Invitations
+
   const [invitationsHouseId, setInvitationsHouseId] = useState('');
   const [invitations, setInvitations] = useState<HouseInvitationResponse[]>([]);
   const [invitationForm, setInvitationForm] = useState<{ roleId?: string; expiresAt?: string }>({
@@ -78,7 +78,7 @@ export function AccessControlAdmin() {
   const [invitationUserId, setInvitationUserId] = useState('');
   const [invitationIdToRevoke, setInvitationIdToRevoke] = useState('');
 
-  // Access rights
+
   const [rightsHouseId, setRightsHouseId] = useState('');
   const [rights, setRights] = useState<HouseAccessRightResponse[]>([]);
   const [rightForm, setRightForm] = useState<HouseAccessRightRequest>({
@@ -95,7 +95,7 @@ export function AccessControlAdmin() {
   const [rightIdToDelete, setRightIdToDelete] = useState('');
   const [parametersJson, setParametersJson] = useState('');
 
-  // Access check
+
   const [checkData, setCheckData] = useState({
     houseId: '',
     userId: '',
@@ -108,7 +108,7 @@ export function AccessControlAdmin() {
 
   const updateStatus = (message: string) => setStatus(message);
 
-  // Houses handlers
+
   const loadHouses = async () => {
     if (!housesOwnerId) {
       updateStatus('Owner ID is required');
@@ -165,7 +165,7 @@ export function AccessControlAdmin() {
     }
   };
 
-  // House rooms handlers
+
   const loadRooms = async () => {
     if (!roomsHouseId) {
       updateStatus('House ID is required');
@@ -222,7 +222,7 @@ export function AccessControlAdmin() {
     }
   };
 
-  // Members handlers
+
   const loadMembers = async () => {
     if (!membersHouseId) {
       updateStatus('House ID is required');
@@ -262,7 +262,7 @@ export function AccessControlAdmin() {
     }
   };
 
-  // Invitations
+
   const loadInvitations = async () => {
     if (!invitationsHouseId) {
       updateStatus('House ID is required');
@@ -334,7 +334,7 @@ export function AccessControlAdmin() {
     }
   };
 
-  // Access rights
+
   const loadRights = async () => {
     if (!rightsHouseId) {
       updateStatus('House ID is required');
@@ -383,7 +383,6 @@ export function AccessControlAdmin() {
   };
 
   const checkAccess = async () => {
-    // checkAccess endpoint removed in new RBAC API
     updateStatus('checkAccess endpoint removed');
   };
 

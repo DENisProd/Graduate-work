@@ -28,7 +28,6 @@ export function ScenarioPlannerWidget(props: { houseId?: string }) {
 
   useEffect(() => {
     if (!houseId) return;
-    // If graph was already loaded via setGraph(houseId, ...), do not reset it.
     if (storeHouseId === houseId && nodesCount > 2) return;
     initialize(houseId);
   }, [houseId, initialize, nodesCount, storeHouseId]);

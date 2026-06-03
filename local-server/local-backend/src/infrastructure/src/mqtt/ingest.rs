@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+﻿use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use chrono::Utc;
@@ -24,24 +24,13 @@ use local_server_core::entities::{
 use super::client::MqttMessage;
 use super::modbus_gateway::ModbusGateway;
 
-/// Per-session state accumulated by the ingestion loop.
 #[derive(Default)]
 struct IngestState {
-    /// Map friendly_name → ieee_address built from the `bridge/devices` retained topic.
     friendly_to_ieee: HashMap<String, String>,
-    /// IEEE addresses for which telemetry has already been observed this session.
-    /// Used to log a one-shot INFO when a device starts reporting.
     telemetry_seen: HashSet<String>,
-    /// Set to true after the first `bridge/devices` snapshot has been processed
-    /// so subsequent snapshots can detect newly added devices.
     bridge_snapshot_seen: bool,
 }
 
-/// Drive the MQTT ingestion loop until the message channel is closed.
-///
-/// Maintains an in-process map of friendly_name → ieee_address built from
-/// the `bridge/devices` retained topic so that telemetry topics (which use
-/// friendly names) can be keyed by IEEE address in the database.
 pub async fn run_ingestion(
     mut rx: broadcast::Receiver<MqttMessage>,
     zigbee_repo: Arc<dyn ZigbeeRepository>,
@@ -126,7 +115,6 @@ async fn handle_message(
     }
 }
 
-/// Parse the Zigbee2MQTT `bridge/devices` JSON array and upsert each device.
 async fn handle_bridge_devices(
     payload: &[u8],
     phys_repo: &Arc<dyn PhysicalDeviceRepository>,
@@ -331,7 +319,6 @@ async fn handle_bridge_event(payload: &[u8], svc: &Arc<ZigbeeRealtimeService>) {
     }
 }
 
-/// Parse `bridge/state` and emit permit_join status.
 async fn handle_bridge_state(payload: &[u8], svc: &Arc<ZigbeeRealtimeService>) {
     let v: Value = match serde_json::from_slice(payload) {
         Ok(v) => v,
@@ -398,7 +385,6 @@ async fn handle_device_telemetry(
         tracing::warn!(device = friendly_name, error = %e, "failed to persist zigbee state");
     }
 
-    // Touch last_seen on the physical device (best-effort)
     phys_repo.update_last_seen(&ieee_addr).await.ok();
 
     svc.publish_state(device_state);
@@ -457,11 +443,6 @@ fn parse_bool(v: &Value, keys: &[&str]) -> Option<bool> {
     None
 }
 
-/// Handle `modbus/discovered` — auto-register new Modbus devices found by the bridge scan.
-///
-/// For each discovered slave that is not yet in the DB, creates a ModbusDevice entry
-/// and two default writable coil registers (channel 1 at address 0, channel 2 at address 1),
-/// which covers the most common case of a two-channel relay.
 async fn handle_modbus_discovered(
     payload: &[u8],
     modbus_repo: &Arc<dyn ModbusRepository>,
@@ -570,8 +551,7 @@ async fn handle_modbus_discovered(
             name: device.name.clone(),
         });
 
-        // Create registers based on what the device actually supports.
-        auto_create_registers(modbus_repo, device.id, slave_id, coils, discrete, holding, input).await;
+            auto_create_registers(modbus_repo, device.id, slave_id, coils, discrete, holding, input).await;
 
         registered += 1;
     }
@@ -582,7 +562,6 @@ async fn handle_modbus_discovered(
         "modbus/discovered: auto-registration complete",
     );
 
-    // Write to scan log
     let entry = ScanLogEntry {
         timestamp: Utc::now(),
         found: discovered.len(),
@@ -597,7 +576,6 @@ async fn handle_modbus_discovered(
     }
 }
 
-/// Pick a human-readable device name based on which register types it supports.
 fn classify_device_name(slave_id: i64, coils: u16, discrete: u16, holding: u16, input: u16) -> String {
     let has_digital_out = coils > 0;
     let has_digital_in  = discrete > 0;
@@ -617,7 +595,6 @@ fn classify_device_name(slave_id: i64, coils: u16, discrete: u16, holding: u16, 
     format!("{} (slave {})", kind, slave_id)
 }
 
-/// Create registers appropriate for what the device actually responded to.
 async fn auto_create_registers(
     modbus_repo: &Arc<dyn ModbusRepository>,
     device_id: uuid::Uuid,
@@ -627,7 +604,6 @@ async fn auto_create_registers(
     holding: u16,
     input: u16,
 ) {
-    // Coil registers — one per channel (writable digital output)
     for i in 0..coils {
         let name = if coils == 1 {
             "Канал".to_string()
@@ -652,7 +628,6 @@ async fn auto_create_registers(
         }
     }
 
-    // Discrete input registers — one per input (read-only digital)
     for i in 0..discrete {
         let name = if discrete == 1 {
             "Вход".to_string()
@@ -677,7 +652,6 @@ async fn auto_create_registers(
         }
     }
 
-    // Holding registers — one block for all (read/write 16-bit)
     if holding > 0 {
         if let Err(e) = modbus_repo
             .create_register(CreateModbusRegisterCmd {
@@ -697,7 +671,6 @@ async fn auto_create_registers(
         }
     }
 
-    // Input registers — one block for all (read-only 16-bit, sensors)
     if input > 0 {
         if let Err(e) = modbus_repo
             .create_register(CreateModbusRegisterCmd {

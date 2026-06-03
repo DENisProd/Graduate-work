@@ -22,7 +22,6 @@ export function DoorWindowPreviewLayer({
   const preview = useMemo(() => {
     if (!mousePosition || (mode !== 'doors' && mode !== 'windows')) return null;
 
-    // Find closest wall
     let closestWall: Wall | null = null;
     let closestDistance = Infinity;
     let closestPosition = 0;
@@ -49,7 +48,6 @@ export function DoorWindowPreviewLayer({
 
     if (!closestWall) return null;
 
-    // Determine which position to use: current or last valid
     let targetWall = closestWall;
     let targetPosition = closestPosition;
     let isPhantom = false;
@@ -64,17 +62,15 @@ export function DoorWindowPreviewLayer({
 
     if (!isValidCurrent) {
       if (lastValidPosition) {
-        // Use last valid position
         const savedWall = walls.find(w => w.id === lastValidPosition.wallId);
         if (savedWall) {
           targetWall = savedWall;
           targetPosition = lastValidPosition.position;
-          isPhantom = true; // Mark as phantom/stuck
+          isPhantom = true;
         } else {
           return null;
         }
       } else {
-        // No valid position ever found
         return null;
       }
     }
@@ -100,10 +96,8 @@ export function DoorWindowPreviewLayer({
       y: center.y + Math.sin(angle) * halfWidth,
     };
 
-    // Calculate perpendicular offset for the "opening" look
     return (
       <Group>
-        {/* Preview Line */}
         <Line
           points={[start.x, start.y, end.x, end.y]}
           stroke={
@@ -118,7 +112,6 @@ export function DoorWindowPreviewLayer({
           opacity={isPhantom ? 0.3 : 0.5}
           dash={isPhantom ? [5, 5] : undefined}
         />
-        {/* Frame Preview */}
         <Rect
           x={center.x}
           y={center.y}
@@ -136,7 +129,6 @@ export function DoorWindowPreviewLayer({
           offsetX={halfWidth}
           offsetY={5}
         />
-        {/* Icon */}
         <Text
           text={mode === 'doors' ? "🚪" : "🪟"}
           x={center.x - 10}

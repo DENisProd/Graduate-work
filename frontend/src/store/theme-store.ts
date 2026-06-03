@@ -26,25 +26,21 @@ const applyTheme = (theme: ThemeMode): void => {
   const root = document.documentElement;
   const html = document.querySelector('html');
   
-  // Удаляем все классы тем
   root.classList.remove('light', 'dark');
   if (html) {
     html.classList.remove('light', 'dark');
   }
   
-  // Добавляем нужный класс
   root.classList.add(resolvedTheme);
   if (html) {
     html.classList.add(resolvedTheme);
   }
   
-  // Устанавливаем data-theme атрибут (для HeroUI)
   root.setAttribute('data-theme', resolvedTheme);
   if (html) {
     html.setAttribute('data-theme', resolvedTheme);
   }
   
-  // Также обновляем color-scheme для правильной работы браузера
   root.style.colorScheme = resolvedTheme;
 };
 
@@ -86,7 +82,6 @@ export const useThemeStore = create<ThemeStore>()(
   )
 );
 
-// Слушатель изменений системной темы
 if (typeof window !== 'undefined') {
   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
   

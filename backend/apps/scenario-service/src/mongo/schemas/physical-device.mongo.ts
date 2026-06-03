@@ -6,7 +6,6 @@ export const PHYSICAL_DEVICE_MODEL = 'PhysicalDevice';
 
 @Schema({ collection: 'PhysicalDevice' })
 export class PhysicalDeviceModel {
-  // Базовая информация
   @Prop({ type: String, default: null })
   name?: string | null;
   @Prop({ type: String, default: null })
@@ -24,9 +23,8 @@ export class PhysicalDeviceModel {
   @Prop({ type: Number, default: null })
   deviceCategoryId?: number | null;
 
-  // Zigbee identity (flattened — no nested object)
   @Prop({ type: String, default: null })
-  protocolAddress?: string | null; // ieeeAddr (Zigbee)
+  protocolAddress?: string | null;
 
   @Prop({ type: Number, default: null })
   networkAddress?: number | null;
@@ -38,7 +36,6 @@ export class PhysicalDeviceModel {
   })
   type?: ZigbeeDeviceType;
 
-  // Тип и производитель
   @Prop({ type: Number, default: null })
   deviceTypeId?: number | null;
   @Prop({ type: String, default: null })

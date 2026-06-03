@@ -58,7 +58,6 @@ function Button({
     isDisabled?: boolean
     isIconOnly?: boolean
     fullWidth?: boolean
-    // Legacy variant aliases
     // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
     variant?: LegacyButtonVariant
   }) {

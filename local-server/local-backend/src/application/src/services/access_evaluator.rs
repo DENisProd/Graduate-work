@@ -1,4 +1,4 @@
-use std::sync::Arc;
+﻿use std::sync::Arc;
 use std::time::Duration;
 
 use local_server_core::{
@@ -28,18 +28,15 @@ impl AccessEvaluator {
         }
     }
 
-    /// Check whether `external_user_id` has access to `resource_id`.
     pub async fn check(
         &self,
         external_user_id: &str,
         resource_id: &str,
     ) -> Result<AccessCheckResult, DomainError> {
-        // 1. Cache lookup
         if let Some(cached) = self.cache.get(external_user_id, resource_id) {
             return Ok(cached);
         }
 
-        // 2. Resolve resource → house
         let resource = self.repo.find_resource(resource_id).await?.ok_or_else(|| {
             DomainError::not_found("resource", resource_id)
         })?;
@@ -50,7 +47,6 @@ impl AccessEvaluator {
 
         let strategy = house.conflict_strategy;
 
-        // 3. Resolve member
         let member = self
             .repo
             .find_member_by_user_in_house(external_user_id, &resource.house_id)
@@ -66,11 +62,9 @@ impl AccessEvaluator {
             return Ok(result);
         };
 
-        // 4. RBAC: check effective_permissions (or fall back to access_rights)
         let perms = self.repo.check_effective(&member.id, resource_id).await?;
 
         let rbac = if perms.is_empty() {
-            // No pre-computed cache — check access_rights directly
             let rights = self.repo.list_rights_for_member(&member.id).await?;
             let applicable: Vec<_> = rights
                 .into_iter()
@@ -90,11 +84,9 @@ impl AccessEvaluator {
             evaluate_rbac(&perms, strategy)
         };
 
-        // 5. ABAC: evaluate policies
         let policies = self.repo.find_policies_for_resource(resource_id).await?;
         let abac_effect = evaluate_policies(&policies).map(|(e, _)| e);
 
-        // 6. Merge RBAC + ABAC under conflict strategy
         let (has_access, right_type, reason) = merge_results(rbac, abac_effect, strategy);
 
         let result = AccessCheckResult {
@@ -107,9 +99,7 @@ impl AccessEvaluator {
         Ok(result)
     }
 
-    /// Invalidate the full cache (called after any rights mutation).
     pub fn invalidate_cache(&self) {
         self.cache.invalidate_all();
     }
 }
-

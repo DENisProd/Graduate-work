@@ -31,7 +31,6 @@ export class ResourcesService {
       throw new ResourceNotFoundException('Ресурс', 'id', dto.parentId);
     }
 
-    // Создаём ресурс с временным path, затем обновляем его, чтобы включить сгенерированный id.
     const created = await this.prisma.resource.create({
       data: {
         houseId: parent.houseId,
@@ -39,7 +38,7 @@ export class ResourcesService {
         name: dto.name,
         externalId: dto.externalId,
         parentId: parent.id,
-        path: parent.path, // временное значение
+        path: parent.path,
         depth: parent.depth + 1,
       },
     });
@@ -77,7 +76,6 @@ export class ResourcesService {
     await this.prisma.resource.delete({ where: { id } });
   }
 
-  /** Найти ресурс типа DEVICE_FUNCTION по id или externalId (deviceFunctionId). */
   async findDeviceFunctionByExternalOrId(deviceFunctionId: string): Promise<Resource> {
     const byId = await this.prisma.resource.findFirst({
       where: { id: deviceFunctionId, type: ResourceType.DEVICE_FUNCTION },
@@ -91,7 +89,6 @@ export class ResourcesService {
   }
 
   async registerResource(dto: RegisterResourceDto): Promise<{ id: string }> {
-    // Idempotent: return existing resource if already registered
     const existing = await this.prisma.resource.findFirst({
       where: { externalId: dto.externalId },
     });

@@ -1,4 +1,4 @@
-use axum::{
+﻿use axum::{
     extract::State,
     routing::{get, post},
     Json, Router,
@@ -7,7 +7,7 @@ use chrono::{DateTime, Utc};
 use local_server_application::ports::{
     AuthPollResult, CompleteAuthArgs, UpsertFromCloudCmd, UpsertFromCloudWidgetDashboardCmd,
 };
-use local_server_application::DomainError;
+use local_server_application::{resolve_scenario_service_url, DomainError};
 use local_server_core::entities::scenario::ScenarioStatus;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -15,10 +15,6 @@ use utoipa::ToSchema;
 use super::error::AppError;
 use crate::HttpAppState;
 
-/// `GET /system/health` — liveness probe used by load balancers, the OTA
-/// applier, and the integration test in `tests/health_test.rs`.
-///
-/// Mounted under `/api/v1` by `http::router`.
 pub fn router(state: HttpAppState) -> Router {
     Router::new()
         .route("/system/health", get(health))
@@ -35,13 +31,9 @@ pub fn router(state: HttpAppState) -> Router {
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct HealthResponse {
-    /// Overall service status. Always `"ok"` when the handler is reachable.
     status: &'static str,
-    /// Semver version of the running binary.
     version: &'static str,
-    /// SQLite connectivity: `"ok"` or `"error"`.
     db: &'static str,
-    /// Runtime MQTT connection status.
     mqtt_connected: bool,
 }
 
@@ -86,6 +78,7 @@ async fn sync_status(
 pub struct SyncReport {
     pub houses_upserted: usize,
     pub rooms_upserted: usize,
+    pub roles_upserted: usize,
     pub members_upserted: usize,
     pub scenarios_upserted: usize,
     pub dashboards_upserted: usize,
@@ -100,13 +93,12 @@ async fn trigger_sync(
             "Not authorized with cloud. Call /system/auth/start first.".into(),
         )
     })?;
+    let runtime_access = settings.access_service_url.clone();
     let access_service_url =
-        resolve_access_service_url(settings.access_service_url, &state.default_access_service_url);
+        resolve_access_service_url(runtime_access.clone(), &state.default_access_service_url);
 
-    // Ensure we have a local user record for the owner.
     state.access_sync.upsert_owner(&user_id).await?;
 
-    // Pull houses.
     let houses = state
         .cloud_sync
         .fetch_user_houses(&access_service_url, &user_id)
@@ -116,21 +108,42 @@ async fn trigger_sync(
     let now = Utc::now().to_rfc3339();
     state.access_sync.mark_pulled("houses", &now).await?;
 
-    // Pull rooms and members for each house.
     let mut rooms_upserted = 0usize;
+    let mut roles_upserted = 0usize;
     let mut members_upserted = 0usize;
     for house in &houses {
         match state
             .cloud_sync
-            .fetch_house_rooms(&access_service_url, &house.id)
+            .fetch_house_resources(&access_service_url, &house.id)
             .await
         {
-            Ok(rooms) => {
-                rooms_upserted += rooms.len();
-                state.access_sync.upsert_rooms(&house.id, &rooms).await?;
+            Ok(resources) => {
+                rooms_upserted += resources.len();
+                state.access_sync.upsert_resources(&house.id, &resources).await?;
             }
             Err(e) => {
-                tracing::warn!(house_id = %house.id, error = %e, "trigger_sync: failed to fetch rooms");
+                tracing::warn!(house_id = %house.id, error = %e, "trigger_sync: fetch_house_resources failed");
+                if let Ok(rooms) = state
+                    .cloud_sync
+                    .fetch_house_rooms(&access_service_url, &house.id)
+                    .await
+                {
+                    rooms_upserted += rooms.len();
+                    state.access_sync.upsert_rooms(&house.id, &rooms).await?;
+                }
+            }
+        }
+        match state
+            .cloud_sync
+            .fetch_house_roles(&access_service_url, &house.id)
+            .await
+        {
+            Ok(roles) => {
+                roles_upserted += roles.len();
+                state.access_sync.upsert_rbac_roles(&house.id, &roles).await?;
+            }
+            Err(e) => {
+                tracing::warn!(house_id = %house.id, error = %e, "trigger_sync: fetch_house_roles failed");
             }
         }
         match state
@@ -141,18 +154,39 @@ async fn trigger_sync(
             Ok(members) => {
                 members_upserted += members.len();
                 state.access_sync.upsert_members(&house.id, &members).await?;
+                state.access_sync.upsert_rbac_members(&house.id, &members).await?;
             }
             Err(e) => {
-                tracing::warn!(house_id = %house.id, error = %e, "trigger_sync: failed to fetch members");
+                tracing::warn!(house_id = %house.id, error = %e, "trigger_sync: fetch_house_members failed");
             }
         }
     }
     let now = Utc::now().to_rfc3339();
     state.access_sync.mark_pulled("rooms", &now).await?;
+    state.access_sync.mark_pulled("resources", &now).await?;
+    state.access_sync.mark_pulled("roles", &now).await?;
     state.access_sync.mark_pulled("members", &now).await?;
 
-    // Pull scenarios from scenario-service.
-    let scenarios_upserted = match state.cloud_scenario.list_all(&state.scenario_service_url).await {
+    match state
+        .cloud_sync
+        .fetch_user_access_rights(&access_service_url, &user_id)
+        .await
+    {
+        Ok(rights) => {
+            state.access_sync.upsert_access_rights(&user_id, &rights).await?;
+            state.access_sync.mark_pulled("access_rights", &now).await?;
+        }
+        Err(e) => tracing::warn!(error = %e, "trigger_sync: fetch_user_access_rights failed"),
+    }
+
+    let scenario_service_url = resolve_scenario_service_url(
+        runtime_access.as_deref(),
+        &state.default_cloud_sync_url,
+        &state.scenario_service_url,
+    );
+    tracing::info!(scenario_base = %scenario_service_url, "trigger_sync: pulling scenarios");
+
+    let scenarios_upserted = match state.cloud_scenario.list_all(&scenario_service_url).await {
         Ok(remote_scenarios) => {
             let count = remote_scenarios.len();
             for remote in remote_scenarios {
@@ -190,12 +224,11 @@ async fn trigger_sync(
         }
     };
 
-    // Pull widget dashboards per house.
     let mut dashboards_upserted = 0usize;
     for house in &houses {
         match state
             .cloud_widget_dashboard
-            .list_by_house(&state.scenario_service_url, &house.id)
+            .list_by_house(&scenario_service_url, &house.id)
             .await
         {
             Ok(remotes) => {
@@ -233,6 +266,7 @@ async fn trigger_sync(
     tracing::info!(
         houses = houses_upserted,
         rooms = rooms_upserted,
+        roles = roles_upserted,
         members = members_upserted,
         scenarios = scenarios_upserted,
         dashboards = dashboards_upserted,
@@ -242,6 +276,7 @@ async fn trigger_sync(
     Ok(Json(SyncReport {
         houses_upserted,
         rooms_upserted,
+        roles_upserted,
         members_upserted,
         scenarios_upserted,
         dashboards_upserted,

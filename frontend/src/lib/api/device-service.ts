@@ -27,7 +27,6 @@ import {
 } from '../mocks';
 import { apiCall, accessApiCall, safeApiCall, USE_MOCKS, buildPageQuery } from './core';
 
-// Rooms are served by device-service at /api/v1/rooms
 export const roomsApi = {
   getAll: (): Promise<RoomResponse[]> =>
     safeApiCall(() => apiCall('/api/v1/rooms'), () => mockApi.rooms.getAll()),
@@ -74,7 +73,7 @@ export const roomsApi = {
 };
 
 export const deviceTypesApi = {
-  // Public read endpoints
+
   getAll: (): Promise<DeviceTypeResponse[]> =>
     safeApiCall(
       () => accessApiCall<DeviceTypeResponse[]>('/v1/admin/device-types'),
@@ -97,7 +96,7 @@ export const deviceTypesApi = {
       : safeApiCall(() => accessApiCall(`/v1/device-types/code/${code}`), mock);
   },
 
-  // Admin write endpoints
+
   create: (data: DeviceTypeRequest): Promise<DeviceTypeResponse> => {
     const mock = () =>
       Promise.resolve({
@@ -138,7 +137,7 @@ export const deviceTypesApi = {
 };
 
 export const deviceCategoriesApi = {
-  // Public read endpoints
+
   getAll: (): Promise<DeviceCategoryResponse[]> =>
     safeApiCall(
       () => accessApiCall('/v1/device-categories/all'),
@@ -171,7 +170,7 @@ export const deviceCategoriesApi = {
       : safeApiCall(() => accessApiCall(`/v1/device-categories/by-type/${deviceTypeId}`), mock);
   },
 
-  // Admin write endpoints
+
   create: (data: DeviceCategoryRequest): Promise<DeviceCategoryResponse> => {
     const mock = () =>
       Promise.resolve({
@@ -217,7 +216,7 @@ export const deviceCategoriesApi = {
 };
 
 export const devicesApi = {
-  // Public read endpoints
+
   getAll: (params?: PageRequest): Promise<PageResponse<DeviceResponse>> => {
     if (USE_MOCKS) return mockApi.devices.getAll(params);
     return safeApiCall(
@@ -253,7 +252,7 @@ export const devicesApi = {
   updateStatus: (id: number, status: string): Promise<DeviceResponse> =>
     accessApiCall(`/v1/devices/${id}/status?status=${encodeURIComponent(status)}`, { method: 'PATCH' }),
 
-  // Admin write endpoints
+
   create: (data: DeviceRequest): Promise<DeviceResponse> => {
     const mock = () =>
       Promise.resolve({
@@ -323,7 +322,7 @@ export const deviceFunctionsApi = {
       method: 'PATCH',
     }),
 
-  // Admin write endpoints
+
   create: (data: DeviceFunctionRequest): Promise<DeviceFunctionResponse> => {
     const mock = () =>
       Promise.resolve({
@@ -394,7 +393,7 @@ export const deviceFunctionActionsApi = {
   execute: (id: number): Promise<DeviceFunctionActionResponse> =>
     accessApiCall(`/v1/device-function-actions/${id}/execute`, { method: 'POST' }),
 
-  // Admin write endpoints
+
   create: (data: DeviceFunctionActionRequest): Promise<DeviceFunctionActionResponse> => {
     const mock = () =>
       Promise.resolve({

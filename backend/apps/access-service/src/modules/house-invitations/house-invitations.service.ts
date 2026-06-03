@@ -105,11 +105,6 @@ export class HouseInvitationsService {
     return inv as InvitationWithRelations;
   }
 
-  /**
-   * Список приглашений дома.
-   * По умолчанию — только активные ожидающие (PENDING и срок не истёк); принятые и прочие финальные статусы не попадают в выборку.
-   * @param includeAll если true — полная история по дому без фильтра по статусу/сроку
-   */
   async findByHouseId(
     houseId: string,
     page: number,

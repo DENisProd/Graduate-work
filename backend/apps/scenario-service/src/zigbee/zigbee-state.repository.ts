@@ -54,7 +54,6 @@ export class ZigbeeStateRepository {
     };
   }
 
-  /** Последнее состояние по каждому IEEE из списка (для начального снимка в Socket.IO). */
   async findLatestByDeviceIeeeAddrs(
     deviceIeeeAddrs: string[],
   ): Promise<Map<string, ZigbeeDeviceState>> {

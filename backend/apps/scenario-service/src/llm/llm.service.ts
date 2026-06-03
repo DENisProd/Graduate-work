@@ -21,10 +21,6 @@ export class LlmService {
     this.model = config.get<string>('OLLAMA_MODEL') ?? 'qwen2.5:3b';
   }
 
-  /**
-   * Calls Ollama and validates the JSON response against the given Zod schema.
-   * Returns null on timeout, network error, or exhausted retries.
-   */
   async generateJson<T>(
     systemPrompt: string,
     userPrompt: string,

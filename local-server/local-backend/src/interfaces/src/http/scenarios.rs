@@ -1,4 +1,4 @@
-use std::sync::Arc;
+﻿use std::sync::Arc;
 
 use axum::{
     Json, Router,
@@ -41,8 +41,6 @@ pub fn router(
         )
         .with_state(state)
 }
-
-// ─── DTOs ─────────────────────────────────────────────────────────────────────
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -107,8 +105,6 @@ fn default_size() -> i64 {
     20
 }
 
-// ─── Handlers ─────────────────────────────────────────────────────────────────
-
 async fn list_scenarios(
     State(s): State<ScenariosState>,
     Query(q): Query<ListQuery>,
@@ -148,7 +144,6 @@ async fn create_scenario(
         })
         .await?;
 
-    // Register in engine if ONLINE
     if scenario.status == ScenarioStatus::Online {
         if let Err(e) = s.engine.register(scenario.clone()).await {
             tracing::warn!(error = %e, "failed to register new scenario in engine");
@@ -178,7 +173,6 @@ async fn update_scenario(
         )
         .await?;
 
-    // Deregister old version, re-register if now ONLINE
     if let Err(e) = s.engine.deregister(&id).await {
         tracing::warn!(error = %e, scenario_id = %id, "deregister failed during update");
     }
@@ -209,8 +203,6 @@ async fn trigger_webhook(
     s.engine.trigger_by_webhook(&token).await?;
     Ok(StatusCode::NO_CONTENT)
 }
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 fn parse_status(s: &str) -> Option<ScenarioStatus> {
     use std::str::FromStr;

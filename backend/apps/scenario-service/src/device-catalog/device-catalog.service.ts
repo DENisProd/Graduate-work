@@ -7,11 +7,8 @@ import {
 } from '../llm/llm.types';
 
 export interface DeviceCatalogSyncResult {
-  /** ID of DeviceType in device-service (for now always ZIGBEE). */
   deviceTypeId: number | null;
-  /** ID of abstract Device in device-service matching the physical device model. */
   deviceId: number | null;
-  /** ID of abstract DeviceCategory in device-service matching the physical device model. */
   deviceCategoryId: number | null;
 }
 

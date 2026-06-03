@@ -1,9 +1,9 @@
-// Infrastructure layer for storage
+
 
 import type { ProjectSnapshot } from '@/domain/room-planner';
 
 const STORAGE_KEY_PREFIX = 'room-planner-project';
-const AUTOSAVE_INTERVAL = 5000; // 5 seconds
+const AUTOSAVE_INTERVAL = 5000;
 
 function getStorageKey(houseId: string): string {
   return `${STORAGE_KEY_PREFIX}-${houseId}`;
@@ -41,7 +41,6 @@ export class LocalStorageService {
   }
 }
 
-// Debounced autosave per houseId
 const autosaveTimers: Record<string, NodeJS.Timeout> = {};
 
 export function debouncedAutosave(houseId: string, snapshot: ProjectSnapshot): void {

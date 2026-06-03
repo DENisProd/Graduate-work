@@ -63,9 +63,6 @@ function coalesceString(
   return undefined;
 }
 
-/**
- * Applies {@link ZIGBEE_PAYLOAD_DEVICE_DATA_RULES} to a Zigbee2MQTT device JSON payload.
- */
 export function mapZigbeePayloadToDeviceDataInputs(
   physicalDeviceId: string,
   payload: Record<string, unknown>,

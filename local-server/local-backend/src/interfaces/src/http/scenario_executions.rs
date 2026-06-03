@@ -1,4 +1,4 @@
-use std::sync::Arc;
+﻿use std::sync::Arc;
 
 use axum::{
     Json, Router,
@@ -33,8 +33,6 @@ pub fn router(
         .route("/scenario-executions/:id", get(get_execution))
         .with_state(state)
 }
-
-// ─── DTOs ─────────────────────────────────────────────────────────────────────
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -82,8 +80,6 @@ pub struct ListQuery {
 fn default_size() -> i64 {
     20
 }
-
-// ─── Handlers ─────────────────────────────────────────────────────────────────
 
 async fn list_executions(
     State(s): State<ScenarioExecutionsState>,

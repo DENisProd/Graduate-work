@@ -61,10 +61,6 @@ export class HouseRolesService {
     }
   }
 
-  /**
-   * Идемпотентно пересоздаёт права доступа для всех системных ролей дома.
-   * Вызывается после создания дома или при пересборке прав.
-   */
   async ensureOwnerFullAccessForHouse(houseId: string): Promise<void> {
     const house = await this.prisma.house.findUnique({
       where: { id: houseId },
@@ -87,11 +83,6 @@ export class HouseRolesService {
     await this.setupHouseResourceAccess(houseId, ownerMember.id, ownerRole.id, adminRole.id, defaultRole.id);
   }
 
-  /**
-   * Создаёт корневой ресурс HOUSE и функциональные дочерние ресурсы,
-   * затем выставляет права: Owner/Admin → ALLOW (полный доступ),
-   * Default → READ (только чтение). Идемпотентно.
-   */
   private async setupHouseResourceAccess(
     houseId: string,
     ownerMemberId: string,
@@ -108,7 +99,6 @@ export class HouseRolesService {
       });
     }
 
-    // Создаём функциональные дочерние ресурсы для каждой зоны системы
     const functionalResources = [
       { type: ResourceType.ROOM,       name: 'Комнаты' },
       { type: ResourceType.DEVICE,     name: 'Устройства' },
@@ -132,7 +122,6 @@ export class HouseRolesService {
       }
     }
 
-    // Owner и Admin → полный доступ (ALLOW) на корень (каскадируется на всех детей)
     for (const roleId of [ownerRoleId, adminRoleId]) {
       const exists = await this.prisma.accessRight.findFirst({
         where: { resourceId: root.id, roleId, accessRightType: AccessRightType.ALLOW },
@@ -144,7 +133,6 @@ export class HouseRolesService {
       }
     }
 
-    // Default → только чтение (READ) на корень
     const defaultExists = await this.prisma.accessRight.findFirst({
       where: { resourceId: root.id, roleId: defaultRoleId, accessRightType: AccessRightType.READ },
     });
@@ -154,7 +142,6 @@ export class HouseRolesService {
       });
     }
 
-    // Кэш effective permissions для участника-владельца
     const ownerRight = await this.prisma.accessRight.findFirst({
       where: { resourceId: root.id, roleId: ownerRoleId, accessRightType: AccessRightType.ALLOW },
     });
@@ -197,7 +184,6 @@ export class HouseRolesService {
     return this.getRoleByHouseAndName(houseId, SYSTEM_ROLE_NAMES.DEFAULT);
   }
 
-  /** Следующий свободный priority для кастомной роли в доме (уникален в паре houseId + priority). */
   async getNextAvailablePriority(houseId: string): Promise<number> {
     const agg = await this.prisma.houseRole.aggregate({
       where: { houseId },
@@ -206,7 +192,6 @@ export class HouseRolesService {
     return (agg._max.priority ?? 0) + 1;
   }
 
-  /** Может ли пользователь пригласить участника с указанной ролью (по приоритету — как при назначении роли). */
   async canAssignRoleForInvitation(houseId: string, inviterUserId: string, roleId: string): Promise<boolean> {
     const isOwner = await this.housesService.isOwner(houseId, inviterUserId);
     if (isOwner) return true;
@@ -220,7 +205,6 @@ export class HouseRolesService {
     return inviterPriority < role.priority;
   }
 
-  /** Inviter может передать только те доменные права, которые сам имеет (владелец — все). */
   async assertCanInviteWithPermissions(houseId: string, inviterUserId: string, permissions: HousePermission[]): Promise<void> {
     if (permissions.length === 0) return;
     const isOwner = await this.housesService.isOwner(houseId, inviterUserId);

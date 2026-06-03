@@ -1,4 +1,4 @@
-use std::sync::Arc;
+﻿use std::sync::Arc;
 use std::time::Duration;
 
 use async_trait::async_trait;
@@ -9,8 +9,6 @@ use serde_json::Value;
 use tokio::sync::oneshot;
 use uuid::Uuid;
 
-/// Sends Modbus RTU commands through the MQTT bridge (topic `modbus/command`)
-/// and correlates responses from `modbus/response` using a UUID `request_id`.
 pub struct ModbusGateway {
     pending: DashMap<String, oneshot::Sender<Value>>,
     command_topic: String,
@@ -26,10 +24,6 @@ impl ModbusGateway {
         }
     }
 
-    /// Send a command JSON, inject a `request_id`, wait for the matching response.
-    ///
-    /// The caller should set `slave_id`, `address`, etc. in `cmd`.
-    /// `action` must be one of the values accepted by the Rust modbus-mqtt-bridge.
     pub async fn execute(
         &self,
         mqtt: &dyn MqttClient,
@@ -120,7 +114,6 @@ impl ModbusGateway {
         }
     }
 
-    /// Called from the MQTT ingest loop when a `modbus/response` message arrives.
     pub fn on_response(&self, payload: &[u8]) {
         let Ok(rsp) = serde_json::from_slice::<Value>(payload) else {
             tracing::warn!("modbus: received non-JSON payload on modbus/response");

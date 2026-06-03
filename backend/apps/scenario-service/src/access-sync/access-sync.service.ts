@@ -63,10 +63,6 @@ export class AccessSyncService {
     await this.client.deleteResource(accessResourceId);
   }
 
-  /**
-   * Registers matched device-functions as DEVICE_FUNCTION resources under the physical device.
-   * Called after capabilities are resolved against catalog functions.
-   */
   async onDeviceFunctionsLinked(
     physicalDeviceId: string,
     houseId: string,

@@ -1,5 +1,3 @@
-// Presentation layer exports
-
 export * from './CanvasStage';
 export * from './WallLayer';
 export * from './DeviceLayer';

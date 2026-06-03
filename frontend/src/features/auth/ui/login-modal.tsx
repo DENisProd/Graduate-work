@@ -20,7 +20,6 @@ interface LoginModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-/** Mock login: enter user ID only. Creates a fake user and stores in global state. */
 export function LoginModal({ isOpen, onOpenChange }: LoginModalProps) {
   const { t } = useTranslation();
   const setUser = useUserStore((s) => s.setUser);

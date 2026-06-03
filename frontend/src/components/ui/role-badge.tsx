@@ -33,7 +33,6 @@ export function RoleBadge({ role, className }: RoleBadgeProps) {
   );
 }
 
-/** Derive role for house list: owner if house.ownerId === currentUserId */
 export function getHouseRole(ownerId: string, currentUserId: string): HouseRole {
   return ownerId === currentUserId ? 'owner' : 'member';
 }

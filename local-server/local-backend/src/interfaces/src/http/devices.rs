@@ -1,4 +1,4 @@
-use std::sync::Arc;
+﻿use std::sync::Arc;
 
 use axum::{
     extract::{Path, Query, State},
@@ -16,14 +16,10 @@ use utoipa::ToSchema;
 use super::error::AppError;
 use super::PageResponse;
 
-// ─── State ───────────────────────────────────────────────────────────────────
-
 #[derive(Clone)]
 pub struct DevicesState {
     pub repo: Arc<dyn DeviceRepository>,
 }
-
-// ─── Response DTOs ────────────────────────────────────────────────────────────
 
 #[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -122,8 +118,6 @@ pub struct TranslationResponse {
     pub description: Option<String>,
 }
 
-// ─── Request DTOs ─────────────────────────────────────────────────────────────
-
 #[derive(Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateDeviceBody {
@@ -171,8 +165,6 @@ pub struct UpdateValueBody {
 fn default_true() -> bool { true }
 fn default_size() -> i64 { 20 }
 
-// ─── Router ───────────────────────────────────────────────────────────────────
-
 pub fn router(repo: Arc<dyn DeviceRepository>) -> Router {
     let state = DevicesState { repo };
     Router::new()
@@ -191,8 +183,6 @@ pub fn router(repo: Arc<dyn DeviceRepository>) -> Router {
         .route("/device-functions/:id/value", patch(update_function_value))
         .with_state(state)
 }
-
-// ─── Handlers ────────────────────────────────────────────────────────────────
 
 #[utoipa::path(get, path = "/api/v1/devices",
     params(

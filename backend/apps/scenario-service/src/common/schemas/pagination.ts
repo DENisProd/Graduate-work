@@ -32,7 +32,6 @@ export const paginationQuerySchema = z.object({
 export type PaginationQuery = z.infer<typeof paginationQuerySchema>;
 
 export function skipTake(p: PaginationQuery) {
-  // Be defensive: some internal callers may bypass Zod parsing.
   const page = Number.isFinite(p.page) ? Math.max(1, Math.trunc(p.page)) : 1;
   const limit = Number.isFinite(p.limit)
     ? Math.min(100, Math.max(1, Math.trunc(p.limit)))

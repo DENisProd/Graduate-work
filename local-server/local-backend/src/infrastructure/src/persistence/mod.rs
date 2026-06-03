@@ -1,5 +1,4 @@
-//! SQLite-backed implementations of `application` repository / probe ports.
-
+﻿
 mod access;
 mod access_sync;
 mod devices;

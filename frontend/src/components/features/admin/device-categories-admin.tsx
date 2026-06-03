@@ -133,19 +133,16 @@ export function DeviceCategoriesAdmin() {
 
       const [categoriesResult, typesResult] = results;
 
-      // Handle categories
       if (categoriesResult.status === 'fulfilled') {
         const categoriesData = categoriesResult.value as unknown;
         setCategories(extractArray<DeviceCategoryResponse>(categoriesData));
       } else {
         console.error('Failed to load categories:', categoriesResult.reason);
-        // If main data fails, we should set error
         const reason = categoriesResult.reason;
         setError(reason instanceof Error ? reason.message : 'Failed to load categories');
         setCategories([]);
       }
       
-      // Handle device types
       if (typesResult.status === 'fulfilled') {
         const typesData = typesResult.value as unknown;
         setDeviceTypes(extractArray<DeviceTypeResponse>(typesData));
@@ -211,7 +208,6 @@ export function DeviceCategoriesAdmin() {
   };
 
   const handleSubmit = async () => {
-    // Валидация
     if (!formData.code.trim()) {
       showToast(t('admin.messages.createError'), 'error');
       return;

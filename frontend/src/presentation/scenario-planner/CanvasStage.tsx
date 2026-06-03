@@ -104,16 +104,9 @@ export function CanvasStage() {
     if (from.type === 'end') return false;
     if (to.type === 'start') return false;
 
-    // start -> trigger | condition
     if (from.type === 'start') return to.type === 'trigger' || to.type === 'condition';
-
-    // trigger -> condition | action
     if (from.type === 'trigger') return to.type === 'condition' || to.type === 'action';
-
-    // condition -> action
     if (from.type === 'condition') return to.type === 'action';
-
-    // action -> end
     if (from.type === 'action') return to.type === 'end';
 
     return false;
@@ -140,7 +133,6 @@ export function CanvasStage() {
       .filter((x): x is { id: string; points: number[] } => x !== null);
   }, [edges, nodes]);
 
-  // Auto-fit current graph into the visible viewport (only when graphRevision changes)
   useEffect(() => {
     if (nodes.length === 0) return;
     const margin = 60;
@@ -158,18 +150,14 @@ export function CanvasStage() {
     );
     const nextScale = Math.max(0.5, Math.min(1, fitScale));
 
-    // We don't change store zoom here to avoid fighting user zoom; we just center via stagePos.
     const cx = minX + bw / 2;
     const cy = minY + bh / 2;
-    // Center for current scale (store zoom); keep consistent with displayed scale
     const x = stageSize.width / 2 - cx * scale;
     const y = stageSize.height / 2 - cy * scale;
 
     setStagePos({ x, y });
-    // If current zoom is too big, user can zoom out manually; at least we center.
   }, [graphRevision, nodes.length, scale, stageSize.height, stageSize.width]);
 
-  // Track container size (so Stage fits the Card)
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
@@ -184,7 +172,6 @@ export function CanvasStage() {
       }
     });
     ro.observe(parent);
-    // initial
     const rect = parent.getBoundingClientRect();
     if (rect.width > 0 && rect.height > 0) setStageSize({ width: rect.width, height: rect.height });
     return () => ro.disconnect();
@@ -295,7 +282,6 @@ export function CanvasStage() {
                     selectNode(to.id);
                     return;
                   }
-                  // invalid -> restart from this node
                   setPendingConnectFromId(to.id);
                   selectNode(to.id);
                   return;

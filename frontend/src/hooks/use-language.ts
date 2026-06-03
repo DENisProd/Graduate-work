@@ -37,9 +37,6 @@ export function useLanguage() {
   };
 }
 
-/**
- * Хук для получения переводов с типизацией
- */
 export function useTranslation() {
   const { t, locale, mounted } = useLanguage();
   

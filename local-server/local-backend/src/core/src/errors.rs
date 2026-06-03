@@ -1,7 +1,5 @@
-use thiserror::Error;
+﻿use thiserror::Error;
 
-/// Pure domain error. Infrastructure errors are translated to one of these
-/// variants at the boundary (in `infrastructure` crate).
 #[derive(Debug, Error)]
 pub enum DomainError {
     #[error("entity not found: {entity} ({id})")]

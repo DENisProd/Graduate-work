@@ -78,7 +78,6 @@ export class PhysicalDeviceService {
 
     const updated = await this.repository.update(id, data);
 
-    // After catalog sync, match capabilities to device-functions and register them in access-service
     const houseId = data.houseId ?? existing.houseId;
     if (needsCatalogSync && resolvedDeviceId && houseId && this.accessSync) {
       this.logger.log(
@@ -142,7 +141,6 @@ export class PhysicalDeviceService {
       return;
     }
 
-    // Ensure actions exist in access-service and attach action IDs to resource metadata
     this.logger.log(
       `[syncCapabilityFunctions] fetching action IDs from access-service for deviceId=${deviceId}`,
     );

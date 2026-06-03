@@ -138,10 +138,6 @@ export class HouseMembersService {
     return this.addMemberFromInvitation(houseId, userId, {});
   }
 
-  /**
-   * Добавление участника по приглашению: либо роль по id, либо явный набор HousePermission (создаётся одна кастомная роль),
-   * иначе — системная роль «По умолчанию».
-   */
   async addMemberFromInvitation(
     houseId: string,
     userId: string,

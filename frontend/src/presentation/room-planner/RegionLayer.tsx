@@ -27,7 +27,6 @@ function centroid(points: Point[]): Point {
   return { x: sx / points.length, y: sy / points.length };
 }
 
-/** Проекция точки P на отрезок A–B (ближайшая точка на отрезке) */
 function projectPointOnSegment(P: Point, A: Point, B: Point): Point {
   const dx = B.x - A.x;
   const dy = B.y - A.y;
@@ -68,7 +67,7 @@ export function RegionLayer() {
 
   return (
     <>
-      {/* Готовые области комнат */}
+
       {roomRegions.map((region, index) => {
         const points = region.points.flatMap((p) => [p.x, p.y]);
         const isSelected = selectedRegionId === region.id;
@@ -100,7 +99,7 @@ export function RegionLayer() {
           />
         );
       })}
-      {/* Подписи комнат */}
+
       {roomRegions.map((region) => {
         const houseRoomId = region.houseRoomId;
         const room =
@@ -127,7 +126,7 @@ export function RegionLayer() {
           />
         );
       })}
-      {/* Кликабельные рёбра выбранной области — клик по ребру добавляет вершину */}
+
       {selectedRegionId && roomRegions.map((region) => {
         if (region.id !== selectedRegionId) return null;
         const pts = region.points;
@@ -185,7 +184,7 @@ export function RegionLayer() {
           );
         });
       })}
-      {/* Редактируемые вершины выбранной области */}
+
       {selectedRegionId && roomRegions.map((region) => {
         if (region.id !== selectedRegionId) return null;
         const canDeleteVertex = region.points.length > 3;
@@ -240,7 +239,7 @@ export function RegionLayer() {
           );
         });
       })}
-      {/* Превью текущего полигона (точки + линии) */}
+
       {pendingRegionPoints.length > 0 && (
         <>
           <Line

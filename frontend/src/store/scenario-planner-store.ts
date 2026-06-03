@@ -106,7 +106,6 @@ export const useScenarioPlannerStore = create<ScenarioPlannerState>((set, get) =
 
   initialize: (houseId: string) => {
     const state = get();
-    // Avoid resetting state on re-mount / StrictMode double effects
     if (state.houseId === houseId && state.nodes.length > 0) {
       return;
     }

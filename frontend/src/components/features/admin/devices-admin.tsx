@@ -59,7 +59,6 @@ export function DevicesAdmin() {
     loadCategories();
   }, []);
 
-  // Сброс страницы при изменении фильтров
   useEffect(() => {
     setPage(0);
   }, [searchQuery, categoryFilter]);

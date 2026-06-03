@@ -1,4 +1,4 @@
-use async_trait::async_trait;
+﻿use async_trait::async_trait;
 use serde_json::Value;
 
 use local_server_core::DomainError;
@@ -28,14 +28,12 @@ pub struct CreateCloudWidgetDashboardCmd {
 
 #[async_trait]
 pub trait CloudWidgetDashboardClient: Send + Sync {
-    /// Fetch all dashboards for a house from cloud.
     async fn list_by_house(
         &self,
         base_url: &str,
         house_id: &str,
     ) -> Result<Vec<RemoteWidgetDashboard>, DomainError>;
 
-    /// Create a dashboard in the cloud.
     async fn create(
         &self,
         base_url: &str,

@@ -20,9 +20,9 @@ import type { Stage as KonvaStage } from 'konva/lib/Stage';
 import { useTheme } from '@/hooks';
 import { domovoyRoomPlanner } from '@/lib/domovoy-canvas-palette';
 
-const CANVAS_WIDTH = 1920; // 16:9 aspect ratio
+const CANVAS_WIDTH = 1920;
 const CANVAS_HEIGHT = 1080;
-const VIRTUAL_SIZE = 5000; // Expanded virtual canvas size
+const VIRTUAL_SIZE = 5000;
 
 interface CanvasStageProps {
   width?: number;
@@ -61,7 +61,6 @@ export function CanvasStage({ width, height }: CanvasStageProps) {
   const stageHeight = height || CANVAS_HEIGHT;
   const scale = zoom / 100;
 
-  // Handle Escape key to cancel drawing
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -87,15 +86,13 @@ export function CanvasStage({ width, height }: CanvasStageProps) {
     [stageWidth, stageHeight]
   );
 
-  // Helper to get world coordinates from stage pointer
   const getStagePointerPosition = (stage: KonvaStage) => {
     const pointer = stage.getPointerPosition();
     if (!pointer) return null;
-    
-    // Account for stage position (panning) and scale
+
     const stageX = stage.x();
     const stageY = stage.y();
-    
+
     return {
       x: (pointer.x - stageX) / scale,
       y: (pointer.y - stageY) / scale
@@ -103,70 +100,53 @@ export function CanvasStage({ width, height }: CanvasStageProps) {
   };
 
   const lastWallPoint = useMemo(() => {
-    // Only use pendingWallStart - no automatic continuation from last wall point
-    // User must manually select start point for each wall segment
     return pendingWallStart || null;
   }, [pendingWallStart]);
 
   const handleStageClick = (e: KonvaEventObject<MouseEvent>) => {
     const stage = e.target.getStage();
     if (!stage) return;
-    
-    // Don't click if panning (dragged)
+
     if (stage.isDragging()) return;
 
-    // Don't handle clicks on interactive elements (points, devices, etc.)
     const target = e.target;
     const targetName = target.name();
-    // Click on region fill (разметка комнат) — выбираем область
     if (mode === 'rooms' && typeof targetName === 'string' && targetName.startsWith('region-fill-')) {
       const regionId = targetName.replace('region-fill-', '');
       selectRegion(regionId);
       e.evt.stopPropagation();
       return;
     }
-    // Click on region vertex or edge — не добавлять новую точку (обрабатывается в RegionLayer)
     if (mode === 'rooms' && typeof targetName === 'string' && (targetName.startsWith('region-point-') || targetName.startsWith('region-edge-'))) {
       return;
     }
-    // Use explicit name check for background or check if it's the Stage
     const isBackground = targetName === 'background';
     const isStage = target === stage;
 
     if (!isBackground && !isStage) {
-      // Check for allowed types if not background/stage
-      const targetType = target.getType(); // 'Shape', 'Group', etc.
-      
-      // We can also check className for more specificity if needed
-      // const className = target.getClassName(); // 'Rect', 'Circle', 'Line'
+      const targetType = target.getType();
 
-      if (targetType === 'Group' || targetType === 'Text') { // 'Circle' usually means point
-         return; 
+      if (targetType === 'Group' || targetType === 'Text') {
+         return;
       }
-      
-      // If it's a shape but not our background, check if it's a point (Circle)
-      // Points should be handled by their own onClick handlers, not by stage
+
       if (target.getClassName() === 'Circle') {
         console.log('[CanvasStage.handleStageClick] Click on Circle detected, ignoring (should be handled by point handler)');
         return;
       }
-      
-      // In other modes, also ignore clicks on walls
+
       if (target.getClassName() === 'Line' && mode !== 'doors' && mode !== 'windows' && mode !== 'select' && mode !== 'walls') {
         return;
       }
     }
 
-    // Prevent event bubbling - stop propagation to avoid double handling
-    // But only after we've checked that it's not a point or other interactive element
     e.evt.stopPropagation();
 
     const clickPoint = getStagePointerPosition(stage);
     if (!clickPoint) return;
-    
+
     const { x, y } = clickPoint;
-    
-    // Bounds Check
+
     if (x < 0 || x > VIRTUAL_SIZE || y < 0 || y > VIRTUAL_SIZE) {
        return;
     }
@@ -187,27 +167,20 @@ export function CanvasStage({ width, height }: CanvasStageProps) {
     }
 
     if (mode === 'walls') {
-      // Remove arbitrary limit of 12 vertices
-      // if (room.walls.length >= 12) return;
-      
-      // Get current state to avoid stale closure
       const currentState = useRoomPlannerStore.getState();
       const currentPendingWallStart = currentState.pendingWallStart;
-      
+
       console.log('[CanvasStage.handleStageClick] Walls mode click, pendingWallStart:', currentPendingWallStart, 'clickPoint:', clickPoint);
-      
-      // Only snap to pendingWallStart if it exists, otherwise snap to grid only
+
       const snapReference = currentPendingWallStart || undefined;
       const snappedPoint = snapPoint(clickPoint, showGrid ? GRID_SIZE : 1, snapReference);
       console.log('[CanvasStage.handleStageClick] Snapped point:', snappedPoint);
 
-      // Check if clicking on first point to close the room
       if (currentPendingWallStart && room.walls.length >= 2) {
         const firstPoint = room.walls[0].a;
         const distance = Math.sqrt(
           Math.pow(snappedPoint.x - firstPoint.x, 2) + Math.pow(snappedPoint.y - firstPoint.y, 2)
         );
-        // If clicking near first point (within 20px), close the room
         if (distance < 20) {
           console.log('[CanvasStage.handleStageClick] Closing room');
           useRoomPlannerStore.getState().closeRoom();
@@ -215,13 +188,10 @@ export function CanvasStage({ width, height }: CanvasStageProps) {
           return;
         }
       }
-      
-      // When clicking on empty space, always use the snapped point
-      // This allows creating walls from pendingWallStart to new points
+
       console.log('[CanvasStage.handleStageClick] Calling addWallPoint with snappedPoint');
       addWallPoint(snappedPoint);
     } else if (mode === 'select') {
-      // In select mode, clicking on background deselects everything
       if (isBackground || isStage) {
         const { selectWall, selectDevice } = useRoomPlannerStore.getState();
         selectDoor(null);
@@ -230,15 +200,10 @@ export function CanvasStage({ width, height }: CanvasStageProps) {
         selectWall(null);
       }
     } else if (mode === 'devices' && pendingDeviceType) {
-      // Add device on click
       const anchor: 'wall' | 'free' = room.walls.length > 0 ? 'wall' : 'free';
       addDevice(pendingDeviceType, { x, y }, anchor);
       setPendingDeviceType(null);
     } else if (mode === 'doors' || mode === 'windows') {
-      // Use last valid position if available and current position is invalid or user just clicked
-      // But we need to check if the current click is close enough to the wall to be considered an attempt
-      
-      // Calculate closest wall logic again for click validation
       let closestWall: typeof room.walls[0] | null = null;
       let closestDistance = Infinity;
       let closestPosition = 0;
@@ -263,7 +228,6 @@ export function CanvasStage({ width, height }: CanvasStageProps) {
         }
       }
 
-      // Check validity of CURRENT click position
       let isValidCurrent = false;
       if (closestWall) {
         isValidCurrent = isValidOpeningPosition(
@@ -275,16 +239,13 @@ export function CanvasStage({ width, height }: CanvasStageProps) {
         );
       }
 
-      // Determine final placement data
       let finalWallId = closestWall?.id;
       let finalPosition = closestPosition;
 
-      // If current is invalid but we have a last valid position, use that
       if (!isValidCurrent && lastValidOpeningPos) {
         finalWallId = lastValidOpeningPos.wallId;
         finalPosition = lastValidOpeningPos.position;
       } else if (!isValidCurrent && !lastValidOpeningPos) {
-        // Cannot place anywhere - deselect if clicking on background
         if (isBackground || isStage) {
           selectDoor(null);
           selectWindow(null);
@@ -294,7 +255,6 @@ export function CanvasStage({ width, height }: CanvasStageProps) {
 
       if (finalWallId) {
         if (mode === 'doors') {
-          // Generate friendly name
           const doorCount = room.doors.length + 1;
           addDoor({
             id: `door_${Date.now()}_${Math.random()}`,
@@ -305,7 +265,6 @@ export function CanvasStage({ width, height }: CanvasStageProps) {
             name: `Дверь #${doorCount}`,
           });
         } else if (mode === 'windows') {
-          // Generate friendly name
           const windowCount = room.windows.length + 1;
           addWindow({
             id: `window_${Date.now()}_${Math.random()}`,
@@ -320,28 +279,21 @@ export function CanvasStage({ width, height }: CanvasStageProps) {
   };
 
   const handleStageDrop = (e: KonvaEventObject<DragEvent>) => {
-    // Allow dropping even if mode is not devices (switch implicitly or just add)
-    // if (mode !== 'devices') return;
-
     const stage = e.target.getStage();
     if (!stage) return;
 
     const pointerPos = getStagePointerPosition(stage);
     if (!pointerPos) return;
 
-    // Get device type from drag data
     const deviceType = e.evt.dataTransfer?.getData('device-type') as DeviceType | undefined;
     if (!deviceType) return;
 
-    // Convert to canvas coordinates
     const { x, y } = pointerPos;
 
-    // Bounds Check
     if (x < 0 || x > VIRTUAL_SIZE || y < 0 || y > VIRTUAL_SIZE) {
        return;
     }
 
-    // Determine anchor based on proximity to walls
     const anchor: 'wall' | 'free' = room.walls.length > 0 ? 'wall' : 'free';
 
     addDevice(deviceType, { x, y }, anchor);
@@ -376,7 +328,6 @@ export function CanvasStage({ width, height }: CanvasStageProps) {
         }}
         onDragOver={(e: KonvaEventObject<DragEvent>) => {
           e.evt.preventDefault();
-          // Track mouse position during drag for phantom preview
           const stage = e.target.getStage();
           if (stage) {
             const pos = getStagePointerPosition(stage);
@@ -386,40 +337,37 @@ export function CanvasStage({ width, height }: CanvasStageProps) {
           }
         }}
         onMouseMove={(e: KonvaEventObject<MouseEvent>) => {
-          // Track mouse position for previews
-          // We need this for walls, doors, and windows
           const stage = e.target.getStage();
           if (stage) {
             const pos = getStagePointerPosition(stage);
             if (pos) {
               setMousePosition(pos);
-              
-              // Track last valid opening position
+
               if (mode === 'doors' || mode === 'windows') {
                  let closestWall: typeof room.walls[0] | null = null;
                  let closestDistance = Infinity;
                  let closestPosition = 0;
-           
+
                  for (const wall of room.walls) {
                    const wallLength = Math.sqrt(
                      Math.pow(wall.b.x - wall.a.x, 2) + Math.pow(wall.b.y - wall.a.y, 2)
                    );
                    if (wallLength === 0) continue;
-           
+
                    const dx = wall.b.x - wall.a.x;
                    const dy = wall.b.y - wall.a.y;
                    const t = Math.max(0, Math.min(1, ((pos.x - wall.a.x) * dx + (pos.y - wall.a.y) * dy) / (wallLength * wallLength)));
                    const projX = wall.a.x + t * dx;
                    const projY = wall.a.y + t * dy;
                    const distance = Math.sqrt(Math.pow(pos.x - projX, 2) + Math.pow(pos.y - projY, 2));
-           
+
                    if (distance < closestDistance && distance < 80) {
                      closestDistance = distance;
                      closestWall = wall;
                      closestPosition = t;
                    }
                  }
-                 
+
                  if (closestWall) {
                     const isValid = isValidOpeningPosition(
                       closestWall,
@@ -428,7 +376,7 @@ export function CanvasStage({ width, height }: CanvasStageProps) {
                       room.walls.map(w => ({ ...w, id: w.id || '' })),
                       closestWall.id || ''
                     );
-                   
+
                    if (isValid) {
                      const dx = closestWall.b.x - closestWall.a.x;
                      const dy = closestWall.b.y - closestWall.a.y;
@@ -451,7 +399,6 @@ export function CanvasStage({ width, height }: CanvasStageProps) {
         }}
       >
         <Layer>
-          {/* Virtual Canvas Background */}
           <Rect
             name="background"
             x={0}
@@ -471,9 +418,8 @@ export function CanvasStage({ width, height }: CanvasStageProps) {
             shadowBlur={10}
             shadowOpacity={resolvedTheme === 'dark' ? 0.35 : 0.08}
             listening={true}
-            // onClick removed - Stage handles all clicks to prevent double handling
+            // onClick omitted intentionally — Stage.onClick handles all background clicks
           />
-          {/* Bounds Indicator */}
           <Rect
             x={0}
             y={0}
@@ -485,7 +431,7 @@ export function CanvasStage({ width, height }: CanvasStageProps) {
             listening={false}
             opacity={0.5}
           />
-          
+
           <GridLayer width={VIRTUAL_SIZE} height={VIRTUAL_SIZE} show={showGrid} />
           <WallLayer walls={room.walls} mode={mode} />
           <MeasurementLayer walls={room.walls} show={showMeasurements} />

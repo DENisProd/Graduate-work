@@ -7,9 +7,7 @@ import { AppModule } from './app.module';
 import { loadGatewayConfig } from './config/gateway.config';
 import { ProxyService } from './proxy/proxy.service';
 
-// cwd = backend/apps/api-gateway/ (cd'd by start script)
 loadEnv({ path: join(process.cwd(), '../../.env') });
-// Local .env takes priority over root backend/.env
 loadEnv({ path: join(process.cwd(), '.env'), override: true });
 
 async function bootstrap() {
@@ -110,7 +108,8 @@ async function bootstrap() {
     });
 
     proxyReq.on('response', (proxyRes) => {
-      // Upstream returned a non-101 (e.g. CORS rejection) — report and close
+      // Node may emit `response` with 101 even when `upgrade` already handled the handshake.
+      if (proxyRes.statusCode === 101) return;
       console.error('[WS] upstream non-101 response:', proxyRes.statusCode);
       socket.destroy();
     });

@@ -25,7 +25,6 @@ export function GridLayer({ width, height, gridSize = GRID_SIZE, show = true }: 
 
   const lines: React.ReactElement[] = [];
 
-  // Vertical lines
   for (let x = 0; x <= width; x += gridSize) {
     lines.push(
       <Line
@@ -39,7 +38,6 @@ export function GridLayer({ width, height, gridSize = GRID_SIZE, show = true }: 
     );
   }
 
-  // Horizontal lines
   for (let y = 0; y <= height; y += gridSize) {
     lines.push(
       <Line

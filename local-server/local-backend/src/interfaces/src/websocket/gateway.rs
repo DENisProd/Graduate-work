@@ -1,4 +1,4 @@
-use std::sync::Arc;
+﻿use std::sync::Arc;
 
 use socketioxide::extract::{Data, SocketRef};
 use socketioxide::SocketIo;
@@ -11,7 +11,6 @@ use local_server_application::{
 
 use super::protocol::{CommandPayload, PairingEventDto, PermitJoinStatusDto, SubscribePayload, ZigbeeStateDto};
 
-/// Register all event handlers for the `/zigbee` namespace.
 pub fn setup_namespace(
     io: &SocketIo,
     mqtt: Arc<dyn MqttClient>,
@@ -27,7 +26,6 @@ pub fn setup_namespace(
         let repo = repo2.clone();
         let prefix = prefix2.clone();
 
-        // zigbee:subscribe { deviceIeeeAddrs: ["0x...", ...] }
         socket.on("zigbee:subscribe", {
             let repo = repo.clone();
             move |socket: SocketRef, Data(data): Data<SubscribePayload>| {
@@ -45,7 +43,6 @@ pub fn setup_namespace(
             }
         });
 
-        // zigbee:unsubscribe { deviceIeeeAddrs: [...] }
         socket.on("zigbee:unsubscribe", move |socket: SocketRef, Data(data): Data<SubscribePayload>| {
             async move {
                 for ieee in &data.device_ieee_addrs {
@@ -54,7 +51,6 @@ pub fn setup_namespace(
             }
         });
 
-        // zigbee:command { friendlyName, payload }
         socket.on("zigbee:command", {
             let mqtt = mqtt.clone();
             let prefix = prefix.clone();
@@ -70,7 +66,6 @@ pub fn setup_namespace(
             }
         });
 
-        // zigbee:pairing:start → permit_join true
         socket.on("zigbee:pairing:start", {
             let mqtt = mqtt.clone();
             let prefix = prefix.clone();
@@ -84,7 +79,6 @@ pub fn setup_namespace(
             }
         });
 
-        // zigbee:pairing:stop → permit_join false
         socket.on("zigbee:pairing:stop", {
             let mqtt = mqtt.clone();
             let prefix = prefix.clone();
@@ -98,21 +92,17 @@ pub fn setup_namespace(
             }
         });
 
-        // zigbee:pairing:watch → join "pairing" room
         socket.on("zigbee:pairing:watch", move |socket: SocketRef| {
             socket.join("pairing").ok();
         });
 
-        // zigbee:pairing:unwatch → leave "pairing" room
         socket.on("zigbee:pairing:unwatch", move |socket: SocketRef| {
             socket.leave("pairing").ok();
         });
     });
 }
 
-/// Spawn background tasks bridging in-process broadcast channels to Socket.IO rooms.
 pub fn spawn_broadcasters(io: SocketIo, svc: Arc<ZigbeeRealtimeService>) {
-    // State broadcast → "zigbee:state" in room "zigbee:{ieee}"
     let io1 = io.clone();
     let mut state_rx = svc.subscribe_state();
     tokio::spawn(async move {
@@ -132,7 +122,6 @@ pub fn spawn_broadcasters(io: SocketIo, svc: Arc<ZigbeeRealtimeService>) {
         }
     });
 
-    // Pairing events (device joined / interview) → "zigbee:pairing:event" in "pairing" room
     let io2 = io.clone();
     let mut pairing_rx = svc.subscribe_pairing();
     tokio::spawn(async move {
@@ -151,7 +140,6 @@ pub fn spawn_broadcasters(io: SocketIo, svc: Arc<ZigbeeRealtimeService>) {
         }
     });
 
-    // Permit_join status → "zigbee:pairing:status" in "pairing" room
     let mut permit_rx = svc.subscribe_permit_join();
     tokio::spawn(async move {
         loop {

@@ -12,7 +12,6 @@ import {
 } from '../mongo/schemas/physical-device.mongo';
 
 type PhysicalDeviceDoc = PhysicalDeviceModel & { _id: Types.ObjectId };
-/** EUI-64 zigbee2mqtt (`0x` + 16 hex) — канонический вид для БД и топиков. */
 export function canonicalZigbeeIeeeAddr(ieee: string): string {
   const t = ieee.trim();
   const m = /^0x([0-9a-fA-F]{16})$/i.exec(t);
@@ -164,7 +163,6 @@ export class ZigbeeDeviceRepository {
     return doc ? this.map(doc) : null;
   }
 
-  /** Разрешение Mongo ObjectId физического устройства → IEEE (protocolAddress). */
   async findIeeeAddrsByPhysicalIds(
     ids: string[],
   ): Promise<Map<string, string>> {

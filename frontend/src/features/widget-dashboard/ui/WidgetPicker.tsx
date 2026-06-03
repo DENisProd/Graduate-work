@@ -7,7 +7,6 @@ import type { WidgetType, WidgetTemplate } from '../types/widget.types';
 interface Props {
   open: boolean;
   onClose: () => void;
-  /** Receives either a raw `WidgetType` or a template id (resolved by WidgetDashboard). */
   onSelect: (typeOrTemplateId: WidgetType | string) => void;
 }
 

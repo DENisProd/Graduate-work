@@ -1,5 +1,3 @@
-// API Types based on OpenAPI documentation
-
 export interface TranslationRequest {
   locale: string;
   name: string;
@@ -12,7 +10,6 @@ export interface TranslationResponse {
   description?: string;
 }
 
-// Room Types
 export interface RoomRequest {
   code: string;
   active?: boolean;
@@ -30,7 +27,6 @@ export interface RoomResponse {
   translations: Record<string, TranslationResponse>;
 }
 
-// Device Type Types
 export interface DeviceTypeRequest {
   code: string;
   active?: boolean;
@@ -50,7 +46,6 @@ export interface DeviceTypeResponse {
   deviceFunctions?: DeviceFunctionResponse[];
 }
 
-// Device Category Types
 export interface DeviceCategoryRequest {
   code: string;
   deviceTypeId: number;
@@ -70,7 +65,6 @@ export interface DeviceCategoryResponse {
   translations: Record<string, TranslationResponse>;
 }
 
-// Device Types
 export type DeviceStatus = 'ONLINE' | 'OFFLINE';
 
 export interface DeviceRequest {
@@ -103,7 +97,6 @@ export interface DeviceResponse {
   translations: Record<string, TranslationResponse>;
 }
 
-// Device Function Types
 export type FunctionType = 'READ' | 'WRITE' | 'READ_WRITE';
 
 export interface DeviceFunctionRequest {
@@ -136,7 +129,6 @@ export interface DeviceFunctionResponse {
   deviceFunctionActions?: DeviceFunctionActionResponse[];
 }
 
-// Device Function Action Types
 export type ActionType =
   | 'TURN_ON'
   | 'TURN_OFF'
@@ -173,7 +165,6 @@ export interface DeviceFunctionActionResponse {
   translations: Record<string, TranslationResponse>;
 }
 
-// Pagination Types
 export interface PageRequest {
   page?: number;
   size?: number;
@@ -192,10 +183,8 @@ export interface PageResponse<T> {
   hasPrevious: boolean;
 }
 
-// Access Control Types
 export type AccessRightType = 'ALLOW' | 'DENY' | 'READ' | 'WRITE';
 
-/** POST /api/v1/access-rights */
 export interface CreateAccessRightDto {
   resourceId: string;
   houseMemberId?: string;
@@ -204,9 +193,6 @@ export interface CreateAccessRightDto {
   expiresAt?: string;
 }
 
-/**
- * RBAC: ответ GET /api/v1/access-rights/user/{id}, GET /api/v1/resources/{id}/permissions, POST /api/v1/access-rights.
- */
 export interface AccessRightResponse {
   id: string;
   resourceId: string;
@@ -218,7 +204,6 @@ export interface AccessRightResponse {
   createdAt: string;
 }
 
-/** GET /api/v1/access-structure?userId= */
 export interface AccessStructureResponse {
   houses: Array<{
     id: string;
@@ -280,7 +265,6 @@ export interface HouseRoomResponse {
   createdAt?: string;
 }
 
-/** Request to register a new device in a house (POST /api/v1/houses/{houseId}/devices) */
 export interface HouseDeviceRegistrationRequest {
   deviceTypeId: number;
   deviceCategoryId: number;
@@ -309,7 +293,7 @@ export interface HouseMemberRoleBriefDto {
 export interface HouseMemberResponse {
   id: string;
   userId: string;
-  /** Отображаемое имя (с access-service, синхронизируется с клиента). */
+  /** Display name (synced from access-service on the client side). */
   userDisplayName?: string;
   userAvatarUrl?: string;
   houseId?: string;
@@ -318,28 +302,21 @@ export interface HouseMemberResponse {
   roles: HouseMemberRoleBriefDto[];
 }
 
-/** Роль дома (для выбора при создании приглашения). GET /api/v1/houses/:houseId/roles */
 export interface HouseRoleResponse {
   id: string;
   name?: string;
   code?: string;
-  /** Приоритет (меньше — выше в списке). Системные роли обычно первые. */
   priority?: number;
-  /** Количество пользователей с этой ролью */
   memberCount?: number;
-  /** Системная роль (нельзя редактировать/удалять) */
   system?: boolean;
-  /** Доменные разрешения роли (INVITE_MEMBERS, EDIT_ROLES, ...) */
   permissions?: string[];
 }
 
-/** Тело запроса создания роли. POST /house-roles */
 export interface HouseRoleCreateRequest {
   name: string;
   priority?: number;
 }
 
-/** Участник роли (ответ GET /house-roles/:id/members). */
 export interface RoleMemberResponse {
   id: number | string;
   userId?: string;
@@ -390,7 +367,6 @@ export type InvitationPermission =
   | 'MANAGE_DEVICES'
   | 'MANAGE_AUTOMATIONS';
 
-/** Права доступа к ресурсам, назначаемые при принятии приглашения. */
 export interface InvitationAccessRight {
   accessRightType: AccessRightType;
   deviceId?: number | null;
@@ -401,19 +377,13 @@ export interface InvitationAccessRight {
 }
 
 export interface HouseInvitationRequest {
-  /** Пометка к приглашению (для UI). Не влияет на права. */
   note?: string;
-  /** Дата истечения приглашения (ISO 8601). По умолчанию бэкенд ставит 7 дней. */
   expiresAt?: string;
-  /** ID роли дома для назначения при принятии. Не используйте вместе с permissions/accessRight. */
   roleId?: string;
-  /** Явный набор доменных прав. После принятия создаётся кастомная роль. */
   permissions?: InvitationPermission[];
-  /** Право доступа к ресурсу, которое будет назначено при принятии приглашения. */
   accessRight?: InvitationAccessRight;
 }
 
-/** Тело запроса создания приглашения: только email, roleId?, permissions?, expiresAt? */
 export interface CreateInvitationBody {
   note?: string;
   roleId?: string;
@@ -426,7 +396,7 @@ export interface HouseInvitationResponse {
   houseId?: number | string;
   houseName?: string;
   note?: string;
-  /** Приходит только в ответе создания приглашения (один раз). */
+  /** Returned only on creation (once). */
   token?: string;
   status: InvitationStatus;
   createdAt: string;
@@ -438,7 +408,6 @@ export interface HouseInvitationResponse {
   permissions?: InvitationPermission[];
 }
 
-/** Легаси-форма (устройства/комнаты по полям) — предпочтительно {@link HouseAccessRightRequestDto} под OpenAPI. */
 export interface HouseAccessRightRequest {
   houseId: number | string;
   houseMemberId: number;
@@ -450,7 +419,6 @@ export interface HouseAccessRightRequest {
   expiresAt?: string | null;
 }
 
-/** POST /api/v1/access-control/rights (HouseAccessRightRequestDto в Swagger). */
 export interface HouseAccessRightRequestDto {
   resourceId: string;
   houseMemberId?: string;
@@ -460,7 +428,6 @@ export interface HouseAccessRightRequestDto {
   expiresAt?: string;
 }
 
-/** Ответ доменного Access Control (HouseAccessRightResponseDto). */
 export interface HouseAccessRightResponse {
   id: string;
   houseId: string;
@@ -493,7 +460,6 @@ export interface AccessCheckRequest {
   operationType?: string | null;
 }
 
-/** POST /api/v1/access-control/check (AccessCheckRequestDto в Swagger). */
 export interface AccessControlCheckRequestDto {
   resourceId: string;
   userId: string;
@@ -521,7 +487,6 @@ export interface ListResponse<T> {
   total: number;
 }
 
-/** Socket.IO zigbee:state и snapshots из zigbee:subscribe (Scenario Service) */
 export interface ZigbeeStateMetrics {
   state: string | null;
   brightness: number | null;
@@ -543,10 +508,8 @@ export interface ZigbeeStateWire {
   stateId: string;
 }
 
-/** GET /zigbee/devices — элемент списка (см. Scenario Service, коллекция PhysicalDevice / Zigbee) */
 export interface ZigbeeDeviceListItem {
   id: string;
-  /** Сопоставление с IEEE в ответе репозитория */
   ieeeAddr?: string;
   protocolAddress?: string;
   physicalDeviceId?: string;
@@ -564,7 +527,6 @@ export interface ZigbeeDeviceListItem {
   roomId?: string | null;
 }
 
-/** Scenario Service: Zigbee MQTT config per house (GET/PUT /zigbee/house-mqtt/:houseId). */
 export interface HouseMqttStatus {
   connected: boolean;
 }
@@ -588,7 +550,6 @@ export interface HouseMqttConfigUpsertRequest {
   enabled?: boolean;
 }
 
-/** GET /physical-devices/:id — документ из Mongo (Zigbee + регистрация в доме) */
 export interface PhysicalDeviceResponse {
   id: string;
   name?: string | null;
@@ -659,8 +620,6 @@ export interface ScenarioResponse {
   creatorId: string;
   isActive?: boolean;
   lastRun?: string;
-  /**
-   * Universal scenario definition (v1). Optional for backward compatibility with older backend payloads.
-   */
+  /** Optional for backward compatibility with older backend payloads. */
   definition?: unknown;
 }

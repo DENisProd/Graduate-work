@@ -1,4 +1,4 @@
-// Mock data for development
+
 import type {
   RoomResponse,
   DeviceTypeResponse,
@@ -9,7 +9,7 @@ import type {
   PageResponse,
 } from '@/types/api';
 
-// Mock Rooms
+
 export const mockRooms: RoomResponse[] = [
   {
     id: 1,
@@ -52,7 +52,7 @@ export const mockRooms: RoomResponse[] = [
   },
 ];
 
-// Mock Device Types
+
 export const mockDeviceTypes: DeviceTypeResponse[] = [
   {
     id: 1,
@@ -95,7 +95,7 @@ export const mockDeviceTypes: DeviceTypeResponse[] = [
   },
 ];
 
-// Mock Device Categories
+
 export const mockDeviceCategories: DeviceCategoryResponse[] = [
   {
     id: 1,
@@ -141,7 +141,7 @@ export const mockDeviceCategories: DeviceCategoryResponse[] = [
   },
 ];
 
-// Mock Devices
+
 export const mockDevices: DeviceResponse[] = [
   {
     id: 1,
@@ -193,7 +193,7 @@ export const mockDevices: DeviceResponse[] = [
   },
 ];
 
-// Mock Device Functions
+
 export const mockDeviceFunctions: DeviceFunctionResponse[] = [
   {
     id: 1,
@@ -251,7 +251,7 @@ export const mockDeviceFunctions: DeviceFunctionResponse[] = [
   },
 ];
 
-// Mock Device Function Actions
+
 export const mockDeviceFunctionActions: DeviceFunctionActionResponse[] = [
   {
     id: 1,
@@ -301,10 +301,10 @@ export const mockDeviceFunctionActions: DeviceFunctionActionResponse[] = [
   },
 ];
 
-// Helper function to simulate API delay
+
 export const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Mock API functions that return mock data with delay
+
 export const mockApi = {
   rooms: {
     getAll: async (): Promise<RoomResponse[]> => {

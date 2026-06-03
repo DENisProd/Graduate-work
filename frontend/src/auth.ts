@@ -6,7 +6,7 @@ type TokenWithKeycloakSub = {
   keycloakSub?: string;
   accessToken?: string;
   refreshToken?: string;
-  expiresAt?: number; // Unix timestamp in seconds
+  expiresAt?: number;
   error?: string;
 };
 
@@ -75,7 +75,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, account, profile }) {
       const tokenData = token as TokenWithKeycloakSub;
 
-      // Initial sign-in — save all Keycloak tokens
       if (account?.provider === 'keycloak') {
         const profileData = profile as KeycloakProfileLike | undefined;
         const profileSub = profileData?.sub ?? profileData?.id;
@@ -87,7 +86,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
         tokenData.accessToken = account.access_token;
         tokenData.refreshToken = account.refresh_token;
-        // expires_at is Unix seconds; fall back to now + expires_in
         tokenData.expiresAt = account.expires_at
           ?? (account.expires_in
             ? Math.floor(Date.now() / 1000) + (account.expires_in as number)
@@ -96,12 +94,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return token;
       }
 
-      // Token still valid — return as-is
       if (tokenData.expiresAt && Date.now() < tokenData.expiresAt * 1000 - 30_000) {
         return token;
       }
 
-      // Access token expired — try to refresh
       if (!tokenData.refreshToken) {
         tokenData.error = 'RefreshAccessTokenError';
         return token;

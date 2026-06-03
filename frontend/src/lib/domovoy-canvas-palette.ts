@@ -1,8 +1,3 @@
-/**
- * Konva / canvas hex & rgba — aligned with global tokens
- * (--primary #1A237E, --brand-secondary #FF9800, --brand-teal #009688).
- */
-
 export const domovoyCanvas = {
   primary: '#1A237E',
   primaryMid: '#3949AB',
@@ -24,7 +19,6 @@ export const domovoyCanvas = {
   shadow: 'rgba(10, 14, 24, 0.35)',
 } as const;
 
-/** Room planner — grid, walls, rulers (Konva). */
 export const domovoyRoomPlanner = {
   gridStrokeLight: 'rgba(26, 35, 126, 0.14)',
   gridStrokeDark: 'rgba(200, 210, 255, 0.09)',

@@ -37,7 +37,6 @@ export class UserService {
     return user;
   }
 
-  /** Обновляет или создаёт пользователя с отображаемым именем (идемпотентно по externalUserId). */
   async upsertDisplayName(externalUserId: string, displayName: string): Promise<void> {
     const trimmed = displayName.trim().slice(0, 255);
     if (!trimmed) return;

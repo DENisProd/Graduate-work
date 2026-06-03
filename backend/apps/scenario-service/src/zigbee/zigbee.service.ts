@@ -50,8 +50,7 @@ export interface ZigbeePairingStatus {
   timeout?: number | null;
 }
 
-/** TTL (мс) блокировки авто-воссоздания после удаления устройства. */
-const DELETED_DEVICE_TTL_MS = 120_000; // 2 минуты
+const DELETED_DEVICE_TTL_MS = 120_000;
 
 @Injectable()
 export class ZigbeeService {
@@ -60,10 +59,7 @@ export class ZigbeeService {
   readonly pairingStatus$ = new Subject<ZigbeePairingStatus>();
   readonly deviceState$ = new Subject<DeviceStateEvent>();
 
-  /**
-   * IEEE-адреса недавно удалённых устройств → время истечения запрета.
-   * Предотвращает авто-воссоздание устройства из входящих MQTT-пакетов.
-   */
+  // TTL map that blocks auto-recreation of a device from incoming MQTT packets after deletion
   private readonly recentlyDeleted = new Map<string, number>();
 
   constructor(
@@ -156,7 +152,7 @@ export class ZigbeeService {
         `[catalog-enrich] DONE ieeeAddr=${device.ieeeAddr}: catalog IDs persisted`,
       );
     } catch (error) {
-      // Catalog links are best-effort and must not break Zigbee ingestion.
+        // Catalog links are best-effort — must not break Zigbee ingestion on failure
       const message = error instanceof Error ? error.message : String(error);
       this.logger.warn(
         `catalog-link-enrich failed for ${device.ieeeAddr}: ${message}`,
@@ -240,9 +236,6 @@ export class ZigbeeService {
     this.pairingStatus$.next(status);
   }
 
-  /**
-   * События zigbee2mqtt/bridge/event (появление устройства, интервью и т.д.).
-   */
   async applyBridgeEvent(payload: Record<string, unknown>): Promise<void> {
     const eventType = payload.type;
     if (typeof eventType !== 'string') return;
@@ -257,16 +250,11 @@ export class ZigbeeService {
     const fn = d.friendly_name ?? d.friendlyName;
     const friendlyName = typeof fn === 'string' ? fn : undefined;
 
-    // Если устройство было недавно удалено — игнорируем bridge-события для него.
-    // Исключение: device_leave/remove — их всё равно обрабатывать нет смысла.
     if (this.isRecentlyDeleted(canonicalZigbeeIeeeAddr(ieeeRaw))) return;
 
     switch (eventType) {
       case 'device_announce': {
         await this.upsertDevice({ ieeeAddr: ieeeRaw, friendlyName });
-        // Notify pairing room so the device appears in the modal.
-        // If the device already has full data (was previously interviewed),
-        // emit interview_done so the user can add it immediately without waiting.
         const annDev = await this.devices.findByIeeeAddr(ieeeRaw);
         if (annDev?.type === ZigbeeDeviceType.Coordinator) break;
         const fullyKnown =
@@ -360,7 +348,7 @@ export class ZigbeeService {
       }
 
       case 'interview_successful': {
-        // Older Z2M format fallback
+        // older Z2M format (pre-1.x)
         await this.upsertDevice({ ieeeAddr: ieeeRaw, friendlyName });
         const dev = await this.devices.findByIeeeAddr(ieeeRaw);
         if (dev?.type === ZigbeeDeviceType.Coordinator) break;
@@ -379,9 +367,6 @@ export class ZigbeeService {
     }
   }
 
-  /**
-   * Синхронизация устройств из retained-сообщения zigbee2mqtt/bridge/devices.
-   */
   async syncDevicesFromZigbee2MqttBridge(list: unknown): Promise<void> {
     if (!Array.isArray(list)) return;
 
@@ -460,12 +445,6 @@ export class ZigbeeService {
     }
   }
 
-  /**
-   * Полное удаление устройства из системы:
-   * 1. Отправляет команду на удаление с координатора Zigbee через MQTT (best-effort).
-   * 2. Удаляет документ PhysicalDevice из MongoDB.
-   * 3. Удаляет историю состояний и логов устройства.
-   */
   async removeDevice(
     ieeeAddr: string,
     force = true,
@@ -478,17 +457,14 @@ export class ZigbeeService {
       return { ok: false, error: `Устройство ${ieeeAddr} не найдено` };
     }
 
-    // Блокируем авто-воссоздание из входящих MQTT-пакетов
     this.markDeleted(canonical);
 
-    // Best-effort: send remove command to Zigbee coordinator via MQTT.
-    // force=true: мост удаляет запись из своей конфигурации немедленно,
-    // не дожидаясь ответа устройства (важно для спящих battery-устройств).
+    // force=true: bridge removes the device entry immediately without waiting for the
+    // device to respond — necessary for sleeping battery-powered devices
     if (device.houseId) {
       this.mqtt.removeDevice(device.houseId, device.friendlyName ?? canonical, force);
     }
 
-    // Cascade delete from MongoDB
     await Promise.all([
       this.devices.deleteByIeeeAddr(canonical),
       this.states.deleteManyByIeeeAddr(canonical),
@@ -498,10 +474,6 @@ export class ZigbeeService {
     return { ok: true, device };
   }
 
-  /**
-   * Отправляет команду управления устройству через MQTT (`…/<friendlyName>/set`).
-   * Резолвит friendlyName по IEEE-адресу; если не найден — использует сам IEEE-адрес.
-   */
   async sendCommand(
     ieeeAddr: string,
     payload: Record<string, unknown>,
@@ -517,10 +489,6 @@ export class ZigbeeService {
     return this.mqtt.sendDeviceCommand(device.houseId, topicName, payload);
   }
 
-  /**
-   * Состояние с топика `zigbee2mqtt/<имя>`.
-   * Имя часто совпадает с IEEE (`0x` + 16 hex), а не только с human-friendly_name.
-   */
   async ingestMqttDeviceState(
     topicSegment: string,
     payload: Record<string, unknown>,
@@ -545,9 +513,6 @@ export class ZigbeeService {
 
     ieeeAddr = canonicalZigbeeIeeeAddr(ieeeAddr);
 
-    // Если устройство было недавно удалено — игнорируем входящие данные,
-    // чтобы не воссоздавать его в MongoDB (спящие устройства могут успеть
-    // прислать пакет раньше, чем мост обработает команду remove).
     if (this.isRecentlyDeleted(ieeeAddr)) return;
 
     let device = await this.devices.findByIeeeAddr(ieeeAddr);
@@ -561,10 +526,8 @@ export class ZigbeeService {
       });
       device = await this.devices.findByIeeeAddr(ieeeAddr);
 
-      // Fallback: some Zigbee2MQTT setups/devices don't emit `bridge/event` for joins,
-      // but we still receive telemetry on `zigbee2mqtt/<friendlyName|ieee>`.
-      // When a device is first seen via telemetry and inserted into MongoDB,
-      // emit a pairing event so the UI can show it in the pairing modal.
+      // Some Z2M setups don't emit bridge/event for joins; emit a pairing event
+      // on first telemetry so the UI pairing modal can pick up the device
       if (device && device.type !== ZigbeeDeviceType.Coordinator) {
         this.pairingEvents$.next({
           type: 'joined',

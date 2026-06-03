@@ -18,7 +18,6 @@ export interface PairingDevice {
 }
 
 interface UsePairingOptions {
-  /** Whether the socket is connected (pairing only works when connected) */
   enabled: boolean;
   houseId: string | null;
 }
@@ -41,10 +40,8 @@ export function usePairing({ enabled, houseId }: UsePairingOptions): UsePairingR
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const activeRef = useRef(false);
 
-  // Manage socket lifecycle. Pairing room is only joined after start() is called.
   useEffect(() => {
     if (!enabled) return;
-    // Clear stale devices from previous session when modal opens.
     setDevices([]);
     zigbeeTelemetryManager.acquire();
     setIsConnected(zigbeeTelemetryManager.isConnected());
@@ -63,7 +60,6 @@ export function usePairing({ enabled, houseId }: UsePairingOptions): UsePairingR
     };
   }, [enabled]);
 
-  // Tick countdown
   const startCountdown = useCallback((seconds: number) => {
     if (timerRef.current) clearInterval(timerRef.current);
     setTimeLeft(seconds);
@@ -80,7 +76,6 @@ export function usePairing({ enabled, houseId }: UsePairingOptions): UsePairingR
     }, 1000);
   }, []);
 
-  // Pairing events from server
   useEffect(() => {
     if (!enabled) return;
 
@@ -127,7 +122,6 @@ export function usePairing({ enabled, houseId }: UsePairingOptions): UsePairingR
     };
   }, [enabled, startCountdown]);
 
-  // Cleanup timer on unmount
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);

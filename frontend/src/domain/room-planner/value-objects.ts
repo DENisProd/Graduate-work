@@ -1,5 +1,3 @@
-// Value Objects
-
 import type { Point, Wall } from './types';
 
 export class PointVO {
@@ -39,7 +37,6 @@ export class WallVO {
     return this.a.distanceTo(this.b);
   }
 
-  // Find closest point on wall to a given point
   closestPoint(point: PointVO): PointVO {
     const ax = this.a.x;
     const ay = this.a.y;
@@ -60,7 +57,6 @@ export class WallVO {
     return new PointVO(ax + t * dx, ay + t * dy);
   }
 
-  // Check if point is within snap distance (10px) of wall
   isPointNear(point: PointVO, snapDistance: number = 10): boolean {
     const closest = this.closestPoint(point);
     return closest.distanceTo(point) <= snapDistance;

@@ -367,8 +367,6 @@ export class ZigbeeController {
     return this.service.listLinks(q);
   }
 
-  // ── House MQTT Connections ──────────────────────────────────────────────────
-
   @Get('house-mqtt')
   @ApiOperation({ summary: 'Список MQTT-конфигураций всех домов' })
   @ApiResponse({ status: 200, description: 'Массив конфигураций (без паролей)' })

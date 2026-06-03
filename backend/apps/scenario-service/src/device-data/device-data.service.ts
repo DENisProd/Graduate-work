@@ -47,10 +47,6 @@ export class DeviceDataService {
     return this.repository.delete(id);
   }
 
-  /**
-   * Разложить payload zigbee2mqtt в строки DeviceData (для GET /device-data).
-   * Правила: `device-data/ingestion/zigbee-payload-device-data.rules.ts`.
-   */
   async ingestFromZigbeePayload(
     physicalDeviceId: string,
     payload: Record<string, unknown>,

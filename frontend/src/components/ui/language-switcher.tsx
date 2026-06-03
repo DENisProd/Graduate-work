@@ -98,9 +98,6 @@ export function LanguageSwitcher() {
   );
 }
 
-/**
- * Полноразмерный переключатель языка с текстом
- */
 export function LanguageSelect() {
   const { locale, setLocale, mounted } = useLanguage();
   const { t } = useTranslation();

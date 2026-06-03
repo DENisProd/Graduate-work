@@ -1,9 +1,5 @@
-use local_server_core::entities::access::{AccessRightType, ConflictStrategy, EffectivePermission};
+﻿use local_server_core::entities::access::{AccessRightType, ConflictStrategy, EffectivePermission};
 
-/// Given a set of effective permissions for a (member, resource) pair,
-/// determine the net access under the house's conflict strategy.
-///
-/// Returns `(has_access, winning_right_type, reason)`.
 pub fn evaluate_rbac(
     perms: &[EffectivePermission],
     strategy: ConflictStrategy,
@@ -37,7 +33,6 @@ pub fn evaluate_rbac(
     }
 }
 
-/// Merge RBAC and ABAC results using the conflict strategy.
 pub fn merge_results(
     rbac: (bool, Option<AccessRightType>, &'static str),
     abac_effect: Option<&str>,

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+﻿use std::sync::Arc;
 
 use axum::{
     extract::{Path, Query, State},
@@ -21,8 +21,6 @@ use super::error::AppError;
 pub struct PhysicalDevicesState {
     pub repo: Arc<dyn PhysicalDeviceRepository>,
 }
-
-// ─── Response DTO ─────────────────────────────────────────────────────────────
 
 #[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -71,8 +69,6 @@ impl From<PhysicalDevice> for PhysicalDeviceResponse {
     }
 }
 
-// ─── Request DTOs ─────────────────────────────────────────────────────────────
-
 #[derive(Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CreatePhysicalDeviceBody {
@@ -109,8 +105,6 @@ pub struct ListQuery {
     pub room_id: Option<String>,
 }
 
-// ─── Router ───────────────────────────────────────────────────────────────────
-
 pub fn router(repo: Arc<dyn PhysicalDeviceRepository>) -> Router {
     let state = PhysicalDevicesState { repo };
     Router::new()
@@ -123,8 +117,6 @@ pub fn router(repo: Arc<dyn PhysicalDeviceRepository>) -> Router {
         )
         .with_state(state)
 }
-
-// ─── Handlers ─────────────────────────────────────────────────────────────────
 
 #[utoipa::path(get, path = "/api/v1/physical-devices",
     responses((status = 200, description = "List of physical devices")),

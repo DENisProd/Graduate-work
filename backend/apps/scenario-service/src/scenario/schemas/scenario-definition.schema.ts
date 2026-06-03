@@ -1,12 +1,5 @@
 import { z } from 'zod';
 
-/**
- * Универсальная структура сценария (Smart Home / Smart Office).
- *
- * Храним в Mongo как JSON в поле ScenarioModel.definition.
- * Версионирование нужно, чтобы безопасно эволюционировать формат.
- */
-
 const jsonPrimitiveSchema = z.union([
   z.string(),
   z.number(),
@@ -22,19 +15,14 @@ const jsonValueSchema: z.ZodType<unknown> = z.lazy(() =>
 );
 
 export const scenarioScopeSchema = z.object({
-  /** Бизнес-контекст: дом или офис (или иной тип пространства) */
   kind: z.enum(['HOUSE', 'OFFICE']).default('HOUSE'),
-  /**
-   * Идентификатор пространства.
-   * Сейчас в модели есть `houseId`; на переходный период можно хранить тот же id.
-   */
   spaceId: z.string().min(1).max(255),
 });
 
 export const scenarioTriggerSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('SCHEDULE'),
-    /** cron-строка (5 или 6 полей) */
+    /** cron expression (5 or 6 fields) */
     cron: z.string().min(1).max(255),
     timezone: z.string().min(1).max(128).optional(),
     enabled: z.boolean().default(true),
@@ -45,17 +33,13 @@ export const scenarioTriggerSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     type: z.literal('DEVICE_EVENT'),
-    /** physicalDeviceId / zigbeeDeviceId и т.п. */
     deviceId: z.string().min(1).max(255),
-    /** событие/топик/кластер (зависит от интеграции) */
     event: z.string().min(1).max(255),
-    /** полезная нагрузка события */
     payload: z.record(jsonValueSchema).optional(),
     enabled: z.boolean().default(true),
   }),
   z.object({
     type: z.literal('WEBHOOK'),
-    /** внешний ключ для вызова сценария */
     token: z.string().min(8).max(255),
     enabled: z.boolean().default(true),
   }),
@@ -69,7 +53,7 @@ export const scenarioConditionSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('DEVICE_STATE'),
     deviceId: z.string().min(1).max(255),
-    /** ключ/путь до значения (например, "temperature" или "state.on") */
+    /** dot-path to the value (e.g. "temperature" or "state.on") */
     path: z.string().min(1).max(255),
     op: z.enum([
       'EQ',
@@ -111,7 +95,6 @@ export const scenarioActionSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('DEVICE_COMMAND'),
     deviceId: z.string().min(1).max(255),
-    /** командный ключ (например, "switch", "setBrightness") */
     command: z.string().min(1).max(255),
     args: z.record(jsonValueSchema).optional(),
   }),
@@ -145,15 +128,12 @@ export const scenarioDefinitionSchema = z.object({
   version: z.literal(1),
   scope: scenarioScopeSchema,
   triggers: z.array(scenarioTriggerSchema).min(1),
-  /** По умолчанию сценарий выполняется всегда */
   conditions: scenarioConditionSchema.optional().default({ type: 'ALWAYS' }),
   actions: z.array(scenarioActionSchema).min(1),
   options: z
     .object({
       timezone: z.string().min(1).max(128).optional(),
-      /** защита от частых срабатываний */
       debounceMs: z.number().int().min(0).max(60_000).optional(),
-      /** ограничение параллельных запусков */
       maxConcurrency: z.number().int().min(1).max(50).optional(),
     })
     .optional(),

@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+﻿use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -16,7 +16,6 @@ pub struct ZigbeeDeviceState {
     pub battery: Option<f64>,
 }
 
-/// Normalized metrics extracted from a Zigbee2MQTT telemetry payload.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ZigbeeMetrics {
     pub state: Option<String>,
@@ -29,7 +28,6 @@ pub struct ZigbeeMetrics {
     pub color_mode: Option<String>,
 }
 
-/// Pairing event emitted from the Zigbee2MQTT bridge when a device joins, leaves, or is interviewed.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PairingEvent {

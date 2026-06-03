@@ -1,4 +1,4 @@
-// Вычисление замкнутых контуров (регионов) по стенам
+
 
 import type { Point, Wall } from './types';
 
@@ -18,22 +18,16 @@ export interface ClosedLoop {
   centroid: Point;
 }
 
-/**
- * Разбивает массив стен на замкнутые контуры (регионы).
- * Каждый контур — упорядоченный полигон и индексы стен.
- * Порядок регионов стабильный (по центроиду) для сохранения привязки к комнатам.
- */
 export function getClosedLoops(walls: Wall[]): ClosedLoop[] {
   if (walls.length < 3) return [];
 
-  // Граф: из каждой точки (key) — список рёбер { wallIndex, endPoint }
   const adj = new Map<string, Array<{ wallIndex: number; end: Point }>>();
 
   for (let i = 0; i < walls.length; i++) {
     const w = walls[i];
     const keyA = pointKey(w.a);
     const keyB = pointKey(w.b);
-    if (keyA === keyB) continue; // вырожденная стена
+    if (keyA === keyB) continue;
 
     if (!adj.has(keyA)) adj.set(keyA, []);
     adj.get(keyA)!.push({ wallIndex: i, end: w.b });
@@ -58,7 +52,6 @@ export function getClosedLoops(walls: Wall[]): ClosedLoop[] {
 
     while (steps < maxSteps) {
       if (pointEq(current, startWall.a)) {
-        // Замкнулись — регион найден
         const polygon = path.slice(0, -1);
         const centroid = getCentroid(polygon);
         loops.push({ polygon, wallIndices: [...wallIndices], centroid });
@@ -87,7 +80,6 @@ export function getClosedLoops(walls: Wall[]): ClosedLoop[] {
     }
   }
 
-  // Стабильный порядок по центроиду (сначала по x, потом по y)
   loops.sort((a, b) => {
     const dx = a.centroid.x - b.centroid.x;
     if (Math.abs(dx) > TOL) return dx;

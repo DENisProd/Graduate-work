@@ -1,4 +1,4 @@
-use std::str::FromStr;
+﻿use std::str::FromStr;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -404,7 +404,6 @@ impl PhysicalDeviceRepository for SqlitePhysicalDeviceRepo {
         let cloud_ts = cmd.cloud_updated_at.to_rfc3339();
         let now = Utc::now().to_rfc3339();
 
-        // Try to find by cloud_id first, then by protocol_address.
         let existing_id: Option<String> = sqlx::query_scalar(
             "SELECT id FROM physical_devices WHERE phys_device_cloud_id = ? LIMIT 1",
         )

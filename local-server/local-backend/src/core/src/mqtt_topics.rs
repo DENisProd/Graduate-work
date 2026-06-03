@@ -1,66 +1,26 @@
-/// Canonical MQTT topic helpers for the IntelliGuard local-server.
-///
-/// All topic strings MUST be built through these functions — never hand-write
-/// `"houses/..."` literals anywhere else in the codebase.
-///
-/// Topic scheme reference: `docs/mqtt-topic-scheme.md`
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
+﻿
 
 pub const HOUSE_PREFIX: &str = "houses";
 pub const STATUS_SUFFIX: &str = "status";
 pub const CMD_PREFIX: &str = "cmd";
 
-// ---------------------------------------------------------------------------
-// Builder functions
-// ---------------------------------------------------------------------------
 
-/// Returns the root prefix for a specific house.
-///
-/// # Example
-/// ```
-/// assert_eq!(local_server_core::mqtt_topics::house_prefix("h1"), "houses/h1");
-/// ```
 pub fn house_prefix(house_id: &str) -> String {
     format!("{}/{}", HOUSE_PREFIX, house_id)
 }
 
-/// Returns the telemetry topic pattern for an arbitrary Zigbee2MQTT suffix
-/// (device friendly-name, bridge path, etc.).
-///
-/// # Example
-/// ```
-/// use local_server_core::mqtt_topics::telemetry_topic;
-/// assert_eq!(
-///     telemetry_topic("h1", "0x001788010d327fb4"),
-///     "houses/h1/zigbee2mqtt/0x001788010d327fb4"
-/// );
-/// ```
 pub fn telemetry_topic(house_id: &str, suffix: &str) -> String {
     format!("{}/zigbee2mqtt/{}", house_prefix(house_id), suffix)
 }
 
-/// Returns the wildcard subscription pattern that covers all Zigbee2MQTT
-/// telemetry from a given house.
-///
-/// Subscribe with QoS 1 and retained = false.
 pub fn telemetry_wildcard(house_id: &str) -> String {
     format!("{}/zigbee2mqtt/#", house_prefix(house_id))
 }
 
-/// Returns the retained status topic for a house.
-///
-/// Publish with QoS 1 and retained = true.
 pub fn status_topic(house_id: &str) -> String {
     format!("{}/{}", house_prefix(house_id), STATUS_SUFFIX)
 }
 
-/// Returns a command topic under `houses/{houseId}/cmd/zigbee2mqtt/{suffix}`.
-///
-/// Used by the scenario-service (central) to send commands down to the
-/// local Zigbee2MQTT instance.
 pub fn cmd_topic(house_id: &str, suffix: &str) -> String {
     format!(
         "{}/{}/zigbee2mqtt/{}",
@@ -70,24 +30,7 @@ pub fn cmd_topic(house_id: &str, suffix: &str) -> String {
     )
 }
 
-// ---------------------------------------------------------------------------
-// Parsing helpers
-// ---------------------------------------------------------------------------
 
-/// Extracts the house-id segment from any `houses/{houseId}/...` topic.
-///
-/// Returns `None` if the topic does not start with the expected prefix or if
-/// the house-id segment is missing.
-///
-/// # Example
-/// ```
-/// use local_server_core::mqtt_topics::parse_house_id;
-/// assert_eq!(
-///     parse_house_id("houses/h1/zigbee2mqtt/bridge/event"),
-///     Some("h1")
-/// );
-/// assert_eq!(parse_house_id("unrelated/topic"), None);
-/// ```
 pub fn parse_house_id(topic: &str) -> Option<&str> {
     let stripped = topic
         .strip_prefix(HOUSE_PREFIX)?
@@ -96,9 +39,6 @@ pub fn parse_house_id(topic: &str) -> Option<&str> {
     if id.is_empty() { None } else { Some(id) }
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {

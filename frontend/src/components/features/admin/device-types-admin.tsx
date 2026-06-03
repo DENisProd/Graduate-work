@@ -21,7 +21,6 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
-/** Normalize API translations to ru/en keys (API may use ru_RU, en_US or array) */
 function normalizeTranslations(
   raw: Record<string, TranslationResponse> | TranslationResponse[] | undefined,
   fallbackName: string,
@@ -95,7 +94,6 @@ export function DeviceTypesAdmin() {
     try {
       setLoading(true);
       const data = await deviceTypesApi.getAll();
-      // Handle both direct arrays and objects with content/data
       let typesArray: DeviceTypeResponse[] = [];
       if (data) {
         if (Array.isArray(data)) {
@@ -172,7 +170,6 @@ export function DeviceTypesAdmin() {
   };
 
   const handleSubmit = async () => {
-    // Валидация
     if (!formData.code.trim()) {
       showToast(t('admin.messages.createError'), 'error');
       return;

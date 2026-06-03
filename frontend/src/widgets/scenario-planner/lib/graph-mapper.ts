@@ -65,14 +65,12 @@ export function definitionToGraph(def: ScenarioDefinitionV1, opts: { houseId: st
 
   nodes.push(...triggerNodes, ...conditionNodes, ...actionNodes);
 
-  // Start -> triggers or condition (if no triggers)
   if (triggerNodes.length > 0) {
     triggerNodes.forEach((t) => edges.push({ id: `e_${startId}_${t.id}`, from: startId, to: t.id }));
   } else if (conditionNodes[0]) {
     edges.push({ id: `e_${startId}_${conditionNodes[0].id}`, from: startId, to: conditionNodes[0].id });
   }
 
-  // Triggers -> condition (if any) else -> actions
   triggerNodes.forEach((t) => {
     if (conditionNodes[0]) {
       edges.push({ id: `e_${t.id}_${conditionNodes[0].id}`, from: t.id, to: conditionNodes[0].id });
@@ -81,14 +79,12 @@ export function definitionToGraph(def: ScenarioDefinitionV1, opts: { houseId: st
     }
   });
 
-  // Condition -> actions
   if (conditionNodes[0]) {
     actionNodes.forEach((a) =>
       edges.push({ id: `e_${conditionNodes[0].id}_${a.id}`, from: conditionNodes[0].id, to: a.id })
     );
   }
 
-  // Actions -> end
   actionNodes.forEach((a) => edges.push({ id: `e_${a.id}_${endId}`, from: a.id, to: endId }));
 
   return { nodes, edges };
@@ -99,12 +95,10 @@ export function graphToDefinition(params: {
   edges: ScenarioPlannerEdge[];
   base: ScenarioDefinitionV1;
 }): ScenarioDefinitionV1 {
-  // Keep scope/options from base; only rebuild triggers/conditions/actions from graph.
   const triggerNodes = params.nodes.filter((n) => n.type === 'trigger');
   const conditionNodes = params.nodes.filter((n) => n.type === 'condition');
   const actionNodes = params.nodes.filter((n) => n.type === 'action');
 
-  // Order: left-to-right then top-to-bottom
   const byPos = (a: ScenarioPlannerNode, b: ScenarioPlannerNode) => (a.x - b.x) || (a.y - b.y);
   triggerNodes.sort(byPos);
   conditionNodes.sort(byPos);
@@ -115,7 +109,7 @@ export function graphToDefinition(params: {
 
   let conditions: ScenarioConditionV1 | undefined;
   if (conditionNodes.length === 0) {
-    conditions = undefined; // UI expects default ALWAYS behavior
+    conditions = undefined;
   } else if (conditionNodes.length === 1) {
     conditions = nodeToCondition(conditionNodes[0]);
   } else {

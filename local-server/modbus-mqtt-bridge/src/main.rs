@@ -1,4 +1,4 @@
-use std::{sync::mpsc, time::Duration};
+﻿use std::{sync::mpsc, time::Duration};
 
 use anyhow::{anyhow, Context, Result};
 use rmodbus::{client::ModbusRequest, ModbusProto};
@@ -7,8 +7,6 @@ use serde::{Deserialize, Serialize};
 use serialport::SerialPort;
 use tokio::sync::oneshot;
 use tracing::{error, info, warn};
-
-// ─── Config ──────────────────────────────────────────────────────────────────
 
 #[derive(Clone, Debug)]
 struct Config {
@@ -22,7 +20,6 @@ struct Config {
     topic_status:     String,
     topic_discovered: String,
     timeout_ms:       u64,
-    // Bus scan settings
     scan_on_startup:  bool,
     scan_baud_rates:  Vec<u32>,
     scan_slave_start: u8,
@@ -74,21 +71,7 @@ fn env_baud_rates(key: &str, default: &[u32]) -> Vec<u32> {
         .unwrap_or_else(|| default.to_vec())
 }
 
-// ─── MQTT command protocol ────────────────────────────────────────────────────
 //
-// Publish JSON to modbus/command:
-//
-//   {"action":"read_holding_registers","slave_id":1,"address":0,"count":10}
-//   {"action":"read_input_registers",  "slave_id":1,"address":0,"count":4}
-//   {"action":"read_coils",            "slave_id":1,"address":0,"count":8}
-//   {"action":"read_discrete_inputs",  "slave_id":1,"address":0,"count":8}
-//   {"action":"write_single_register", "slave_id":1,"address":0,"value":42}
-//   {"action":"write_multiple_registers","slave_id":1,"address":0,"values":[1,2,3]}
-//   {"action":"write_single_coil",     "slave_id":1,"address":0,"value":true}
-//   {"action":"scan_bus"}              — scan all baud rates and slave IDs from config
-//   {"action":"scan_bus","baud_rates":[9600],"slave_id_start":1,"slave_id_end":5}
-//
-// Optional field "request_id" is echoed in the response for correlation.
 
 #[derive(Debug, Deserialize, Clone)]
 #[serde(tag = "action", rename_all = "snake_case")]
@@ -152,8 +135,6 @@ struct Rsp {
     #[serde(skip_serializing_if = "Option::is_none")] request_id: Option<String>,
 }
 
-// ─── Modbus serial thread ─────────────────────────────────────────────────────
-
 type CmdPacket = (Cmd, oneshot::Sender<Result<serde_json::Value>>);
 
 fn modbus_thread(config: Config, rx: mpsc::Receiver<CmdPacket>) {
@@ -203,9 +184,6 @@ fn modbus_thread(config: Config, rx: mpsc::Receiver<CmdPacket>) {
     }
 }
 
-/// Process any commands queued during a scan so the bridge stays responsive.
-/// Restores the port to normal baud/timeout before each command, then returns
-/// without restoring scan settings (caller must do that after each call).
 fn service_pending_cmds(
     port: &mut dyn SerialPort,
     cmd_rx: &mpsc::Receiver<CmdPacket>,
@@ -228,11 +206,6 @@ fn service_pending_cmds(
     }
 }
 
-// ─── Bus scan ─────────────────────────────────────────────────────────────────
-
-/// Probe each baud_rate × slave_id combination.
-/// Any response (including Modbus exception) means the device is present.
-/// Restores original baud rate and timeout when done.
 fn scan_bus(
     port: &mut dyn SerialPort,
     cmd_rx: &mpsc::Receiver<CmdPacket>,
@@ -307,7 +280,6 @@ fn scan_bus(
 
             if found {
                 let is_exception = found_via_fc01 && (header[1] & 0x80 != 0);
-                // Probe capabilities: which register types the device supports.
                 let caps = probe_capabilities(port, slave_id);
                 tracing::info!(
                     slave_id, baud, is_exception,
@@ -329,7 +301,6 @@ fn scan_bus(
         }
     }
 
-    // Restore normal operating parameters.
     port.set_baud_rate(restore_baud).ok();
     port.set_timeout(restore_timeout).ok();
 
@@ -340,8 +311,6 @@ fn scan_bus(
     }))
 }
 
-// ─── Capability detection ─────────────────────────────────────────────────────
-
 struct Capabilities {
     coils:              u16,
     discrete_inputs:    u16,
@@ -349,13 +318,7 @@ struct Capabilities {
     input_registers:    u16,
 }
 
-/// For a device already known to be alive, probe all four Modbus register types
-/// and return how many of each kind it supports (0 = not supported / exception).
 fn probe_capabilities(port: &mut dyn SerialPort, slave_id: u8) -> Capabilities {
-    // func 0x01 — coils (read/write digital output)
-    // func 0x02 — discrete inputs (read-only digital input)
-    // func 0x03 — holding registers (read/write 16-bit)
-    // func 0x04 — input registers (read-only 16-bit, sensors)
     Capabilities {
         coils:             probe_func(port, slave_id, 0x01, 8),
         discrete_inputs:   probe_func(port, slave_id, 0x02, 8),
@@ -364,8 +327,6 @@ fn probe_capabilities(port: &mut dyn SerialPort, slave_id: u8) -> Capabilities {
     }
 }
 
-/// Send one read request for `count` items of `func` code.
-/// Returns `count` on a valid (non-exception) response, 0 otherwise.
 fn probe_func(port: &mut dyn SerialPort, slave_id: u8, func: u8, count: u16) -> u16 {
     port.clear(serialport::ClearBuffer::All).ok();
 
@@ -395,8 +356,6 @@ fn probe_func(port: &mut dyn SerialPort, slave_id: u8, func: u8, count: u16) -> 
         0       // timeout, IO error, or exception response
     }
 }
-
-// ─── Per-command execution ────────────────────────────────────────────────────
 
 fn run_cmd(port: &mut dyn SerialPort, cmd: &Cmd) -> Result<serde_json::Value> {
     // Flush stale bytes from previous transaction.
@@ -507,18 +466,12 @@ fn run_cmd(port: &mut dyn SerialPort, cmd: &Cmd) -> Result<serde_json::Value> {
     }
 }
 
-/// Read one complete Modbus RTU response frame from the serial port.
-///
-/// RTU read response:  [slave][func][byte_count][data…][crc_lo][crc_hi]
-/// RTU write response: [slave][func][addr_hi][addr_lo][val_hi][val_lo][crc_lo][crc_hi]  (8 bytes)
-/// RTU exception:      [slave][func|0x80][exc_code][crc_lo][crc_hi]                     (5 bytes)
 fn read_rtu_response(port: &mut dyn SerialPort, expected_func: u8) -> Result<Vec<u8>> {
     let mut header = [0u8; 3];
     port.read_exact(&mut header).context("reading RTU header")?;
 
     let func = header[1];
 
-    // Exception: high bit of function code set
     if func & 0x80 != 0 {
         let mut tail = [0u8; 2];
         let mut crc_hi = [0u8; 1];
@@ -551,8 +504,6 @@ fn read_rtu_response(port: &mut dyn SerialPort, expected_func: u8) -> Result<Vec
     frame.extend_from_slice(&tail);
     Ok(frame)
 }
-
-// ─── Async MQTT loop ──────────────────────────────────────────────────────────
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -621,7 +572,6 @@ async fn main() -> Result<()> {
                     }
                 });
 
-                // Auto-scan on startup
                 if config.scan_on_startup {
                     let cmd_tx2       = cmd_tx.clone();
                     let c2            = client.clone();
@@ -723,8 +673,6 @@ async fn main() -> Result<()> {
                     let result = rx.await.unwrap_or_else(|_| Err(anyhow!("modbus thread dropped")));
                     let rsp = match result {
                         Ok(data) => {
-                            // Publish scan results to modbus/discovered so local-server
-                            // picks them up the same way as the startup scan.
                             if is_scan {
                                 if let Ok(p) = serde_json::to_vec(&data) {
                                     if let Err(e) = c.publish(&t_discovered, QoS::AtLeastOnce, true, p).await {

@@ -1,9 +1,7 @@
-use chrono::{Local, NaiveTime};
+﻿use chrono::{Local, NaiveTime};
 use local_server_core::entities::access::AccessPolicy;
 use serde_json::Value;
 
-/// Evaluate a slice of ABAC policies and return the winning effect string
-/// ("ALLOW" or "DENY"), or `None` if no policy applies.
 pub fn evaluate_policies(policies: &[AccessPolicy]) -> Option<(&str, i32)> {
     let mut best: Option<(&str, i32)> = None;
     for policy in policies {

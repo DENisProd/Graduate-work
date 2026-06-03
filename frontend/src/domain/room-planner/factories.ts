@@ -1,4 +1,4 @@
-// Factory pattern for creating entities
+
 
 import type { DeviceType, Point, DeviceAnchor } from './types';
 import { DeviceEntity } from './entities';

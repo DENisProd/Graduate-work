@@ -33,7 +33,6 @@ export default function DashboardPage() {
   const { t, ready } = useTranslation();
   const currentUserId = useCurrentUserId();
 
-  // Main data
   const [searchQuery, setSearchQuery] = useState('');
   const [houses, setHouses] = useState<HouseResponse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -174,7 +173,6 @@ export default function DashboardPage() {
 
 
 
-      {/* Houses */}
       <section className="mb-8">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-2xl font-semibold">{t('dashboard.myHouses')}</h2>
@@ -218,7 +216,6 @@ export default function DashboardPage() {
         )}
       </section>
 
-      {/* Recent Events */}
       <section>
         <Card className="border border-border bg-card shadow">
           <Card.Content>

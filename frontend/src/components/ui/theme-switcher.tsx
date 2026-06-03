@@ -12,7 +12,6 @@ import {
   DropdownMenuRadioItem,
 } from '@/components/animate-ui/components/radix/dropdown-menu';
 
-// SVG иконки
 const SunIcon = ({ className }: { className?: string }) => (
   <svg
     className={className}
@@ -132,9 +131,6 @@ export function ThemeSwitcher() {
   );
 }
 
-/**
- * Простой переключатель темы (только светлая/тёмная)
- */
 export function ThemeToggle() {
   const { isDark, toggleTheme, mounted } = useTheme();
   const { t } = useTranslation();

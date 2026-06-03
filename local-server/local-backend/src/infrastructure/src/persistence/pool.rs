@@ -1,4 +1,4 @@
-use std::path::Path;
+﻿use std::path::Path;
 use std::str::FromStr;
 
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous};
@@ -19,11 +19,8 @@ pub enum PoolError {
 
 #[derive(Debug, Clone)]
 pub struct SqlitePoolConfig {
-    /// Connection string in the form `sqlite:./local.db` or `sqlite::memory:`.
     pub url: String,
-    /// Maximum simultaneous connections. SQLite/WAL works well at low values.
     pub max_connections: u32,
-    /// `PRAGMA busy_timeout` in milliseconds.
     pub busy_timeout_ms: u32,
 }
 
@@ -37,12 +34,6 @@ impl Default for SqlitePoolConfig {
     }
 }
 
-/// Build a SQLite pool with the PRAGMAs required by the local-server design
-/// (WAL, NORMAL synchronous, foreign-keys ON, busy timeout) and run all
-/// embedded migrations.
-///
-/// Migrations are embedded at compile time from `local-server/migrations/` via
-/// the `MIGRATOR` constant — the binary is self-contained.
 pub async fn init_pool(cfg: &SqlitePoolConfig) -> Result<SqlitePool, PoolError> {
     let connect_opts = build_connect_opts(&cfg.url, cfg.busy_timeout_ms)?;
 
@@ -56,8 +47,6 @@ pub async fn init_pool(cfg: &SqlitePoolConfig) -> Result<SqlitePool, PoolError> 
     Ok(pool)
 }
 
-/// Embedded migrations. Path is resolved relative to this crate's manifest at
-/// compile time, so the binary keeps the SQL bundled.
 pub static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("../../migrations");
 
 fn build_connect_opts(url: &str, busy_timeout_ms: u32) -> Result<SqliteConnectOptions, PoolError> {
@@ -76,9 +65,6 @@ fn build_connect_opts(url: &str, busy_timeout_ms: u32) -> Result<SqliteConnectOp
     Ok(opts)
 }
 
-/// Best-effort extraction of the parent directory for a `sqlite:./path/to.db`
-/// URL so we can pre-create it. `:memory:` and other non-file forms return
-/// `None`.
 fn sqlite_file_parent(url: &str) -> Option<&Path> {
     let path = url.strip_prefix("sqlite://").or_else(|| url.strip_prefix("sqlite:"))?;
     if path.is_empty() || path.starts_with(':') {

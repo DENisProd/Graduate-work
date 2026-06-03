@@ -38,7 +38,6 @@ export class HouseRoomsService {
   async create(dto: HouseRoomRequestDto): Promise<RoomWithHouse> {
     await this.housesService.findById(dto.houseId);
 
-    // Find or create house root resource
     let parentResource = await this.prisma.resource.findFirst({
       where: { houseId: dto.houseId, type: ResourceType.HOUSE },
     });
@@ -53,7 +52,6 @@ export class HouseRoomsService {
       });
     }
 
-    // Create room resource with temporary path
     const room = await this.prisma.resource.create({
       data: {
         houseId: dto.houseId,
@@ -65,7 +63,6 @@ export class HouseRoomsService {
       },
     });
 
-    // Update path to include the generated id
     await this.prisma.resource.update({
       where: { id: room.id },
       data: { path: `${parentResource.path}/${room.id}` },

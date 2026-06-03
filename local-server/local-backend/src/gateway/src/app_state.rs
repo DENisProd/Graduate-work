@@ -1,4 +1,4 @@
-use std::sync::Arc;
+﻿use std::sync::Arc;
 
 use local_server_core::entities::scan_log::{new_scan_log, ScanLog};
 use local_server_application::{
@@ -26,7 +26,6 @@ use tokio::sync::Notify;
 
 use crate::mqtt_manager::RuntimeMqttManager;
 
-/// Owns all concrete adapters for the lifetime of the process.
 pub struct AppState {
     #[allow(dead_code)]
     pub pool: SqlitePool,
@@ -51,7 +50,6 @@ pub struct AppState {
     pub outbox_notify: Arc<Notify>,
     pub mqtt_manager: Arc<RuntimeMqttManager>,
     pub modbus_repo: Arc<dyn ModbusRepository>,
-    /// Trait object passed to the HTTP layer (avoids interface→infra dependency).
     pub modbus_bridge: Arc<dyn ModbusBridgePort>,
     pub scan_log: ScanLog,
 }
@@ -86,12 +84,14 @@ impl AppState {
             Arc::new(ReqwestCloudAuthClient::new()) as Arc<dyn CloudAuthClient>;
 
         let cloud_sync_client = Arc::new(ReqwestCloudSyncClient::with_settings(
-            cloud_sync_api_key,
+            cloud_sync_api_key.clone(),
             runtime_settings_repo.clone(),
         )) as Arc<dyn CloudSyncClient>;
 
-        let cloud_scenario_client =
-            Arc::new(ReqwestCloudScenarioClient::new()) as Arc<dyn CloudScenarioClient>;
+        let cloud_scenario_client = Arc::new(ReqwestCloudScenarioClient::with_settings(
+            cloud_sync_api_key,
+            runtime_settings_repo.clone(),
+        )) as Arc<dyn CloudScenarioClient>;
 
         let cloud_phys_dev_client =
             Arc::new(ReqwestCloudPhysicalDeviceClient::new()) as Arc<dyn CloudPhysicalDeviceClient>;
@@ -161,6 +161,7 @@ impl AppState {
         &self,
         version: &'static str,
         default_access_service_url: String,
+        default_cloud_sync_url: String,
         public_base_url: Option<String>,
         scenario_service_url: String,
         serial_number: Option<String>,
@@ -174,6 +175,7 @@ impl AppState {
             cloud_sync: self.cloud_sync_client.clone(),
             access_sync: self.access_sync_repo.clone(),
             default_access_service_url,
+            default_cloud_sync_url,
             public_base_url,
             cloud_scenario: self.cloud_scenario_client.clone(),
             cloud_widget_dashboard: self.cloud_widget_dashboard_client.clone(),

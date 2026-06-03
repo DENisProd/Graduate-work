@@ -20,10 +20,6 @@ function parseJsonObject(buf: Buffer): Record<string, unknown> | null {
   return { value: v as string | number | boolean };
 }
 
-/**
- * Обрабатывает все входящие сообщения zigbee2mqtt (топики под префиксом).
- * Транспорт (MQTT) остаётся в {@link ZigbeeMqttService}.
- */
 @Injectable()
 export class ZigbeeIngestService {
   private readonly logger = new Logger(ZigbeeIngestService.name);

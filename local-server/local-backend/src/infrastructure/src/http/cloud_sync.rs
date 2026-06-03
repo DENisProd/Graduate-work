@@ -1,4 +1,4 @@
-use std::sync::Arc;
+﻿use std::sync::Arc;
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -12,9 +12,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone)]
 pub struct ReqwestCloudSyncClient {
     http: reqwest::Client,
-    /// Fallback static key (used when runtime settings have no auth_code).
     api_key: String,
-    /// Provides the dynamic auth_code obtained via device authorization flow.
     settings: Option<Arc<dyn RuntimeSettingsRepository>>,
 }
 
@@ -41,8 +39,6 @@ impl ReqwestCloudSyncClient {
         }
     }
 
-    /// Returns the current bearer token: auth_code from runtime settings if
-    /// available and non-empty, otherwise falls back to the static api_key.
     async fn bearer_token(&self) -> String {
         if let Some(repo) = &self.settings {
             if let Ok(s) = repo.load().await {
@@ -58,8 +54,6 @@ impl ReqwestCloudSyncClient {
         format!("{}/api/access/v1{}", base.trim_end_matches('/'), path)
     }
 }
-
-// ── access-service response shapes ────────────────────────────────────────────
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -82,8 +76,6 @@ struct HouseRoomDto {
     created_at: String,
 }
 
-// ── access-service role response shape ────────────────────────────────────────
-
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct HouseRoleDto {
@@ -93,8 +85,6 @@ struct HouseRoleDto {
     priority: i32,
     is_system: bool,
 }
-
-// ── access-service member response shape ─────────────────────────────────────
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -113,8 +103,6 @@ struct HouseMemberDto {
     #[serde(default)]
     roles: Vec<MemberRoleBriefDto>,
 }
-
-// ── resource tree response shape ──────────────────────────────────────────────
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -156,8 +144,6 @@ impl ResourceTreeNodeDto {
     }
 }
 
-// ── access right response shape ───────────────────────────────────────────────
-
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct AccessRightDto {
@@ -168,8 +154,6 @@ struct AccessRightDto {
     access_right_type: String,
     expires_at: Option<String>,
 }
-
-// ── trait impl ────────────────────────────────────────────────────────────────
 
 #[async_trait]
 impl CloudSyncClient for ReqwestCloudSyncClient {

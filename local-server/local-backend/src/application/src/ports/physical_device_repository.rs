@@ -1,4 +1,4 @@
-use async_trait::async_trait;
+﻿use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use local_server_core::entities::physical_device::PhysicalDevice;
 use uuid::Uuid;
@@ -34,7 +34,6 @@ pub struct UpdatePhysicalDeviceCmd {
     pub friendly_name: Option<String>,
 }
 
-/// Command used when syncing cloud metadata onto a local physical device record.
 pub struct UpsertPhysDevFromCloudCmd {
     pub name: Option<String>,
     pub description: Option<String>,
@@ -49,7 +48,6 @@ pub struct UpsertPhysDevFromCloudCmd {
     pub cloud_updated_at: DateTime<Utc>,
 }
 
-/// Command used when syncing devices from the Zigbee2MQTT bridge/devices topic.
 pub struct UpsertFromBridgeCmd {
     pub ieee_address: String,
     pub friendly_name: Option<String>,
@@ -82,15 +80,12 @@ pub trait PhysicalDeviceRepository: Send + Sync {
     ) -> Result<PhysicalDevice, DomainError>;
     async fn delete(&self, id: Uuid) -> Result<(), DomainError>;
     async fn delete_by_ieee(&self, ieee: &str) -> Result<(), DomainError>;
-    /// Upsert a device discovered from the Zigbee2MQTT bridge/devices topic.
     async fn upsert_by_ieee(
         &self,
         cmd: UpsertFromBridgeCmd,
     ) -> Result<PhysicalDevice, DomainError>;
     async fn update_last_seen(&self, ieee: &str) -> Result<(), DomainError>;
 
-    /// Upsert cloud metadata onto a local record. Matches first by cloud_id,
-    /// then by protocol_address. Creates a new record if neither matches.
     async fn upsert_from_cloud(
         &self,
         cloud_id: &str,
@@ -98,9 +93,7 @@ pub trait PhysicalDeviceRepository: Send + Sync {
         cmd: UpsertPhysDevFromCloudCmd,
     ) -> Result<PhysicalDevice, DomainError>;
 
-    /// Local devices with a protocol_address (IEEE) but no cloud mapping.
     async fn list_without_cloud_id(&self) -> Result<Vec<PhysicalDevice>, DomainError>;
 
-    /// Record the cloud ObjectId for a local device after pushing it.
     async fn set_phys_cloud_id(&self, id: Uuid, cloud_id: &str) -> Result<(), DomainError>;
 }

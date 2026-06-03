@@ -1,4 +1,3 @@
-/** Normalize API response to array (content/data/array). */
 export function toArray<T>(data: unknown): T[] {
   if (!data) return [];
   if (Array.isArray(data)) return data as T[];
@@ -36,7 +35,6 @@ export function formatDate(value: string | undefined): string {
   }
 }
 
-/** Format Date for input datetime-local: YYYY-MM-DDTHH:mm */
 export function toDateTimeLocal(value: string | null | undefined): string {
   if (!value) return '';
   const d = new Date(value);
@@ -49,7 +47,6 @@ export function toDateTimeLocal(value: string | null | undefined): string {
   return `${y}-${m}-${day}T${h}:${min}`;
 }
 
-/** Display name from translations by locale, fallback to name/code */
 export function getDisplayName(
   translations: Record<string, { name?: string }> | undefined,
   name: string | undefined,

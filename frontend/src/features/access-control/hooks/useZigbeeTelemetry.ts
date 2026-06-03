@@ -20,9 +20,6 @@ function useZigbeeSocketLive(): boolean {
   );
 }
 
-/**
- * Живая телеметрия Zigbee (Socket.IO /zigbee). Несколько вызовов — общий сокет, ref-count.
- */
 export function useZigbeeTelemetry(options: {
   enabled: boolean;
   devices: ZigbeeDeviceListItem[];
@@ -77,7 +74,6 @@ export function useZigbeeTelemetry(options: {
   return {
     getLiveState,
     isSocketConnected,
-    /** Есть что слать на zigbee:subscribe (IEEE или ObjectId) */
     canSubscribe,
   };
 }

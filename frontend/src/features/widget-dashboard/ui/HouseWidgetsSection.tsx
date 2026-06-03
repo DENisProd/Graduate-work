@@ -126,7 +126,6 @@ export function HouseWidgetsSection({
           isDefault: true,
         });
 
-        // Seed a first-time dashboard with a few useful widgets.
         if ((created.widgets?.length ?? 0) === 0) {
           const seed = buildDefaultWidgets(t);
           created = await widgetDashboardsApi.update(created.id, {

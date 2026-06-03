@@ -21,11 +21,9 @@ export function WallLayer({ walls, mode }: WallLayerProps) {
   const moveWallPoint = useRoomPlannerStore((state) => state.moveWallPoint);
   const addWallPoint = useRoomPlannerStore((state) => state.addWallPoint);
   const showGrid = useRoomPlannerStore((state) => state.showGrid);
-  
-  // State for dragging preview
+
   const [draggingPoint, setDraggingPoint] = useState<{ index: number; pos: Point } | null>(null);
 
-  // Always show points if we have walls or pending start
   const pendingWallStart = useRoomPlannerStore((state) => state.pendingWallStart);
   if (walls.length === 0 && !pendingWallStart) return null;
 
@@ -42,11 +40,9 @@ export function WallLayer({ walls, mode }: WallLayerProps) {
       const currentPendingWallStart = useRoomPlannerStore.getState().pendingWallStart;
       console.log('[WallLayer.handlePointClick] Clicked on existing point:', point, 'pointIndex:', pointIndex, 'pendingWallStart:', currentPendingWallStart);
       if (currentPendingWallStart) {
-        // We have a pending start, so create wall from pending start to this point
         console.log('[WallLayer.handlePointClick] Has pendingWallStart, creating wall to this point');
         addWallPoint(point);
       } else {
-        // No pending start - set this existing point as the start point for a new wall
         console.log('[WallLayer.handlePointClick] No pendingWallStart, setting this point as start point');
         useRoomPlannerStore.getState().setPendingWallStart(point);
       }
@@ -65,29 +61,24 @@ export function WallLayer({ walls, mode }: WallLayerProps) {
   const handlePointDragMove = (pointIndex: number, e: KonvaEventObject<DragEvent>) => {
     e.cancelBubble = true;
     e.evt.stopPropagation();
-    
+
     const rawPos = { x: e.target.x(), y: e.target.y() };
-    
-    // Find connected point to align to
+
     let alignTo: Point | undefined;
-    
+
     if (pointIndex === walls.length) {
-       // Last point: connect to start of last wall
        alignTo = walls[walls.length - 1].a;
     } else if (pointIndex > 0) {
-       // Middle point: connect to start of previous wall
        alignTo = walls[pointIndex - 1].a;
     } else {
-       // First point: connect to end of first wall
        alignTo = walls[0].b;
     }
 
     const snappedPos = snapPoint(rawPos, showGrid ? GRID_SIZE : 1, alignTo);
-    
-    // Update the circle position visually
+
     e.target.x(snappedPos.x);
     e.target.y(snappedPos.y);
-    
+
     setDraggingPoint({ index: pointIndex, pos: snappedPos });
   };
 
@@ -107,7 +98,6 @@ export function WallLayer({ walls, mode }: WallLayerProps) {
     const { index, pos } = draggingPoint;
     const lines = [];
 
-    // If pointIndex < walls.length, it is the start of walls[pointIndex]
     if (index < walls.length) {
        const wall = walls[index];
        lines.push(
@@ -122,7 +112,6 @@ export function WallLayer({ walls, mode }: WallLayerProps) {
        );
     }
 
-    // If pointIndex > 0, it is the end of walls[pointIndex - 1]
     if (index > 0) {
        const prevWall = walls[index - 1];
        lines.push(
@@ -136,7 +125,7 @@ export function WallLayer({ walls, mode }: WallLayerProps) {
          />
        );
     }
-    
+
     return <Group listening={false}>{lines}</Group>;
   };
 
@@ -156,7 +145,6 @@ export function WallLayer({ walls, mode }: WallLayerProps) {
             dash={isSelected ? [5, 5] : undefined}
             listening={mode === 'select' || mode === 'doors' || mode === 'windows'}
             onClick={(e) => {
-              // In select mode, select wall on click
               if (mode === 'select') {
                 e.cancelBubble = true;
                 e.evt.stopPropagation();
@@ -164,12 +152,10 @@ export function WallLayer({ walls, mode }: WallLayerProps) {
                   selectWall(wall.id);
                 }
               }
-              // In doors/windows mode, let the click pass through to stage handler
             }}
           />
         );
       })}
-      {/* Show pending start point if exists */}
       {mode === 'walls' && pendingWallStart && (
         <Group key="pending-start-point">
           <Circle
@@ -183,23 +169,19 @@ export function WallLayer({ walls, mode }: WallLayerProps) {
           />
         </Group>
       )}
-      
-      {/* Render all wall points */}
+
       {(mode === 'walls' || mode === 'select') &&
         walls.map((wall, index) => {
           const isFirstPoint = index === 0;
           const isLastPoint = index === walls.length - 1;
-          const pointIndex = index; // Index for point a of this wall
+          const pointIndex = index;
           const nextWall = !isLastPoint ? walls[index + 1] : null;
-          // Check if wall.b is different from next wall's a (for disconnected walls)
-          const shouldShowPointB = isLastPoint || 
+          const shouldShowPointB = isLastPoint ||
             (nextWall && (Math.abs(wall.b.x - nextWall.a.x) > 0.1 || Math.abs(wall.b.y - nextWall.a.y) > 0.1));
-          
+
           return (
             <Group key={`point-group-${index}`}>
-              {/* Point A - start of wall */}
               <Group key={`point-group-${index}-a`}>
-                {/* Visible small circle */}
                 <Circle
                   key={`point-${index}-a`}
                   x={wall.a.x}
@@ -214,20 +196,18 @@ export function WallLayer({ walls, mode }: WallLayerProps) {
                   }
                   stroke={isFirstPoint ? domovoyCanvas.handleHover : domovoyCanvas.primary}
                   strokeWidth={2}
-                  listening={false} // Let the invisible hit area handle events
+                  listening={false}
                 />
-                {/* Invisible hit area - larger radius */}
                 <Circle
                   x={wall.a.x}
                   y={wall.a.y}
-                  radius={15} // Larger hit area
+                  radius={15}
                   fill="transparent"
                   draggable={mode === 'select'}
                   onClick={(e) => {
                     e.cancelBubble = true;
                     e.evt.stopPropagation();
                     if (mode === 'walls' && isFirstPoint && pendingWallStart && walls.length >= 2) {
-                      // Close the room
                       useRoomPlannerStore.getState().closeRoom();
                       useRoomPlannerStore.getState().setPendingWallStart(null);
                     } else {
@@ -250,7 +230,6 @@ export function WallLayer({ walls, mode }: WallLayerProps) {
                     handlePointDragEnd(pointIndex, e);
                   }}
                   onMouseDown={(e) => {
-                    // Only stop propagation if not in walls mode to allow clicks to work
                     if (mode !== 'walls') {
                       e.cancelBubble = true;
                       e.evt.stopPropagation();
@@ -270,11 +249,9 @@ export function WallLayer({ walls, mode }: WallLayerProps) {
                   }}
                 />
               </Group>
-              
-              {/* Point B - end of wall (only if not connected to next wall or is last wall) */}
+
               {shouldShowPointB && (
                 <Group key={`point-group-${index}-b`}>
-                  {/* Visible small circle */}
                   <Circle
                     key={`point-${index}-b`}
                     x={wall.b.x}
@@ -289,7 +266,6 @@ export function WallLayer({ walls, mode }: WallLayerProps) {
                     strokeWidth={2}
                     listening={false}
                   />
-                  {/* Invisible hit area */}
                   <Circle
                     x={wall.b.x}
                     y={wall.b.y}
@@ -321,7 +297,6 @@ export function WallLayer({ walls, mode }: WallLayerProps) {
                       handlePointDragEnd(pointIndex, e);
                     }}
                     onMouseDown={(e) => {
-                      // Only stop propagation if not in walls mode to allow clicks to work
                       if (mode !== 'walls') {
                         e.cancelBubble = true;
                         e.evt.stopPropagation();
@@ -345,7 +320,7 @@ export function WallLayer({ walls, mode }: WallLayerProps) {
             </Group>
           );
         })}
-      
+
     </>
   );
 }

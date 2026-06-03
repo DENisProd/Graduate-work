@@ -1,4 +1,4 @@
-use async_trait::async_trait;
+﻿use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 use local_server_application::ports::{
@@ -31,8 +31,6 @@ impl Default for ReqwestCloudPhysicalDeviceClient {
         Self::new()
     }
 }
-
-// ── DTOs ──────────────────────────────────────────────────────────────────────
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -105,8 +103,6 @@ struct CreatePhysicalDeviceRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     firmware_version: Option<String>,
 }
-
-// ── trait impl ────────────────────────────────────────────────────────────────
 
 #[async_trait]
 impl CloudPhysicalDeviceClient for ReqwestCloudPhysicalDeviceClient {

@@ -1,4 +1,4 @@
-use async_trait::async_trait;
+﻿use async_trait::async_trait;
 use chrono::Utc;
 use local_server_application::ports::{
     AccessSyncRepository, RemoteAccessRight, RemoteHouse, RemoteHouseMember, RemoteHouseRole,

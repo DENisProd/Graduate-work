@@ -1,5 +1,4 @@
-//! Outbound adapters. Each submodule implements one or more `application` ports.
-
+﻿
 pub mod gpio;
 pub mod http;
 pub mod mqtt;

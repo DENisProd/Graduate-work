@@ -1,4 +1,4 @@
-// Command pattern for undo/redo
+
 
 import type { Point, DeviceType, DeviceAnchor } from './types';
 import { RoomEntity } from './entities';
@@ -14,21 +14,18 @@ export class AddWallPointCommand implements Command {
   execute(room: RoomEntity): RoomEntity {
     const walls = room.walls;
     if (walls.length === 0) {
-      // First point - just store it
       return room;
     }
-    // Add new wall segment
     const lastPoint = walls[walls.length - 1].b;
     const newWall = {
       a: lastPoint,
       b: this.point,
-      thickness: 100, // Default thickness
+      thickness: 100,
     };
     return room.addWall(newWall);
   }
 
   undo(room: RoomEntity): RoomEntity {
-    // Remove last wall
     if (room.walls.length === 0) return room;
     return new RoomEntity(
       room.walls.slice(0, -1),

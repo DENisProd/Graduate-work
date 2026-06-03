@@ -3,7 +3,6 @@ import type { ScenarioCondition } from '../scenario/schemas/scenario-definition.
 import { ZigbeeService } from '../zigbee/zigbee.service';
 import type { TriggerContext } from './scenario-engine.types';
 
-/** Traverse dot-notation path, e.g. "state.on" → obj.state.on */
 function getAtPath(obj: Record<string, unknown>, path: string): unknown {
   return path.split('.').reduce<unknown>((acc, key) => {
     if (acc !== null && acc !== undefined && typeof acc === 'object') {
@@ -58,7 +57,6 @@ function compareOp(actual: unknown, op: string, expected: unknown): boolean {
   }
 }
 
-/** Returns "HH:mm" for the current moment in the given IANA timezone. */
 function currentTimeInTz(tz: string): string {
   try {
     const now = new Date();

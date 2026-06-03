@@ -25,7 +25,6 @@ export type ZigbeeStateRealtimePayload = {
 export class ZigbeeRealtimeService {
   private readonly stateSubject = new Subject<ZigbeeStateRealtimePayload>();
 
-  /** Поток обработанных состояний после сохранения в БД (для Socket.IO). */
   readonly stateUpdates$ = this.stateSubject.asObservable();
 
   publishStateUpdate(

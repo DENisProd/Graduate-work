@@ -365,7 +365,6 @@ export const useAccessControlStore = create<AccessControlState & AccessControlAc
   },
 
   checkAccess: async () => {
-    // checkAccess endpoint removed in new RBAC API
     set({ status: 'error' });
   },
 
@@ -374,7 +373,6 @@ export const useAccessControlStore = create<AccessControlState & AccessControlAc
   reset: () => set(initialState),
 }));
 
-/** Selector: effective owner ID (from URL or house) */
 export function selectEffectiveOwnerId(state: AccessControlState): string | undefined {
   return state.ownerIdFromUrl ?? state.house?.ownerId;
 }

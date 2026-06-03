@@ -1,4 +1,4 @@
-use async_trait::async_trait;
+﻿use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sqlx::{Row, SqlitePool};
 use uuid::Uuid;
@@ -49,7 +49,6 @@ impl ZigbeeRepository for SqliteZigbeeRepo {
         .await
         .map_err(db_err)?;
 
-        // Write a log entry alongside the state
         let log_id = Uuid::new_v4().to_string();
         let metrics_json = serde_json::json!({
             "state":       state.state,

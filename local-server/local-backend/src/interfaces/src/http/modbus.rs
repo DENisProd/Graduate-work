@@ -1,4 +1,4 @@
-use std::sync::Arc;
+﻿use std::sync::Arc;
 
 use axum::{
     extract::{Path, State},
@@ -19,8 +19,6 @@ use uuid::Uuid;
 
 use super::error::AppError;
 
-// ─── State ───────────────────────────────────────────────────────────────────
-
 #[derive(Clone)]
 pub struct ModbusHttpState {
     pub repo: Arc<dyn ModbusRepository>,
@@ -28,8 +26,6 @@ pub struct ModbusHttpState {
     pub mqtt: Arc<dyn MqttClient>,
     pub scan_log: ScanLog,
 }
-
-// ─── Response DTOs ────────────────────────────────────────────────────────────
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -113,8 +109,6 @@ impl From<ModbusRegisterState> for ModbusStateResponse {
     }
 }
 
-// ─── Request DTOs ─────────────────────────────────────────────────────────────
-
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateDeviceBody {
@@ -157,8 +151,6 @@ pub struct WriteRegisterBody {
     #[serde(default)]
     pub coil: Option<bool>,
 }
-
-// ─── Handlers ─────────────────────────────────────────────────────────────────
 
 async fn list_devices(
     State(s): State<ModbusHttpState>,
@@ -206,8 +198,6 @@ async fn delete_device(
     Ok(StatusCode::NO_CONTENT)
 }
 
-// ─── Registers ────────────────────────────────────────────────────────────────
-
 async fn list_registers(
     State(s): State<ModbusHttpState>,
     Path(device_id): Path<Uuid>,
@@ -254,8 +244,6 @@ async fn delete_register(
     Ok(StatusCode::NO_CONTENT)
 }
 
-// ─── Read / Write via MQTT bridge ─────────────────────────────────────────────
-
 async fn read_register(
     State(s): State<ModbusHttpState>,
     Path((_device_id, reg_id)): Path<(Uuid, Uuid)>,
@@ -294,7 +282,6 @@ async fn read_register(
 
     let data = s.gateway.execute(s.mqtt.clone(), cmd).await?;
 
-    // Parse the raw values returned by the bridge.
     let raw: Vec<serde_json::Value> = data
         .get("values")
         .and_then(|v| v.as_array())
@@ -410,8 +397,6 @@ async fn get_device_state(
     Ok(Json(states.into_iter().map(Into::into).collect()))
 }
 
-// ─── Scan log ─────────────────────────────────────────────────────────────────
-
 async fn get_scan_log(
     State(s): State<ModbusHttpState>,
 ) -> Json<Vec<ScanLogEntry>> {
@@ -428,8 +413,6 @@ async fn trigger_scan(
     Ok(StatusCode::ACCEPTED)
 }
 
-// ─── Router ───────────────────────────────────────────────────────────────────
-
 pub fn router(
     repo: Arc<dyn ModbusRepository>,
     gateway: Arc<dyn ModbusBridgePort>,
@@ -439,23 +422,18 @@ pub fn router(
     let state = ModbusHttpState { repo, gateway, mqtt, scan_log };
 
     Router::new()
-        // devices
         .route("/modbus/devices",     get(list_devices).post(create_device))
         .route("/modbus/devices/:id", get(get_device).delete(delete_device))
-        // registers
         .route("/modbus/devices/:id/registers",
             get(list_registers).post(create_register))
         .route("/modbus/devices/:id/registers/:reg_id",
             delete(delete_register))
-        // read / write via MQTT bridge
         .route("/modbus/devices/:id/registers/:reg_id/read",
             post(read_register))
         .route("/modbus/devices/:id/registers/:reg_id/write",
             post(write_register))
-        // latest cached state for all registers of a device
         .route("/modbus/devices/:id/state",
             get(get_device_state))
-        // scan log + trigger
         .route("/modbus/scan-log", get(get_scan_log))
         .route("/modbus/scan", post(trigger_scan))
         .with_state(state)

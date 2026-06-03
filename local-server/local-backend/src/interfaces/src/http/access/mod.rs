@@ -1,4 +1,4 @@
-pub mod access_rights;
+﻿pub mod access_rights;
 pub mod check;
 pub mod houses;
 pub mod invitations;

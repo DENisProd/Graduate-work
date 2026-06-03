@@ -1,4 +1,4 @@
-use std::sync::Arc;
+﻿use std::sync::Arc;
 use std::time::Duration;
 
 use async_trait::async_trait;
@@ -23,8 +23,6 @@ pub struct RumqttcClient {
 }
 
 impl RumqttcClient {
-    /// Connect to the broker and start the event loop.
-    /// Returns an Arc to the client and an initial message receiver.
     pub async fn connect(
         mqtt_url: &str,
         topic_prefix: &str,
@@ -52,7 +50,6 @@ impl RumqttcClient {
             shutdown_tx,
         });
 
-        // Subscribe to all topics under the prefix and to modbus responses.
         let subscribe_topic = format!("{}/#", topic_prefix);
         client
             .inner
@@ -70,7 +67,6 @@ impl RumqttcClient {
             .await
             .map_err(|e| anyhow::anyhow!("MQTT subscribe modbus/discovered: {e}"))?;
 
-        // Spawn the event loop driver in the background
         let tx = client.msg_tx.clone();
         let inner2 = client.inner.clone();
         tokio::spawn(run_eventloop(

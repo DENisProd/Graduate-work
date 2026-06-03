@@ -11,9 +11,6 @@ type NestedKeyOf<T> = T extends object
 
 type TranslationKey = NestedKeyOf<typeof dictionaries.en>;
 
-/**
- * Получает перевод по ключу
- */
 export function getTranslation(
   locale: Locale,
   key: TranslationKey,
@@ -49,9 +46,6 @@ export function getTranslation(
   return value;
 }
 
-/**
- * Создает функцию перевода для заданной локали
- */
 export function createTranslator(locale: Locale) {
   return (key: TranslationKey, params?: Record<string, string | number>) =>
     getTranslation(locale, key, params);

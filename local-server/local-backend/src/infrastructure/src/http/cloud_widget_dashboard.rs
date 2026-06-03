@@ -1,4 +1,4 @@
-use async_trait::async_trait;
+﻿use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -32,8 +32,6 @@ impl Default for ReqwestCloudWidgetDashboardClient {
         Self::new()
     }
 }
-
-// ── DTOs ──────────────────────────────────────────────────────────────────────
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -77,8 +75,6 @@ struct CreateWidgetDashboardRequest {
     layouts: Value,
     widgets: Vec<Value>,
 }
-
-// ── trait impl ────────────────────────────────────────────────────────────────
 
 #[async_trait]
 impl CloudWidgetDashboardClient for ReqwestCloudWidgetDashboardClient {

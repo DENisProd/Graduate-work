@@ -109,17 +109,10 @@ export class ZigbeeRealtimeGateway
     };
   }
 
-  /**
-   * Emits pairing events for all currently known Zigbee devices to a single client.
-   * Devices with full data (model/capabilities) are emitted as interview_done so the
-   * user can add them immediately. Devices with no data yet are emitted as joined.
-   * Called when a client subscribes to the pairing room.
-   */
   private async emitExistingDevicesToClient(client: Socket): Promise<void> {
     try {
       const { items } = await this.zigbee.listDevices({ page: 1, limit: 100 });
       for (const dev of items) {
-        // Coordinator is not a "pairable" device; don't show it in pairing UI.
         if (dev.type === 'Coordinator') continue;
         const fullyKnown =
           Boolean(dev.modelId) || (dev.capabilities?.length ?? 0) > 0;
@@ -217,10 +210,6 @@ export class ZigbeeRealtimeGateway
     return { ok: true as const, subscribed: ieees.length, snapshots };
   }
 
-  /**
-   * Команда управления устройством. Пример:
-   * `{ deviceIeeeAddr: '0xabc…', payload: { state: 'ON' } }`
-   */
   @SubscribeMessage('zigbee:command')
   async onCommand(_client: Socket, body: unknown) {
     const parsed = zigbeeSocketCommandSchema.safeParse(body);
@@ -251,13 +240,6 @@ export class ZigbeeRealtimeGateway
     return result;
   }
 
-  /**
-   * Подписаться на события сопряжения — войти в pairing-комнату —
-   * БЕЗ включения permit_join. Вызывается при открытии модалки,
-   * чтобы device_announce/joined/interview события приходили клиенту
-   * даже до нажатия кнопки "Начать".
-   * Сразу же отдаёт все уже известные устройства, чтобы модалка не была пустой.
-   */
   @SubscribeMessage('zigbee:pairing:watch')
   async onPairingWatch(client: Socket) {
     await client.join(PAIRING_ROOM);
@@ -265,18 +247,12 @@ export class ZigbeeRealtimeGateway
     return { ok: true as const };
   }
 
-  /** Отписаться от событий сопряжения (без отключения permit_join). */
   @SubscribeMessage('zigbee:pairing:unwatch')
   async onPairingUnwatch(client: Socket) {
     await client.leave(PAIRING_ROOM);
     return { ok: true as const };
   }
 
-  /**
-   * Включить режим сопряжения (permit_join) и подписаться на события.
-   * Клиент автоматически входит в комнату `pairing`.
-   * Сразу же отдаёт все уже известные устройства.
-   */
   @SubscribeMessage('zigbee:pairing:start')
   async onPairingStart(client: Socket, body: unknown) {
     const b = body !== null && typeof body === 'object' ? (body as Record<string, unknown>) : {};
@@ -287,14 +263,12 @@ export class ZigbeeRealtimeGateway
         : 254;
     if (!houseId) return { ok: false as const, error: 'houseId обязателен' };
     await client.join(PAIRING_ROOM);
-    // Do NOT emit existing devices on "start pairing":
-    // the UI should focus on devices that join during this session.
+    // Don't emit existing devices here — UI should focus on new devices joining this session
     const result = this.zigbee.permitJoin(houseId, true, time);
     if (!result.ok) return { ok: false as const, error: result.error };
     return { ok: true as const, time };
   }
 
-  /** Выключить permit_join. Клиент остаётся в pairing-комнате (продолжает получать события). */
   @SubscribeMessage('zigbee:pairing:stop')
   async onPairingStop(client: Socket, body: unknown) {
     const b = body !== null && typeof body === 'object' ? (body as Record<string, unknown>) : {};
@@ -305,10 +279,6 @@ export class ZigbeeRealtimeGateway
     return { ok: true as const };
   }
 
-  /**
-   * Отписка: тело как у subscribe — снимаем только перечисленные устройства.
-   * Пустое тело или `{}` — выйти из всех комнат zigbee для этого сокета.
-   */
   @SubscribeMessage('zigbee:unsubscribe')
   async onUnsubscribe(client: Socket, body: unknown) {
     const track = trackedIeees(client);

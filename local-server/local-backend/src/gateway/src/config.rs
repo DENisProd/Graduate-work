@@ -1,12 +1,5 @@
-use serde::Deserialize;
+﻿use serde::Deserialize;
 
-/// Runtime configuration loaded from layered TOML files plus environment
-/// overrides.
-///
-/// Layers (later overrides earlier):
-///   1. `config/default.toml` — committed defaults
-///   2. `config/local.toml`   — gitignored, per-machine overrides
-///   3. Environment variables  — final override
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     #[serde(default = "default_port")]
@@ -19,34 +12,22 @@ pub struct Config {
     pub busy_timeout_ms: u32,
     #[serde(default = "default_shutdown_secs")]
     pub graceful_shutdown_secs: u64,
-    /// MQTT broker URL, e.g. `mqtt://localhost:1883`.  Optional — if absent,
-    /// MQTT ingestion and WebSocket live state are disabled.
     #[serde(default)]
     pub mqtt_url: Option<String>,
-    /// Topic prefix used by Zigbee2MQTT (default: `zigbee2mqtt`).
     #[serde(default = "default_mqtt_prefix")]
     pub mqtt_topic_prefix: String,
-    /// Access service base URL used by device authorization flow.
     #[serde(default = "default_access_service_url")]
     pub access_service_url: String,
-    /// Optional public URL for local-server callback endpoint.
     #[serde(default)]
     pub local_server_public_url: Option<String>,
-    /// Cloud sync API base URL (for outbox push and delta pull).
     #[serde(default = "default_cloud_sync_url")]
     pub cloud_sync_api_url: String,
-    /// Bearer token for cloud sync API.
     #[serde(default)]
     pub cloud_sync_api_key: String,
-    /// Delta pull interval in seconds.
     #[serde(default = "default_sync_interval_secs")]
     pub sync_interval_secs: u64,
-    /// Scenario-service base URL used for two-way scenario sync.
     #[serde(default = "default_scenario_service_url")]
     pub scenario_service_url: String,
-    /// Stable hardware identifier for this device (e.g. MAC address or UUID).
-    /// Set via `LOCAL_SERVER_SERIAL` env var. Used by the backend to deduplicate
-    /// sessions across restarts, so only one entry appears in the UI.
     #[serde(default)]
     pub serial_number: Option<String>,
 }

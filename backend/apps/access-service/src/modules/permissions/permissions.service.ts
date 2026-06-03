@@ -82,7 +82,6 @@ export class PermissionsService {
       },
     });
 
-    // Простейший триггер кэша: прямое право для участника -> пишем в EffectivePermission.
     if (houseMemberId) {
       await this.prisma.effectivePermission.upsert({
         where: {
@@ -155,7 +154,6 @@ export class PermissionsService {
     });
   }
 
-  /** Права пользователя (по внешнему ID): прямые и через роли. Просроченные исключаются. */
   async findByUserId(externalUserId: string): Promise<AccessRightWithResource[]> {
     const user = await this.usersService.findOrCreateByExternalUserId(externalUserId);
     const members = await this.prisma.houseMember.findMany({
@@ -218,7 +216,6 @@ export class PermissionsService {
     }
   }
 
-  /** Структура доступа пользователя: дома, комнаты, устройства, функции (по правам). */
   async getAccessStructure(externalUserId: string): Promise<AccessStructureResponseDto> {
     const rights = await this.findByUserId(externalUserId);
     const allowedIds = new Set(rights.map((r) => r.resourceId));

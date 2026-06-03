@@ -1,4 +1,4 @@
-// Application use cases
+
 
 import type {
   Room,
@@ -22,7 +22,6 @@ export class AddWallPointUseCase {
   execute(room: RoomEntity, point: Point, fromPoint?: Point): RoomEntity {
     const walls = room.walls;
     
-    // If fromPoint is provided, start from that point (connect mode)
     if (fromPoint) {
       const newWall = {
         a: fromPoint,
@@ -34,7 +33,6 @@ export class AddWallPointUseCase {
     }
     
     if (walls.length === 0) {
-      // First point - create a wall with same start and end
       return room.addWall({
         a: point,
         b: point,
@@ -42,7 +40,6 @@ export class AddWallPointUseCase {
         id: `wall_${Date.now()}_${Math.random()}`,
       });
     }
-    // Add new wall segment
     const lastPoint = walls[walls.length - 1].b;
     const newWall = {
       a: lastPoint,
@@ -72,7 +69,6 @@ export class CloseRoomUseCase {
     const firstPoint = room.walls[0].a;
     const lastPoint = room.walls[room.walls.length - 1].b;
     
-    // Check if already closed
     if (
       Math.abs(firstPoint.x - lastPoint.x) < 1 &&
       Math.abs(firstPoint.y - lastPoint.y) < 1
@@ -99,7 +95,6 @@ export class AddDeviceUseCase {
     position: Point,
     anchor: DeviceAnchor = 'free'
   ): RoomEntity {
-    // Snap to wall if anchor is 'wall'
     const finalPosition =
       anchor === 'wall' ? this.snapStrategy.snap(position, room.walls) : position;
 
@@ -131,7 +126,6 @@ export class MoveDeviceUseCase {
     const device = room.devices.find((d) => d.id === deviceId);
     if (!device) return room;
 
-    // Snap to wall if anchor is 'wall'
     const finalPosition =
       device.anchor === 'wall'
         ? this.snapStrategy.snap(newPosition, room.walls)

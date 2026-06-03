@@ -152,6 +152,7 @@ async fn health_endpoint_reports_db_ok() {
         mqtt: Arc::new(NoopMqtt) as Arc<dyn MqttClient>,
         cloud_auth: Arc::new(NoopCloudAuth) as Arc<dyn CloudAuthClient>,
         default_access_service_url: "http://localhost:8085".to_string(),
+        default_cloud_sync_url: "http://localhost:8050".to_string(),
         public_base_url: None,
         serial_number: None,
     };

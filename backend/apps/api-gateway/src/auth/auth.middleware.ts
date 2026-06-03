@@ -33,14 +33,11 @@ export class AuthMiddleware implements NestMiddleware {
   }
 
   async use(req: Request, res: Response, next: NextFunction) {
-    // Preflight requests never carry auth
     if (req.method === 'OPTIONS') return next();
 
-    // Public paths bypass auth (prefix match or exact /health suffix)
     const path = getRequestPathname(req);
     if (PUBLIC_PREFIXES.some((p) => path.startsWith(p)) || path.endsWith('/health')) return next();
 
-    // No Keycloak configured — pass through (development mode)
     if (!this.jwksClient) return next();
 
     const token = this.extractBearerToken(req);
@@ -48,33 +45,32 @@ export class AuthMiddleware implements NestMiddleware {
       return res.status(401).json({ message: 'Authorization header required' });
     }
 
-    try {
-      const payload = await this.verifyToken(token);
+    if (this.looksLikeJwt(token)) {
+      try {
+        const payload = await this.verifyToken(token);
 
-      // Forward identity headers to upstream services
-      req.headers['x-user-id'] = payload.sub as string;
-      if (payload['preferred_username']) {
-        req.headers['x-user-display-name'] = encodeURIComponent(
-          payload['preferred_username'] as string,
-        );
-      }
-      next();
-    } catch (err) {
-      this.logger.warn(`JWT validation failed: ${(err as Error).message}`);
-
-      // Fallback: validate as device auth_code (UUID Bearer token from local server)
-      const deviceUser = await this.tryDeviceToken(token);
-      if (deviceUser) {
-        req.headers['x-user-id'] = deviceUser.externalUserId;
+        req.headers['x-user-id'] = payload.sub as string;
+        if (payload['preferred_username']) {
+          req.headers['x-user-display-name'] = encodeURIComponent(
+            payload['preferred_username'] as string,
+          );
+        }
         return next();
+      } catch (err) {
+        this.logger.warn(`JWT validation failed: ${(err as Error).message}`);
       }
-
-      return res.status(401).json({ message: 'Invalid or expired token' });
     }
+
+    const deviceUser = await this.tryDeviceToken(token);
+    if (deviceUser) {
+      req.headers['x-user-id'] = deviceUser.externalUserId;
+      return next();
+    }
+
+    return res.status(401).json({ message: 'Invalid or expired token' });
   }
 
   private async tryDeviceToken(token: string): Promise<{ externalUserId: string } | null> {
-    // Check in-process cache (60-second TTL) to avoid a DB round-trip on every request
     const cached = this.deviceTokenCache.get(token);
     if (cached) {
       if (Date.now() < cached.expiresAt) return { externalUserId: cached.externalUserId };
@@ -102,6 +98,10 @@ export class AuthMiddleware implements NestMiddleware {
     const auth = req.headers.authorization;
     if (!auth?.startsWith('Bearer ')) return null;
     return auth.slice(7);
+  }
+
+  private looksLikeJwt(token: string): boolean {
+    return token.split('.').length === 3;
   }
 
   private verifyToken(token: string): Promise<jwt.JwtPayload> {

@@ -1,4 +1,4 @@
-use async_trait::async_trait;
+﻿use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use local_server_core::entities::scenario::{
     ExecutionStatus, Scenario, ScenarioDefinitionJson, ScenarioExecution, ScenarioStatus,
@@ -30,7 +30,6 @@ pub struct UpsertFromCloudCmd {
     pub creator_id: String,
     pub definition: ScenarioDefinitionJson,
     pub status: ScenarioStatus,
-    /// Timestamp from cloud; used for last-write-wins conflict resolution.
     pub cloud_updated_at: DateTime<Utc>,
 }
 
@@ -48,19 +47,14 @@ pub trait ScenarioRepository: Send + Sync {
     async fn update(&self, id: &Uuid, cmd: UpdateScenarioCmd) -> Result<Scenario, DomainError>;
     async fn delete(&self, id: &Uuid) -> Result<(), DomainError>;
 
-    /// Upsert a scenario received from the cloud. Inserts if the cloud_id is
-    /// unknown, updates (last-write-wins) if it already exists locally.
     async fn upsert_from_cloud(
         &self,
         cloud_id: &str,
         cmd: UpsertFromCloudCmd,
     ) -> Result<Scenario, DomainError>;
 
-    /// Return scenarios that have no cloud mapping yet (created locally).
     async fn list_without_cloud_id(&self) -> Result<Vec<Scenario>, DomainError>;
 
-    /// Record the cloud ObjectId for a locally-created scenario after it has
-    /// been successfully pushed to the cloud.
     async fn set_cloud_id(&self, id: &Uuid, cloud_id: &str) -> Result<(), DomainError>;
 }
 

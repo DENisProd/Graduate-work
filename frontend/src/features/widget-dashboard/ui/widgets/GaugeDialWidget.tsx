@@ -47,7 +47,6 @@ export function GaugeDialWidget({ config, state }: Props) {
     return { progress: pct, color: c };
   }, [value, config.min, config.max, config.accent, config.warnAt, config.criticalAt]);
 
-  // Half-circle arc, 180°, radius 80, stroke 12
   const radius = 80;
   const circumference = Math.PI * radius;
   const strokeDasharray = circumference;

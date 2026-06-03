@@ -1,9 +1,5 @@
 'use client';
 
-/**
- * @deprecated Use useAccessControlStore from @/store/access-control-store instead.
- */
-
 import { useEffect, useMemo, useState } from 'react';
 import {
   houseRoomsApi,
@@ -198,7 +194,6 @@ export function useHouseDetails({ houseId, ownerIdFromUrl }: UseHouseDetailsPara
   };
 
   const checkAccess = async () => {
-    // checkAccess endpoint removed in new RBAC API
     setStatus(t('common.error'));
   };
 

@@ -1,5 +1,3 @@
-// Re-export shim — all implementations live in ./api/*
-
 export { ApiError, USE_MOCKS, API_BASE_URL, ACCESS_API_BASE_URL, PHYSICAL_DEVICES_API_BASE_URL } from './api/core';
 
 export {

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+﻿use std::sync::Arc;
 use std::time::Duration;
 
 use tokio::sync::Notify;
@@ -6,7 +6,6 @@ use tokio::sync::Notify;
 use crate::ports::{CloudSyncClient, SyncEntry};
 use local_server_core::DomainError;
 
-/// Rows from sync_outbox that need to be pushed.
 #[derive(Debug, Clone)]
 pub struct PendingEntry {
     pub id: String,
@@ -17,14 +16,12 @@ pub struct PendingEntry {
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
-/// Port for reading/marking outbox entries.
 #[async_trait::async_trait]
 pub trait SyncOutboxRepository: Send + Sync {
     async fn find_pending(&self, limit: i64) -> Result<Vec<PendingEntry>, DomainError>;
     async fn mark_sent(&self, ids: &[String]) -> Result<(), DomainError>;
 }
 
-/// Background loop: every 30 s (or on wake) push pending outbox → cloud ingest.
 pub async fn run_outbox_pusher(
     outbox: Arc<dyn SyncOutboxRepository>,
     cloud: Arc<dyn CloudSyncClient>,

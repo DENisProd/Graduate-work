@@ -1,4 +1,4 @@
-use std::sync::Arc;
+﻿use std::sync::Arc;
 
 use axum::{
     Json, Router,
@@ -35,8 +35,6 @@ pub fn router(repo: Arc<dyn WidgetDashboardRepository>) -> Router {
         )
         .with_state(state)
 }
-
-// ─── DTOs ─────────────────────────────────────────────────────────────────────
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -104,8 +102,6 @@ pub struct UpdateBody {
     pub layouts: Option<Value>,
     pub widgets: Option<Vec<Value>>,
 }
-
-// ─── Handlers ─────────────────────────────────────────────────────────────────
 
 async fn list_by_house(
     State(s): State<WidgetDashboardsState>,

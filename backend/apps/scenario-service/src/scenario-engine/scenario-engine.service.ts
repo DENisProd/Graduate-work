@@ -34,7 +34,6 @@ import {
   type TriggerContext,
 } from './scenario-engine.types';
 
-/** Returns true when all keys in `expected` match the values in `actual`. */
 function payloadMatches(
   expected: Record<string, unknown>,
   actual: Record<string, unknown>,
@@ -49,7 +48,6 @@ function payloadMatches(
 export class ScenarioEngineService implements OnModuleInit {
   private readonly logger = new Logger(ScenarioEngineService.name);
 
-  /** Maps cronJobId → scenarioId for cleanup on reload. */
   private readonly cronJobs = new Map<string, string>();
 
   constructor(
@@ -71,13 +69,11 @@ export class ScenarioEngineService implements OnModuleInit {
     await this.reloadScheduledTriggers();
   }
 
-  /** Re-registers all SCHEDULE-based cron jobs from the database. */
   async reloadScheduledTriggers(): Promise<void> {
     for (const jobId of this.cronJobs.keys()) {
       try {
         this.schedulerRegistry.deleteCronJob(jobId);
       } catch {
-        // ignore if already removed
       }
     }
     this.cronJobs.clear();
@@ -96,7 +92,6 @@ export class ScenarioEngineService implements OnModuleInit {
     );
   }
 
-  /** Manually fire a scenario (MANUAL trigger). Returns the execution ID. */
   async fireManual(
     scenarioId: string,
     initiatorId?: string,
@@ -131,7 +126,6 @@ export class ScenarioEngineService implements OnModuleInit {
     return this.startExecution(scenario, def, ctx);
   }
 
-  /** Fire a scenario via webhook token. Returns the execution ID. */
   async fireWebhook(
     token: string,
     webhookPayload?: Record<string, unknown>,
@@ -170,8 +164,6 @@ export class ScenarioEngineService implements OnModuleInit {
     };
     return this.startExecution(scenario, def, ctx);
   }
-
-  // ─── Private helpers ──────────────────────────────────────────────────────
 
   private registerScenarioCronJobs(scenario: ScenarioDocument): number {
     const scenarioId = this.toIdStr(scenario);
@@ -256,10 +248,6 @@ export class ScenarioEngineService implements OnModuleInit {
     }
   }
 
-  /**
-   * Internal fire: loads the scenario, checks guards, creates execution record,
-   * then runs asynchronously.
-   */
   private async fireTrigger(
     ctx: TriggerContext,
     scenarioId: string,
@@ -304,7 +292,6 @@ export class ScenarioEngineService implements OnModuleInit {
     }
   }
 
-  /** Creates execution record and runs the scenario asynchronously. */
   private async startExecution(
     scenario: ScenarioDocument,
     def: ScenarioDefinition,
@@ -324,7 +311,6 @@ export class ScenarioEngineService implements OnModuleInit {
     return { executionId: execution.id };
   }
 
-  /** Core execution loop: conditions → actions → record result. */
   private async doRunScenario(
     scenario: ScenarioDocument,
     def: ScenarioDefinition,
@@ -378,7 +364,6 @@ export class ScenarioEngineService implements OnModuleInit {
           endedAt: new Date(),
         });
       } catch {
-        // best-effort logging update
       }
     } finally {
       this.concurrencyGuard.release(scenarioId);

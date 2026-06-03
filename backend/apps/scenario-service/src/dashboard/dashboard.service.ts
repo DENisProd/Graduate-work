@@ -130,7 +130,6 @@ export class DashboardService {
       ],
     };
 
-    // If we somehow have zero device identifiers, return empty (no global logs).
     if ((logFilter.$or as unknown[]).length === 0) {
       return {
         totalDevices,

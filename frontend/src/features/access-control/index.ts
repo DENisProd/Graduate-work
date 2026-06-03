@@ -1,8 +1,3 @@
-/**
- * Access Control — FSD slice (Feature-Sliced Design).
- * Public API: only these exports should be used by app/pages.
- */
-
 export { AccessControlPageContent } from './ui/AccessControlPageContent';
 export { AccessControlHouses } from './ui/AccessControlHouses';
 export { MyHousesList } from './ui/MyHousesList';

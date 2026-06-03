@@ -329,8 +329,6 @@ export default function LandingPage() {
     <>
       <ThemeInitializer />
       <div ref={pageRef} className="min-h-screen bg-background text-foreground">
-        {/* <LandingHeader t={t} /> */}
-
         <AuroraBackground className="w-full">
           <section className="relative w-full overflow-hidden">
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/[0.04] via-transparent to-background" />

@@ -38,7 +38,6 @@ export const createZigbeeStateSchema = z.object({
   timestamp: z.coerce.date().optional(),
   payload: z.record(z.unknown()),
 
-  // normalized (optional)
   state: z.string().max(32).optional(),
   brightness: z.coerce.number().int().min(0).max(255).optional(),
   linkquality: z.coerce.number().int().min(0).max(255).optional(),
@@ -73,7 +72,6 @@ export type CreateZigbeeLinksBatchInput = z.infer<
 const listZigbeeDevicesQuerySchemaBase = z.object({
   q: z.string().max(255).optional(),
   type: zigbeeDeviceTypeSchema.optional(),
-  /** When set, include only devices assigned to this house */
   houseId: z.string().min(1).max(255).optional(),
 });
 export const listZigbeeDevicesQuerySchema =
@@ -148,7 +146,6 @@ export type ListZigbeeDeviceLogsQuery = z.infer<
   typeof listZigbeeDeviceLogsQuerySchema
 >;
 
-/** Подписка Socket.IO: список устройств с фронтенда */
 export const zigbeeSocketSubscribeSchema = z
   .object({
     deviceIeeeAddrs: z.array(z.string().min(3).max(64)).max(200).optional(),
@@ -164,7 +161,6 @@ export type ZigbeeSocketSubscribePayload = z.infer<
   typeof zigbeeSocketSubscribeSchema
 >;
 
-/** REST-команда устройству: { payload: { state: 'ON' } } */
 export const zigbeeCommandSchema = z.object({
   payload: z.record(z.unknown()).refine((v) => Object.keys(v).length > 0, {
     message: 'payload не может быть пустым',
@@ -172,7 +168,6 @@ export const zigbeeCommandSchema = z.object({
 });
 export type ZigbeeCommandInput = z.infer<typeof zigbeeCommandSchema>;
 
-/** Socket.IO-команда: устройство задаётся по ieeeAddr или physicalDeviceId */
 export const zigbeeSocketCommandSchema = z
   .object({
     deviceIeeeAddr: z.string().min(3).max(64).optional(),

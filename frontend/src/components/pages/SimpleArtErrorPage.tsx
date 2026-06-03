@@ -105,7 +105,6 @@ export function SimpleArtErrorPage({
                       </filter>
                     </defs>
 
-                    {/* Background grid */}
                     <rect x="0" y="0" width="980" height="520" rx="28" fill="url(#g2)" />
                     <g opacity="0.35">
                       {Array.from({ length: 18 }).map((_, i) => (
@@ -128,7 +127,6 @@ export function SimpleArtErrorPage({
                       ))}
                     </g>
 
-                    {/* House */}
                     <g filter="url(#shadow)">
                       <path
                         d="M210 268 L490 78 L770 268 V448 C770 470 752 488 730 488 H250 C228 488 210 470 210 448 Z"
@@ -145,7 +143,6 @@ export function SimpleArtErrorPage({
                         strokeLinejoin="round"
                       />
 
-                      {/* Windows */}
                       <g opacity="0.95">
                         {[
                           [300, 308],
@@ -178,7 +175,6 @@ export function SimpleArtErrorPage({
                         ))}
                       </g>
 
-                      {/* Door */}
                       <path
                         d="M450 488 V362 C450 346 463 333 479 333 H501 C517 333 530 346 530 362 V488"
                         fill="var(--art-panel-fill)"
@@ -188,7 +184,6 @@ export function SimpleArtErrorPage({
                       <circle cx="518" cy="414" r="5" fill="var(--muted-foreground)" />
                     </g>
 
-                    {/* Cloud + signal */}
                     <g filter="url(#softGlow)">
                       <path
                         d="M736 154 C720 128 688 114 657 126 C640 98 603 90 577 112 C548 102 518 120 512 148 C486 152 466 175 470 201 C474 230 502 250 532 244 H716 C748 244 774 219 774 188 C774 169 758 154 736 154 Z"
@@ -225,7 +220,6 @@ export function SimpleArtErrorPage({
                       </g>
                     </g>
 
-                    {/* Status text */}
                     <g>
                       <text
                         x="110"

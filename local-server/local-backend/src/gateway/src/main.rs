@@ -1,11 +1,13 @@
-use std::sync::Arc;
+﻿use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context;
 use local_server_application::ports::{MqttClient, RuntimeSettingsRepository};
+use local_server_application::resolve_scenario_service_url;
 use local_server_application::services::{
     run_delta_puller, run_outbox_pusher, run_physical_device_sync, run_scenario_sync,
-    run_widget_dashboard_sync, CloudSyncUrlProvider, ScenarioEngine, UserIdProvider,
+    run_widget_dashboard_sync, CloudSyncUrlProvider, ScenarioEngine, ScenarioServiceUrlProvider,
+    UserIdProvider,
 };
 use local_server_infrastructure::persistence::{init_pool, SqlitePoolConfig};
 use local_server_interfaces::{http, websocket};
@@ -50,6 +52,32 @@ impl CloudSyncUrlProvider for RuntimeSettingsCloudSyncUrlProvider {
     }
 }
 
+struct RuntimeSettingsScenarioUrlProvider {
+    settings: Arc<dyn RuntimeSettingsRepository>,
+    cloud_sync_fallback: String,
+    scenario_fallback: String,
+}
+
+#[async_trait::async_trait]
+impl ScenarioServiceUrlProvider for RuntimeSettingsScenarioUrlProvider {
+    async fn get(&self) -> String {
+        let runtime_access = self
+            .settings
+            .load()
+            .await
+            .ok()
+            .and_then(|s| s.access_service_url)
+            .filter(|s| !s.trim().is_empty());
+        let url = resolve_scenario_service_url(
+            runtime_access.as_deref(),
+            &self.cloud_sync_fallback,
+            &self.scenario_fallback,
+        );
+        tracing::debug!(scenario_base = %url, "scenario_sync: resolved cloud URL");
+        url
+    }
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     init_tracing();
@@ -64,6 +92,8 @@ async fn main() -> anyhow::Result<()> {
         database_url = %cfg.database_url,
         mqtt_url = ?cfg.mqtt_url,
         access_service_url = %cfg.access_service_url,
+        cloud_sync_api_url = %cfg.cloud_sync_api_url,
+        scenario_service_url = %cfg.scenario_service_url,
         local_server_public_url = ?cfg.local_server_public_url,
         version = VERSION,
         "starting local-server",
@@ -97,7 +127,6 @@ async fn main() -> anyhow::Result<()> {
 
     let mqtt_client: Arc<dyn MqttClient> = state.mqtt_manager.clone();
 
-    // Scenario engine
     let scenario_engine = Arc::new(
         ScenarioEngine::new(
             state.scenario_repo.clone(),
@@ -117,7 +146,6 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("loading scenarios")?;
 
-    // Spawn outbox pusher background task
     {
         let outbox = state.sync_outbox_repo.clone() as Arc<dyn local_server_application::services::SyncOutboxRepository>;
         let cloud = state.cloud_sync_client.clone();
@@ -129,7 +157,6 @@ async fn main() -> anyhow::Result<()> {
         });
     }
 
-    // Spawn delta puller background task
     {
         let access_sync = state.access_sync_repo.clone();
         let cloud = state.cloud_sync_client.clone();
@@ -146,18 +173,20 @@ async fn main() -> anyhow::Result<()> {
         });
     }
 
-    // Spawn scenario sync background task (pull from cloud, push local-only)
     {
         let repo = state.scenario_repo.clone();
         let cloud = state.cloud_scenario_client.clone();
-        let url = cfg.scenario_service_url.clone();
+        let url_provider = Arc::new(RuntimeSettingsScenarioUrlProvider {
+            settings: state.runtime_settings_repo.clone(),
+            cloud_sync_fallback: cfg.cloud_sync_api_url.clone(),
+            scenario_fallback: cfg.scenario_service_url.clone(),
+        }) as Arc<dyn ScenarioServiceUrlProvider>;
         let interval = cfg.sync_interval_secs;
         tokio::spawn(async move {
-            run_scenario_sync(repo, cloud, interval, url).await;
+            run_scenario_sync(repo, cloud, interval, url_provider).await;
         });
     }
 
-    // Spawn physical device sync background task
     {
         let repo = state.phys_repo.clone();
         let cloud = state.cloud_phys_dev_client.clone();
@@ -168,7 +197,6 @@ async fn main() -> anyhow::Result<()> {
         });
     }
 
-    // Spawn widget dashboard sync background task
     {
         let repo = state.widget_dashboard_repo.clone();
         let cloud = state.cloud_widget_dashboard_client.clone();
@@ -183,11 +211,11 @@ async fn main() -> anyhow::Result<()> {
         });
     }
 
-    // Build HTTP router then wrap with Socket.IO layer
     let http_router = http::router(
         state.http_state(
             VERSION,
             cfg.access_service_url.clone(),
+            cfg.cloud_sync_api_url.clone(),
             cfg.local_server_public_url.clone(),
             cfg.scenario_service_url.clone(),
             cfg.serial_number.clone(),
@@ -238,9 +266,6 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Convert API gateway HTTP URL to MQTT-over-WebSocket URL.
-/// `http://host:port` → `ws://host:port/api/mqtt`
-/// `https://host:port` → `wss://host:port/api/mqtt`
 fn derive_mqtt_ws_url(cloud_url: &str) -> Option<String> {
     let base = cloud_url.trim().trim_end_matches('/');
     if base.starts_with("https://") {

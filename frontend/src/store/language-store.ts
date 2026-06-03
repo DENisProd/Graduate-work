@@ -12,10 +12,8 @@ export const useLanguageStore = create<LanguageStore>()(
       locale: i18nConfig.defaultLocale,
       
       setLocale: (locale: Locale) => {
-        // Сохраняем в cookie для middleware
         setCookie(i18nConfig.cookieName, locale);
-        
-        // Обновляем html lang атрибут
+
         if (typeof document !== 'undefined') {
           document.documentElement.lang = locale;
         }

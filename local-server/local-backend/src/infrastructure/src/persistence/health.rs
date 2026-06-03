@@ -1,9 +1,7 @@
-use async_trait::async_trait;
+﻿use async_trait::async_trait;
 use local_server_application::ports::{HealthChecker, HealthError};
 use sqlx::SqlitePool;
 
-/// SQLite-backed `HealthChecker`. Issues a cheap `SELECT 1` round-trip; on
-/// any sqlx error the failure is mapped to `HealthError::Database`.
 #[derive(Debug, Clone)]
 pub struct SqliteHealthChecker {
     pool: SqlitePool,

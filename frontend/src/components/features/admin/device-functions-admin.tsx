@@ -388,7 +388,6 @@ export function DeviceFunctionsAdmin({
         )}
       />
 
-      {/* Device Selection Modal */}
       <Dialog open={isDeviceSelectModalOpen} onOpenChange={setIsDeviceSelectModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -674,7 +673,6 @@ export function DeviceFunctionsAdmin({
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Modal */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

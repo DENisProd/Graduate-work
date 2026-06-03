@@ -1,4 +1,4 @@
-use std::sync::Arc;
+﻿use std::sync::Arc;
 
 use axum::Router;
 use axum::http::{header, HeaderName, HeaderValue, Method};
@@ -33,8 +33,6 @@ pub mod modbus;
 pub mod widget_dashboards;
 pub mod zigbee;
 
-// ─── Shared pagination wrapper ────────────────────────────────────────────────
-
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PageResponse<T: Serialize> {
@@ -67,8 +65,6 @@ impl<T: Serialize> PageResponse<T> {
         }
     }
 }
-
-// ─── OpenAPI spec ─────────────────────────────────────────────────────────────
 
 #[derive(OpenApi)]
 #[openapi(
@@ -108,12 +104,6 @@ impl<T: Serialize> PageResponse<T> {
 )]
 struct ApiDoc;
 
-// ─── Router ───────────────────────────────────────────────────────────────────
-
-/// Build the full HTTP-only axum router (no Socket.IO layer).
-///
-/// To add the WebSocket layer, call `crate::websocket::apply_to_router` on
-/// the result.  Swagger UI: `GET /docs`.
 #[allow(clippy::too_many_arguments)]
 pub fn router(
     http_state: HttpAppState,

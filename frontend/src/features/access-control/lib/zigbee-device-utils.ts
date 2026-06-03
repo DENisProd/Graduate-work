@@ -1,6 +1,5 @@
 import type { ZigbeeDeviceListItem, ZigbeeStateWire } from '@/types/api';
 
-/** MongoDB ObjectId as string (24 hex), matches backend zigbeeSocketSubscribeSchema */
 export const MONGO_OBJECT_ID_RE = /^[a-f0-9]{24}$/i;
 
 export function zigbeeAddress(device: ZigbeeDeviceListItem): string {
@@ -19,10 +18,6 @@ export function isZigbeeDevice(device: ZigbeeDeviceListItem): boolean {
   );
 }
 
-/**
- * Тело zigbee:subscribe / zigbee:unsubscribe (частичная отписка).
- * Лимит 200 на массив соблюдается здесь.
- */
 export function buildZigbeeSubscribePayload(devices: ZigbeeDeviceListItem[]): {
   deviceIeeeAddrs: string[];
   physicalDeviceIds: string[];

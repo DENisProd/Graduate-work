@@ -1,4 +1,4 @@
-use std::str::FromStr;
+﻿use std::str::FromStr;
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -31,8 +31,6 @@ impl SqliteAccessRepo {
         Self { pool }
     }
 }
-
-// ── Houses ─────────────────────────────────────────────────────────────────────
 
 #[async_trait]
 impl AccessRepository for SqliteAccessRepo {
@@ -100,7 +98,6 @@ impl AccessRepository for SqliteAccessRepo {
         let id = Uuid::new_v4().to_string();
         let now = Utc::now().to_rfc3339();
 
-        // Ensure user record exists
         sqlx::query(
             "INSERT INTO users(id, external_user_id, created_at) VALUES(?,?,?) \
              ON CONFLICT(id) DO NOTHING",
@@ -172,8 +169,6 @@ impl AccessRepository for SqliteAccessRepo {
             .map_err(db_err)?;
         Ok(())
     }
-
-    // ── Members ───────────────────────────────────────────────────────────────
 
     async fn find_member(&self, id: &str) -> Result<Option<HouseMember>, DomainError> {
         let row = sqlx::query(
@@ -253,7 +248,6 @@ impl AccessRepository for SqliteAccessRepo {
         let id = Uuid::new_v4().to_string();
         let now = Utc::now().to_rfc3339();
 
-        // Ensure user exists
         sqlx::query(
             "INSERT INTO users(id, external_user_id, created_at) VALUES(?,?,?) \
              ON CONFLICT(id) DO NOTHING",
@@ -310,8 +304,6 @@ impl AccessRepository for SqliteAccessRepo {
             .map_err(db_err)?;
         Ok(())
     }
-
-    // ── Roles ─────────────────────────────────────────────────────────────────
 
     async fn list_roles(&self, house_id: &str) -> Result<Vec<HouseRole>, DomainError> {
         let rows = sqlx::query(
@@ -418,8 +410,6 @@ impl AccessRepository for SqliteAccessRepo {
         Ok(())
     }
 
-    // ── Member-Role assignments ───────────────────────────────────────────────
-
     async fn assign_role(&self, member_id: &str, role_id: &str) -> Result<(), DomainError> {
         let id = Uuid::new_v4().to_string();
         let now = Utc::now().to_rfc3339();
@@ -475,8 +465,6 @@ impl AccessRepository for SqliteAccessRepo {
             })
             .collect())
     }
-
-    // ── Rooms ─────────────────────────────────────────────────────────────────
 
     async fn list_rooms(&self, house_id: &str) -> Result<Vec<HouseRoom>, DomainError> {
         let rows = sqlx::query(
@@ -565,8 +553,6 @@ impl AccessRepository for SqliteAccessRepo {
         Ok(())
     }
 
-    // ── Invitations ───────────────────────────────────────────────────────────
-
     async fn list_invitations(
         &self,
         house_id: &str,
@@ -642,8 +628,6 @@ impl AccessRepository for SqliteAccessRepo {
             .map_err(db_err)?;
         Ok(())
     }
-
-    // ── Resources ─────────────────────────────────────────────────────────────
 
     async fn find_resource(&self, id: &str) -> Result<Option<Resource>, DomainError> {
         let row = sqlx::query(
@@ -735,8 +719,6 @@ impl AccessRepository for SqliteAccessRepo {
         Ok(())
     }
 
-    // ── Access Rights ─────────────────────────────────────────────────────────
-
     async fn list_rights_for_member(
         &self,
         member_id: &str,
@@ -819,8 +801,6 @@ impl AccessRepository for SqliteAccessRepo {
             .map_err(db_err)?;
         Ok(())
     }
-
-    // ── Access Policies ───────────────────────────────────────────────────────
 
     async fn list_policies(&self, house_id: &str) -> Result<Vec<AccessPolicy>, DomainError> {
         let rows = sqlx::query(
@@ -936,8 +916,6 @@ impl AccessRepository for SqliteAccessRepo {
         Ok(())
     }
 
-    // ── Effective permissions ─────────────────────────────────────────────────
-
     async fn check_effective(
         &self,
         member_id: &str,
@@ -975,7 +953,6 @@ impl AccessRepository for SqliteAccessRepo {
     async fn rebuild_effective(&self, house_id: &str) -> Result<usize, DomainError> {
         let mut tx = self.pool.begin().await.map_err(db_err)?;
 
-        // Delete existing effective permissions for this house's members
         sqlx::query(
             "DELETE FROM effective_permissions WHERE house_member_id IN \
              (SELECT id FROM house_members WHERE house_id = ?)",
@@ -985,7 +962,6 @@ impl AccessRepository for SqliteAccessRepo {
         .await
         .map_err(db_err)?;
 
-        // Re-insert from access_rights (direct member grants)
         let direct_rows = sqlx::query(
             "SELECT ar.id, ar.access_right_type, ar.house_member_id, ar.resource_id, ar.expires_at \
              FROM access_rights ar \
@@ -1018,7 +994,6 @@ impl AccessRepository for SqliteAccessRepo {
             count += 1;
         }
 
-        // Role-based grants
         let role_rows = sqlx::query(
             "SELECT ar.id, ar.access_right_type, mr.house_member_id, ar.resource_id, ar.expires_at \
              FROM access_rights ar \
@@ -1055,8 +1030,6 @@ impl AccessRepository for SqliteAccessRepo {
         Ok(count)
     }
 }
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 impl SqliteAccessRepo {
     async fn find_policy(&self, id: &str) -> Result<Option<AccessPolicy>, DomainError> {

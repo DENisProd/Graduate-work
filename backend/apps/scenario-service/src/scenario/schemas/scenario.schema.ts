@@ -9,10 +9,6 @@ export const createScenarioSchema = z.object({
   description: z.string().max(2000).optional(),
   status: scenarioStatusSchema.default(ScenarioStatus.OFFLINE),
   houseId: z.string().min(1).max(255),
-  /**
-   * Полноценное определение сценария (триггеры/условия/действия/контекст).
-   * Хранится в Mongo в поле `definition`.
-   */
   definition: scenarioDefinitionSchema,
 });
 export type CreateScenarioInput = z.infer<typeof createScenarioSchema>;

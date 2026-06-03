@@ -10,10 +10,6 @@ type CommandState =
   | { status: 'ok'; topic: string }
   | { status: 'error'; error: string };
 
-/**
- * Sends Zigbee control commands via the open Socket.IO /zigbee connection.
- * The socket must already be open (acquired via useZigbeeTelemetry).
- */
 export function useZigbeeCommand() {
   const [state, setState] = useState<CommandState>({ status: 'idle' });
 

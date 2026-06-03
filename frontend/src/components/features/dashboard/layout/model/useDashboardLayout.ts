@@ -2,15 +2,22 @@
 
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { useCurrentUserId, useTranslation } from '@/hooks';
-import { accessApiClient, housesApi } from '@/lib/api-client';
+import { housesApi } from '@/lib/api-client';
 import { toArray } from '@/features/access-control';
+import { env } from '@/config/env.config';
 import type { HouseResponse } from '@/types/api';
+
+type SessionWithToken = { accessToken?: string | null };
 
 export function useDashboardLayout() {
   const { t } = useTranslation();
   const pathname = usePathname();
   const currentUserId = useCurrentUserId();
+  const { data: session } = useSession();
+  const sessionToken = (session as SessionWithToken | null)?.accessToken ?? null;
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
     houses: true,
@@ -24,16 +31,29 @@ export function useDashboardLayout() {
   const houseIdFromPath = pathname.match(/^\/dashboard\/houses\/([^/]+)/)?.[1] ?? null;
 
   useEffect(() => {
-    if (!currentUserId) {
-      setUserHouses([]);
+    if (!currentUserId || !sessionToken) {
+      if (!currentUserId) setUserHouses([]);
       return;
     }
 
-    accessApiClient.houses
-      .getHousesByUser(currentUserId, { page: 0, size: 10 })
-      .then((data) => setUserHouses(toArray<HouseResponse>(data)))
-      .catch(() => setUserHouses([]));
-  }, [currentUserId]);
+    const url = `${env.ACCESS_API_BASE_URL}/v1/houses/user/${encodeURIComponent(currentUserId)}?page=0&size=10`;
+
+    fetch(url, {
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${sessionToken}`,
+        'X-User-Id': currentUserId,
+      },
+    })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .then((data) => setUserHouses(toArray<HouseResponse>(data as any)))
+      .catch((err: unknown) => {
+        console.error('[Dashboard] Failed to load houses:', err);
+        setUserHouses([]);
+      });
+  }, [currentUserId, sessionToken]);
 
   useEffect(() => {
     if (houseIdFromPath) {

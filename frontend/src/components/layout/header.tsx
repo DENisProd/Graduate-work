@@ -37,7 +37,6 @@ const NAV_LINK_BASE =
   'text-sm font-medium text-muted-foreground transition-colors hover:text-foreground';
 
 interface NavLinksProps {
-  /** In the mobile sheet each link should close the drawer */
   closeOnClick?: boolean;
   t: (key: string) => string;
 }
@@ -86,7 +85,6 @@ export function Header() {
       <div className="container mx-auto">
         <div className="flex h-16 items-center justify-between px-4 md:px-6">
 
-          {/* ── Left: Logo + Desktop nav ─────────────────────── */}
           <div className="flex items-center gap-8">
             <AppLogo label={t('home.title')} labelClassName="hidden sm:inline" />
 
@@ -95,14 +93,12 @@ export function Header() {
             </nav>
           </div>
 
-          {/* ── Right: Desktop controls ──────────────────────── */}
           <div className="hidden items-center gap-2 md:flex">
             <LanguageSwitcher />
             <ThemeToggle />
             <AccountBlock />
           </div>
 
-          {/* ── Right: Mobile controls ───────────────────────── */}
           <div className="flex items-center gap-1 md:hidden">
             <AccountBlock />
 
@@ -120,17 +116,14 @@ export function Header() {
 
               <SheetContent side="right" className="flex flex-col p-0">
 
-                {/* Sheet header */}
                 <div className="flex items-center gap-2 border-b px-5 py-4">
                   <AppLogo label={t('home.title')} />
                 </div>
 
-                {/* Navigation */}
                 <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
                   <NavLinks closeOnClick t={t} />
                 </nav>
 
-                {/* Theme + Language at the bottom */}
                 <div className="flex items-center justify-between border-t px-5 py-4">
                   <span className="text-xs text-muted-foreground">
                     {t('settings.appearance')}
