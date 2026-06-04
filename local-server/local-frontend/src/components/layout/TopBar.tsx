@@ -1,9 +1,13 @@
-import { Sun, Moon } from 'lucide-react'
+import { Sun, Moon, Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/hooks/useI18n'
 import { useSettingsStore } from '@/stores/settings.store'
 
-export function TopBar() {
+interface TopBarProps {
+  onMenuClick?: () => void
+}
+
+export function TopBar({ onMenuClick }: TopBarProps) {
   const { t, locale, setLocale } = useI18n()
   const {
     theme,
@@ -17,7 +21,15 @@ export function TopBar() {
   const isAuthorized = authStatus === 'authorized'
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-end gap-3 border-b border-slate-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-950">
+    <header className="flex h-14 shrink-0 items-center border-b border-slate-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-950">
+      <button
+        onClick={onMenuClick}
+        className="mr-2 rounded-md p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100 md:hidden"
+        aria-label="Open menu"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+      <div className="flex flex-1 items-center justify-end gap-3">
       {resolvedUser ? (
         <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-900/20 dark:text-emerald-300">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
@@ -57,6 +69,7 @@ export function TopBar() {
       >
         {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
       </button>
+      </div>
     </header>
   )
 }

@@ -9,10 +9,16 @@ import {
   ChevronUp,
   Users,
   DoorOpen,
+  X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/hooks/useI18n'
 import { useSettingsStore } from '@/stores/settings.store'
+
+interface SidebarProps {
+  open?: boolean
+  onClose?: () => void
+}
 
 function initialsFromLabel(primary: string, fallbackId: string, guestLabel: string): string {
   const name = primary.trim()
@@ -35,7 +41,7 @@ function shortenId(id: string): string {
   return `${t.slice(0, 8)}…${t.slice(-4)}`
 }
 
-export function Sidebar() {
+export function Sidebar({ open = false, onClose }: SidebarProps) {
   const { t } = useI18n()
 
   const navItems = useMemo(
@@ -72,12 +78,33 @@ export function Sidebar() {
   const initials = initialsFromLabel(display, idLine, guest)
 
   return (
-    <aside className="flex h-screen w-60 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+    <>
+      {open && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
+          onClick={onClose}
+          aria-hidden
+        />
+      )}
+    <aside
+      className={cn(
+        'fixed inset-y-0 left-0 z-50 flex h-screen w-60 flex-col border-r border-slate-200 bg-white transition-transform duration-300 dark:border-slate-800 dark:bg-slate-950',
+        'md:relative md:inset-auto md:z-auto md:translate-x-0',
+        open ? 'translate-x-0' : '-translate-x-full',
+      )}
+    >
       <div className="flex h-14 shrink-0 items-center gap-2 border-b border-slate-200 px-4 dark:border-slate-800">
         <Server className="h-5 w-5 text-blue-500" />
         <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
           {t('layout.localServer')}
         </span>
+        <button
+          onClick={onClose}
+          className="ml-auto rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 md:hidden dark:hover:bg-slate-800 dark:hover:text-slate-200"
+          aria-label="Close navigation"
+        >
+          <X className="h-4 w-4" />
+        </button>
       </div>
 
       <nav className="min-h-0 flex-1 overflow-y-auto p-2">
@@ -87,6 +114,7 @@ export function Sidebar() {
               key={to}
               to={to}
               end={end === true}
+              onClick={onClose}
               className={({ isActive }) =>
                 cn(
                   'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
@@ -140,5 +168,6 @@ export function Sidebar() {
         </NavLink>
       </div>
     </aside>
+    </>
   )
 }

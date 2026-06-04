@@ -21,7 +21,7 @@ export function ModbusDeviceDrawer({ device, open, onClose }: Props) {
 
       <div
         className={cn(
-          'fixed right-0 top-0 z-50 flex h-full w-[640px] flex-col bg-white shadow-2xl transition-transform duration-300 ease-in-out dark:bg-slate-950',
+          'fixed right-0 top-0 z-50 flex h-full w-full flex-col bg-white shadow-2xl transition-transform duration-300 ease-in-out dark:bg-slate-950 md:w-[640px]',
           open ? 'translate-x-0' : 'translate-x-full',
         )}
       >

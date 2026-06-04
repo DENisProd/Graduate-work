@@ -128,7 +128,7 @@ export function DeviceControlDrawer({ device, open, onClose }: Props) {
 
       <div
         className={cn(
-          'fixed right-0 top-0 z-50 flex h-full w-96 flex-col bg-white shadow-2xl transition-transform duration-300 ease-in-out dark:bg-slate-950',
+          'fixed right-0 top-0 z-50 flex h-full w-full flex-col bg-white shadow-2xl transition-transform duration-300 ease-in-out dark:bg-slate-950 sm:w-96',
           open ? 'translate-x-0' : 'translate-x-full',
         )}
       >

@@ -399,7 +399,7 @@ export function HouseDetailPanel({ house, onClose }: Props) {
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed right-0 top-0 z-50 flex h-full w-[480px] flex-col bg-white shadow-2xl dark:bg-slate-950">
+      <div className="fixed right-0 top-0 z-50 flex h-full w-full flex-col bg-white shadow-2xl dark:bg-slate-950 sm:w-[480px]">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-slate-800">
           <div>

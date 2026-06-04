@@ -261,7 +261,7 @@ export function ZigbeePage() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
             {t('zigbee.title')}
@@ -286,7 +286,7 @@ export function ZigbeePage() {
               className="flex items-center gap-2 rounded-lg border border-orange-300 bg-orange-50 px-3 py-2 text-sm font-medium text-orange-700 hover:bg-orange-100 dark:border-orange-800 dark:bg-orange-900/20 dark:text-orange-400 dark:hover:bg-orange-900/30"
             >
               <Plus className="h-4 w-4" />
-              {t('modbus.addDevice')}
+              <span className="hidden sm:inline">{t('modbus.addDevice')}</span>
             </button>
             <button
               onClick={() => syncMutation.mutate()}
@@ -294,14 +294,14 @@ export function ZigbeePage() {
               className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
             >
               <RefreshCw className={cn('h-4 w-4', syncMutation.isPending && 'animate-spin')} />
-              {t('zigbee.syncFromBridge')}
+              <span className="hidden sm:inline">{t('zigbee.syncFromBridge')}</span>
             </button>
           </div>
         )}
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-slate-200 dark:border-slate-800">
+      <div className="flex gap-1 overflow-x-auto border-b border-slate-200 dark:border-slate-800">
         {TABS.map(({ key, labelKey }) => (
           <button
             key={key}
