@@ -14,6 +14,9 @@
 
 name: smart-home
 
+include:
+  - path: ./infrastructure/docker-compose.yml
+
 services:
   access-service:
     build:
@@ -27,6 +30,9 @@ services:
       ACCESS_CONTROL_SERVICE_PORT: 8086
       DEVICE_AUTH_VERIFICATION_URL: ${DEVICE_AUTH_VERIFICATION_URL:-http://localhost:3000/device-auth}
       ACCESS_CORS_ORIGINS: ${ACCESS_CORS_ORIGINS:-http://localhost:3000,http://localhost:8082}
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8086/api/v1/health || exit 1"]
       interval: 15s
@@ -48,6 +54,11 @@ services:
       CENTRAL_MQTT_USERNAME: ${CENTRAL_MQTT_USERNAME:-}
       CENTRAL_MQTT_PASSWORD: ${CENTRAL_MQTT_PASSWORD:-}
       SCENARIO_CORS_ORIGINS: ${SCENARIO_CORS_ORIGINS:-http://localhost:3000,http://localhost:8082}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      mqtt-gateway:
+        condition: service_healthy
 
   api-gateway:
     build:

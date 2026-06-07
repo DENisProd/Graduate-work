@@ -11,9 +11,6 @@ COPY nest-cli.json tsconfig.json tsconfig.build.json prisma.config.ts ./
 COPY prisma ./prisma
 COPY src ./src
 
-# Prisma client must exist before TypeScript compile; URL is not used at generate time.
-ENV ACCESS_CONTROL_DB_URL="postgresql://build:build@localhost:5432/build"
-RUN pnpm run prisma:generate
 RUN pnpm run build
 
 # ── runner ──────────────────────────────────────────────────────────────────
@@ -27,8 +24,6 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
-
-RUN node_modules/.bin/prisma generate
 
 EXPOSE 8086
 

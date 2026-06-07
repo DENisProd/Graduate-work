@@ -236,18 +236,18 @@ pnpm dev    # localhost:3000
 
 ### Облако (`.env` в корне)
 
-Полный список с описаниями: [`.env.cloud.example`](.env.cloud.example)
+Шаблон: [`.env.cloud.example`](.env.cloud.example) — переменные сгруппированы по назначению, лишние убраны.
 
 | Переменная | Описание |
 |---|---|
 | `AUTH_SECRET` | Секрет сессий NextAuth (`npx auth secret`) |
-| `AUTH_KEYCLOAK_ID` | Client ID в Keycloak |
-| `AUTH_KEYCLOAK_SECRET` | Client Secret из Keycloak |
-| `AUTH_KEYCLOAK_ISSUER` | URL realm (`http://localhost:8080/realms/smart-home`) |
-| `NEXT_PUBLIC_API_URL` | URL api-gateway (доступен из браузера) |
-| `POSTGRES_PASSWORD` | Пароль суперпользователя PostgreSQL |
-| `MONGO_PASSWORD` | Пароль MongoDB |
-| `KEYCLOAK_ADMIN_PASSWORD` | Пароль администратора Keycloak |
+| `AUTH_KEYCLOAK_SECRET` | Client Secret из Keycloak (обязательно после первого up) |
+| `AUTH_KEYCLOAK_ISSUER` | URL realm для браузера |
+| `NEXT_PUBLIC_*` | URL API для frontend (вшиваются при сборке) |
+| `POSTGRES_PASSWORD` | Пароль PostgreSQL |
+| `ACCESS_CONTROL_DB_*` | Пользователь БД access-service |
+| `MONGO_*` | MongoDB для scenario-service |
+| `KEYCLOAK_ADMIN_PASSWORD` | Админ Keycloak (логин `admin`) |
 
 ### Backend (`.env` в `backend/`)
 
