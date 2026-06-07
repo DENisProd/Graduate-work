@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Access control service (NestJS + Prisma)",
   "scripts": {
-    "build": "nest build && tsc-alias -p tsconfig.build.json",
+    "build": "prisma generate && nest build && tsc-alias -p tsconfig.build.json",
     "start": "bun run src/main.ts",
     "start:dev": "bun --watch run src/main.ts",
     "start:debug": "bun --inspect --watch run src/main.ts",
