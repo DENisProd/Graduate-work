@@ -60,10 +60,17 @@ services:
       JAVA_OPTS_APPEND: >-
         -Xms128m -Xmx512m
         -XX:MaxMetaspaceSize=256m
+      KC_HOSTNAME: https://auth-home.darksecrets.ru
+      KC_HOSTNAME_STRICT: "true"
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
     command:
       [
         "start-dev",
         "--import-realm",
+        "--hostname=https://auth-home.darksecrets.ru",
+        "--proxy-headers=xforwarded",
+        "--http-enabled=true",
         "--spi-theme--static-max-age=-1",
         "--spi-theme--cache-themes=false",
         "--spi-theme--cache-templates=false"
