@@ -6,6 +6,7 @@ import { signIn } from 'next-auth/react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/hooks';
+import type { TranslationKey } from '@/lib/i18n';
 
 const KNOWN_ERROR_KEYS = [
   'Configuration',
@@ -33,7 +34,7 @@ function resolveErrorKey(error: string | null): KnownErrorKey {
   return 'Default';
 }
 
-function errorTranslationKey(errorKey: KnownErrorKey, field: 'title' | 'subtitle' | 'engLine') {
+function errorTranslationKey(errorKey: KnownErrorKey, field: 'title' | 'subtitle' | 'engLine'): TranslationKey {
   const map: Record<KnownErrorKey, string> = {
     Configuration: 'configuration',
     AccessDenied: 'accessDenied',
@@ -50,7 +51,7 @@ function errorTranslationKey(errorKey: KnownErrorKey, field: 'title' | 'subtitle
     Default: 'default',
   };
 
-  return `auth.signInErrors.${map[errorKey]}.${field}` as const;
+  return `auth.signInErrors.${map[errorKey]}.${field}` as TranslationKey;
 }
 
 export function AuthErrorPage() {

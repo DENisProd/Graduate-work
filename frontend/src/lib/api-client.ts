@@ -35,3 +35,5 @@ export {
   deviceDataApi,
   scenariosApi,
 } from './api/scenario-service';
+
+export { modbusApi } from './api/modbus';

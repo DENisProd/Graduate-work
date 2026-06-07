@@ -46,7 +46,11 @@ async function refreshKeycloakToken(refreshToken: string): Promise<{
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
-    Keycloak(),
+    Keycloak({
+      clientId: process.env.AUTH_KEYCLOAK_ID!,
+      clientSecret: process.env.AUTH_KEYCLOAK_SECRET!,
+      issuer: process.env.AUTH_KEYCLOAK_ISSUER!,
+    }),
   ],
   pages: {
     signIn: '/auth/signin',
@@ -66,10 +70,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const kcSub = (token as TokenWithKeycloakSub).keycloakSub;
         session.user.id = kcSub ?? token.sub ?? "";
       }
-      (session as Record<string, unknown>).accessToken =
-        (token as TokenWithKeycloakSub).accessToken ?? null;
-      (session as Record<string, unknown>).error =
-        (token as TokenWithKeycloakSub).error ?? null;
+      session.accessToken = (token as TokenWithKeycloakSub).accessToken ?? null;
+      session.error = (token as TokenWithKeycloakSub).error ?? null;
       return session;
     },
     async jwt({ token, account, profile }) {

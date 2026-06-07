@@ -9,7 +9,9 @@ export type WidgetType =
   | 'CIRCULAR_PROGRESS'
   | 'SLIDER_CONTROL'
   | 'DEVICE_HERO'
-  | 'MINI_LINE_CHART';
+  | 'MINI_LINE_CHART'
+  | 'MODBUS_REGISTER_VALUE'
+  | 'MODBUS_REGISTER_CONTROL';
 
 export interface WidgetLayout {
   i: string;
@@ -152,6 +154,25 @@ export interface MiniLineChartConfig {
   accent: 'green' | 'blue' | 'amber' | 'red';
 }
 
+export interface ModbusRegisterValueConfig {
+  type: 'MODBUS_REGISTER_VALUE';
+  modbusDeviceId: string;
+  modbusRegisterId: string;
+  label?: string;
+  unit?: string;
+  refreshInterval: number;
+  accent: 'green' | 'blue' | 'amber' | 'red';
+}
+
+export interface ModbusRegisterControlConfig {
+  type: 'MODBUS_REGISTER_CONTROL';
+  modbusDeviceId: string;
+  modbusRegisterId: string;
+  label?: string;
+  controlType: 'coil' | 'holding';
+  accent: 'green' | 'blue' | 'amber';
+}
+
 export type WidgetConfig =
   | TelemetryValueConfig
   | DeviceStatusConfig
@@ -163,7 +184,9 @@ export type WidgetConfig =
   | CircularProgressConfig
   | SliderControlConfig
   | DeviceHeroConfig
-  | MiniLineChartConfig;
+  | MiniLineChartConfig
+  | ModbusRegisterValueConfig
+  | ModbusRegisterControlConfig;
 
 export interface WidgetInstance {
   id: string;

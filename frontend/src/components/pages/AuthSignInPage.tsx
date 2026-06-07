@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/sidebar-02/logo';
 import { useTranslation } from '@/hooks';
+import type { TranslationKey } from '@/lib/i18n';
 
 const KNOWN_ERROR_KEYS = [
   'Configuration',
@@ -34,7 +35,7 @@ function resolveErrorKey(error: string | null): KnownErrorKey | null {
   return 'Default';
 }
 
-function errorTranslationKey(errorKey: KnownErrorKey) {
+function errorTranslationKey(errorKey: KnownErrorKey): TranslationKey {
   const map: Record<KnownErrorKey, string> = {
     Configuration: 'configuration',
     AccessDenied: 'accessDenied',
@@ -51,7 +52,7 @@ function errorTranslationKey(errorKey: KnownErrorKey) {
     Default: 'default',
   };
 
-  return `auth.signInErrors.${map[errorKey]}.subtitle` as const;
+  return `auth.signInErrors.${map[errorKey]}.subtitle` as TranslationKey;
 }
 
 function resolveCallbackUrl(raw: string | null) {

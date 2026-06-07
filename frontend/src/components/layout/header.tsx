@@ -12,6 +12,12 @@ import {
   SheetContent,
   SheetClose,
 } from '@/components/ui/sheet';
+import { getTranslation } from '@/lib/i18n';
+
+type TranslationFn = (
+  key: Parameters<typeof getTranslation>[1],
+  params?: Record<string, string | number>,
+) => string;
 
 /* ── Hamburger icon ──────────────────────────────────────────────── */
 const MenuIcon = () => (
@@ -38,7 +44,7 @@ const NAV_LINK_BASE =
 
 interface NavLinksProps {
   closeOnClick?: boolean;
-  t: (key: string) => string;
+  t: TranslationFn;
 }
 
 function NavLinks({ closeOnClick, t }: NavLinksProps) {

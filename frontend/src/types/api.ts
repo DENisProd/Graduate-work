@@ -623,3 +623,61 @@ export interface ScenarioResponse {
   /** Optional for backward compatibility with older backend payloads. */
   definition?: unknown;
 }
+
+export type ModbusRegisterType = 'holding' | 'input' | 'coil' | 'discrete';
+
+export interface ModbusDeviceResponse {
+  id: string;
+  name: string;
+  slaveId: number;
+  description?: string | null;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateModbusDeviceRequest {
+  name: string;
+  slaveId: number;
+  description?: string;
+  enabled?: boolean;
+}
+
+export interface ModbusRegisterResponse {
+  id: string;
+  deviceId: string;
+  name: string;
+  registerType: ModbusRegisterType;
+  address: number;
+  count: number;
+  unit?: string | null;
+  scaleFactor: number;
+  offset: number;
+  writable: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateModbusRegisterRequest {
+  name: string;
+  registerType: ModbusRegisterType;
+  address: number;
+  count?: number;
+  unit?: string;
+  scaleFactor?: number;
+  offset?: number;
+  writable?: boolean;
+}
+
+export interface ModbusRegisterStateResponse {
+  registerId: string;
+  rawValues: number[];
+  scaledValues: number[];
+  timestamp: string;
+}
+
+export interface WriteModbusRegisterRequest {
+  value?: number;
+  values?: number[];
+  coil?: boolean;
+}

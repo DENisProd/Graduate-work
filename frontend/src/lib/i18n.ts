@@ -9,7 +9,7 @@ type NestedKeyOf<T> = T extends object
     }[keyof T & string]
   : never;
 
-type TranslationKey = NestedKeyOf<typeof dictionaries.en>;
+export type TranslationKey = NestedKeyOf<typeof dictionaries.en>;
 
 export function getTranslation(
   locale: Locale,
