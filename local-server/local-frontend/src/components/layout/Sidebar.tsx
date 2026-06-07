@@ -5,7 +5,6 @@ import {
   Cpu,
   Workflow,
   Settings,
-  Server,
   ChevronUp,
   Users,
   DoorOpen,
@@ -14,6 +13,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/hooks/useI18n'
 import { useSettingsStore } from '@/stores/settings.store'
+import { AppLogo } from './app-logo'
 
 interface SidebarProps {
   open?: boolean
@@ -93,11 +93,13 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         open ? 'translate-x-0' : '-translate-x-full',
       )}
     >
-      <div className="flex h-14 shrink-0 items-center gap-2 border-b border-slate-200 px-4 dark:border-slate-800">
-        <Server className="h-5 w-5 text-blue-500" />
-        <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-          {t('layout.localServer')}
-        </span>
+      <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-slate-200 px-4 dark:border-slate-800">
+        <AppLogo
+          label={t('header.title')}
+          href="/"
+          className="min-w-0 text-sm"
+          labelClassName="truncate text-sm font-semibold"
+        />
         <button
           onClick={onClose}
           className="ml-auto rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 md:hidden dark:hover:bg-slate-800 dark:hover:text-slate-200"

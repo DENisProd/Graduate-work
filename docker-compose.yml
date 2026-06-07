@@ -14,11 +14,9 @@
 
 name: smart-home
 
-include:
-  - path: ./infrastructure/docker-compose.yml
-
 services:
   access-service:
+    container_name: smart-home-access-service
     build:
       context: ./backend/apps/access-service
     restart: unless-stopped
@@ -26,13 +24,10 @@ services:
       - "${ACCESS_SERVICE_PORT:-8086}:8086"
     environment:
       ACCESS_CONTROL_DB_URL: >-
-        postgresql://${ACCESS_CONTROL_DB_USERNAME:-access_control_service}:${ACCESS_CONTROL_DB_PASSWORD:-access_control_service}@postgres:5432/access_control_service?schema=public
+        postgresql://${ACCESS_CONTROL_DB_USERNAME:-access_control_service}:${ACCESS_CONTROL_DB_PASSWORD:-access_control_service}@postgres:5432/access_control_service
       ACCESS_CONTROL_SERVICE_PORT: 8086
       DEVICE_AUTH_VERIFICATION_URL: ${DEVICE_AUTH_VERIFICATION_URL:-http://localhost:3000/device-auth}
       ACCESS_CORS_ORIGINS: ${ACCESS_CORS_ORIGINS:-http://localhost:3000,http://localhost:8082}
-    depends_on:
-      postgres:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8086/api/v1/health || exit 1"]
       interval: 15s
@@ -41,6 +36,7 @@ services:
       start_period: 30s
 
   scenario-service:
+    container_name: smart-home-scenario-service
     build:
       context: ./backend/apps/scenario-service
     restart: unless-stopped
@@ -48,19 +44,15 @@ services:
       - "${SCENARIO_SERVICE_PORT:-3001}:3001"
     environment:
       SCENARIO_DATABASE_URL: >-
-        mongodb://${MONGO_USERNAME:-device_service}:${MONGO_PASSWORD:-password}@mongodb:27017/scenario?authSource=admin
+        mongodb://${MONGO_USERNAME:-device_service}:${MONGO_PASSWORD:-password}@localhost:27017/scenario?authSource=admin
       SCENARIO_SERVICE_PORT: 3001
       CENTRAL_MQTT_URL: ${CENTRAL_MQTT_URL:-mqtt://mqtt-gateway:1883}
       CENTRAL_MQTT_USERNAME: ${CENTRAL_MQTT_USERNAME:-}
       CENTRAL_MQTT_PASSWORD: ${CENTRAL_MQTT_PASSWORD:-}
       SCENARIO_CORS_ORIGINS: ${SCENARIO_CORS_ORIGINS:-http://localhost:3000,http://localhost:8082}
-    depends_on:
-      mongodb:
-        condition: service_healthy
-      mqtt-gateway:
-        condition: service_healthy
 
   api-gateway:
+    container_name: smart-home-api-gateway
     build:
       context: ./backend/apps/api-gateway
     restart: unless-stopped
@@ -79,22 +71,10 @@ services:
       scenario-service:
         condition: service_started
 
-  # ── Reverse proxy / TLS termination ─────────────────────────────────────────
-  #
-  # Phase 1 — HTTP: docker compose up -d  (nginx serves on :80 right away)
-  # Phase 2 — HTTPS: ./infrastructure/nginx/init-ssl.sh <domain> <email>
-  #   The script gets a Let's Encrypt cert via certbot and hot-reloads nginx.
-  #
-  # With nginx as the single entry point set NEXT_PUBLIC_* build args to:
-  #   NEXT_PUBLIC_API_URL                  = http(s)://<domain>
-  #   NEXT_PUBLIC_ACCESS_API_URL           = http(s)://<domain>/access
-  #   NEXT_PUBLIC_PHYSICAL_DEVICES_API_URL = http(s)://<domain>/scenario
-
   frontend:
+    container_name: smart-home-frontend
     build:
       context: ./frontend
-      # NEXT_PUBLIC_* are baked into the bundle at build time — set these to the
-      # URLs that the user's browser can reach (not internal container names).
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8082}
         NEXT_PUBLIC_ACCESS_API_URL: ${NEXT_PUBLIC_ACCESS_API_URL:-http://localhost:8086}

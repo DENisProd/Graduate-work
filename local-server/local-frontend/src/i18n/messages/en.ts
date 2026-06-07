@@ -10,8 +10,10 @@ export const en = {
     rooms: 'Rooms',
     settings: 'Settings',
   },
+  header: {
+    title: 'Domovoy',
+  },
   layout: {
-    localServer: 'Local Server',
     guest: 'Guest',
     noHouseSelected: 'No house selected',
     setIdentityInSettings: 'Set identity in Settings',

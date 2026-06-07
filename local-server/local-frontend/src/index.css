@@ -4,6 +4,13 @@
 
 :root {
   color-scheme: light dark;
+  --primary: #1a237e;
+  --brand-secondary: #ff9800;
+  --brand-teal: #009688;
+}
+
+.dark {
+  --primary: #8ea2ff;
 }
 
 * {

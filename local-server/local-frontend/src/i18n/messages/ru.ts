@@ -12,8 +12,10 @@ export const ru = {
     rooms: 'Комнаты',
     settings: 'Настройки',
   },
+  header: {
+    title: 'Домовой',
+  },
   layout: {
-    localServer: 'Локальный сервер',
     guest: 'Гость',
     noHouseSelected: 'Дом не выбран',
     setIdentityInSettings: 'Задайте профиль в Настройках',
