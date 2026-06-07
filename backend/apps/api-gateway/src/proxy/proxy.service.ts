@@ -16,7 +16,6 @@ export class ProxyService {
     const serviceUrls: Record<ServiceKey, string> = {
       scenario: config.scenarioServiceUrl,
       access: config.accessServiceUrl,
-      devices: config.deviceServiceUrl,
       mqtt: config.mqttBrokerUrl,
     };
 
@@ -30,7 +29,7 @@ export class ProxyService {
     }
 
     this.logger.log(
-      `Routing: /api/scenario→${config.scenarioServiceUrl} /api/access→${config.accessServiceUrl} /api/devices→${config.deviceServiceUrl}`,
+      `Routing: /api/scenario→${config.scenarioServiceUrl} /api/access→${config.accessServiceUrl} /api/mqtt→${config.mqttBrokerUrl}`,
     );
   }
 

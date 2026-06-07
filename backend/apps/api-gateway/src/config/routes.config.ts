@@ -1,4 +1,4 @@
-export type ServiceKey = 'scenario' | 'access' | 'devices' | 'mqtt';
+export type ServiceKey = 'scenario' | 'access' | 'mqtt';
 
 export interface UpstreamRoute {
   prefix: string;

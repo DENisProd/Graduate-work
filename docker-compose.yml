@@ -70,6 +70,7 @@ services:
       GATEWAY_PORT: 8082
       ACCESS_SERVICE_URL: http://access-service:8086
       SCENARIO_SERVICE_URL: http://scenario-service:3001
+      MQTT_BROKER_URL: ${MQTT_BROKER_URL:-ws://mqtt-gateway:8083}
       KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-http://keycloak:8080/realms/smart-home}
       GATEWAY_CORS_ORIGINS: ${GATEWAY_CORS_ORIGINS:-http://localhost:3000}
     depends_on:
