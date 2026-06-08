@@ -109,8 +109,11 @@ async fn main() -> anyhow::Result<()> {
     let state = AppState::new(pool, cfg.mqtt_topic_prefix.clone(), cfg.cloud_sync_api_key.clone());
 
     let saved_settings = state.runtime_settings_repo.load().await?;
-    let gateway_url = saved_settings.access_service_url
+    let gateway_url = saved_settings
+        .access_service_url
+        .as_ref()
         .filter(|s| !s.trim().is_empty())
+        .cloned()
         .unwrap_or_else(|| cfg.cloud_sync_api_url.clone());
     let mqtt_config = resolve_mqtt_connect_config(
         cfg.mqtt_url.as_deref(),
