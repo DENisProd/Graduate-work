@@ -15,7 +15,8 @@ import { listModbusDevices, deleteModbusDevice } from '@/api/modbus'
 import { DeviceControlDrawer } from '@/components/shared/DeviceControlDrawer'
 import { ModbusDeviceDrawer } from '@/components/shared/ModbusDeviceDrawer'
 import { DeviceHistoryPanel } from '@/components/shared/DeviceHistoryPanel'
-import { ModbusTab, AddDeviceModal } from '@/pages/ModbusPage'
+import { ModbusTab } from '@/pages/ModbusPage'
+import { AddDeviceDialog } from '@/components/shared/AddDeviceDialog'
 import { useZigbeeSocket } from '@/hooks/useZigbeeSocket'
 import { useDeviceStatesStore } from '@/stores/device-states.store'
 import type { ZigbeeDevice, ModbusDevice, PhysicalDevice } from '@/types'
@@ -179,7 +180,7 @@ export function ZigbeePage() {
   // Modbus device detail
   const [selectedModbus, setSelectedModbus] = useState<ModbusDevice | null>(null)
   const [pendingDeleteModbus, setPendingDeleteModbus] = useState<ModbusDevice | null>(null)
-  const [showAddModbus, setShowAddModbus] = useState(false)
+  const [showAddDevice, setShowAddDevice] = useState(false)
 
   const { connected } = useZigbeeSocket()
   const states = useDeviceStatesStore((s) => s.states)
@@ -282,11 +283,11 @@ export function ZigbeePage() {
         {tab === 'devices' && (
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowAddModbus(true)}
-              className="flex items-center gap-2 rounded-lg border border-orange-300 bg-orange-50 px-3 py-2 text-sm font-medium text-orange-700 hover:bg-orange-100 dark:border-orange-800 dark:bg-orange-900/20 dark:text-orange-400 dark:hover:bg-orange-900/30"
+              onClick={() => setShowAddDevice(true)}
+              className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
             >
               <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">{t('modbus.addDevice')}</span>
+              <span className="hidden sm:inline">{t('addDevice.button')}</span>
             </button>
             <button
               onClick={() => syncMutation.mutate()}
@@ -551,14 +552,14 @@ export function ZigbeePage() {
         onClose={() => setSelectedModbus(null)}
       />
 
-      {/* Add Modbus Device modal */}
-      {showAddModbus && (
-        <AddDeviceModal
-          onClose={() => setShowAddModbus(false)}
-          onSuccess={() => queryClient.invalidateQueries({ queryKey: ['modbus-devices'] })}
-          t={t}
-        />
-      )}
+      <AddDeviceDialog
+        open={showAddDevice}
+        onClose={() => setShowAddDevice(false)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['modbus-devices'] })
+          queryClient.invalidateQueries({ queryKey: ['zigbee-devices'] })
+        }}
+      />
 
       {pendingDeleteZigbee && (
         <ZigbeeDeleteDialog

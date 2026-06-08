@@ -61,13 +61,14 @@ export function DevicesTab({
     try {
       await houseMqttApi.reconnect(houseId);
       await refetchMqttStatus();
+      await loadDevices();
       showToast(t('admin.accessControl.connectedDevices.mqttBanner.reconnectDone'), 'success');
     } catch {
       showToast(t('admin.accessControl.connectedDevices.mqttNotConnected'), 'error');
     } finally {
       setMqttReconnecting(false);
     }
-  }, [houseId, refetchMqttStatus, showToast, t]);
+  }, [houseId, loadDevices, refetchMqttStatus, showToast, t]);
 
   useEffect(() => {
     if (activeTab !== 'devices') return;

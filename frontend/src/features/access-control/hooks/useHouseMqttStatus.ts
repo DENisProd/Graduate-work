@@ -16,7 +16,7 @@ export function useHouseMqttStatus(houseId: string | null, enabled = true) {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(
-    async (signal?: AbortSignal) => {
+    async (signal?: AbortSignal, options?: { preserveState?: boolean }) => {
       if (!houseId || !enabled) {
         setState('not_configured');
         setConfig(null);
@@ -24,7 +24,9 @@ export function useHouseMqttStatus(houseId: string | null, enabled = true) {
         return;
       }
 
-      setState('loading');
+      if (!options?.preserveState) {
+        setState('loading');
+      }
       setError(null);
 
       try {
@@ -63,6 +65,6 @@ export function useHouseMqttStatus(houseId: string | null, enabled = true) {
     error,
     isConnected: state === 'connected',
     isConfigured: state !== 'not_configured' && state !== 'loading',
-    refetch: () => load(),
+    refetch: () => load(undefined, { preserveState: true }),
   };
 }

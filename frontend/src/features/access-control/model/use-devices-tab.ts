@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/hooks';
 import { useToast } from '@/components/shared';
@@ -33,6 +33,9 @@ export function useDevicesTab(houseId: string | null, activeTab: HouseDetailsTab
     isConnected: isMqttConnected,
     refetch: refetchMqttStatus,
   } = useHouseMqttStatus(houseId, mqttEnabled);
+
+  const isMqttConnectedRef = useRef(isMqttConnected);
+  isMqttConnectedRef.current = isMqttConnected;
 
   const telemetryEnabled =
     activeTab === 'devices' && Boolean(houseId) && !devicesLoading && devices.length > 0;
@@ -81,7 +84,7 @@ export function useDevicesTab(houseId: string | null, activeTab: HouseDetailsTab
       setDevicesError('none');
       setDevicesErrorDetails(null);
       try {
-        if (isMqttConnected) {
+        if (isMqttConnectedRef.current) {
           try {
             await zigbeeDevicesApi.requestSyncFromBridge(houseId, { signal });
           } catch (error) {
@@ -97,7 +100,6 @@ export function useDevicesTab(houseId: string | null, activeTab: HouseDetailsTab
               }
               if (error.status === 503) {
                 showToast(t('admin.accessControl.connectedDevices.mqttNotConnected'), 'error');
-                void refetchMqttStatus();
               } else {
                 showToast(t('common.error'), 'error');
               }
@@ -126,7 +128,7 @@ export function useDevicesTab(houseId: string | null, activeTab: HouseDetailsTab
         if (!signal?.aborted) setDevicesLoading(false);
       }
     },
-    [devicesPage, handleError, houseId, isMqttConnected, refetchMqttStatus, router, showToast, t]
+    [devicesPage, handleError, houseId, router, showToast, t]
   );
 
   const removeDevice = useCallback((id: string) => {

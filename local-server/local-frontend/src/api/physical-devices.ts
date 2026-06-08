@@ -36,7 +36,9 @@ export async function getPhysicalDevice(id: string): Promise<PhysicalDevice> {
 
 export async function updatePhysicalDevice(
   id: string,
-  body: Partial<Pick<PhysicalDevice, 'name' | 'description' | 'houseId' | 'roomId'>>,
+  body: Partial<
+    Pick<PhysicalDevice, 'name' | 'description' | 'houseId' | 'roomId' | 'deviceCategoryId'>
+  >,
 ): Promise<PhysicalDevice> {
   const { data } = await api.patch<PhysicalDevice>(`/api/v1/physical-devices/${id}`, body)
   return data
