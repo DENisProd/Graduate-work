@@ -401,6 +401,7 @@ async fn patch_settings(
     State(state): State<HttpAppState>,
     Json(body): Json<UpdateRuntimeSettingsRequest>,
 ) -> Result<Json<RuntimeSettingsResponse>, AppError> {
+    let update_access_service_url = body.access_service_url.is_some();
     let access_service_url = normalize_opt(body.access_service_url);
     if let Some(ref url) = access_service_url {
         if !url.starts_with("http://") && !url.starts_with("https://") {
@@ -410,7 +411,7 @@ async fn patch_settings(
             .into());
         }
     }
-    if body.access_service_url.is_some() {
+    if update_access_service_url {
         state
             .runtime_settings
             .set_access_service_url(access_service_url.as_deref())
@@ -420,7 +421,7 @@ async fn patch_settings(
     if body.mqtt_username.is_some() {
         state
             .runtime_settings
-            .set_mqtt_username(normalize_opt(body.mqtt_username))
+            .set_mqtt_username(normalize_opt(body.mqtt_username).as_deref())
             .await?;
     }
 
