@@ -19,6 +19,21 @@ interface SettingsTabProps {
 
 type LoadState = 'idle' | 'loading' | 'error';
 
+const DEFAULT_MQTT_PLACEHOLDER = 'mqtt://host.docker.internal:1883';
+
+function isGatewayMqttUrl(url: string): boolean {
+  return /\/api\/mqtt/i.test(url.trim());
+}
+
+function isValidBrokerMqttUrl(url: string): boolean {
+  try {
+    const protocol = new URL(url.trim()).protocol;
+    return protocol === 'mqtt:' || protocol === 'mqtts:';
+  } catch {
+    return false;
+  }
+}
+
 const emptyDraft = (): HouseMqttConfigUpsertRequest & {
   enabled: boolean;
   topicPrefix: string;
@@ -116,11 +131,15 @@ export function SettingsTab({ houseId, canManage = true }: SettingsTabProps) {
     return () => controller.abort();
   }, [load]);
 
-  const isValid = useMemo(() => {
+  const mqttUrlIssue = useMemo(() => {
     const url = draft.mqttUrl.trim();
-    if (!url) return false;
-    return true;
+    if (!url) return 'empty' as const;
+    if (isGatewayMqttUrl(url)) return 'gateway' as const;
+    if (!isValidBrokerMqttUrl(url)) return 'invalid' as const;
+    return null;
   }, [draft.mqttUrl]);
+
+  const isValid = mqttUrlIssue === null;
 
   const onSave = useCallback(async () => {
     if (!houseId) return;
@@ -233,9 +252,7 @@ export function SettingsTab({ houseId, canManage = true }: SettingsTabProps) {
             {locale === 'ru' ? 'Подключение к локальному серверу' : 'Local server connection'}
           </CardTitle>
           <CardDescription className="text-xs text-muted-foreground">
-            {locale === 'ru'
-              ? 'Эти настройки используются scenario-service для подключения по MQTT и получения телеметрии.'
-              : 'These settings are used by scenario-service to connect over MQTT and ingest telemetry.'}
+            {t('admin.accessControl.connectedDevices.houseMqttSettings.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -261,15 +278,23 @@ export function SettingsTab({ houseId, canManage = true }: SettingsTabProps) {
             <div className="space-y-1.5 md:col-span-2">
               <p className="text-xs font-medium text-foreground">MQTT URL</p>
               <Input
-                placeholder="mqtt://192.168.1.10:1883"
+                placeholder={DEFAULT_MQTT_PLACEHOLDER}
                 value={draft.mqttUrl}
                 onChange={(e) => setDraft((prev) => ({ ...prev, mqttUrl: e.target.value }))}
               />
               <p className="text-[11px] text-muted-foreground">
-                {locale === 'ru'
-                  ? 'Пример: mqtt://192.168.1.10:1883 (Mosquitto/Zigbee2MQTT).'
-                  : 'Example: mqtt://192.168.1.10:1883 (Mosquitto/Zigbee2MQTT).'}
+                {t('admin.accessControl.connectedDevices.houseMqttSettings.brokerHint')}
               </p>
+              {mqttUrlIssue === 'gateway' ? (
+                <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                  {t('admin.accessControl.connectedDevices.houseMqttSettings.gatewayUrlWarning')}
+                </p>
+              ) : null}
+              {mqttUrlIssue === 'invalid' ? (
+                <p className="text-[11px] text-destructive">
+                  {t('admin.accessControl.connectedDevices.houseMqttSettings.invalidUrl')}
+                </p>
+              ) : null}
             </div>
 
             <div className="space-y-1.5">

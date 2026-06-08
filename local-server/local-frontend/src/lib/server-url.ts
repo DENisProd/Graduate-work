@@ -18,7 +18,7 @@ function isServedViaCaddy(): boolean {
 }
 
 /** Localhost ports that should go through Caddy same-origin proxy in the browser. */
-const LOCALHOST_PORTS_VIA_CADDY = new Set(['8080', '8050', '8085', '8086'])
+const LOCALHOST_PORTS_VIA_CADDY = new Set(['8080', '8050', '8082', '8085', '8086'])
 
 /** URLs that must be rewritten to the current page origin in the browser. */
 function shouldUseSameOrigin(url: string): boolean {
@@ -89,5 +89,5 @@ export function resolveAccessServiceUrl(stored?: string): string {
 
   if (typeof window !== 'undefined') return window.location.origin
 
-  return 'http://localhost:8085'
+  return 'http://localhost:8082'
 }

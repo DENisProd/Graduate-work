@@ -338,8 +338,10 @@ export const en = {
     connection: 'Connection',
     connectionHint:
       'URL of the local Rust server (e.g. http://192.168.1.100:8080)',
-    gateway: 'Gateway Settings',
-    gatewayHint: 'Cloud MQTT connects via this gateway at /api/mqtt. Local MQTT is set via ZIGBEE_MQTT_URL env var.',
+    gateway: 'API Gateway',
+    gatewayUrl: 'API Gateway URL',
+    gatewayHint:
+      'Cloud api-gateway URL (e.g. http://localhost:8082). HTTP uses /api/access and /api/scenario; MQTT connects automatically via ws://…/api/mqtt.',
     saveGateway: 'Save gateway settings',
     identity: 'Identity',
     identityHint: 'User UUID sent as X-User-Id header with every request.',

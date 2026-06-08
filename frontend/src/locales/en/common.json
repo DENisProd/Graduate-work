@@ -198,10 +198,20 @@
   },
   "settings": {
     "title": "Settings",
+    "pageDescription": "API gateway, appearance and language preferences.",
     "appearance": "Appearance",
     "language": "Language",
     "theme": "Theme",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "gateway": {
+      "title": "API Gateway",
+      "description": "Cloud and local backends connect through a single api-gateway entry point.",
+      "url": "Gateway URL",
+      "accessService": "access-service (houses, members, device catalog, device auth)",
+      "scenarioService": "scenario-service (Zigbee, scenarios, widgets)",
+      "mqttService": "MQTT WebSocket proxy",
+      "localBackendHint": "Local servers reach the cloud via /api/access and /api/scenario. Per-house Zigbee MQTT is configured separately in house settings (direct Mosquitto URL, not /api/mqtt)."
+    }
   },
   "profile": {
     "title": "Profile",
@@ -781,6 +791,22 @@
         "syncFromBridge": "Sync from bridge",
         "syncRequested": "Device list request sent to the bridge",
         "syncUnavailable": "Bridge or MQTT unavailable",
+        "mqttNotConnected": "MQTT is not connected for this house. Configure the Zigbee2MQTT broker in house settings.",
+        "mqttBanner": {
+          "title": "MQTT not connected",
+          "notConfigured": "scenario-service needs the Zigbee2MQTT broker URL for this house. This is not the api-gateway /api/mqtt address.",
+          "disconnected": "Broker is configured but scenario-service cannot connect. Check that Mosquitto is reachable from the cloud container.",
+          "openSettings": "Configure MQTT",
+          "reconnect": "Reconnect",
+          "reconnecting": "Reconnecting…",
+          "reconnectDone": "Reconnect requested"
+        },
+        "houseMqttSettings": {
+          "description": "scenario-service connects directly to the Zigbee2MQTT broker (Mosquitto) for this house — not via api-gateway /api/mqtt.",
+          "brokerHint": "Example for local stack on the same machine: mqtt://host.docker.internal:1883",
+          "gatewayUrlWarning": "Do not use api-gateway URL (/api/mqtt). Specify the MQTT broker reachable from scenario-service.",
+          "invalidUrl": "URL must start with mqtt:// or mqtts://"
+        },
         "networkAddress": "Network address",
         "ieeeAddress": "IEEE address",
         "capabilities": "Capabilities",

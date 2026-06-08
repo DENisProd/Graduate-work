@@ -4,6 +4,7 @@ import { Sun, Moon } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/hooks/useI18n'
+import { resolveAccessServiceUrl } from '@/lib/server-url'
 import { useSettingsStore } from '@/stores/settings.store'
 import {
   completeDeviceAuthorization,
@@ -107,7 +108,9 @@ export function SettingsPage() {
     setTheme,
   } = useSettingsStore()
 
-  const [accessServiceUrlDraft, setAccessServiceUrlDraft] = useState('http://localhost:8085')
+  const [accessServiceUrlDraft, setAccessServiceUrlDraft] = useState(() =>
+    resolveAccessServiceUrl(useSettingsStore.getState().accessServiceUrl),
+  )
   const [authCountdownSec, setAuthCountdownSec] = useState<number | null>(null)
 
   const { data: runtimeSettings } = useQuery({
@@ -277,12 +280,12 @@ export function SettingsPage() {
             )}
             <div>
               <p className="mb-1 text-xs font-medium text-slate-600 dark:text-slate-400">
-                Access Service URL
+                {t('settings.gatewayUrl')}
               </p>
               <Input
                 value={accessServiceUrlDraft}
                 onChange={setAccessServiceUrlDraft}
-                placeholder="http://localhost:8085"
+                placeholder="http://localhost:8082"
               />
             </div>
           </div>

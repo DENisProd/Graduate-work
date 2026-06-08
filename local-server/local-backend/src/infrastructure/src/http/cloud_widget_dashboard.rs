@@ -1,15 +1,22 @@
-﻿use async_trait::async_trait;
+﻿use std::sync::Arc;
+
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use local_server_application::ports::{
     CloudWidgetDashboardClient, CreateCloudWidgetDashboardCmd, RemoteWidgetDashboard,
+    RuntimeSettingsRepository,
 };
 use local_server_core::DomainError;
+
+use super::cloud_auth_request::{apply_bearer, resolve_bearer_token, scenario_api_url};
 
 #[derive(Clone)]
 pub struct ReqwestCloudWidgetDashboardClient {
     http: reqwest::Client,
+    api_key: String,
+    settings: Option<Arc<dyn RuntimeSettingsRepository>>,
 }
 
 impl ReqwestCloudWidgetDashboardClient {
@@ -19,11 +26,23 @@ impl ReqwestCloudWidgetDashboardClient {
                 .timeout(std::time::Duration::from_secs(15))
                 .build()
                 .expect("reqwest client"),
+            api_key: String::new(),
+            settings: None,
         }
     }
 
-    fn url(base: &str, path: &str) -> String {
-        format!("{}/v1{}", base.trim_end_matches('/'), path)
+    pub fn with_settings(
+        api_key: String,
+        settings: Arc<dyn RuntimeSettingsRepository>,
+    ) -> Self {
+        Self {
+            http: reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(15))
+                .build()
+                .expect("reqwest client"),
+            api_key,
+            settings: Some(settings),
+        }
     }
 }
 
@@ -83,13 +102,12 @@ impl CloudWidgetDashboardClient for ReqwestCloudWidgetDashboardClient {
         base_url: &str,
         house_id: &str,
     ) -> Result<Vec<RemoteWidgetDashboard>, DomainError> {
-        let url = Self::url(
+        let url = scenario_api_url(
             base_url,
             &format!("/widget-dashboards?houseId={}", house_id),
         );
-        let res = self
-            .http
-            .get(&url)
+        let token = resolve_bearer_token(self.settings.as_ref(), &self.api_key).await;
+        let res = apply_bearer(self.http.get(&url), token)
             .send()
             .await
             .map_err(|e| DomainError::DependencyUnavailable(format!("widget-dash list: {e}")))?;
@@ -113,7 +131,7 @@ impl CloudWidgetDashboardClient for ReqwestCloudWidgetDashboardClient {
         base_url: &str,
         cmd: CreateCloudWidgetDashboardCmd,
     ) -> Result<RemoteWidgetDashboard, DomainError> {
-        let url = Self::url(base_url, "/widget-dashboards");
+        let url = scenario_api_url(base_url, "/widget-dashboards");
         let body = CreateWidgetDashboardRequest {
             house_id: cmd.house_id,
             user_id: cmd.user_id,
@@ -123,10 +141,8 @@ impl CloudWidgetDashboardClient for ReqwestCloudWidgetDashboardClient {
             widgets: cmd.widgets,
         };
 
-        let res = self
-            .http
-            .post(&url)
-            .json(&body)
+        let token = resolve_bearer_token(self.settings.as_ref(), &self.api_key).await;
+        let res = apply_bearer(self.http.post(&url).json(&body), token)
             .send()
             .await
             .map_err(|e| DomainError::DependencyUnavailable(format!("widget-dash create: {e}")))?;

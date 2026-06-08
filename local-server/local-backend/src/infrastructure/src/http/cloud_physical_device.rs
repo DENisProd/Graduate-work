@@ -1,14 +1,21 @@
-﻿use async_trait::async_trait;
+﻿use std::sync::Arc;
+
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 use local_server_application::ports::{
     CloudPhysicalDeviceClient, CreateCloudPhysicalDeviceCmd, RemotePhysicalDevice,
+    RuntimeSettingsRepository,
 };
 use local_server_core::DomainError;
+
+use super::cloud_auth_request::{apply_bearer, resolve_bearer_token, scenario_api_url};
 
 #[derive(Clone)]
 pub struct ReqwestCloudPhysicalDeviceClient {
     http: reqwest::Client,
+    api_key: String,
+    settings: Option<Arc<dyn RuntimeSettingsRepository>>,
 }
 
 impl ReqwestCloudPhysicalDeviceClient {
@@ -18,11 +25,23 @@ impl ReqwestCloudPhysicalDeviceClient {
                 .timeout(std::time::Duration::from_secs(15))
                 .build()
                 .expect("reqwest client"),
+            api_key: String::new(),
+            settings: None,
         }
     }
 
-    fn url(base: &str, path: &str) -> String {
-        format!("{}/v1{}", base.trim_end_matches('/'), path)
+    pub fn with_settings(
+        api_key: String,
+        settings: Arc<dyn RuntimeSettingsRepository>,
+    ) -> Self {
+        Self {
+            http: reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(15))
+                .build()
+                .expect("reqwest client"),
+            api_key,
+            settings: Some(settings),
+        }
     }
 }
 
@@ -109,13 +128,14 @@ impl CloudPhysicalDeviceClient for ReqwestCloudPhysicalDeviceClient {
     async fn list_all(&self, base_url: &str) -> Result<Vec<RemotePhysicalDevice>, DomainError> {
         let mut all: Vec<RemotePhysicalDevice> = Vec::new();
         let mut page: usize = 1;
+        let token = resolve_bearer_token(self.settings.as_ref(), &self.api_key).await;
 
         loop {
-            let url =
-                Self::url(base_url, &format!("/physical-devices?page={}&limit=100", page));
-            let res = self
-                .http
-                .get(&url)
+            let url = scenario_api_url(
+                base_url,
+                &format!("/physical-devices?page={}&limit=100", page),
+            );
+            let res = apply_bearer(self.http.get(&url), token.clone())
                 .send()
                 .await
                 .map_err(|e| DomainError::DependencyUnavailable(format!("phys-dev list: {e}")))?;
@@ -150,7 +170,7 @@ impl CloudPhysicalDeviceClient for ReqwestCloudPhysicalDeviceClient {
         base_url: &str,
         cmd: CreateCloudPhysicalDeviceCmd,
     ) -> Result<RemotePhysicalDevice, DomainError> {
-        let url = Self::url(base_url, "/physical-devices");
+        let url = scenario_api_url(base_url, "/physical-devices");
         let name = cmd.name.unwrap_or_default();
         let house_id = cmd.house_id.unwrap_or_default();
         let body = CreatePhysicalDeviceRequest {
@@ -167,10 +187,8 @@ impl CloudPhysicalDeviceClient for ReqwestCloudPhysicalDeviceClient {
             firmware_version: cmd.firmware_version,
         };
 
-        let res = self
-            .http
-            .post(&url)
-            .json(&body)
+        let token = resolve_bearer_token(self.settings.as_ref(), &self.api_key).await;
+        let res = apply_bearer(self.http.post(&url).json(&body), token)
             .send()
             .await
             .map_err(|e| DomainError::DependencyUnavailable(format!("phys-dev create: {e}")))?;

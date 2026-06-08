@@ -353,8 +353,10 @@ export const ru = {
     connection: 'Подключение',
     connectionHint:
       'URL локального Rust-сервера (напр. http://192.168.1.100:8080)',
-    gateway: 'Настройки шлюза',
-    gatewayHint: 'Облачный шлюз умного дома',
+    gateway: 'API Gateway',
+    gatewayUrl: 'URL API Gateway',
+    gatewayHint:
+      'URL облачного api-gateway (например http://localhost:8082). HTTP — /api/access и /api/scenario; MQTT — автоматически через ws://…/api/mqtt.',
     saveGateway: 'Сохранить настройки шлюза',
     identity: 'Профиль',
     identityHint: 'UUID пользователя в заголовке X-User-Id для каждого запроса.',

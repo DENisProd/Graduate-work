@@ -7,22 +7,24 @@ use crate::ports::{
     AccessSyncRepository, CloudWidgetDashboardClient, CreateCloudWidgetDashboardCmd,
     UpsertFromCloudWidgetDashboardCmd, WidgetDashboardRepository,
 };
-use crate::services::UserIdProvider;
+use crate::services::{ScenarioServiceUrlProvider, UserIdProvider};
 
 pub async fn run_widget_dashboard_sync(
     repo: Arc<dyn WidgetDashboardRepository>,
     cloud: Arc<dyn CloudWidgetDashboardClient>,
     interval_secs: u64,
-    scenario_service_url: String,
+    scenario_service_url: Arc<dyn ScenarioServiceUrlProvider>,
     access_sync: Arc<dyn AccessSyncRepository>,
     user_id_provider: Arc<dyn UserIdProvider>,
 ) {
     loop {
+        let base_url = scenario_service_url.get().await;
+        tracing::debug!(scenario_base = %base_url, "widget_dashboard_sync: cycle start");
         let house_ids = resolve_house_ids(&access_sync, &user_id_provider).await;
         for house_id in &house_ids {
-            pull_from_cloud(&repo, &cloud, &scenario_service_url, house_id).await;
+            pull_from_cloud(&repo, &cloud, &base_url, house_id).await;
         }
-        push_local_to_cloud(&repo, &cloud, &scenario_service_url).await;
+        push_local_to_cloud(&repo, &cloud, &base_url).await;
         tokio::time::sleep(Duration::from_secs(interval_secs)).await;
     }
 }

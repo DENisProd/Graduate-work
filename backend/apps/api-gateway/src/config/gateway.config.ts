@@ -24,7 +24,7 @@ export function loadGatewayConfig(): GatewayConfig {
     port: Number(process.env.GATEWAY_PORT ?? 8080),
     accessServiceUrl: process.env.ACCESS_SERVICE_URL ?? 'http://localhost:8086',
     scenarioServiceUrl: process.env.SCENARIO_SERVICE_URL ?? 'http://localhost:8095',
-    mqttBrokerUrl: process.env.MQTT_BROKER_URL ?? 'ws://localhost:18083',
+    mqttBrokerUrl: process.env.MQTT_BROKER_URL ?? 'ws://localhost:8083',
     keycloakIssuer: process.env.KEYCLOAK_ISSUER ?? '',
     corsOrigins: parseCorsOrigins(process.env.GATEWAY_CORS_ORIGINS, [
       'http://localhost:3000',

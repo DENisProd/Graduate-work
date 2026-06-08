@@ -1,13 +1,17 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAddDeviceModalStore } from '@/store/add-device-modal-store';
 import type { HouseDetailsTab } from '@/store/access-control-store';
 import { useConnectedLocalServers } from '@/features/access-control/model/use-connected-local-servers';
 import { useDevicesTab } from '@/features/access-control/model/use-devices-tab';
+import { houseMqttApi } from '@/lib/api-client';
+import { useToast } from '@/components/shared';
+import { useTranslation } from '@/hooks';
 import { DevicesListContent } from './DevicesListContent';
 import { DevicesListHeader } from './DevicesListHeader';
 import { DevicesPagination } from './DevicesPagination';
+import { HouseMqttBanner } from './HouseMqttBanner';
 
 interface DevicesTabProps {
   houseId: string | null;
@@ -22,9 +26,12 @@ export function DevicesTab({
   canManage = true,
   detailsPathPrefix,
 }: DevicesTabProps) {
+  const { t } = useTranslation();
+  const { showToast } = useToast();
   const openAddDeviceModal = useAddDeviceModalStore((s) => s.open);
   const addDeviceModalOpen = useAddDeviceModalStore((s) => s.isOpen);
   const prevAddDeviceModalOpenRef = useRef(addDeviceModalOpen);
+  const [mqttReconnecting, setMqttReconnecting] = useState(false);
 
   const {
     servers,
@@ -44,7 +51,23 @@ export function DevicesTab({
     loadDevices,
     removeDevice,
     setDevicesPage,
+    mqttState,
+    refetchMqttStatus,
   } = useDevicesTab(houseId, activeTab);
+
+  const handleMqttReconnect = useCallback(async () => {
+    if (!houseId) return;
+    setMqttReconnecting(true);
+    try {
+      await houseMqttApi.reconnect(houseId);
+      await refetchMqttStatus();
+      showToast(t('admin.accessControl.connectedDevices.mqttBanner.reconnectDone'), 'success');
+    } catch {
+      showToast(t('admin.accessControl.connectedDevices.mqttNotConnected'), 'error');
+    } finally {
+      setMqttReconnecting(false);
+    }
+  }, [houseId, refetchMqttStatus, showToast, t]);
 
   useEffect(() => {
     if (activeTab !== 'devices') return;
@@ -73,6 +96,15 @@ export function DevicesTab({
           onAddDevice={() => houseId && openAddDeviceModal(houseId)}
           canManage={canManage}
         />
+
+        {houseId ? (
+          <HouseMqttBanner
+            houseId={houseId}
+            state={mqttState}
+            onReconnect={canManage ? () => void handleMqttReconnect() : undefined}
+            reconnecting={mqttReconnecting}
+          />
+        ) : null}
 
         <DevicesListContent
           houseId={houseId}

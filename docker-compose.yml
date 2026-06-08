@@ -53,6 +53,8 @@ services:
     build:
       context: ./backend/apps/scenario-service
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "${SCENARIO_SERVICE_PORT:-3001}:3001"
     environment:

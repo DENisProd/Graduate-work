@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
 
 const localBackend = process.env.VITE_LOCAL_SERVER_URL?.trim() || 'http://localhost:8080'
-const accessGateway = process.env.VITE_ACCESS_SERVICE_URL?.trim() || 'http://localhost:8050'
+const accessGateway = process.env.VITE_ACCESS_SERVICE_URL?.trim() || 'http://localhost:8082'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],

@@ -7,6 +7,7 @@ import { useToast } from '@/components/shared';
 import type { HouseDetailsTab } from '@/store/access-control-store';
 import { ApiError, zigbeeDevicesApi } from '@/lib/api-client';
 import type { ZigbeeDeviceListItem } from '@/types/api';
+import { useHouseMqttStatus } from '@/features/access-control/hooks/useHouseMqttStatus';
 import { useZigbeeTelemetry } from '@/features/access-control/hooks/useZigbeeTelemetry';
 import { normalizeApiList } from '@/features/access-control/lib/normalize-api-list';
 
@@ -25,6 +26,13 @@ export function useDevicesTab(houseId: string | null, activeTab: HouseDetailsTab
   const [devicesLoading, setDevicesLoading] = useState(false);
   const [devicesError, setDevicesError] = useState<DevicesLoadError>('none');
   const [devicesErrorDetails, setDevicesErrorDetails] = useState<string[] | null>(null);
+
+  const mqttEnabled = activeTab === 'devices' && Boolean(houseId);
+  const {
+    state: mqttState,
+    isConnected: isMqttConnected,
+    refetch: refetchMqttStatus,
+  } = useHouseMqttStatus(houseId, mqttEnabled);
 
   const telemetryEnabled =
     activeTab === 'devices' && Boolean(houseId) && !devicesLoading && devices.length > 0;
@@ -73,26 +81,29 @@ export function useDevicesTab(houseId: string | null, activeTab: HouseDetailsTab
       setDevicesError('none');
       setDevicesErrorDetails(null);
       try {
-        try {
-          await zigbeeDevicesApi.requestSyncFromBridge(houseId, { signal });
-        } catch (error) {
-          if (signal?.aborted) return;
-          if (error instanceof ApiError) {
-            if (error.status === 401) {
-              router.push('/login');
-              return;
-            }
-            if (error.status === 403) {
-              showToast(t('errors.unauthorized'), 'error');
-              return;
-            }
-            if (error.status === 503) {
-              showToast(t('admin.accessControl.connectedDevices.syncUnavailable'), 'error');
+        if (isMqttConnected) {
+          try {
+            await zigbeeDevicesApi.requestSyncFromBridge(houseId, { signal });
+          } catch (error) {
+            if (signal?.aborted) return;
+            if (error instanceof ApiError) {
+              if (error.status === 401) {
+                router.push('/login');
+                return;
+              }
+              if (error.status === 403) {
+                showToast(t('errors.unauthorized'), 'error');
+                return;
+              }
+              if (error.status === 503) {
+                showToast(t('admin.accessControl.connectedDevices.mqttNotConnected'), 'error');
+                void refetchMqttStatus();
+              } else {
+                showToast(t('common.error'), 'error');
+              }
             } else {
               showToast(t('common.error'), 'error');
             }
-          } else {
-            showToast(t('common.error'), 'error');
           }
         }
 
@@ -115,7 +126,7 @@ export function useDevicesTab(houseId: string | null, activeTab: HouseDetailsTab
         if (!signal?.aborted) setDevicesLoading(false);
       }
     },
-    [devicesPage, handleError, houseId, router, showToast, t]
+    [devicesPage, handleError, houseId, isMqttConnected, refetchMqttStatus, router, showToast, t]
   );
 
   const removeDevice = useCallback((id: string) => {
@@ -143,5 +154,7 @@ export function useDevicesTab(houseId: string | null, activeTab: HouseDetailsTab
     loadDevices,
     removeDevice,
     setDevicesPage,
+    mqttState,
+    refetchMqttStatus,
   };
 }

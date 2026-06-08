@@ -7,7 +7,7 @@ use chrono::{DateTime, Utc};
 use local_server_application::ports::{
     AuthPollResult, CompleteAuthArgs, UpsertFromCloudCmd, UpsertFromCloudWidgetDashboardCmd,
 };
-use local_server_application::{resolve_scenario_service_url, DomainError};
+use local_server_application::{resolve_mqtt_url, resolve_scenario_service_url, DomainError};
 use local_server_core::entities::scenario::ScenarioStatus;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -405,6 +405,19 @@ async fn patch_settings(
         .runtime_settings
         .set_access_service_url(access_service_url.as_deref())
         .await?;
+
+    let gateway_url = resolve_access_service_url(
+        access_service_url,
+        &state.default_access_service_url,
+    );
+    if let Some(mqtt_url) = resolve_mqtt_url(
+        state.configured_mqtt_url.as_deref(),
+        &gateway_url,
+    ) {
+        if let Err(e) = state.mqtt.reconfigure(Some(&mqtt_url)).await {
+            tracing::warn!(error = %e, mqtt_url = %mqtt_url, "MQTT reconfigure after gateway settings update failed");
+        }
+    }
 
     get_settings(State(state)).await
 }

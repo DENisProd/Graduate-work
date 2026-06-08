@@ -1,10 +1,10 @@
 :80 {
     # Cloud api-gateway: access + scenario (must be before /api/* → local-backend)
     handle /api/access/* {
-        reverse_proxy {$ACCESS_GATEWAY_UPSTREAM:host.docker.internal:8050}
+        reverse_proxy {$ACCESS_GATEWAY_UPSTREAM:host.docker.internal:8082}
     }
     handle /api/scenario/* {
-        reverse_proxy {$ACCESS_GATEWAY_UPSTREAM:host.docker.internal:8050}
+        reverse_proxy {$ACCESS_GATEWAY_UPSTREAM:host.docker.internal:8082}
     }
 
     # Proxy API + WebSocket to local-backend

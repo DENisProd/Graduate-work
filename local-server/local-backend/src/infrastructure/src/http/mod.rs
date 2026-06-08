@@ -1,5 +1,5 @@
-﻿
-mod cloud_auth;
+﻿mod cloud_auth;
+mod cloud_auth_request;
 mod cloud_physical_device;
 mod cloud_scenario;
 mod cloud_sync;

@@ -6,6 +6,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { loadGatewayConfig } from './config/gateway.config';
 import { ProxyService } from './proxy/proxy.service';
+import { buildUpstreamWsPath } from './proxy/ws-path';
 
 loadEnv({ path: join(process.cwd(), '../../.env') });
 loadEnv({ path: join(process.cwd(), '.env'), override: true });
@@ -59,10 +60,12 @@ async function bootstrap() {
     // Replace Host with the upstream host so the backend doesn't reject it
     reqHeaders.host = targetUrl.host;
 
+    const upstreamPath = buildUpstreamWsPath(url, entry.target, entry.pathRewrite);
+
     const proxyReq = http.request({
       hostname: targetUrl.hostname,
       port: Number(targetUrl.port) || 80,
-      path: url,
+      path: upstreamPath,
       method: req.method ?? 'GET',
       headers: reqHeaders,
     });

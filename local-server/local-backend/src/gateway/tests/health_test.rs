@@ -109,7 +109,8 @@ async fn health_endpoint_reports_db_ok() {
         )),
         access_sync: access_sync_repo,
         default_access_service_url: "http://localhost:8085".to_string(),
-        default_cloud_sync_url: "http://localhost:8050".to_string(),
+        default_cloud_sync_url: "http://localhost:8082".to_string(),
+        configured_mqtt_url: None,
         public_base_url: None,
         cloud_scenario: Arc::new(ReqwestCloudScenarioClient::with_settings(
             String::new(),

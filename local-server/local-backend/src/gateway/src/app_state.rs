@@ -89,15 +89,20 @@ impl AppState {
         )) as Arc<dyn CloudSyncClient>;
 
         let cloud_scenario_client = Arc::new(ReqwestCloudScenarioClient::with_settings(
-            cloud_sync_api_key,
+            cloud_sync_api_key.clone(),
             runtime_settings_repo.clone(),
         )) as Arc<dyn CloudScenarioClient>;
 
-        let cloud_phys_dev_client =
-            Arc::new(ReqwestCloudPhysicalDeviceClient::new()) as Arc<dyn CloudPhysicalDeviceClient>;
+        let cloud_phys_dev_client = Arc::new(ReqwestCloudPhysicalDeviceClient::with_settings(
+            cloud_sync_api_key.clone(),
+            runtime_settings_repo.clone(),
+        )) as Arc<dyn CloudPhysicalDeviceClient>;
 
         let cloud_widget_dashboard_client =
-            Arc::new(ReqwestCloudWidgetDashboardClient::new()) as Arc<dyn CloudWidgetDashboardClient>;
+            Arc::new(ReqwestCloudWidgetDashboardClient::with_settings(
+                cloud_sync_api_key.clone(),
+                runtime_settings_repo.clone(),
+            )) as Arc<dyn CloudWidgetDashboardClient>;
 
         let widget_dashboard_repo =
             Arc::new(SqliteWidgetDashboardRepo::new(pool.clone())) as Arc<dyn WidgetDashboardRepository>;
@@ -162,6 +167,7 @@ impl AppState {
         version: &'static str,
         default_access_service_url: String,
         default_cloud_sync_url: String,
+        configured_mqtt_url: Option<String>,
         public_base_url: Option<String>,
         scenario_service_url: String,
         serial_number: Option<String>,
@@ -176,6 +182,7 @@ impl AppState {
             access_sync: self.access_sync_repo.clone(),
             default_access_service_url,
             default_cloud_sync_url,
+            configured_mqtt_url,
             public_base_url,
             cloud_scenario: self.cloud_scenario_client.clone(),
             cloud_widget_dashboard: self.cloud_widget_dashboard_client.clone(),

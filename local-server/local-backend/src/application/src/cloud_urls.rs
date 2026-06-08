@@ -7,6 +7,30 @@ pub fn scenario_url_from_access(access: &str) -> String {
     format!("{origin}/api/scenario")
 }
 
+/// WebSocket MQTT URL for cloud broker via api-gateway (`/api/mqtt` → EMQX `/mqtt`).
+pub fn mqtt_ws_url_from_gateway(gateway_url: &str) -> Option<String> {
+    let base = gateway_url.trim().trim_end_matches('/');
+    if base.starts_with("https://") {
+        Some(format!(
+            "{}/api/mqtt",
+            base.replacen("https://", "wss://", 1)
+        ))
+    } else if base.starts_with("http://") {
+        Some(format!("{}/api/mqtt", base.replacen("http://", "ws://", 1)))
+    } else {
+        None
+    }
+}
+
+/// Prefer explicit local broker (`ZIGBEE_MQTT_URL`); otherwise derive cloud MQTT from gateway root.
+pub fn resolve_mqtt_url(configured: Option<&str>, gateway_url: &str) -> Option<String> {
+    configured
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .or_else(|| mqtt_ws_url_from_gateway(gateway_url))
+}
+
 pub fn resolve_scenario_service_url(
     runtime_access: Option<&str>,
     cloud_sync_fallback: &str,
@@ -20,4 +44,33 @@ pub fn resolve_scenario_service_url(
         return scenario_fallback.trim().to_string();
     }
     scenario_url_from_access(access)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mqtt_ws_url_from_http_gateway() {
+        assert_eq!(
+            mqtt_ws_url_from_gateway("http://localhost:8082").as_deref(),
+            Some("ws://localhost:8082/api/mqtt")
+        );
+    }
+
+    #[test]
+    fn resolve_mqtt_prefers_configured() {
+        assert_eq!(
+            resolve_mqtt_url(Some("mqtt://mosquitto:1883"), "http://localhost:8082").as_deref(),
+            Some("mqtt://mosquitto:1883")
+        );
+    }
+
+    #[test]
+    fn resolve_mqtt_derives_from_gateway() {
+        assert_eq!(
+            resolve_mqtt_url(None, "http://host.docker.internal:8082").as_deref(),
+            Some("ws://host.docker.internal:8082/api/mqtt")
+        );
+    }
 }

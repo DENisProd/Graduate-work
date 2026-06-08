@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use anyhow::Context;
 use local_server_application::ports::{MqttClient, RuntimeSettingsRepository};
-use local_server_application::resolve_scenario_service_url;
+use local_server_application::{resolve_mqtt_url, resolve_scenario_service_url};
 use local_server_application::services::{
     run_delta_puller, run_outbox_pusher, run_physical_device_sync, run_scenario_sync,
     run_widget_dashboard_sync, CloudSyncUrlProvider, ScenarioEngine, ScenarioServiceUrlProvider,
@@ -111,8 +111,7 @@ async fn main() -> anyhow::Result<()> {
     let gateway_url = saved_settings.access_service_url
         .filter(|s| !s.trim().is_empty())
         .unwrap_or_else(|| cfg.cloud_sync_api_url.clone());
-    let effective_mqtt_url = cfg.mqtt_url.clone()
-        .or_else(|| derive_mqtt_ws_url(&gateway_url));
+    let effective_mqtt_url = resolve_mqtt_url(cfg.mqtt_url.as_deref(), &gateway_url);
     if let Err(e) = state
         .mqtt_manager
         .reconfigure(effective_mqtt_url.as_deref())
@@ -169,14 +168,16 @@ async fn main() -> anyhow::Result<()> {
         });
     }
 
+    let scenario_url_provider = Arc::new(RuntimeSettingsScenarioUrlProvider {
+        settings: state.runtime_settings_repo.clone(),
+        cloud_sync_fallback: cfg.cloud_sync_api_url.clone(),
+        scenario_fallback: cfg.scenario_service_url.clone(),
+    }) as Arc<dyn ScenarioServiceUrlProvider>;
+
     {
         let repo = state.scenario_repo.clone();
         let cloud = state.cloud_scenario_client.clone();
-        let url_provider = Arc::new(RuntimeSettingsScenarioUrlProvider {
-            settings: state.runtime_settings_repo.clone(),
-            cloud_sync_fallback: cfg.cloud_sync_api_url.clone(),
-            scenario_fallback: cfg.scenario_service_url.clone(),
-        }) as Arc<dyn ScenarioServiceUrlProvider>;
+        let url_provider = scenario_url_provider.clone();
         let interval = cfg.sync_interval_secs;
         tokio::spawn(async move {
             run_scenario_sync(repo, cloud, interval, url_provider).await;
@@ -186,24 +187,32 @@ async fn main() -> anyhow::Result<()> {
     {
         let repo = state.phys_repo.clone();
         let cloud = state.cloud_phys_dev_client.clone();
-        let url = cfg.scenario_service_url.clone();
+        let url_provider = scenario_url_provider.clone();
         let interval = cfg.sync_interval_secs;
         tokio::spawn(async move {
-            run_physical_device_sync(repo, cloud, interval, url).await;
+            run_physical_device_sync(repo, cloud, interval, url_provider).await;
         });
     }
 
     {
         let repo = state.widget_dashboard_repo.clone();
         let cloud = state.cloud_widget_dashboard_client.clone();
-        let url = cfg.scenario_service_url.clone();
+        let url_provider = scenario_url_provider.clone();
         let interval = cfg.sync_interval_secs;
         let access_sync = state.access_sync_repo.clone();
         let user_id_provider = Arc::new(RuntimeSettingsUserIdProvider {
             settings: state.runtime_settings_repo.clone(),
         }) as Arc<dyn UserIdProvider>;
         tokio::spawn(async move {
-            run_widget_dashboard_sync(repo, cloud, interval, url, access_sync, user_id_provider).await;
+            run_widget_dashboard_sync(
+                repo,
+                cloud,
+                interval,
+                url_provider,
+                access_sync,
+                user_id_provider,
+            )
+            .await;
         });
     }
 
@@ -212,6 +221,7 @@ async fn main() -> anyhow::Result<()> {
             VERSION,
             cfg.access_service_url.clone(),
             cfg.cloud_sync_api_url.clone(),
+            cfg.mqtt_url.clone(),
             cfg.local_server_public_url.clone(),
             cfg.scenario_service_url.clone(),
             cfg.serial_number.clone(),
@@ -260,17 +270,6 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!("shutdown complete");
     Ok(())
-}
-
-fn derive_mqtt_ws_url(cloud_url: &str) -> Option<String> {
-    let base = cloud_url.trim().trim_end_matches('/');
-    if base.starts_with("https://") {
-        Some(format!("{}/api/mqtt", base.replacen("https://", "wss://", 1)))
-    } else if base.starts_with("http://") {
-        Some(format!("{}/api/mqtt", base.replacen("http://", "ws://", 1)))
-    } else {
-        None
-    }
 }
 
 fn init_tracing() {

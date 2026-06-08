@@ -25,7 +25,7 @@ export const UPSTREAM_ROUTES: UpstreamRoute[] = [
   {
     prefix: '/api/mqtt',
     service: 'mqtt',
-    pathRewrite: { '^/api/mqtt': '' },
+    pathRewrite: { '^/api/mqtt': '/mqtt' },
     ws: true,
   },
 ];

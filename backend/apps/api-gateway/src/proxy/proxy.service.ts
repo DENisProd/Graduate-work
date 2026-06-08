@@ -10,7 +10,11 @@ export class ProxyService {
   private readonly logger = new Logger(ProxyService.name);
 
   private readonly routes: Array<{ prefix: string; handler: RequestHandler }> = [];
-  readonly wsProxies: Array<{ prefix: string; target: string }> = [];
+  readonly wsProxies: Array<{
+    prefix: string;
+    target: string;
+    pathRewrite?: Record<string, string>;
+  }> = [];
 
   constructor(@Inject(GATEWAY_CONFIG) private readonly config: GatewayConfig) {
     const serviceUrls: Record<ServiceKey, string> = {
@@ -24,7 +28,7 @@ export class ProxyService {
       const handler = this.createProxy(route.prefix, target, route.pathRewrite);
       this.routes.push({ prefix: route.prefix, handler });
       if (route.ws) {
-        this.wsProxies.push({ prefix: route.prefix, target });
+        this.wsProxies.push({ prefix: route.prefix, target, pathRewrite: route.pathRewrite });
       }
     }
 

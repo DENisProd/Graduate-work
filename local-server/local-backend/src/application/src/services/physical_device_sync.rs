@@ -7,16 +7,19 @@ use crate::ports::{
     CloudPhysicalDeviceClient, CreateCloudPhysicalDeviceCmd, PhysicalDeviceRepository,
     UpsertPhysDevFromCloudCmd,
 };
+use crate::services::ScenarioServiceUrlProvider;
 
 pub async fn run_physical_device_sync(
     repo: Arc<dyn PhysicalDeviceRepository>,
     cloud: Arc<dyn CloudPhysicalDeviceClient>,
     interval_secs: u64,
-    scenario_service_url: String,
+    scenario_service_url: Arc<dyn ScenarioServiceUrlProvider>,
 ) {
     loop {
-        pull_from_cloud(&repo, &cloud, &scenario_service_url).await;
-        push_local_to_cloud(&repo, &cloud, &scenario_service_url).await;
+        let base_url = scenario_service_url.get().await;
+        tracing::debug!(scenario_base = %base_url, "physical_device_sync: cycle start");
+        pull_from_cloud(&repo, &cloud, &base_url).await;
+        push_local_to_cloud(&repo, &cloud, &base_url).await;
         tokio::time::sleep(Duration::from_secs(interval_secs)).await;
     }
 }
