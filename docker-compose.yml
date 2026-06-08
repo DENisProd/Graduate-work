@@ -9,8 +9,8 @@
 #   keycloak       → http://localhost:8080
 #   mqtt dashboard → http://localhost:18083
 #
-# NEXT_PUBLIC_* vars are baked into the frontend JS bundle at build time.
-# To change them, rebuild the frontend image: docker compose build frontend
+# NEXT_PUBLIC_GATEWAY_URL is baked into the frontend JS bundle at build time.
+# To change it, rebuild the frontend image: docker compose build frontend
 
 name: smart-home
 
@@ -95,10 +95,7 @@ services:
     build:
       context: ./frontend
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8082}
-        NEXT_PUBLIC_ACCESS_API_URL: ${NEXT_PUBLIC_ACCESS_API_URL:-http://localhost:8086}
-        NEXT_PUBLIC_PHYSICAL_DEVICES_API_URL: ${NEXT_PUBLIC_PHYSICAL_DEVICES_API_URL:-http://localhost:3001}
-        NEXT_PUBLIC_USE_MOCKS: ${NEXT_PUBLIC_USE_MOCKS:-false}
+        NEXT_PUBLIC_GATEWAY_URL: ${NEXT_PUBLIC_GATEWAY_URL:-http://localhost:8082}
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -109,5 +106,7 @@ services:
       AUTH_KEYCLOAK_SECRET: ${AUTH_KEYCLOAK_SECRET}
       # Must be reachable from the user's browser for the OAuth redirect.
       AUTH_KEYCLOAK_ISSUER: ${AUTH_KEYCLOAK_ISSUER:-http://localhost:8080/realms/smart-home}
+      # Server-side health checks from inside the container (browser uses NEXT_PUBLIC_GATEWAY_URL).
+      GATEWAY_INTERNAL_URL: ${GATEWAY_INTERNAL_URL:-http://api-gateway:8082}
     depends_on:
       - api-gateway

@@ -1,4 +1,4 @@
-const gatewayUrl = process.env.NEXT_PUBLIC_GATEWAY_URL || 'http://localhost:4001';
+const gatewayUrl = process.env.NEXT_PUBLIC_GATEWAY_URL || 'http://localhost:8082';
 
 export const env = {
   GATEWAY_URL: gatewayUrl,

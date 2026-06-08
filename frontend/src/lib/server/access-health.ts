@@ -2,8 +2,16 @@ import 'server-only';
 
 const DEFAULT_TIMEOUT_MS = 3000;
 
+function resolveServerGatewayUrl(): string {
+  return (
+    process.env.GATEWAY_INTERNAL_URL ||
+    process.env.NEXT_PUBLIC_GATEWAY_URL ||
+    'http://localhost:8082'
+  );
+}
+
 export async function isAccessServiceHealthy(options?: { timeoutMs?: number }): Promise<boolean> {
-  const gatewayUrl = process.env.NEXT_PUBLIC_GATEWAY_URL || 'http://localhost:4001';
+  const gatewayUrl = resolveServerGatewayUrl();
   const url = `${gatewayUrl}/health`;
   const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const controller = new AbortController();

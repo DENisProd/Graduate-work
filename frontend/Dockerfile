@@ -16,17 +16,11 @@ RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# NEXT_PUBLIC_* vars are baked into the JS bundle at build time.
-# Pass them as build args in docker-compose (see docker-compose.yml).
-ARG NEXT_PUBLIC_API_URL
-ARG NEXT_PUBLIC_ACCESS_API_URL
-ARG NEXT_PUBLIC_PHYSICAL_DEVICES_API_URL
-ARG NEXT_PUBLIC_USE_MOCKS=false
+# NEXT_PUBLIC_GATEWAY_URL is baked into the JS bundle at build time.
+# Pass it as a build arg in docker-compose (see docker-compose.yml).
+ARG NEXT_PUBLIC_GATEWAY_URL=http://localhost:8082
 
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
-    NEXT_PUBLIC_ACCESS_API_URL=$NEXT_PUBLIC_ACCESS_API_URL \
-    NEXT_PUBLIC_PHYSICAL_DEVICES_API_URL=$NEXT_PUBLIC_PHYSICAL_DEVICES_API_URL \
-    NEXT_PUBLIC_USE_MOCKS=$NEXT_PUBLIC_USE_MOCKS \
+ENV NEXT_PUBLIC_GATEWAY_URL=$NEXT_PUBLIC_GATEWAY_URL \
     NEXT_TELEMETRY_DISABLED=1
 
 RUN pnpm run build
