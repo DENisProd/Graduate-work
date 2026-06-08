@@ -352,13 +352,13 @@ export const en = {
     gateway: 'API Gateway',
     gatewayUrl: 'API Gateway URL',
     gatewayHint:
-      'Cloud api-gateway URL (e.g. http://localhost:8082). HTTP uses /api/access and /api/scenario; MQTT connects automatically via ws://…/api/mqtt.',
+      'Cloud api-gateway URL',
     mqttUsername: 'MQTT username',
     mqttPassword: 'MQTT password',
     mqttPasswordPlaceholder: 'EMQX password',
     mqttPasswordKeep: '•••••••• (leave empty to keep current)',
     mqttCredentialsHint:
-      'EMQX credentials for ws://…/api/mqtt. Required when the broker enforces authentication.',
+      'EMQX credentials. Required when the broker enforces authentication.',
     mqttConnected: 'connected',
     mqttDisconnected: 'disconnected',
     saveGateway: 'Save gateway settings',

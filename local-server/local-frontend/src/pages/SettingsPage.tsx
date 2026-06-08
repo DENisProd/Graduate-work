@@ -14,7 +14,6 @@ import {
   startDeviceAuthorization,
   updateRuntimeSettings,
 } from '@/api/system'
-import { OtaPanel } from '@/components/shared/OtaPanel'
 import { SyncStatusPanel } from '@/components/shared/SyncStatusPanel'
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
@@ -37,12 +36,14 @@ function Input({
   placeholder,
   type = 'text',
   className,
+  autoComplete,
 }: {
   value: string
   onChange: (v: string) => void
   placeholder?: string
   type?: string
   className?: string
+  autoComplete?: string
 }) {
   return (
     <input
@@ -50,6 +51,7 @@ function Input({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
+      autoComplete={autoComplete}
       className={cn(
         'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 outline-none transition-colors',
         'focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20',
@@ -490,13 +492,6 @@ export function SettingsPage() {
               {t('settings.dark')}
             </button>
           </div>
-        </Card>
-      </section>
-
-      <section>
-        <SectionTitle>{t('settings.systemUpdates')}</SectionTitle>
-        <Card>
-          <OtaPanel />
         </Card>
       </section>
 
