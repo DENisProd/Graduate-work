@@ -62,6 +62,29 @@ export async function deleteModbusRegister(deviceId: string, registerId: string)
   await api.delete(`/api/v1/modbus/devices/${deviceId}/registers/${registerId}`)
 }
 
+export interface UpdateModbusRegisterBody {
+  name?: string
+  registerType?: 'holding' | 'input' | 'coil' | 'discrete'
+  address?: number
+  count?: number
+  unit?: string
+  scaleFactor?: number
+  offset?: number
+  writable?: boolean
+}
+
+export async function updateModbusRegister(
+  deviceId: string,
+  registerId: string,
+  body: UpdateModbusRegisterBody,
+): Promise<ModbusRegister> {
+  const { data } = await api.patch<ModbusRegister>(
+    `/api/v1/modbus/devices/${deviceId}/registers/${registerId}`,
+    body,
+  )
+  return data
+}
+
 // ─── Read / Write ─────────────────────────────────────────────────────────────
 
 export async function readModbusRegister(
@@ -78,6 +101,8 @@ export interface WriteModbusRegisterBody {
   value?: number
   values?: number[]
   coil?: boolean
+  /** Engineering value — backend converts using scale/offset */
+  scaledValue?: number
 }
 
 export async function writeModbusRegister(

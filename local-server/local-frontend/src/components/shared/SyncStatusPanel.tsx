@@ -7,6 +7,7 @@ import { CloudOff, AlertTriangle, RefreshCw, CloudDownload } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { getSyncStatus, triggerSync } from '@/api/system'
+import { buildSyncToastMessage } from '@/lib/sync-toast'
 
 function relativeTime(iso: string | null, neverLabel: string, locale: Locale) {
   if (!iso) return neverLabel
@@ -41,11 +42,10 @@ export function SyncStatusPanel() {
     setIsSyncing(true)
     try {
       const report = await triggerSync()
-      toast.success(
-        t('syncPanel.toastOk', { houses: report.housesUpserted, rooms: report.roomsUpserted }),
-      )
+      toast.success(buildSyncToastMessage(report, t))
       void queryClient.invalidateQueries({ queryKey: ['sync-status'] })
       void queryClient.invalidateQueries({ queryKey: ['houses'] })
+      void queryClient.invalidateQueries({ queryKey: ['rooms'] })
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       toast.error(t('syncPanel.toastFailed', { message: msg }))

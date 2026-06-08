@@ -8,7 +8,7 @@ pub use http::{
     ReqwestCloudAuthClient, ReqwestCloudPhysicalDeviceClient, ReqwestCloudScenarioClient,
     ReqwestCloudSyncClient, ReqwestCloudWidgetDashboardClient,
 };
-pub use mqtt::{run_ingestion, ModbusGateway, RumqttcClient};
+pub use mqtt::{run_ingestion, run_mqtt_bridge, ModbusGateway, RumqttcClient};
 pub use persistence::{
     OutboxWriter, SqliteAccessRepo, SqliteAccessSyncRepo, SqliteDeviceRepo, SqliteModbusRepo,
     SqlitePhysicalDeviceRepo, SqliteRuntimeSettingsRepo, SqliteScenarioExecutionRepo,

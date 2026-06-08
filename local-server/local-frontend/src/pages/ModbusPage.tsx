@@ -7,6 +7,7 @@ import {
   Trash2,
   RefreshCw,
   PencilLine,
+  SquarePen,
   ClipboardList,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -16,6 +17,7 @@ import type { ModbusDevice, ModbusRegister, ModbusRegisterState, ScanLogEntry } 
 import {
   listModbusRegisters,
   createModbusRegister,
+  updateModbusRegister,
   deleteModbusRegister,
   readModbusRegister,
   writeModbusRegister,
@@ -94,29 +96,34 @@ export { AddModbusDeviceModal as AddDeviceModal } from '@/components/shared/AddM
 
 const REGISTER_TYPES = ['holding', 'input', 'coil', 'discrete'] as const
 
-function AddRegisterModal({
+function RegisterFormModal({
   deviceId,
+  initialRegister,
   onClose,
   onSuccess,
   t,
 }: {
   deviceId: string
+  initialRegister?: ModbusRegister
   onClose: () => void
   onSuccess: () => void
   t: (key: string, vars?: Record<string, string | number | undefined>) => string
 }) {
-  const [name, setName] = useState('')
-  const [regType, setRegType] = useState<(typeof REGISTER_TYPES)[number]>('holding')
-  const [address, setAddress] = useState('0')
-  const [count, setCount] = useState('1')
-  const [unit, setUnit] = useState('')
-  const [scaleFactor, setScaleFactor] = useState('1')
-  const [offset, setOffset] = useState('0')
-  const [writable, setWritable] = useState(false)
+  const isEdit = !!initialRegister
+  const [name, setName] = useState(initialRegister?.name ?? '')
+  const [regType, setRegType] = useState<(typeof REGISTER_TYPES)[number]>(
+    initialRegister?.registerType ?? 'holding',
+  )
+  const [address, setAddress] = useState(String(initialRegister?.address ?? 0))
+  const [count, setCount] = useState(String(initialRegister?.count ?? 1))
+  const [unit, setUnit] = useState(initialRegister?.unit ?? '')
+  const [scaleFactor, setScaleFactor] = useState(String(initialRegister?.scaleFactor ?? 1))
+  const [offset, setOffset] = useState(String(initialRegister?.offset ?? 0))
+  const [writable, setWritable] = useState(initialRegister?.writable ?? true)
 
   const mutation = useMutation({
-    mutationFn: () =>
-      createModbusRegister(deviceId, {
+    mutationFn: () => {
+      const body = {
         name: name.trim(),
         registerType: regType,
         address: Number(address),
@@ -125,13 +132,19 @@ function AddRegisterModal({
         scaleFactor: Number(scaleFactor),
         offset: Number(offset),
         writable,
-      }),
+      }
+      if (isEdit) {
+        return updateModbusRegister(deviceId, initialRegister!.id, body)
+      }
+      return createModbusRegister(deviceId, body)
+    },
     onSuccess: () => {
-      toast.success(t('modbus.toastRegisterCreated'))
+      toast.success(t(isEdit ? 'modbus.toastRegisterUpdated' : 'modbus.toastRegisterCreated'))
       onSuccess()
       onClose()
     },
-    onError: () => toast.error(t('modbus.toastRegisterCreateFailed')),
+    onError: () =>
+      toast.error(t(isEdit ? 'modbus.toastRegisterUpdateFailed' : 'modbus.toastRegisterCreateFailed')),
   })
 
   const regTypeLabel: Record<(typeof REGISTER_TYPES)[number], string> = {
@@ -145,7 +158,9 @@ function AddRegisterModal({
     <>
       <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="fixed left-1/2 top-1/2 z-50 w-[26rem] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-6 shadow-2xl dark:bg-slate-900 max-h-[90vh] overflow-y-auto">
-        <h3 className="font-semibold text-slate-900 dark:text-slate-100">{t('modbus.addRegister')}</h3>
+        <h3 className="font-semibold text-slate-900 dark:text-slate-100">
+          {isEdit ? t('modbus.editRegister') : t('modbus.addRegister')}
+        </h3>
         <div className="mt-4 space-y-3">
           <label className="block">
             <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('modbus.formName')}</span>
@@ -161,7 +176,13 @@ function AddRegisterModal({
             <select
               className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
               value={regType}
-              onChange={(e) => setRegType(e.target.value as (typeof REGISTER_TYPES)[number])}
+              onChange={(e) => {
+                const next = e.target.value as (typeof REGISTER_TYPES)[number]
+                setRegType(next)
+                if (next === 'holding' || next === 'coil') {
+                  setWritable(true)
+                }
+              }}
             >
               {REGISTER_TYPES.map((rt) => (
                 <option key={rt} value={rt}>{regTypeLabel[rt]}</option>
@@ -245,7 +266,7 @@ function AddRegisterModal({
             disabled={!name.trim() || mutation.isPending}
             className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
           >
-            {mutation.isPending ? '…' : t('common.add')}
+            {mutation.isPending ? '…' : isEdit ? t('common.save') : t('common.add')}
           </button>
         </div>
       </div>
@@ -266,8 +287,12 @@ function WriteRegisterModal({
   onClose: () => void
   t: (key: string, vars?: Record<string, string | number | undefined>) => string
 }) {
+  const queryClient = useQueryClient()
   const [value, setValue] = useState('')
   const [coil, setCoil] = useState(true)
+  const [useScaled, setUseScaled] = useState(
+    register.scaleFactor !== 1 || register.offset !== 0,
+  )
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -279,10 +304,15 @@ function WriteRegisterModal({
         const values = trimmed.split(',').map((v) => Number(v.trim()))
         return writeModbusRegister(deviceId, register.id, { values })
       }
-      return writeModbusRegister(deviceId, register.id, { value: Number(trimmed) })
+      const num = Number(trimmed)
+      if (useScaled) {
+        return writeModbusRegister(deviceId, register.id, { scaledValue: num })
+      }
+      return writeModbusRegister(deviceId, register.id, { value: num })
     },
     onSuccess: () => {
       toast.success(t('modbus.toastWriteOk'))
+      queryClient.invalidateQueries({ queryKey: ['modbus-device-state', deviceId] })
       onClose()
     },
     onError: () => toast.error(t('modbus.toastWriteFailed')),
@@ -323,17 +353,28 @@ function WriteRegisterModal({
               </button>
             </div>
           ) : (
-            <label className="block">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                {register.count > 1 ? t('modbus.writeValues') : t('modbus.writeValue')}
-              </span>
-              <input
-                className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                placeholder={register.count > 1 ? '1000, 2000' : '1000'}
-              />
-            </label>
+            <>
+              <label className="block">
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                  {register.count > 1 ? t('modbus.writeValues') : t('modbus.writeValue')}
+                </span>
+                <input
+                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                  placeholder={register.count > 1 ? '1000, 2000' : useScaled ? '23.5' : '1000'}
+                />
+              </label>
+              <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+                <input
+                  type="checkbox"
+                  checked={useScaled}
+                  onChange={(e) => setUseScaled(e.target.checked)}
+                  className="rounded"
+                />
+                {t('modbus.writeScaled')}
+              </label>
+            </>
           )}
         </div>
         <div className="mt-5 flex justify-end gap-2">
@@ -369,6 +410,7 @@ export function RegistersPanel({
 }) {
   const queryClient = useQueryClient()
   const [showAddRegister, setShowAddRegister] = useState(false)
+  const [editingReg, setEditingReg] = useState<ModbusRegister | null>(null)
   const [pendingDeleteReg, setPendingDeleteReg] = useState<ModbusRegister | null>(null)
   const [writingReg, setWritingReg] = useState<ModbusRegister | null>(null)
   const [readingId, setReadingId] = useState<string | null>(null)
@@ -498,15 +540,25 @@ export function RegistersPanel({
                         >
                           <RefreshCw className={cn('h-3.5 w-3.5', readingId === reg.id && 'animate-spin')} />
                         </button>
-                        {reg.writable && (
+                        {(reg.registerType === 'holding' || reg.registerType === 'coil') && (
                           <button
                             onClick={() => setWritingReg(reg)}
-                            title={t('modbus.write')}
-                            className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-amber-600 dark:hover:bg-slate-800 dark:hover:text-amber-400"
+                            title={
+                              reg.writable ? t('modbus.write') : t('modbus.writeDisabledHint')
+                            }
+                            disabled={!reg.writable}
+                            className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-amber-600 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-slate-800 dark:hover:text-amber-400"
                           >
                             <PencilLine className="h-3.5 w-3.5" />
                           </button>
                         )}
+                        <button
+                          onClick={() => setEditingReg(reg)}
+                          title={t('modbus.editRegister')}
+                          className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-blue-600 dark:hover:bg-slate-800 dark:hover:text-blue-400"
+                        >
+                          <SquarePen className="h-3.5 w-3.5" />
+                        </button>
                         <button
                           onClick={() => setPendingDeleteReg(reg)}
                           title={t('common.delete')}
@@ -525,9 +577,21 @@ export function RegistersPanel({
       )}
 
       {showAddRegister && (
-        <AddRegisterModal
+        <RegisterFormModal
           deviceId={device.id}
           onClose={() => setShowAddRegister(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['modbus-registers', device.id] })
+          }}
+          t={t}
+        />
+      )}
+
+      {editingReg && (
+        <RegisterFormModal
+          deviceId={device.id}
+          initialRegister={editingReg}
+          onClose={() => setEditingReg(null)}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['modbus-registers', device.id] })
           }}

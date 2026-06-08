@@ -46,9 +46,15 @@ impl MqttClient for NoopMqtt {
     async fn current_url(&self) -> Option<String> {
         None
     }
+    async fn is_cloud_connected(&self) -> bool {
+        false
+    }
+    async fn cloud_current_url(&self) -> Option<String> {
+        None
+    }
     async fn reconfigure(
         &self,
-        _config: Option<local_server_application::ports::MqttConnectConfig>,
+        _config: local_server_application::ports::MqttRuntimeConfig,
     ) -> Result<(), DomainError> {
         Ok(())
     }
@@ -114,6 +120,7 @@ async fn health_endpoint_reports_db_ok() {
         default_access_service_url: "http://localhost:8085".to_string(),
         default_cloud_sync_url: "http://localhost:8082".to_string(),
         configured_mqtt_url: None,
+        configured_bridge_house_id: None,
         default_mqtt_username: None,
         default_mqtt_password: None,
         public_base_url: None,

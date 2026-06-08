@@ -788,7 +788,7 @@ function ModbusRegisterControlWidget({ config }: { config: Record<string, unknow
   const currentCoil = (data?.rawValues?.[0] ?? 0) !== 0
 
   const writeMutation = useMutation({
-    mutationFn: (body: { coil?: boolean; value?: number }) =>
+    mutationFn: (body: { coil?: boolean; value?: number; scaledValue?: number }) =>
       writeModbusRegister(deviceId!, registerId!, body),
     onSuccess: () => refetch(),
     onError: () => toast.error('Write failed'),
@@ -836,7 +836,10 @@ function ModbusRegisterControlWidget({ config }: { config: Record<string, unknow
             <button
               onClick={() => {
                 const v = parseFloat(numericValue)
-                if (!isNaN(v) && canWrite) { writeMutation.mutate({ value: v }); setNumericValue('') }
+                if (!isNaN(v) && canWrite) {
+                  writeMutation.mutate({ scaledValue: v })
+                  setNumericValue('')
+                }
               }}
               disabled={writeMutation.isPending || !canWrite || numericValue === ''}
               className="flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"

@@ -1,5 +1,7 @@
 ﻿use async_trait::async_trait;
 use local_server_application::ports::{HealthChecker, HealthError};
+
+use super::local_data_reset::reset_local_data;
 use sqlx::SqlitePool;
 
 #[derive(Debug, Clone)]
@@ -20,6 +22,12 @@ impl HealthChecker for SqliteHealthChecker {
             .fetch_one(&self.pool)
             .await
             .map(|_| ())
+            .map_err(|e| HealthError::Database(e.to_string()))
+    }
+
+    async fn reset_local_data(&self) -> Result<(), HealthError> {
+        reset_local_data(&self.pool)
+            .await
             .map_err(|e| HealthError::Database(e.to_string()))
     }
 }

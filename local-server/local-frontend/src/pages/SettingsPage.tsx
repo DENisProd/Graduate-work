@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Sun, Moon } from 'lucide-react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Sun, Moon, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/hooks/useI18n'
@@ -11,6 +11,7 @@ import {
   getDeviceAuthorizationStatus,
   getRuntimeSettings,
   logoutDeviceAuthorization,
+  resetLocalData,
   startDeviceAuthorization,
   updateRuntimeSettings,
 } from '@/api/system'
@@ -92,6 +93,7 @@ function Button({
 
 export function SettingsPage() {
   const { t, locale, setLocale } = useI18n()
+  const queryClient = useQueryClient()
   const {
     userId,
     theme,
@@ -106,6 +108,7 @@ export function SettingsPage() {
     isAuthPolling,
     setAccessServiceUrl,
     resetAuthState,
+    resetLocalUiState,
     setAuthState,
     setTheme,
   } = useSettingsStore()
@@ -117,6 +120,8 @@ export function SettingsPage() {
   const [mqttPasswordDraft, setMqttPasswordDraft] = useState('')
   const [hasMqttPassword, setHasMqttPassword] = useState(false)
   const [authCountdownSec, setAuthCountdownSec] = useState<number | null>(null)
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
+  const [resetting, setResetting] = useState(false)
 
   const { data: runtimeSettings } = useQuery({
     queryKey: ['runtime-settings'],
@@ -243,6 +248,21 @@ export function SettingsPage() {
     toast.success(t('settings.toastLogout'))
   }
 
+  const handleResetData = async () => {
+    setResetting(true)
+    try {
+      await resetLocalData()
+      resetLocalUiState()
+      await queryClient.invalidateQueries()
+      toast.success(t('settings.toastDataReset'))
+      setShowResetConfirm(false)
+    } catch {
+      toast.error(t('settings.toastDataResetFailed'))
+    } finally {
+      setResetting(false)
+    }
+  }
+
   useEffect(() => {
     if (!isAuthPolling || !authSessionId || authStatus !== 'pending') return
     const timer = window.setInterval(() => {
@@ -288,7 +308,7 @@ export function SettingsPage() {
             {runtimeSettings?.mqttUrl && (
               <div>
                 <p className="mb-1 text-xs font-medium text-slate-600 dark:text-slate-400">
-                  MQTT
+                  {t('settings.mqttLocal')}
                   <span
                     className={cn(
                       'ml-2 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase',
@@ -302,6 +322,26 @@ export function SettingsPage() {
                 </p>
                 <p className="font-mono text-xs text-slate-500 dark:text-slate-400">
                   {runtimeSettings.mqttUrl}
+                </p>
+              </div>
+            )}
+            {runtimeSettings?.mqttCloudUrl && (
+              <div>
+                <p className="mb-1 text-xs font-medium text-slate-600 dark:text-slate-400">
+                  {t('settings.mqttCloud')}
+                  <span
+                    className={cn(
+                      'ml-2 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase',
+                      runtimeSettings.mqttCloudConnected
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+                        : 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
+                    )}
+                  >
+                    {runtimeSettings.mqttCloudConnected ? t('settings.mqttConnected') : t('settings.mqttDisconnected')}
+                  </span>
+                </p>
+                <p className="font-mono text-xs text-slate-500 dark:text-slate-400">
+                  {runtimeSettings.mqttCloudUrl}
                 </p>
               </div>
             )}
@@ -501,6 +541,54 @@ export function SettingsPage() {
           <SyncStatusPanel />
         </Card>
       </section>
+
+      <section>
+        <SectionTitle>{t('settings.dataReset')}</SectionTitle>
+        <Card>
+          <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
+            {t('settings.dataResetHint')}
+          </p>
+          <Button variant="secondary" onClick={() => setShowResetConfirm(true)}>
+            {t('settings.resetData')}
+          </Button>
+        </Card>
+      </section>
+
+      {showResetConfirm && (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+            onClick={() => !resetting && setShowResetConfirm(false)}
+          />
+          <div className="fixed left-1/2 top-1/2 z-50 w-[22rem] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-6 shadow-2xl dark:bg-slate-900">
+            <div className="mb-3 flex items-center gap-2 text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="h-5 w-5" />
+              <h3 className="font-semibold text-slate-900 dark:text-slate-100">
+                {t('settings.resetDataTitle')}
+              </h3>
+            </div>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {t('settings.resetDataBody')}
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => setShowResetConfirm(false)}
+                disabled={resetting}
+                className="rounded-lg border border-slate-300 px-4 py-1.5 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={() => void handleResetData()}
+                disabled={resetting}
+                className="rounded-lg bg-red-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
+              >
+                {resetting ? '…' : t('settings.resetDataConfirm')}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

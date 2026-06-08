@@ -19,6 +19,7 @@ pub struct HttpAppState {
     pub default_cloud_sync_url: String,
     /// Explicit `ZIGBEE_MQTT_URL` / config `mqtt_url`. When unset, MQTT uses gateway `/api/mqtt`.
     pub configured_mqtt_url: Option<String>,
+    pub configured_bridge_house_id: Option<String>,
     pub default_mqtt_username: Option<String>,
     pub default_mqtt_password: Option<String>,
     pub public_base_url: Option<String>,

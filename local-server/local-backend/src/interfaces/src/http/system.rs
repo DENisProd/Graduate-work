@@ -8,7 +8,7 @@ use local_server_application::ports::{
     AuthPollResult, CompleteAuthArgs, UpsertFromCloudCmd, UpsertFromCloudWidgetDashboardCmd,
 };
 use local_server_application::{
-    resolve_mqtt_connect_config, resolve_scenario_service_url, DomainError,
+    resolve_bridge_house_id, resolve_mqtt_runtime_config, resolve_scenario_service_url, DomainError,
 };
 use local_server_core::entities::scenario::ScenarioStatus;
 use serde::{Deserialize, Serialize};
@@ -28,6 +28,7 @@ pub fn router(state: HttpAppState) -> Router {
         .route("/system/auth/complete", post(complete_auth))
         .route("/system/auth/logout", post(logout_auth))
         .route("/system/auth/callback", post(auth_callback))
+        .route("/system/reset", post(reset_local_data_handler))
         .with_state(state)
 }
 
@@ -120,7 +121,10 @@ async fn trigger_sync(
             .await
         {
             Ok(resources) => {
-                rooms_upserted += resources.len();
+                rooms_upserted += resources
+                    .iter()
+                    .filter(|r| r.r#type.eq_ignore_ascii_case("ROOM"))
+                    .count();
                 state.access_sync.upsert_resources(&house.id, &resources).await?;
             }
             Err(e) => {
@@ -275,6 +279,8 @@ async fn trigger_sync(
         "cloud sync pull complete"
     );
 
+    reconfigure_mqtt_from_settings(&state).await;
+
     Ok(Json(SyncReport {
         houses_upserted,
         rooms_upserted,
@@ -289,10 +295,12 @@ async fn trigger_sync(
 #[serde(rename_all = "camelCase")]
 pub struct RuntimeSettingsResponse {
     pub mqtt_url: Option<String>,
+    pub mqtt_cloud_url: Option<String>,
     pub mqtt_username: Option<String>,
     pub has_mqtt_password: bool,
     pub access_service_url: String,
     pub mqtt_connected: bool,
+    pub mqtt_cloud_connected: bool,
     pub auth_session_id: Option<String>,
     pub auth_status: Option<String>,
     pub auth_code: Option<String>,
@@ -375,12 +383,44 @@ fn resolve_access_service_url(
     settings_url.unwrap_or_else(|| default_url.to_string())
 }
 
+async fn reconfigure_mqtt_from_settings(state: &HttpAppState) {
+    let settings = match state.runtime_settings.load().await {
+        Ok(s) => s,
+        Err(e) => {
+            tracing::warn!(error = %e, "MQTT reconfigure: failed to load settings");
+            return;
+        }
+    };
+    let gateway_url = resolve_access_service_url(
+        settings.access_service_url.clone(),
+        &state.default_access_service_url,
+    );
+    let bridge_house_id = resolve_bridge_house_id(
+        state.access_sync.as_ref(),
+        &settings,
+        state.configured_bridge_house_id.as_deref(),
+    )
+    .await;
+    let mqtt_config = resolve_mqtt_runtime_config(
+        state.configured_mqtt_url.as_deref(),
+        &gateway_url,
+        &settings,
+        state.default_mqtt_username.as_deref(),
+        state.default_mqtt_password.as_deref(),
+        bridge_house_id,
+    );
+    if let Err(e) = state.mqtt.reconfigure(mqtt_config).await {
+        tracing::warn!(error = %e, "MQTT reconfigure failed");
+    }
+}
+
 async fn get_settings(
     State(state): State<HttpAppState>,
 ) -> Result<Json<RuntimeSettingsResponse>, AppError> {
     let settings = state.runtime_settings.load().await?;
     Ok(Json(RuntimeSettingsResponse {
         mqtt_url: state.mqtt.current_url().await,
+        mqtt_cloud_url: state.mqtt.cloud_current_url().await,
         mqtt_username: settings.mqtt_username,
         has_mqtt_password: settings.mqtt_password.is_some(),
         access_service_url: resolve_access_service_url(
@@ -388,6 +428,7 @@ async fn get_settings(
             &state.default_access_service_url,
         ),
         mqtt_connected: state.mqtt.is_connected().await,
+        mqtt_cloud_connected: state.mqtt.is_cloud_connected().await,
         auth_session_id: settings.auth_session_id,
         auth_status: settings.auth_status,
         auth_code: settings.auth_code,
@@ -435,22 +476,7 @@ async fn patch_settings(
         }
     }
 
-    let settings = state.runtime_settings.load().await?;
-    let gateway_url = resolve_access_service_url(
-        settings.access_service_url.clone(),
-        &state.default_access_service_url,
-    );
-    if let Some(mqtt_config) = resolve_mqtt_connect_config(
-        state.configured_mqtt_url.as_deref(),
-        &gateway_url,
-        &settings,
-        state.default_mqtt_username.as_deref(),
-        state.default_mqtt_password.as_deref(),
-    ) {
-        if let Err(e) = state.mqtt.reconfigure(Some(mqtt_config)).await {
-            tracing::warn!(error = %e, "MQTT reconfigure after settings update failed");
-        }
-    }
+    reconfigure_mqtt_from_settings(&state).await;
 
     get_settings(State(state)).await
 }
@@ -545,6 +571,7 @@ async fn auth_status(
                     settings.auth_expires_at.as_deref(),
                 )
                 .await?;
+            reconfigure_mqtt_from_settings(&state).await;
             return Ok(Json(AuthStatusResponse {
                 auth_session_id: session_id,
                 status: "authorized".to_string(),
@@ -670,4 +697,21 @@ async fn auth_callback(
         external_user_id: body.external_user_id,
         display_name: body.display_name,
     }))
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ResetLocalDataResponse {
+    pub ok: bool,
+}
+
+async fn reset_local_data_handler(
+    State(state): State<HttpAppState>,
+) -> Result<Json<ResetLocalDataResponse>, AppError> {
+    state
+        .health
+        .reset_local_data()
+        .await
+        .map_err(|e| DomainError::Internal(e.to_string()))?;
+    Ok(Json(ResetLocalDataResponse { ok: true }))
 }

@@ -332,9 +332,17 @@ mod tests {
             None
         }
 
+        async fn is_cloud_connected(&self) -> bool {
+            false
+        }
+
+        async fn cloud_current_url(&self) -> Option<String> {
+            None
+        }
+
         async fn reconfigure(
             &self,
-            _config: Option<crate::ports::MqttConnectConfig>,
+            _config: crate::ports::MqttRuntimeConfig,
         ) -> Result<(), DomainError> {
             Ok(())
         }

@@ -2,6 +2,7 @@
 use chrono::Utc;
 use local_server_application::ports::modbus_repository::{
     CreateModbusDeviceCmd, CreateModbusRegisterCmd, ModbusRepository, SaveModbusStateCmd,
+    UpdateModbusRegisterCmd,
 };
 use local_server_application::DomainError;
 use local_server_core::entities::modbus::{
@@ -229,6 +230,65 @@ impl ModbusRepository for SqliteModbusRepo {
             .await
             .map_err(db_err)?;
         Ok(())
+    }
+
+    async fn update_register(
+        &self,
+        id: Uuid,
+        cmd: UpdateModbusRegisterCmd,
+    ) -> Result<ModbusRegister, DomainError> {
+        let existing = self
+            .find_register(id)
+            .await?
+            .ok_or_else(|| DomainError::NotFound {
+                entity: "ModbusRegister".into(),
+                id: id.to_string(),
+            })?;
+
+        let name = cmd.name.unwrap_or(existing.name);
+        let register_type = cmd.register_type.unwrap_or(existing.register_type);
+        let address = cmd.address.unwrap_or(existing.address);
+        let count = cmd.count.unwrap_or(existing.count);
+        let unit = cmd.unit.unwrap_or(existing.unit);
+        let scale_factor = cmd.scale_factor.unwrap_or(existing.scale_factor);
+        let offset = cmd.offset.unwrap_or(existing.offset);
+        let writable = cmd.writable.unwrap_or(existing.writable);
+        let now = Utc::now().to_rfc3339();
+
+        sqlx::query(
+            "UPDATE modbus_registers SET \
+             name = ?, register_type = ?, address = ?, count = ?, unit = ?, \
+             scale_factor = ?, offset = ?, writable = ?, updated_at = ? \
+             WHERE id = ?",
+        )
+        .bind(&name)
+        .bind(register_type.as_str())
+        .bind(address)
+        .bind(count)
+        .bind(&unit)
+        .bind(scale_factor)
+        .bind(offset)
+        .bind(writable as i64)
+        .bind(&now)
+        .bind(id.to_string())
+        .execute(&self.pool)
+        .await
+        .map_err(db_err)?;
+
+        Ok(ModbusRegister {
+            id,
+            device_id: existing.device_id,
+            name,
+            register_type,
+            address,
+            count,
+            unit,
+            scale_factor,
+            offset,
+            writable,
+            created_at: existing.created_at,
+            updated_at: parse_dt(&now)?,
+        })
     }
 
     async fn save_state(&self, cmd: SaveModbusStateCmd) -> Result<(), DomainError> {

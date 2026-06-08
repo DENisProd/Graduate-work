@@ -25,7 +25,7 @@ pub struct RumqttcClient {
 impl RumqttcClient {
     pub async fn connect(
         mqtt_url: &str,
-        topic_prefix: &str,
+        subscribe_topics: &[String],
         username: Option<&str>,
         password: Option<&str>,
     ) -> Result<Arc<Self>, anyhow::Error> {
@@ -50,43 +50,41 @@ impl RumqttcClient {
         let (msg_tx, _) = broadcast::channel::<MqttMessage>(256);
         let (shutdown_tx, shutdown_rx) = watch::channel(false);
 
+        let prefix = subscribe_topics
+            .first()
+            .and_then(|t| t.strip_suffix("/#"))
+            .unwrap_or("zigbee2mqtt")
+            .to_string();
+
         let client = Arc::new(Self {
             inner,
-            prefix: topic_prefix.to_owned(),
+            prefix,
             broker_url: mqtt_url.to_string(),
             msg_tx,
             shutdown_tx,
         });
 
-        let subscribe_topic = format!("{}/#", topic_prefix);
-        client
-            .inner
-            .subscribe(&subscribe_topic, QoS::AtLeastOnce)
-            .await
-            .map_err(|e| anyhow::anyhow!("MQTT subscribe: {e}"))?;
-        client
-            .inner
-            .subscribe("modbus/response", QoS::AtLeastOnce)
-            .await
-            .map_err(|e| anyhow::anyhow!("MQTT subscribe modbus/response: {e}"))?;
-        client
-            .inner
-            .subscribe("modbus/discovered", QoS::AtLeastOnce)
-            .await
-            .map_err(|e| anyhow::anyhow!("MQTT subscribe modbus/discovered: {e}"))?;
+        for topic in subscribe_topics {
+            client
+                .inner
+                .subscribe(topic, QoS::AtLeastOnce)
+                .await
+                .map_err(|e| anyhow::anyhow!("MQTT subscribe {topic}: {e}"))?;
+        }
 
         let tx = client.msg_tx.clone();
         let inner2 = client.inner.clone();
+        let subscribe_topics_owned: Vec<String> = subscribe_topics.to_vec();
         tokio::spawn(run_eventloop(
             eventloop,
             tx,
             inner2,
-            subscribe_topic,
+            subscribe_topics_owned,
             shutdown_rx,
             mqtt_url.to_owned(),
         ));
 
-        tracing::info!(host = %host, port, prefix = topic_prefix, "MQTT connected");
+        tracing::info!(host = %host, port, topics = subscribe_topics.len(), "MQTT connected");
         Ok(client)
     }
 
@@ -107,7 +105,7 @@ async fn run_eventloop(
     mut eventloop: EventLoop,
     tx: broadcast::Sender<MqttMessage>,
     client: AsyncClient,
-    subscribe_topic: String,
+    subscribe_topics: Vec<String>,
     mut shutdown_rx: watch::Receiver<bool>,
     broker_url: String,
 ) {
@@ -124,9 +122,9 @@ async fn run_eventloop(
             Ok(Event::Incoming(Packet::ConnAck(_))) => {
                 backoff = 1;
                 tracing::info!(broker = %broker_url, "MQTT reconnected, re-subscribing");
-                client.subscribe(&subscribe_topic, QoS::AtLeastOnce).await.ok();
-                client.subscribe("modbus/response", QoS::AtLeastOnce).await.ok();
-                client.subscribe("modbus/discovered", QoS::AtLeastOnce).await.ok();
+                for topic in &subscribe_topics {
+                    client.subscribe(topic, QoS::AtLeastOnce).await.ok();
+                }
             }
             Ok(Event::Incoming(Packet::Publish(p))) => {
                 let msg = MqttMessage { topic: p.topic.clone(), payload: p.payload.to_vec() };
@@ -160,7 +158,18 @@ impl MqttClient for RumqttcClient {
         Some(self.broker_url.clone())
     }
 
-    async fn reconfigure(&self, _config: Option<local_server_application::ports::MqttConnectConfig>) -> Result<(), DomainError> {
+    async fn is_cloud_connected(&self) -> bool {
+        false
+    }
+
+    async fn cloud_current_url(&self) -> Option<String> {
+        None
+    }
+
+    async fn reconfigure(
+        &self,
+        _config: local_server_application::ports::MqttRuntimeConfig,
+    ) -> Result<(), DomainError> {
         Err(DomainError::Validation(
             "static MQTT client does not support runtime reconfiguration".into(),
         ))

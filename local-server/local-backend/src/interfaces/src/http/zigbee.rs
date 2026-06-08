@@ -125,13 +125,33 @@ async fn delete_device(
 
 async fn send_command(
     State(s): State<ZigbeeHttpState>,
-    Path(_ieee): Path<String>,
-    Json(body): Json<CommandPayload>,
+    Path(ieee): Path<String>,
+    Json(body): Json<serde_json::Value>,
 ) -> Result<StatusCode, AppError> {
-    let topic = format!("{}/{}/set", s.prefix, body.friendly_name);
-    let payload = serde_json::to_vec(&body.payload)
+    let payload = if let Ok(cmd) = serde_json::from_value::<CommandPayload>(body.clone()) {
+        cmd.payload
+    } else if let Some(p) = body.get("payload").cloned() {
+        p
+    } else {
+        body
+    };
+
+    let device = s
+        .phys_repo
+        .find_by_ieee(&ieee)
+        .await?
+        .ok_or_else(|| DomainError::not_found("zigbee_device", &ieee))?;
+
+    let friendly_name = device
+        .friendly_name
+        .as_deref()
+        .filter(|n| !n.is_empty())
+        .unwrap_or(&ieee);
+
+    let topic = format!("{}/{}/set", s.prefix, friendly_name);
+    let bytes = serde_json::to_vec(&payload)
         .map_err(|e| DomainError::Validation(e.to_string()))?;
-    s.mqtt.publish(&topic, &payload).await?;
+    s.mqtt.publish(&topic, &bytes).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 

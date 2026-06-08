@@ -8,6 +8,7 @@ use axum::{
 };
 use local_server_application::ports::modbus_repository::{
     CreateModbusDeviceCmd, CreateModbusRegisterCmd, ModbusRepository, SaveModbusStateCmd,
+    UpdateModbusRegisterCmd,
 };
 use local_server_application::ports::{ModbusBridgePort, MqttClient};
 use local_server_core::entities::modbus::{
@@ -143,6 +144,19 @@ fn default_one_f() -> f64 { 1.0 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct UpdateRegisterBody {
+    pub name: Option<String>,
+    pub register_type: Option<String>,
+    pub address: Option<i64>,
+    pub count: Option<i64>,
+    pub unit: Option<String>,
+    pub scale_factor: Option<f64>,
+    pub offset: Option<f64>,
+    pub writable: Option<bool>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WriteRegisterBody {
     #[serde(default)]
     pub value: Option<u16>,
@@ -150,6 +164,9 @@ pub struct WriteRegisterBody {
     pub values: Option<Vec<u16>>,
     #[serde(default)]
     pub coil: Option<bool>,
+    /// When set, converts engineering units to raw register value using scale/offset.
+    #[serde(default)]
+    pub scaled_value: Option<f64>,
 }
 
 async fn list_devices(
@@ -219,6 +236,9 @@ async fn create_register(
             ))
         })?;
 
+    let writable = body.writable
+        || matches!(&rt, RegisterType::Holding | RegisterType::Coil);
+
     let reg = s
         .repo
         .create_register(CreateModbusRegisterCmd {
@@ -230,10 +250,45 @@ async fn create_register(
             unit: body.unit,
             scale_factor: body.scale_factor,
             offset: body.offset,
-            writable: body.writable,
+            writable,
         })
         .await?;
     Ok((StatusCode::CREATED, Json(reg.into())))
+}
+
+async fn update_register(
+    State(s): State<ModbusHttpState>,
+    Path((_device_id, reg_id)): Path<(Uuid, Uuid)>,
+    Json(body): Json<UpdateRegisterBody>,
+) -> Result<Json<ModbusRegisterResponse>, AppError> {
+    let register_type = match body.register_type.as_deref() {
+        Some(rt) => Some(
+            RegisterType::from_str(rt).ok_or_else(|| {
+                local_server_application::DomainError::Validation(format!(
+                    "Unknown register_type '{rt}'. Use: holding, input, coil, discrete"
+                ))
+            })?,
+        ),
+        None => None,
+    };
+
+    let reg = s
+        .repo
+        .update_register(
+            reg_id,
+            UpdateModbusRegisterCmd {
+                name: body.name,
+                register_type,
+                address: body.address,
+                count: body.count,
+                unit: body.unit.map(Some),
+                scale_factor: body.scale_factor,
+                offset: body.offset,
+                writable: body.writable,
+            },
+        )
+        .await?;
+    Ok(Json(reg.into()))
 }
 
 async fn delete_register(
@@ -342,40 +397,73 @@ async fn write_register(
             id: reg.device_id.to_string(),
         })?;
 
-    let cmd = match reg.register_type {
+    fn to_raw_u16(_reg: &ModbusRegister, value: u16) -> u16 {
+        value
+    }
+
+    fn scaled_to_raw(reg: &ModbusRegister, scaled: f64) -> u16 {
+        if reg.scale_factor.abs() < f64::EPSILON {
+            return scaled.round() as u16;
+        }
+        ((scaled - reg.offset) / reg.scale_factor).round().clamp(0.0, 65535.0) as u16
+    }
+
+    let (cmd, raw_values, scaled_values) = match reg.register_type {
         RegisterType::Coil => {
             let v = body.coil.ok_or_else(|| {
                 local_server_application::DomainError::Validation(
                     "Coil write requires 'coil' boolean field".into(),
                 )
             })?;
-            serde_json::json!({
+            let cmd = serde_json::json!({
                 "action":   "write_single_coil",
                 "slave_id": dev.slave_id,
                 "address":  reg.address,
                 "value":    v,
-            })
+            });
+            let raw = vec![serde_json::json!(if v { 1 } else { 0 })];
+            let scaled = vec![if v { 1.0 } else { 0.0 }];
+            (cmd, raw, scaled)
         }
         RegisterType::Holding if body.values.is_some() => {
-            serde_json::json!({
+            let values = body.values.unwrap();
+            let cmd = serde_json::json!({
                 "action":   "write_multiple_registers",
                 "slave_id": dev.slave_id,
                 "address":  reg.address,
-                "values":   body.values.unwrap(),
-            })
+                "values":   values,
+            });
+            let raw: Vec<serde_json::Value> =
+                values.iter().map(|v| serde_json::json!(v)).collect();
+            let scaled: Vec<f64> = values
+                .iter()
+                .map(|v| *v as f64 * reg.scale_factor + reg.offset)
+                .collect();
+            (cmd, raw, scaled)
         }
         RegisterType::Holding => {
-            let v = body.value.ok_or_else(|| {
-                local_server_application::DomainError::Validation(
-                    "Holding register write requires 'value' (u16) or 'values' ([u16]) field".into(),
-                )
-            })?;
-            serde_json::json!({
+            let raw_u16 = if let Some(scaled) = body.scaled_value {
+                scaled_to_raw(&reg, scaled)
+            } else {
+                let v = body.value.ok_or_else(|| {
+                    local_server_application::DomainError::Validation(
+                        "Holding register write requires 'value' (u16), 'values' ([u16]), or 'scaledValue' field".into(),
+                    )
+                })?;
+                to_raw_u16(&reg, v)
+            };
+            let cmd = serde_json::json!({
                 "action":   "write_single_register",
                 "slave_id": dev.slave_id,
                 "address":  reg.address,
-                "value":    v,
-            })
+                "value":    raw_u16,
+            });
+            let scaled_f = raw_u16 as f64 * reg.scale_factor + reg.offset;
+            (
+                cmd,
+                vec![serde_json::json!(raw_u16)],
+                vec![scaled_f],
+            )
         }
         _ => {
             return Err(local_server_application::DomainError::Validation(
@@ -386,6 +474,15 @@ async fn write_register(
     };
 
     s.gateway.execute(s.mqtt.clone(), cmd).await?;
+
+    s.repo
+        .save_state(SaveModbusStateCmd {
+            register_id: reg.id,
+            raw_values,
+            scaled_values,
+        })
+        .await?;
+
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -427,7 +524,7 @@ pub fn router(
         .route("/modbus/devices/:id/registers",
             get(list_registers).post(create_register))
         .route("/modbus/devices/:id/registers/:reg_id",
-            delete(delete_register))
+            delete(delete_register).patch(update_register))
         .route("/modbus/devices/:id/registers/:reg_id/read",
             post(read_register))
         .route("/modbus/devices/:id/registers/:reg_id/write",

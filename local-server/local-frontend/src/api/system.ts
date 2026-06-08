@@ -15,10 +15,12 @@ export interface SyncStatus {
 
 export interface RuntimeSettingsResponse {
   mqttUrl: string | null
+  mqttCloudUrl: string | null
   mqttUsername: string | null
   hasMqttPassword: boolean
   accessServiceUrl: string
   mqttConnected: boolean
+  mqttCloudConnected: boolean
   authSessionId: string | null
   authStatus: string | null
   authCode: string | null
@@ -116,6 +118,10 @@ export async function completeDeviceAuthorization(body: CompleteAuthRequest): Pr
 
 export async function logoutDeviceAuthorization(): Promise<void> {
   await api.post('/api/v1/system/auth/logout')
+}
+
+export async function resetLocalData(): Promise<void> {
+  await api.post('/api/v1/system/reset')
 }
 
 export interface UpdateCheckResult {

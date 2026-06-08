@@ -8,7 +8,9 @@ max_db_connections = 5
 busy_timeout_ms = 5000
 graceful_shutdown_secs = 10
 mqtt_topic_prefix = "zigbee2mqtt"
-# mqtt_url = "mqtt://localhost:1883"  # uncomment or set ZIGBEE_MQTT_URL env var
+# Local Mosquitto in docker-compose. Override via ZIGBEE_MQTT_URL or config/local.toml.
+# When set, Zigbee/Modbus ingest uses this broker instead of cloud gateway /api/mqtt.
+mqtt_url = "mqtt://mosquitto:1883"
 access_service_url = "http://localhost:8082"
 # local_server_public_url = "https://your-public-url.example"
 # serial_number = "SN-00:11:22:33:44:55"  # set via LOCAL_SERVER_SERIAL env var

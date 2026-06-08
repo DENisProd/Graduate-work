@@ -227,6 +227,49 @@ docker run --rm -p 8080:8080 \
 - `Dockerfile` собирает бинарник `local-server` в multi-stage режиме
 - каталог `migrations` вшивается на этапе сборки
 - runtime-образ основан на `debian:bookworm-slim`
+- по умолчанию профиль **`release-device`** (быстрая сборка на Orange Pi / ARM SBC)
+
+### Сборка на Orange Pi и других одноплатниках
+
+Сборка Rust на слабом ARM может занимать 20–40 минут. Основные ускорения уже включены в `Dockerfile`:
+
+| Что | Эффект |
+|-----|--------|
+| профиль `release-device` (`lto=false`, `codegen-units=16`) | в 2–4 раза быстрее, чем `release` с полным LTO |
+| linker **mold** | быстрее этап линковки |
+| BuildKit cache (`registry` + `git` + `target`) | повторные сборки только перекомпилируют изменённый код |
+
+Включите BuildKit и соберите из корня `local-server`:
+
+```bash
+DOCKER_BUILDKIT=1 docker compose build local-backend
+```
+
+На платах с 1–2 GB RAM ограничьте параллелизм:
+
+```bash
+docker compose build local-backend \
+  --build-arg CARGO_BUILD_JOBS=2
+```
+
+Максимальная оптимизация бинарника (медленная сборка):
+
+```bash
+docker compose build local-backend --build-arg CARGO_PROFILE=release
+```
+
+**Лучший вариант для Orange Pi — не собирать на плате**, а собрать образ на ПК и загрузить на плату:
+
+```bash
+# на ПК (Linux/macOS с Docker Buildx)
+docker buildx build --platform linux/arm64 \
+  -t local-backend:arm64 \
+  --load ./local-backend
+
+docker save local-backend:arm64 | ssh orangepi docker load
+```
+
+Или пушить готовый образ в registry и на плате делать только `docker compose pull`.
 
 На практике этот сервис обычно поднимается не отдельно, а через корневой `docker-compose.yml` в `local-server`.
 

@@ -43,12 +43,12 @@ export function useZigbeeSocket() {
   }, [socket])
 
   const subscribe = useCallback(
-    (ieeeAddr: string) => socket.emit('zigbee:subscribe', { ieeeAddr }),
+    (ieeeAddr: string) => socket.emit('zigbee:subscribe', { deviceIeeeAddrs: [ieeeAddr] }),
     [socket],
   )
 
   const unsubscribe = useCallback(
-    (ieeeAddr: string) => socket.emit('zigbee:unsubscribe', { ieeeAddr }),
+    (ieeeAddr: string) => socket.emit('zigbee:unsubscribe', { deviceIeeeAddrs: [ieeeAddr] }),
     [socket],
   )
 

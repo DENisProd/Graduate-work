@@ -1,4 +1,6 @@
-use crate::ports::{MqttConnectConfig, RuntimeSettings};
+use crate::ports::{AccessSyncRepository, MqttConnectConfig, MqttRuntimeConfig, RuntimeSettings};
+
+const DEFAULT_LOCAL_MQTT: &str = "mqtt://mosquitto:1883";
 
 pub fn scenario_url_from_access(access: &str) -> String {
     let base = access.trim().trim_end_matches('/');
@@ -50,14 +52,32 @@ pub fn resolve_mqtt_credentials(
     (username, password)
 }
 
-pub fn resolve_mqtt_connect_config(
+pub fn resolve_local_mqtt_connect_config(
     configured_url: Option<&str>,
+    default_username: Option<&str>,
+    default_password: Option<&str>,
+) -> Option<MqttConnectConfig> {
+    let url = configured_url
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string)
+        .unwrap_or_else(|| DEFAULT_LOCAL_MQTT.to_string());
+    let (username, password) =
+        resolve_mqtt_credentials(&RuntimeSettings::default(), default_username, default_password);
+    Some(MqttConnectConfig {
+        url,
+        username,
+        password,
+    })
+}
+
+pub fn resolve_cloud_mqtt_connect_config(
     gateway_url: &str,
     settings: &RuntimeSettings,
     default_username: Option<&str>,
     default_password: Option<&str>,
 ) -> Option<MqttConnectConfig> {
-    let url = resolve_mqtt_url(configured_url, gateway_url)?;
+    let url = mqtt_ws_url_from_gateway(gateway_url)?;
     let (username, password) =
         resolve_mqtt_credentials(settings, default_username, default_password);
     Some(MqttConnectConfig {
@@ -65,6 +85,61 @@ pub fn resolve_mqtt_connect_config(
         username,
         password,
     })
+}
+
+pub fn resolve_mqtt_runtime_config(
+    configured_local_url: Option<&str>,
+    gateway_url: &str,
+    settings: &RuntimeSettings,
+    default_username: Option<&str>,
+    default_password: Option<&str>,
+    bridge_house_id: Option<String>,
+) -> MqttRuntimeConfig {
+    MqttRuntimeConfig {
+        local: resolve_local_mqtt_connect_config(
+            configured_local_url,
+            default_username,
+            default_password,
+        ),
+        cloud: resolve_cloud_mqtt_connect_config(
+            gateway_url,
+            settings,
+            default_username,
+            default_password,
+        ),
+        bridge_house_id,
+    }
+}
+
+/// House id for local↔cloud MQTT bridging: explicit env/config, else first synced house.
+pub async fn resolve_bridge_house_id(
+    access_sync: &dyn AccessSyncRepository,
+    settings: &RuntimeSettings,
+    configured: Option<&str>,
+) -> Option<String> {
+    if let Some(id) = configured.map(str::trim).filter(|s| !s.is_empty()) {
+        return Some(id.to_string());
+    }
+    let user_id = settings.auth_external_user_id.as_deref()?;
+    access_sync
+        .list_houses(user_id)
+        .await
+        .ok()?
+        .first()
+        .map(|h| h.id.clone())
+}
+
+/// Legacy single-broker resolver (local preferred, else cloud gateway).
+pub fn resolve_mqtt_connect_config(
+    configured_url: Option<&str>,
+    gateway_url: &str,
+    settings: &RuntimeSettings,
+    default_username: Option<&str>,
+    default_password: Option<&str>,
+) -> Option<MqttConnectConfig> {
+    resolve_local_mqtt_connect_config(configured_url, default_username, default_password).or_else(
+        || resolve_cloud_mqtt_connect_config(gateway_url, settings, default_username, default_password),
+    )
 }
 
 pub fn resolve_mqtt_url(configured: Option<&str>, gateway_url: &str) -> Option<String> {
@@ -93,6 +168,7 @@ pub fn resolve_scenario_service_url(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ports::RuntimeSettings;
 
     #[test]
     fn mqtt_ws_url_from_http_gateway() {
@@ -116,5 +192,52 @@ mod tests {
             resolve_mqtt_url(None, "http://host.docker.internal:8082").as_deref(),
             Some("ws://host.docker.internal:8082/api/mqtt")
         );
+    }
+
+    #[test]
+    fn local_mqtt_ignores_cloud_sqlite_credentials() {
+        let settings = RuntimeSettings {
+            mqtt_username: Some("cloud-user".into()),
+            mqtt_password: Some("cloud-pass".into()),
+            ..Default::default()
+        };
+        let cfg = resolve_local_mqtt_connect_config(Some("mqtt://mosquitto:1883"), None, None).unwrap();
+        assert_eq!(cfg.url, "mqtt://mosquitto:1883");
+        assert!(cfg.username.is_none());
+        assert!(cfg.password.is_none());
+        let _ = settings;
+    }
+
+    #[test]
+    fn gateway_mqtt_uses_sqlite_credentials() {
+        let settings = RuntimeSettings {
+            mqtt_username: Some("cloud-user".into()),
+            mqtt_password: Some("cloud-pass".into()),
+            ..Default::default()
+        };
+        let cfg = resolve_cloud_mqtt_connect_config("https://api-home.example", &settings, None, None)
+            .unwrap();
+        assert_eq!(cfg.url, "wss://api-home.example/api/mqtt");
+        assert_eq!(cfg.username.as_deref(), Some("cloud-user"));
+        assert_eq!(cfg.password.as_deref(), Some("cloud-pass"));
+    }
+
+    #[test]
+    fn runtime_config_includes_both_brokers() {
+        let settings = RuntimeSettings {
+            mqtt_username: Some("cloud-user".into()),
+            ..Default::default()
+        };
+        let cfg = resolve_mqtt_runtime_config(
+            Some("mqtt://mosquitto:1883"),
+            "https://api-home.example",
+            &settings,
+            None,
+            None,
+            Some("house-1".into()),
+        );
+        assert_eq!(cfg.local.as_ref().unwrap().url, "mqtt://mosquitto:1883");
+        assert!(cfg.cloud.is_some());
+        assert_eq!(cfg.bridge_house_id.as_deref(), Some("house-1"));
     }
 }

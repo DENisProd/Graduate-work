@@ -21,7 +21,7 @@ services:
     volumes:
       - ./zigbee2mqtt/data:/app/data
     devices:
-      - ${ZIGBEE_DEVICE:-/dev/ttyACM0}:/dev/ttyACM0
+      - /dev/ttyACM0:/dev/ttyACM0
     ports:
       - "8090:8080"   # Zigbee2MQTT web UI — host:8090 to avoid conflict with Caddy
 
@@ -49,7 +49,12 @@ services:
 
   # ── Local backend (Rust/Axum) ─────────────────────────────────────────────────
   local-backend:
-    build: ./local-backend
+    build:
+      context: ./local-backend
+      args:
+        # release-device (default): fast ARM build. Use "release" for max binary opt.
+        CARGO_PROFILE: ${LOCAL_BACKEND_CARGO_PROFILE:-release-device}
+        CARGO_BUILD_JOBS: ${LOCAL_BACKEND_CARGO_BUILD_JOBS:-}
     container_name: local-backend
     restart: unless-stopped
     depends_on:
@@ -59,8 +64,8 @@ services:
     environment:
       LOCAL_SERVER_PORT:    8080
       DATABASE_URL:         sqlite:/app/data/local.db
-      # Leave unset to connect MQTT via api-gateway (ws://…/api/mqtt). For local-only Zigbee:
-      # ZIGBEE_MQTT_URL:    mqtt://mosquitto:1883
+      # Local Mosquitto for Zigbee/Modbus ingest (not cloud gateway /api/mqtt).
+      ZIGBEE_MQTT_URL:      mqtt://mosquitto:1883
       LOCAL_SERVER_SERIAL:  ${LOCAL_SERVER_SERIAL:-00:00:00:00:00:00}
       SYNC_INTERVAL_SECS:   ${SYNC_INTERVAL_SECS:-300}
       RUST_LOG:             ${RUST_LOG:-info}
@@ -71,7 +76,7 @@ services:
     expose:
       - "8080"
     ports:
-      - "${LOCAL_SERVER_PORT:-8080}:8080"
+      - "${LOCAL_SERVER_PORT:-8081}:8080"
     extra_hosts:
       - "host.docker.internal:host-gateway"
 

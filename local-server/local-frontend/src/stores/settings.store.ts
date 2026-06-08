@@ -43,6 +43,7 @@ interface SettingsState {
     | 'isAuthPolling'
   >>) => void
   resetAuthState: () => void
+  resetLocalUiState: () => void
   setCurrentHouse: (id: string, name: string) => void
   clearCurrentHouse: () => void
   setTheme: (theme: 'light' | 'dark') => void
@@ -84,6 +85,11 @@ export const useSettingsStore = create<SettingsState>()(
           authDisplayName: '',
           authExpiresAt: '',
           isAuthPolling: false,
+          currentHouseId: '',
+          currentHouseName: '',
+        }),
+      resetLocalUiState: () =>
+        set({
           currentHouseId: '',
           currentHouseName: '',
         }),

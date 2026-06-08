@@ -43,7 +43,7 @@ pub use modbus_repository::{
     CreateModbusDeviceCmd, CreateModbusRegisterCmd, ModbusRepository, SaveModbusStateCmd,
 };
 pub use mqtt_client::MqttClient;
-pub use mqtt_connect_config::MqttConnectConfig;
+pub use mqtt_connect_config::{MqttConnectConfig, MqttRuntimeConfig};
 pub use runtime_settings_repository::{RuntimeSettings, RuntimeSettingsRepository};
 pub use physical_device_repository::{
     PhysicalDeviceRepository, UpsertPhysDevFromCloudCmd,

@@ -33,5 +33,12 @@ strip         = true
 panic         = "abort"
 opt-level     = 3
 
+# Faster release build for SBC / Docker on Orange Pi etc.
+# ~2-4× quicker compile+link; binary slightly larger/slower at runtime.
+[profile.release-device]
+inherits      = "release"
+lto           = false
+codegen-units = 16
+
 [profile.dev]
 opt-level = 0

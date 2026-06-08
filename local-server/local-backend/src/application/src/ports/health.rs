@@ -10,4 +10,5 @@ pub enum HealthError {
 #[async_trait]
 pub trait HealthChecker: Send + Sync {
     async fn check_db(&self) -> Result<(), HealthError>;
+    async fn reset_local_data(&self) -> Result<(), HealthError>;
 }

@@ -23,6 +23,17 @@ pub struct CreateModbusRegisterCmd {
     pub writable: bool,
 }
 
+pub struct UpdateModbusRegisterCmd {
+    pub name: Option<String>,
+    pub register_type: Option<RegisterType>,
+    pub address: Option<i64>,
+    pub count: Option<i64>,
+    pub unit: Option<Option<String>>,
+    pub scale_factor: Option<f64>,
+    pub offset: Option<f64>,
+    pub writable: Option<bool>,
+}
+
 pub struct SaveModbusStateCmd {
     pub register_id: Uuid,
     pub raw_values: Vec<serde_json::Value>,
@@ -39,6 +50,7 @@ pub trait ModbusRepository: Send + Sync {
     async fn list_registers(&self, device_id: Uuid) -> Result<Vec<ModbusRegister>, DomainError>;
     async fn find_register(&self, id: Uuid) -> Result<Option<ModbusRegister>, DomainError>;
     async fn create_register(&self, cmd: CreateModbusRegisterCmd) -> Result<ModbusRegister, DomainError>;
+    async fn update_register(&self, id: Uuid, cmd: UpdateModbusRegisterCmd) -> Result<ModbusRegister, DomainError>;
     async fn delete_register(&self, id: Uuid) -> Result<(), DomainError>;
 
     async fn save_state(&self, cmd: SaveModbusStateCmd) -> Result<(), DomainError>;

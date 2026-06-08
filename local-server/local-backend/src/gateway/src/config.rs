@@ -34,6 +34,8 @@ pub struct Config {
     pub scenario_service_url: String,
     #[serde(default)]
     pub serial_number: Option<String>,
+    #[serde(default)]
+    pub mqtt_bridge_house_id: Option<String>,
 }
 
 impl Config {
@@ -80,6 +82,9 @@ impl Config {
         }
         if let Ok(v) = std::env::var("LOCAL_SERVER_SERIAL") {
             builder = builder.set_override("serial_number", v)?;
+        }
+        if let Ok(v) = std::env::var("MQTT_BRIDGE_HOUSE_ID") {
+            builder = builder.set_override("mqtt_bridge_house_id", v)?;
         }
 
         Ok(builder.build()?.try_deserialize::<Self>()?)
