@@ -536,10 +536,9 @@ export interface HouseMqttStatus {
 export interface HouseMqttConfigResponse {
   houseId: string;
   mqttUrl: string;
-  mqttUsername?: string;
-  /** Password is not returned by backend. */
-  mqttPassword?: undefined;
-  hasMqttPassword?: boolean;
+  /** EMQX credentials for local-server (not used by scenario-service). */
+  localServerUsername?: string;
+  hasLocalServerPassword?: boolean;
   topicPrefix: string;
   enabled: boolean;
   status?: HouseMqttStatus;
@@ -548,7 +547,6 @@ export interface HouseMqttConfigResponse {
 export interface HouseMqttProvisionResponse {
   username: string;
   password: string;
-  mqttUrl: string;
   topicPrefix: string;
   config: HouseMqttConfigResponse;
 }

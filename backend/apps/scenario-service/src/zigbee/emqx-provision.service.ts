@@ -16,9 +16,14 @@ export class EmqxProvisionService {
 
   constructor(private readonly config: ConfigService) {}
 
-  houseMqttUsername(houseId: string): string {
+  localServerMqttUsername(houseId: string): string {
     const short = houseId.replace(/-/g, '').slice(0, 12).toLowerCase();
-    return `house-${short}`;
+    return `local-${short}`;
+  }
+
+  /** @deprecated use localServerMqttUsername */
+  houseMqttUsername(houseId: string): string {
+    return this.localServerMqttUsername(houseId);
   }
 
   generatePassword(): string {

@@ -404,36 +404,38 @@ export class ZigbeeController {
 
   @Post('house-mqtt/:houseId/provision')
   @ApiOperation({
-    summary: 'Создать пользователя EMQX для дома и применить MQTT-конфигурацию',
+    summary: 'Создать учётные данные EMQX для локального сервера',
     description:
-      'Генерирует логин/пароль, создаёт ACL в EMQX, сохраняет конфигурацию и переподключает scenario-service. Пароль возвращается один раз.',
+      'Генерирует логин/пароль для local-server (ACL в EMQX). scenario-service подключается отдельно через CENTRAL_MQTT_*.',
   })
   @ApiParam({ name: 'houseId', description: 'UUID дома' })
-  @ApiResponse({ status: 201, description: 'Учётные данные созданы' })
+  @ApiResponse({ status: 201, description: 'Учётные данные для local-server созданы' })
   @ApiResponse({ status: 503, description: 'EMQX недоступен или не настроен' })
   async provisionHouseMqtt(@Param('houseId') houseId: string) {
-    const username = this.emqxProvision.houseMqttUsername(houseId);
+    const username = this.emqxProvision.localServerMqttUsername(houseId);
     const password = this.emqxProvision.generatePassword();
     const topicPrefix = houseDataPrefix(houseId);
 
     await this.emqxProvision.provisionHouseUser(houseId, username, password);
 
+    const existing = await this.mqttConfigRepo.findByHouseId(houseId);
     const config = await this.mqttConfigRepo.upsert({
       houseId,
       mqttUrl: 'central',
       mqttUsername: username,
       mqttPassword: password,
       topicPrefix,
-      enabled: true,
+      enabled: existing?.enabled ?? true,
     });
 
-    this.zigbeeMqtt.connect(config);
-    await this.zigbeeMqtt.waitForConnection(houseId, 10_000);
+    if (config.enabled) {
+      this.zigbeeMqtt.connect(config);
+      await this.zigbeeMqtt.waitForConnection(houseId, 10_000);
+    }
 
     return {
       username,
       password,
-      mqttUrl: 'central',
       topicPrefix,
       config: toPublicHouseMqttConfig(config, this.zigbeeMqtt.getConnectionStatus(houseId)),
     };

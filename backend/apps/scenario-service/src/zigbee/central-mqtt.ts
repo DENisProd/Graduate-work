@@ -43,13 +43,11 @@ export function resolveHouseTopicPrefix(
   return prefix || 'zigbee2mqtt';
 }
 
-export function mqttClientCredentials(
+/** scenario-service always authenticates to mqtt-gateway with CENTRAL_MQTT_* */
+export function scenarioServiceMqttCredentials(
   config: ConfigService,
-  house?: { mqttUsername?: string; mqttPassword?: string },
 ): { username?: string; password?: string } {
-  const username =
-    house?.mqttUsername?.trim() || config.get<string>('CENTRAL_MQTT_USERNAME')?.trim() || undefined;
-  const password =
-    house?.mqttPassword?.trim() || config.get<string>('CENTRAL_MQTT_PASSWORD')?.trim() || undefined;
+  const username = config.get<string>('CENTRAL_MQTT_USERNAME')?.trim() || undefined;
+  const password = config.get<string>('CENTRAL_MQTT_PASSWORD')?.trim() || undefined;
   return { username, password };
 }

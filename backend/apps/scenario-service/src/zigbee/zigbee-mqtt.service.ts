@@ -10,9 +10,9 @@ import { ConfigService } from '@nestjs/config';
 import * as mqtt from 'mqtt';
 import type { IClientOptions, MqttClient } from 'mqtt';
 import {
-  mqttClientCredentials,
   resolveHouseMqttUrl,
   resolveHouseTopicPrefix,
+  scenarioServiceMqttCredentials,
 } from './central-mqtt';
 import { ZigbeeIngestService } from './zigbee-ingest.service';
 import { HouseMqttConfigRepository, HouseMqttConfig } from './house-mqtt-config.repository';
@@ -87,7 +87,13 @@ export class ZigbeeMqttService implements OnModuleInit, OnModuleDestroy {
     );
     this.lastErrors.delete(houseId);
 
-    const creds = mqttClientCredentials(this.config, config);
+    const creds = scenarioServiceMqttCredentials(this.config);
+    if (!creds.username || !creds.password) {
+      const message = 'CENTRAL_MQTT_USERNAME and CENTRAL_MQTT_PASSWORD must be set for scenario-service';
+      this.lastErrors.set(houseId, message);
+      this.logger.error(`[${houseId}] ${message}`);
+      return;
+    }
     const opts: IClientOptions = {
       reconnectPeriod: 5000,
       connectTimeout: 10_000,
