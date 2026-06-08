@@ -54,7 +54,8 @@ services:
       args:
         # release-device (default): fast ARM build. Use "release" for max binary opt.
         CARGO_PROFILE: ${LOCAL_BACKEND_CARGO_PROFILE:-release-device}
-        CARGO_BUILD_JOBS: ${LOCAL_BACKEND_CARGO_BUILD_JOBS:-}
+        # Optional: BUILD_JOBS=2 for low-RAM boards — pass via:
+        # docker compose build --build-arg BUILD_JOBS=2 local-backend
     container_name: local-backend
     restart: unless-stopped
     depends_on:

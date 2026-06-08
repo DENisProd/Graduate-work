@@ -5,8 +5,8 @@ WORKDIR /app
 
 # release-device: fast compile on ARM SBC (Orange Pi). Override with "release" for max opt.
 ARG CARGO_PROFILE=release-device
-# Limit parallel rustc jobs on low-RAM boards, e.g. CARGO_BUILD_JOBS=2
-ARG CARGO_BUILD_JOBS=
+# Limit parallel rustc jobs on low-RAM boards: --build-arg BUILD_JOBS=2
+ARG BUILD_JOBS
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config libsqlite3-dev mold \
@@ -38,7 +38,8 @@ RUN mkdir -p \
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     --mount=type=cache,target=/app/target \
-    if [ -n "$CARGO_BUILD_JOBS" ]; then export CARGO_BUILD_JOBS; fi && \
+    unset CARGO_BUILD_JOBS; \
+    if [ -n "$BUILD_JOBS" ]; then export CARGO_BUILD_JOBS="$BUILD_JOBS"; fi && \
     cargo build --profile "${CARGO_PROFILE}" --bin local-server && \
     rm -rf src/*/src
 
@@ -55,7 +56,8 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
            "target/${CARGO_PROFILE}/deps/local_server-"* \
            "target/${CARGO_PROFILE}/.fingerprint/local-server-"* \
            "target/${CARGO_PROFILE}/local-server" && \
-    if [ -n "$CARGO_BUILD_JOBS" ]; then export CARGO_BUILD_JOBS; fi && \
+    unset CARGO_BUILD_JOBS; \
+    if [ -n "$BUILD_JOBS" ]; then export CARGO_BUILD_JOBS="$BUILD_JOBS"; fi && \
     cargo build --profile "${CARGO_PROFILE}" --bin local-server && \
     cp "target/${CARGO_PROFILE}/local-server" /app/local-server
 

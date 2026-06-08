@@ -248,8 +248,7 @@ DOCKER_BUILDKIT=1 docker compose build local-backend
 На платах с 1–2 GB RAM ограничьте параллелизм:
 
 ```bash
-docker compose build local-backend \
-  --build-arg CARGO_BUILD_JOBS=2
+docker compose build local-backend --build-arg BUILD_JOBS=2
 ```
 
 Максимальная оптимизация бинарника (медленная сборка):
