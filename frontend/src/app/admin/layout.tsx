@@ -11,6 +11,14 @@ export default async function AdminLayoutWrapper({
 }) {
   const session = await auth();
 
+  if (!session?.user) {
+    redirect('/auth/signin?callbackUrl=/admin');
+  }
+
+  if (!session?.roles?.includes('admin')) {
+    redirect('/dashboard');
+  }
+
   const accessHealthy = await isAccessServiceHealthy();
   if (!accessHealthy) {
     redirect('/503');

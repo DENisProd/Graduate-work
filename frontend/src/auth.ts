@@ -8,7 +8,17 @@ type TokenWithKeycloakSub = {
   refreshToken?: string;
   expiresAt?: number;
   error?: string;
+  roles?: string[];
 };
+
+function decodeJwtPayload(token: string): Record<string, unknown> {
+  try {
+    const payload = token.split('.')[1];
+    return JSON.parse(Buffer.from(payload, 'base64url').toString('utf-8'));
+  } catch {
+    return {};
+  }
+}
 
 type KeycloakProfileLike = {
   sub?: string;
@@ -72,6 +82,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       session.accessToken = (token as TokenWithKeycloakSub).accessToken ?? null;
       session.error = (token as TokenWithKeycloakSub).error ?? null;
+      session.roles = (token as TokenWithKeycloakSub).roles ?? [];
       return session;
     },
     async jwt({ token, account, profile }) {
@@ -88,6 +99,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
         tokenData.accessToken = account.access_token;
         tokenData.refreshToken = account.refresh_token;
+        if (account.access_token) {
+          const payload = decodeJwtPayload(account.access_token);
+          const realmAccess = payload?.realm_access as { roles?: string[] } | undefined;
+          tokenData.roles = realmAccess?.roles ?? [];
+        }
         tokenData.expiresAt = account.expires_at
           ?? (account.expires_in
             ? Math.floor(Date.now() / 1000) + (account.expires_in as number)

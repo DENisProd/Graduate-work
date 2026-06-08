@@ -10,5 +10,6 @@ declare module "next-auth" {
     };
     accessToken?: string | null;
     error?: string | null;
+    roles?: string[];
   }
 }

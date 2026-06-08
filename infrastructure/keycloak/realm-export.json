@@ -21,6 +21,18 @@
   "accessCodeLifespan": 60,
   "accessCodeLifespanUserAction": 300,
   "accessCodeLifespanLogin": 1800,
+  "roles": {
+    "realm": [
+      {
+        "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "name": "admin",
+        "description": "System administrator with full access",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "smart-home"
+      }
+    ]
+  },
   "clients": [
     {
       "clientId": "smart-home-app",
@@ -40,6 +52,23 @@
     }
   ],
   "users": [
+    {
+      "id": "d4e5f6a7-b8c9-0123-defa-456789012345",
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Admin",
+      "lastName": "User",
+      "email": "admin@example.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["admin"]
+    },
     {
       "id": "5801a824-7e12-45c2-a646-824384e9037c",
       "username": "ivan",

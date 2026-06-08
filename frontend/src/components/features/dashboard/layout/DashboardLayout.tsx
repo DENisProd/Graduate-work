@@ -24,6 +24,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     selectedHouseName,
     userHouses,
     isFullWidthPage,
+    isAdmin,
   } = useDashboardLayout();
 
   const perms = useHousePermissions();
@@ -38,6 +39,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     userHouses,
     pathname,
     houseNavPerms,
+    isAdmin,
   );
 
   return (

@@ -9,7 +9,7 @@ import { toArray } from '@/features/access-control';
 import { env } from '@/config/env.config';
 import type { HouseResponse } from '@/types/api';
 
-type SessionWithToken = { accessToken?: string | null };
+type SessionWithToken = { accessToken?: string | null; roles?: string[] };
 
 export function useDashboardLayout() {
   const { t } = useTranslation();
@@ -17,6 +17,7 @@ export function useDashboardLayout() {
   const currentUserId = useCurrentUserId();
   const { data: session } = useSession();
   const sessionToken = (session as SessionWithToken | null)?.accessToken ?? null;
+  const isAdmin = ((session as SessionWithToken | null)?.roles ?? []).includes('admin');
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
@@ -114,5 +115,6 @@ export function useDashboardLayout() {
     selectedHouseName,
     userHouses,
     isFullWidthPage,
+    isAdmin,
   };
 }

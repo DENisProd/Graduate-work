@@ -17,6 +17,7 @@ import {
   Map,
   Settings,
   Shield,
+  ShieldCheck,
   User,
   Users,
   Workflow,
@@ -317,6 +318,7 @@ export function buildDashboardRoutes(
   userHouses: HouseResponse[],
   pathname: string,
   permissions?: HouseNavPermissions,
+  isAdmin?: boolean,
 ): Route[] {
   const overviewSection = t('navigation.overview');
   const propertiesSection = t('navigation.properties');
@@ -341,6 +343,20 @@ export function buildDashboardRoutes(
         section: overviewSection,
         isActive: pathname.startsWith('/dashboard/settings'),
       },
+    );
+
+    if (isAdmin) {
+      routes.push({
+        id: 'admin-panel',
+        title: t('navigation.admin'),
+        link: '/admin',
+        icon: <ShieldCheck className="size-4" />,
+        section: overviewSection,
+        isActive: pathname.startsWith('/admin'),
+      });
+    }
+
+    routes.push(
       {
         id: 'houses',
         title: t('dashboard.myHouses'),
