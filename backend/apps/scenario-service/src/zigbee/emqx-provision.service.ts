@@ -10,6 +10,13 @@ interface EmqxAclRule {
   topic: string;
 }
 
+export interface EmqxClientPresence {
+  connected: boolean;
+  username: string;
+  clientId?: string;
+  connectedAt?: string;
+}
+
 @Injectable()
 export class EmqxProvisionService {
   private readonly logger = new Logger(EmqxProvisionService.name);
@@ -30,11 +37,63 @@ export class EmqxProvisionService {
     return randomBytes(18).toString('base64url');
   }
 
+  /** Returns EMQX client session for a username (local-server MQTT login), if online. */
+  async getClientPresence(username: string): Promise<EmqxClientPresence> {
+    const trimmed = username.trim();
+    if (!trimmed) {
+      return { connected: false, username: trimmed };
+    }
+
+    try {
+      const token = await this.login();
+      const url = new URL(`${this.apiBase()}/api/v5/clients`);
+      url.searchParams.set('username', trimmed);
+      url.searchParams.set('limit', '1');
+
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) {
+        this.logger.warn(
+          `EMQX clients lookup failed for ${trimmed} (${response.status})`,
+        );
+        return { connected: false, username: trimmed };
+      }
+
+      const body = (await response.json()) as {
+        data?: Array<{ clientid?: string; connected_at?: string }>;
+      };
+      const client = body.data?.[0];
+      if (!client) {
+        return { connected: false, username: trimmed };
+      }
+
+      return {
+        connected: true,
+        username: trimmed,
+        clientId: client.clientid,
+        connectedAt: client.connected_at,
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`EMQX clients lookup error for ${trimmed}: ${message}`);
+      return { connected: false, username: trimmed };
+    }
+  }
+
   async provisionHouseUser(houseId: string, username: string, password: string): Promise<void> {
     const token = await this.login();
     await this.upsertUser(token, username, password);
     await this.applyHouseAcl(token, username, houseId);
     this.logger.log(`[${houseId}] EMQX user provisioned: ${username}`);
+  }
+
+  /** Ensures scenario-service MQTT credentials exist in EMQX (idempotent). */
+  async ensureScenarioServiceUser(username: string, password: string): Promise<void> {
+    const token = await this.login();
+    await this.upsertUser(token, username, password);
+    await this.applyScenarioServiceAcl(token, username);
+    this.logger.log(`EMQX scenario-service user ensured: ${username}`);
   }
 
   private apiBase(): string {
@@ -110,6 +169,19 @@ export class EmqxProvisionService {
     );
   }
 
+  private scenarioServiceAclRules(): EmqxAclRule[] {
+    return [
+      { permission: 'allow', action: 'subscribe', topic: 'houses/+/zigbee2mqtt/#' },
+      { permission: 'allow', action: 'publish', topic: 'houses/+/zigbee2mqtt/#' },
+      { permission: 'allow', action: 'subscribe', topic: 'modbus/response' },
+      { permission: 'allow', action: 'publish', topic: 'modbus/command' },
+    ];
+  }
+
+  private async applyScenarioServiceAcl(token: string, username: string): Promise<void> {
+    await this.upsertAclRules(token, username, this.scenarioServiceAclRules(), 'scenario-service');
+  }
+
   private houseAclRules(houseId: string): EmqxAclRule[] {
     const base = `houses/${houseId}`;
     return [
@@ -123,30 +195,40 @@ export class EmqxProvisionService {
   }
 
   private async applyHouseAcl(token: string, username: string, houseId: string): Promise<void> {
+    await this.upsertAclRules(token, username, this.houseAclRules(houseId), 'house');
+  }
+
+  /** Idempotent ACL upsert: PUT to update, POST to create, 409 = already exists. */
+  private async upsertAclRules(
+    token: string,
+    username: string,
+    rules: EmqxAclRule[],
+    context: string,
+  ): Promise<void> {
     const headers = {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     };
-    const payload = JSON.stringify({ rules: this.houseAclRules(houseId) });
+    const payload = JSON.stringify({ rules });
     const put = await fetch(
       `${this.apiBase()}/api/v5/authorization/sources/built_in_database/rules/users/${encodeURIComponent(username)}`,
       { method: 'PUT', headers, body: payload },
     );
-    if (put.ok) return;
+    if (put.ok || put.status === 409) return;
 
     const post = await fetch(
       `${this.apiBase()}/api/v5/authorization/sources/built_in_database/rules/users`,
       {
         method: 'POST',
         headers,
-        body: JSON.stringify([{ username, rules: this.houseAclRules(houseId) }]),
+        body: JSON.stringify([{ username, rules }]),
       },
     );
-    if (post.ok) return;
+    if (post.ok || post.status === 409) return;
 
     const body = await post.text();
     throw new ServiceUnavailableException(
-      `EMQX ACL provisioning failed (${post.status}): ${body || post.statusText}`,
+      `EMQX ${context} ACL failed (${post.status}): ${body || post.statusText}`,
     );
   }
 }

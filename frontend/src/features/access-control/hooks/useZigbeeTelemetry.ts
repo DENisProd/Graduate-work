@@ -1,24 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ZigbeeDeviceListItem, ZigbeeStateWire } from '@/types/api';
 import {
   buildZigbeeSubscribePayload,
   resolveZigbeeStateForDevice,
 } from '@/features/access-control/lib/zigbee-device-utils';
 import { zigbeeTelemetryManager } from '@/features/access-control/lib/zigbee-telemetry-manager';
-
-function subscribeZigbeeConnection(onStoreChange: () => void) {
-  return zigbeeTelemetryManager.subscribeConnection(onStoreChange);
-}
-
-function useZigbeeSocketLive(): boolean {
-  return useSyncExternalStore(
-    subscribeZigbeeConnection,
-    () => zigbeeTelemetryManager.isConnected(),
-    () => false
-  );
-}
 
 export function useZigbeeTelemetry(options: {
   enabled: boolean;
@@ -65,15 +53,12 @@ export function useZigbeeTelemetry(options: {
     };
   }, [enabled, canSubscribe, devicesKey, devices, instanceId, onState]);
 
-  const isSocketConnected = useZigbeeSocketLive();
-
   const getLiveState = useCallback((device: ZigbeeDeviceListItem) => {
     return resolveZigbeeStateForDevice(wireMapRef.current, device);
   }, []);
 
   return {
     getLiveState,
-    isSocketConnected,
     canSubscribe,
   };
 }

@@ -391,15 +391,26 @@ export class ZigbeeController {
     return this.zigbeeMqtt.getAllStatuses();
   }
 
+  private async publicHouseMqttConfig(houseId: string) {
+    const config = await this.mqttConfigRepo.findByHouseId(houseId);
+    if (!config) return null;
+    const status = this.zigbeeMqtt.getConnectionStatus(houseId);
+    const username =
+      config.mqttUsername?.trim() ||
+      this.emqxProvision.localServerMqttUsername(houseId);
+    const localServer = await this.emqxProvision.getClientPresence(username);
+    return toPublicHouseMqttConfig(config, status, localServer);
+  }
+
   @Get('house-mqtt/:houseId')
   @ApiOperation({ summary: 'MQTT-конфигурация конкретного дома' })
   @ApiParam({ name: 'houseId', description: 'UUID дома' })
   @ApiResponse({ status: 200, description: 'Конфигурация (без пароля)' })
   @ApiResponse({ status: 404, description: 'Конфигурация не найдена' })
   async getHouseMqttConfig(@Param('houseId') houseId: string) {
-    const config = await this.mqttConfigRepo.findByHouseId(houseId);
-    if (!config) throw new NotFoundException(`MQTT-конфигурация для дома ${houseId} не найдена`);
-    return toPublicHouseMqttConfig(config, this.zigbeeMqtt.getConnectionStatus(houseId));
+    const payload = await this.publicHouseMqttConfig(houseId);
+    if (!payload) throw new NotFoundException(`MQTT-конфигурация для дома ${houseId} не найдена`);
+    return payload;
   }
 
   @Post('house-mqtt/:houseId/provision')
@@ -437,7 +448,7 @@ export class ZigbeeController {
       username,
       password,
       topicPrefix,
-      config: toPublicHouseMqttConfig(config, this.zigbeeMqtt.getConnectionStatus(houseId)),
+      config: (await this.publicHouseMqttConfig(houseId))!,
     };
   }
 
@@ -510,7 +521,7 @@ export class ZigbeeController {
       this.zigbeeMqtt.disconnectHouse(houseId);
     }
 
-    return toPublicHouseMqttConfig(config, this.zigbeeMqtt.getConnectionStatus(houseId));
+    return (await this.publicHouseMqttConfig(houseId))!;
   }
 
   @Delete('house-mqtt/:houseId')
@@ -535,6 +546,6 @@ export class ZigbeeController {
     if (!config) throw new NotFoundException(`MQTT-конфигурация для дома ${houseId} не найдена`);
     this.zigbeeMqtt.connect(config);
     await this.zigbeeMqtt.waitForConnection(houseId, 10_000);
-    return toPublicHouseMqttConfig(config, this.zigbeeMqtt.getConnectionStatus(houseId));
+    return (await this.publicHouseMqttConfig(houseId))!;
   }
 }

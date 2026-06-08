@@ -531,6 +531,14 @@ export interface HouseMqttStatus {
   connected: boolean;
   url?: string;
   lastError?: string;
+  connectedAt?: string;
+  lastMessageAt?: string;
+  localServer?: {
+    connected: boolean;
+    username: string;
+    clientId?: string;
+    connectedAt?: string;
+  };
 }
 
 export interface HouseMqttConfigResponse {

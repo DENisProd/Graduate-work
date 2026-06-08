@@ -12,7 +12,7 @@ import { DevicesListContent } from './DevicesListContent';
 import { DevicesListHeader } from './DevicesListHeader';
 import { DevicesPagination } from './DevicesPagination';
 import { formatMqttLastError, mqttReconnectToastKey } from '@/features/access-control/lib/mqtt-reconnect-feedback';
-import { HouseMqttBanner } from './HouseMqttBanner';
+import { HouseMqttBanner, useMqttStatusPolling } from './HouseMqttBanner';
 
 interface DevicesTabProps {
   houseId: string | null;
@@ -53,8 +53,11 @@ export function DevicesTab({
     removeDevice,
     setDevicesPage,
     mqttState,
+    mqttConfig,
     refetchMqttStatus,
   } = useDevicesTab(houseId, activeTab);
+
+  useMqttStatusPolling(activeTab === 'devices' && Boolean(houseId), refetchMqttStatus);
 
   const handleMqttReconnect = useCallback(async () => {
     if (!houseId) return;
@@ -114,8 +117,11 @@ export function DevicesTab({
           <HouseMqttBanner
             houseId={houseId}
             state={mqttState}
+            config={mqttConfig}
+            isSocketConnected={isSocketConnected}
             onReconnect={canManage ? () => void handleMqttReconnect() : undefined}
             reconnecting={mqttReconnecting}
+            onRefresh={() => void refetchMqttStatus()}
           />
         ) : null}
 

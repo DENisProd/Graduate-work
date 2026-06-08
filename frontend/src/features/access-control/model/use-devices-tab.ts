@@ -8,6 +8,7 @@ import type { HouseDetailsTab } from '@/store/access-control-store';
 import { ApiError, zigbeeDevicesApi } from '@/lib/api-client';
 import type { ZigbeeDeviceListItem } from '@/types/api';
 import { useHouseMqttStatus } from '@/features/access-control/hooks/useHouseMqttStatus';
+import { useZigbeeSocketConnection } from '@/features/access-control/hooks/useZigbeeSocketConnection';
 import { useZigbeeTelemetry } from '@/features/access-control/hooks/useZigbeeTelemetry';
 import { normalizeApiList } from '@/features/access-control/lib/normalize-api-list';
 
@@ -30,6 +31,7 @@ export function useDevicesTab(houseId: string | null, activeTab: HouseDetailsTab
   const mqttEnabled = activeTab === 'devices' && Boolean(houseId);
   const {
     state: mqttState,
+    config: mqttConfig,
     isConnected: isMqttConnected,
     refetch: refetchMqttStatus,
   } = useHouseMqttStatus(houseId, mqttEnabled);
@@ -37,10 +39,13 @@ export function useDevicesTab(houseId: string | null, activeTab: HouseDetailsTab
   const isMqttConnectedRef = useRef(isMqttConnected);
   isMqttConnectedRef.current = isMqttConnected;
 
-  const telemetryEnabled =
-    activeTab === 'devices' && Boolean(houseId) && !devicesLoading && devices.length > 0;
+  const socketEnabled = activeTab === 'devices' && Boolean(houseId);
+  const isSocketConnected = useZigbeeSocketConnection(socketEnabled);
 
-  const { getLiveState, isSocketConnected } = useZigbeeTelemetry({
+  const telemetryEnabled =
+    socketEnabled && !devicesLoading && devices.length > 0;
+
+  const { getLiveState } = useZigbeeTelemetry({
     enabled: telemetryEnabled,
     devices,
   });
@@ -157,6 +162,7 @@ export function useDevicesTab(houseId: string | null, activeTab: HouseDetailsTab
     removeDevice,
     setDevicesPage,
     mqttState,
+    mqttConfig,
     refetchMqttStatus,
   };
 }

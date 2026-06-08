@@ -778,7 +778,7 @@
         "searching": "Поиск устройств…",
         "waitingForDevices": "Ожидание подключения устройства…",
         "found": "Найдено устройств: {{count}}",
-        "noSocket": "Нет соединения в реальном времени. Сначала откройте вкладку «Устройства».",
+        "noSocket": "Нет соединения Socket.IO с облаком. Проверьте доступность {{gateway}}/socket.io/ и статус «Реальное время» на вкладке.",
         "startError": "Не удалось включить режим сопряжения",
         "addToHouse": "Добавить в дом",
         "adding": "Добавление…",
@@ -797,7 +797,7 @@
         "mqttBanner": {
           "title": "MQTT не подключён",
           "notConfigured": "scenario-service нужен URL брокера Zigbee2MQTT для этого дома. Это не адрес api-gateway /api/mqtt.",
-          "disconnected": "Брокер настроен, но scenario-service не может подключиться. Проверьте, что Mosquitto доступен из облачного контейнера.",
+          "disconnected": "Брокер настроен, но scenario-service не может подключиться. Проверьте CENTRAL_MQTT_* и mqtt-bootstrap.",
           "openSettings": "Настроить MQTT",
           "reconnect": "Переподключить",
           "reconnecting": "Переподключение…",
@@ -805,6 +805,21 @@
           "reconnectSuccess": "MQTT подключён",
           "reconnectFailed": "MQTT не подключён — проверьте, что брокер доступен с облачного сервера",
           "reconnectFailedDetail": "MQTT не подключён: {{detail}}"
+        },
+        "mqttStatus": {
+          "title": "Статус MQTT и реального времени",
+          "loading": "Загрузка статуса MQTT…",
+          "refresh": "Обновить",
+          "cloudTitle": "Облако → EMQX",
+          "localTitle": "Локальный сервер → EMQX",
+          "realtimeTitle": "Реальное время (Socket.IO)",
+          "connected": "Подключено",
+          "disconnected": "Не подключено",
+          "localDisconnected": "Локальный сервер не подключён к EMQX",
+          "realtimeConnected": "Socket.IO активен — сопряжение и телеметрия доступны",
+          "realtimeDisconnected": "Socket.IO не подключён — сопряжение недоступно",
+          "lastHandshake": "Последнее подключение: {{value}}",
+          "lastMessage": "Последнее MQTT-сообщение: {{value}}"
         },
         "houseMqttSettings": {
           "title": "MQTT дома",

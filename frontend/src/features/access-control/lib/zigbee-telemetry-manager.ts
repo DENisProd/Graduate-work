@@ -168,7 +168,8 @@ class ZigbeeTelemetryManager {
     const socket = io(`${base}/zigbee`, {
       path: '/socket.io/',
       withCredentials: true,
-      transports: ['websocket', 'polling'],
+      // Polling first: works through nginx/reverse-proxy without WS upgrade on /socket.io.
+      transports: ['polling', 'websocket'],
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,

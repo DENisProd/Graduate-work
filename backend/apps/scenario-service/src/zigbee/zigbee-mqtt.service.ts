@@ -16,18 +16,29 @@ import {
 } from './central-mqtt';
 import { ZigbeeIngestService } from './zigbee-ingest.service';
 import { HouseMqttConfigRepository, HouseMqttConfig } from './house-mqtt-config.repository';
+import { EmqxBootstrapService } from './emqx-bootstrap.service';
 
 interface ConnectionEntry {
   client: MqttClient;
   topicPrefix: string;
   houseId: string;
   mqttUrl: string;
+  connectedAt?: Date;
+  lastMessageAt?: Date;
 }
 
 export interface HouseMqttConnectionStatus {
   connected: boolean;
   url?: string;
   lastError?: string;
+  connectedAt?: string;
+  lastMessageAt?: string;
+  localServer?: {
+    connected: boolean;
+    username: string;
+    clientId?: string;
+    connectedAt?: string;
+  };
 }
 
 @Injectable()
@@ -39,11 +50,13 @@ export class ZigbeeMqttService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly config: ConfigService,
     private readonly configRepo: HouseMqttConfigRepository,
+    private readonly emqxBootstrap: EmqxBootstrapService,
     @Inject(forwardRef(() => ZigbeeIngestService))
     private readonly ingest: ZigbeeIngestService,
   ) {}
 
   async onModuleInit(): Promise<void> {
+    await this.emqxBootstrap.waitReady();
     const configs = await this.configRepo.findAll();
     for (const config of configs) {
       if (config.enabled) {
@@ -108,6 +121,7 @@ export class ZigbeeMqttService implements OnModuleInit, OnModuleDestroy {
 
     client.on('connect', () => {
       this.lastErrors.delete(houseId);
+      entry.connectedAt = new Date();
       this.logger.log(`[${houseId}] MQTT подключён: ${mqttUrl}`);
       const pattern = `${topicPrefix}/#`;
       client.subscribe(pattern, { qos: 0 }, (err) => {
@@ -121,6 +135,7 @@ export class ZigbeeMqttService implements OnModuleInit, OnModuleDestroy {
     });
 
     client.on('message', (topic, payload) => {
+      entry.lastMessageAt = new Date();
       this.logIncoming(houseId, topic, payload);
       void this.ingest.processMqttMessage(houseId, topicPrefix, topic, payload);
     });
@@ -133,6 +148,7 @@ export class ZigbeeMqttService implements OnModuleInit, OnModuleDestroy {
 
     client.on('offline', () => {
       if (!client.connected) {
+        entry.connectedAt = undefined;
         this.lastErrors.set(
           houseId,
           this.lastErrors.get(houseId) ?? 'MQTT broker offline or unreachable',
@@ -208,6 +224,8 @@ export class ZigbeeMqttService implements OnModuleInit, OnModuleDestroy {
       connected: entry.client.connected,
       url: entry.mqttUrl,
       lastError,
+      connectedAt: entry.connectedAt?.toISOString(),
+      lastMessageAt: entry.lastMessageAt?.toISOString(),
     };
   }
 

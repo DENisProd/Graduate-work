@@ -776,7 +776,7 @@
         "searching": "Searching for devices…",
         "waitingForDevices": "Waiting for a device to join…",
         "found": "Found {{count}} device(s)",
-        "noSocket": "Real-time connection is not active. Open the Devices tab first to connect.",
+        "noSocket": "No Socket.IO connection to the cloud. Check {{gateway}}/socket.io/ and the Real-time status on the Devices tab.",
         "startError": "Failed to start pairing mode",
         "addToHouse": "Add to house",
         "adding": "Adding…",
@@ -795,7 +795,7 @@
         "mqttBanner": {
           "title": "MQTT not connected",
           "notConfigured": "scenario-service needs the Zigbee2MQTT broker URL for this house. This is not the api-gateway /api/mqtt address.",
-          "disconnected": "Broker is configured but scenario-service cannot connect. Check that Mosquitto is reachable from the cloud container.",
+          "disconnected": "Broker is configured but scenario-service cannot connect. Check CENTRAL_MQTT_* and run mqtt-bootstrap.",
           "openSettings": "Configure MQTT",
           "reconnect": "Reconnect",
           "reconnecting": "Reconnecting…",
@@ -803,6 +803,21 @@
           "reconnectSuccess": "MQTT connected",
           "reconnectFailed": "MQTT not connected — check that the broker is reachable from the cloud server",
           "reconnectFailedDetail": "MQTT not connected: {{detail}}"
+        },
+        "mqttStatus": {
+          "title": "MQTT & real-time status",
+          "loading": "Loading MQTT status…",
+          "refresh": "Refresh",
+          "cloudTitle": "Cloud → EMQX",
+          "localTitle": "Local server → EMQX",
+          "realtimeTitle": "Real-time (Socket.IO)",
+          "connected": "Connected",
+          "disconnected": "Not connected",
+          "localDisconnected": "Local server is not connected to EMQX",
+          "realtimeConnected": "Socket.IO active — pairing and telemetry available",
+          "realtimeDisconnected": "Socket.IO not connected — pairing unavailable",
+          "lastHandshake": "Last connected: {{value}}",
+          "lastMessage": "Last MQTT message: {{value}}"
         },
         "houseMqttSettings": {
           "title": "House MQTT",

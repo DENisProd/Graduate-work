@@ -7,63 +7,63 @@ services:
 
   # Postgres
 
-  postgres:
+  # postgres:
 
-    image: postgres:18
+  #   image: postgres:18
 
-    container_name: smart-home-postgres
+  #   container_name: smart-home-postgres
 
-    ports:
+  #   ports:
 
-      - "5432:5432"
+  #     - "5432:5432"
 
-    environment:
+  #   environment:
 
-      POSTGRES_USER: postgres
+  #     POSTGRES_USER: postgres
 
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
 
-      # Passed to init-databases.sh on first volume init
+  #     # Passed to init-databases.sh on first volume init
 
-      KC_DB_USERNAME: ${KC_DB_USERNAME:-keycloak}
+  #     KC_DB_USERNAME: ${KC_DB_USERNAME:-keycloak}
 
-      KC_DB_PASSWORD: ${KC_DB_PASSWORD:-keycloak}
+  #     KC_DB_PASSWORD: ${KC_DB_PASSWORD:-keycloak}
 
-      ACCESS_CONTROL_DB_USERNAME: ${ACCESS_CONTROL_DB_USERNAME:-access_control_service}
+  #     ACCESS_CONTROL_DB_USERNAME: ${ACCESS_CONTROL_DB_USERNAME:-access_control_service}
 
-      ACCESS_CONTROL_DB_PASSWORD: ${ACCESS_CONTROL_DB_PASSWORD:-access_control_service}
+  #     ACCESS_CONTROL_DB_PASSWORD: ${ACCESS_CONTROL_DB_PASSWORD:-access_control_service}
 
-      DEVICE_DB_USERNAME: ${DEVICE_DB_USERNAME:-devices}
+  #     DEVICE_DB_USERNAME: ${DEVICE_DB_USERNAME:-devices}
 
-      DEVICE_DB_PASSWORD: ${DEVICE_DB_PASSWORD:-devices}
+  #     DEVICE_DB_PASSWORD: ${DEVICE_DB_PASSWORD:-devices}
 
-      HOME_DB_USERNAME: ${HOME_DB_USERNAME:-home_service}
+  #     HOME_DB_USERNAME: ${HOME_DB_USERNAME:-home_service}
 
-      HOME_DB_PASSWORD: ${HOME_DB_PASSWORD:-home_service}
+  #     HOME_DB_PASSWORD: ${HOME_DB_PASSWORD:-home_service}
 
-      ROOM_DB_USERNAME: ${ROOM_DB_USERNAME:-room_service}
+  #     ROOM_DB_USERNAME: ${ROOM_DB_USERNAME:-room_service}
 
-      ROOM_DB_PASSWORD: ${ROOM_DB_PASSWORD:-room_service}
+  #     ROOM_DB_PASSWORD: ${ROOM_DB_PASSWORD:-room_service}
 
-      USER_PROFILE_DB_USERNAME: ${USER_PROFILE_DB_USERNAME:-user_profile}
+  #     USER_PROFILE_DB_USERNAME: ${USER_PROFILE_DB_USERNAME:-user_profile}
 
-      USER_PROFILE_DB_PASSWORD: ${USER_PROFILE_DB_PASSWORD:-user_profile}
+  #     USER_PROFILE_DB_PASSWORD: ${USER_PROFILE_DB_PASSWORD:-user_profile}
 
-    volumes:
+  #   volumes:
 
-      - pg_data:/var/lib/postgresql
+  #     - pg_data:/var/lib/postgresql
 
-      - ./postgres/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh
+  #     - ./postgres/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh
 
-    healthcheck:
+  #   healthcheck:
 
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+  #     test: ["CMD-SHELL", "pg_isready -U postgres"]
 
-      interval: 10s
+  #     interval: 10s
 
-      timeout: 5s
+  #     timeout: 5s
 
-      retries: 5
+  #     retries: 5
 
 
 
@@ -103,26 +103,16 @@ services:
 
 
 
-  redis:
-
-    image: redis:latest
-
-    container_name: smart-home-redis
-
-    ports:
-
-      - "6379:6379"
-
-    volumes:
-
-      - redis_data:/data
-
-
+  # redis:
+  #   image: redis:latest
+  #   container_name: smart-home-redis
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
 
   keycloak:
-
     build:
-
       context: ./keycloak
 
       dockerfile: Dockerfile.keycloak
@@ -150,6 +140,8 @@ services:
       KC_HOSTNAME_STRICT: "false"
 
       KC_HTTP_ENABLED: "true"
+
+      KC_PROXY: ${KC_PROXY:-}
 
     command:
 
@@ -209,6 +201,8 @@ services:
       start_period: 30s
 
   # Создаёт MQTT-пользователя scenario-service и ACL (один раз после старта EMQX).
+  # Если пароль изменился или bootstrap уже завершился — перезапустите:
+  #   docker compose run --rm mqtt-bootstrap
   mqtt-bootstrap:
     image: curlimages/curl:8.11.1
     container_name: smart-home-mqtt-bootstrap

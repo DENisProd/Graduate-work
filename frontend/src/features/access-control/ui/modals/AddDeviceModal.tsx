@@ -5,6 +5,7 @@ import { AppButton } from '@/components/ui/app-button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { env } from '@/config/env.config';
 import { ApiError, physicalDevicesApi, zigbeeDevicesApi } from '@/lib/api-client';
 import { deviceCategoriesApi } from '@/lib/api/device-service';
 import { useTranslation } from '@/hooks';
@@ -277,7 +278,7 @@ export function AddDeviceModal({
 
           {!isSocketConnected && (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-xs text-amber-700 dark:text-amber-400">
-              {t('admin.accessControl.pairing.noSocket')}
+              {t('admin.accessControl.pairing.noSocket', { gateway: env.GATEWAY_URL })}
             </div>
           )}
 
