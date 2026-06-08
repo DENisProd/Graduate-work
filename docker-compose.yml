@@ -14,6 +14,16 @@
 
 name: smart-home
 
+# Инфраструктура поднимается отдельно:
+#   cd infrastructure && docker compose up -d   → mongodb, keycloak, mqtt-gateway
+#   cd ../../infra && docker compose up -d      → postgres (сеть internal)
+networks:
+  internal:
+    external: true
+  infrastructure:
+    external: true
+    name: infrastructure_default
+
 services:
   access-service:
     container_name: smart-home-access-service
@@ -28,8 +38,11 @@ services:
       ACCESS_CONTROL_SERVICE_PORT: 8086
       DEVICE_AUTH_VERIFICATION_URL: ${DEVICE_AUTH_VERIFICATION_URL:-http://localhost:3000/device-auth}
       ACCESS_CORS_ORIGINS: ${ACCESS_CORS_ORIGINS:-http://localhost:3000,http://localhost:8082}
+    networks:
+      - default
+      - internal
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8086/api/v1/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8086/health || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -44,12 +57,15 @@ services:
       - "${SCENARIO_SERVICE_PORT:-3001}:3001"
     environment:
       SCENARIO_DATABASE_URL: >-
-        mongodb://${MONGO_USERNAME:-device_service}:${MONGO_PASSWORD:-password}@localhost:27017/scenario?authSource=admin
+        mongodb://${MONGO_USERNAME:-device_service}:${MONGO_PASSWORD:-password}@mongodb:27017/scenario?authSource=admin
       SCENARIO_SERVICE_PORT: 3001
       CENTRAL_MQTT_URL: ${CENTRAL_MQTT_URL:-mqtt://mqtt-gateway:1883}
       CENTRAL_MQTT_USERNAME: ${CENTRAL_MQTT_USERNAME:-}
       CENTRAL_MQTT_PASSWORD: ${CENTRAL_MQTT_PASSWORD:-}
       SCENARIO_CORS_ORIGINS: ${SCENARIO_CORS_ORIGINS:-http://localhost:3000,http://localhost:8082}
+    networks:
+      - default
+      - infrastructure
 
   api-gateway:
     container_name: smart-home-api-gateway
@@ -70,6 +86,9 @@ services:
         condition: service_healthy
       scenario-service:
         condition: service_started
+    networks:
+      - default
+      - infrastructure
 
   frontend:
     container_name: smart-home-frontend
