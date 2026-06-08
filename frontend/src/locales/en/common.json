@@ -799,13 +799,26 @@
           "openSettings": "Configure MQTT",
           "reconnect": "Reconnect",
           "reconnecting": "Reconnecting…",
-          "reconnectDone": "Reconnect requested"
+          "reconnectDone": "Reconnect requested",
+          "reconnectSuccess": "MQTT connected",
+          "reconnectFailed": "MQTT not connected — check that the broker is reachable from the cloud server",
+          "reconnectFailedDetail": "MQTT not connected: {{detail}}"
         },
         "houseMqttSettings": {
-          "description": "scenario-service connects directly to the Zigbee2MQTT broker (Mosquitto) for this house — not via api-gateway /api/mqtt.",
-          "brokerHint": "Example for local stack on the same machine: mqtt://host.docker.internal:1883",
-          "gatewayUrlWarning": "Do not use api-gateway URL (/api/mqtt). Specify the MQTT broker reachable from scenario-service.",
-          "invalidUrl": "URL must start with mqtt:// or mqtts://"
+          "description": "scenario-service connects to central EMQX (mqtt-gateway) for this house — not via api-gateway /api/mqtt.",
+          "brokerHint": "For cloud use central (→ mqtt://mqtt-gateway:1883 inside Docker) or mqtt://mqtt-gateway:1883. Topic prefix: houses/{houseId}/zigbee2mqtt.",
+          "gatewayUrlWarning": "Do not use api-gateway URL (/api/mqtt). Use central or mqtt://mqtt-gateway:1883.",
+          "invalidUrl": "URL: central, mqtt://… or mqtts://…",
+          "generateCredentials": "Generate in EMQX",
+          "generateCredentialsHint": "Creates an EMQX user scoped to this house and connects scenario-service.",
+          "provisionDialogTitle": "MQTT credentials created",
+          "provisionDialogDescription": "Password is shown once. Copy it into local server settings (MQTT username/password).",
+          "provisionUsername": "Username",
+          "provisionPassword": "Password",
+          "copyCredentials": "Copy",
+          "credentialsCopied": "Copied",
+          "provisionSuccess": "EMQX credentials created",
+          "provisionFailed": "Failed to create EMQX credentials"
         },
         "networkAddress": "Network address",
         "ieeeAddress": "IEEE address",

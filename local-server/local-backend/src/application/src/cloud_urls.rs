@@ -1,3 +1,5 @@
+use crate::ports::{MqttConnectConfig, RuntimeSettings};
+
 pub fn scenario_url_from_access(access: &str) -> String {
     let base = access.trim().trim_end_matches('/');
     let origin = base
@@ -22,7 +24,49 @@ pub fn mqtt_ws_url_from_gateway(gateway_url: &str) -> Option<String> {
     }
 }
 
-/// Prefer explicit local broker (`ZIGBEE_MQTT_URL`); otherwise derive cloud MQTT from gateway root.
+pub fn resolve_mqtt_credentials(
+    settings: &RuntimeSettings,
+    default_username: Option<&str>,
+    default_password: Option<&str>,
+) -> (Option<String>, Option<String>) {
+    let username = settings
+        .mqtt_username
+        .clone()
+        .or_else(|| {
+            default_username
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(str::to_string)
+        });
+    let password = settings
+        .mqtt_password
+        .clone()
+        .or_else(|| {
+            default_password
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(str::to_string)
+        });
+    (username, password)
+}
+
+pub fn resolve_mqtt_connect_config(
+    configured_url: Option<&str>,
+    gateway_url: &str,
+    settings: &RuntimeSettings,
+    default_username: Option<&str>,
+    default_password: Option<&str>,
+) -> Option<MqttConnectConfig> {
+    let url = resolve_mqtt_url(configured_url, gateway_url)?;
+    let (username, password) =
+        resolve_mqtt_credentials(settings, default_username, default_password);
+    Some(MqttConnectConfig {
+        url,
+        username,
+        password,
+    })
+}
+
 pub fn resolve_mqtt_url(configured: Option<&str>, gateway_url: &str) -> Option<String> {
     configured
         .map(str::trim)

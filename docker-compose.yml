@@ -64,6 +64,8 @@ services:
       CENTRAL_MQTT_URL: ${CENTRAL_MQTT_URL:-mqtt://mqtt-gateway:1883}
       CENTRAL_MQTT_USERNAME: ${CENTRAL_MQTT_USERNAME:-}
       CENTRAL_MQTT_PASSWORD: ${CENTRAL_MQTT_PASSWORD:-}
+      EMQX_API_URL: ${EMQX_API_URL:-http://mqtt-gateway:18083}
+      EMQX_DASHBOARD_PASSWORD: ${EMQX_DASHBOARD_PASSWORD:-changeme}
       SCENARIO_CORS_ORIGINS: ${SCENARIO_CORS_ORIGINS:-http://localhost:3000,http://localhost:8082}
     networks:
       - default

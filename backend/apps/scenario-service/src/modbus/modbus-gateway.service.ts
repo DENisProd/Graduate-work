@@ -56,7 +56,13 @@ export class ModbusGatewayService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    this.client = mqtt.connect(url, { reconnectPeriod: 5000 });
+    const username = this.config.get<string>('CENTRAL_MQTT_USERNAME')?.trim();
+    const password = this.config.get<string>('CENTRAL_MQTT_PASSWORD')?.trim();
+    this.client = mqtt.connect(url, {
+      reconnectPeriod: 5000,
+      ...(username ? { username } : {}),
+      ...(password ? { password } : {}),
+    });
 
     this.client.on('connect', () => {
       this.logger.log(`Connected to MQTT broker for modbus: ${url}`);

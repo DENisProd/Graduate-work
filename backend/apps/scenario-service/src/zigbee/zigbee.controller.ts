@@ -11,6 +11,7 @@ import {
   ServiceUnavailableException,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   ApiBody,
   ApiOperation,
@@ -19,6 +20,10 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { resolveHouseMqttUrl, resolveHouseTopicPrefix } from './central-mqtt';
+import { EmqxProvisionService } from './emqx-provision.service';
+import { toPublicHouseMqttConfig } from './house-mqtt-response';
+import { houseDataPrefix } from './mqtt-topics';
 import { ZigbeeService } from './zigbee.service';
 import { ZigbeeMqttService } from './zigbee-mqtt.service';
 import { HouseMqttConfigRepository } from './house-mqtt-config.repository';
@@ -39,9 +44,11 @@ import {
 @Controller('zigbee')
 export class ZigbeeController {
   constructor(
+    private readonly config: ConfigService,
     private readonly service: ZigbeeService,
     private readonly zigbeeMqtt: ZigbeeMqttService,
     private readonly mqttConfigRepo: HouseMqttConfigRepository,
+    private readonly emqxProvision: EmqxProvisionService,
   ) {}
 
   @Get('devices')
@@ -372,10 +379,9 @@ export class ZigbeeController {
   @ApiResponse({ status: 200, description: 'Массив конфигураций (без паролей)' })
   async listHouseMqttConfigs() {
     const configs = await this.mqttConfigRepo.findAll();
-    return configs.map(({ mqttPassword: _pwd, ...rest }) => ({
-      ...rest,
-      status: this.zigbeeMqtt.getConnectionStatus(rest.houseId),
-    }));
+    return configs.map((cfg) =>
+      toPublicHouseMqttConfig(cfg, this.zigbeeMqtt.getConnectionStatus(cfg.houseId)),
+    );
   }
 
   @Get('house-mqtt/status')
@@ -393,8 +399,44 @@ export class ZigbeeController {
   async getHouseMqttConfig(@Param('houseId') houseId: string) {
     const config = await this.mqttConfigRepo.findByHouseId(houseId);
     if (!config) throw new NotFoundException(`MQTT-конфигурация для дома ${houseId} не найдена`);
-    const { mqttPassword: _pwd, ...rest } = config;
-    return { ...rest, status: this.zigbeeMqtt.getConnectionStatus(houseId) };
+    return toPublicHouseMqttConfig(config, this.zigbeeMqtt.getConnectionStatus(houseId));
+  }
+
+  @Post('house-mqtt/:houseId/provision')
+  @ApiOperation({
+    summary: 'Создать пользователя EMQX для дома и применить MQTT-конфигурацию',
+    description:
+      'Генерирует логин/пароль, создаёт ACL в EMQX, сохраняет конфигурацию и переподключает scenario-service. Пароль возвращается один раз.',
+  })
+  @ApiParam({ name: 'houseId', description: 'UUID дома' })
+  @ApiResponse({ status: 201, description: 'Учётные данные созданы' })
+  @ApiResponse({ status: 503, description: 'EMQX недоступен или не настроен' })
+  async provisionHouseMqtt(@Param('houseId') houseId: string) {
+    const username = this.emqxProvision.houseMqttUsername(houseId);
+    const password = this.emqxProvision.generatePassword();
+    const topicPrefix = houseDataPrefix(houseId);
+
+    await this.emqxProvision.provisionHouseUser(houseId, username, password);
+
+    const config = await this.mqttConfigRepo.upsert({
+      houseId,
+      mqttUrl: 'central',
+      mqttUsername: username,
+      mqttPassword: password,
+      topicPrefix,
+      enabled: true,
+    });
+
+    this.zigbeeMqtt.connect(config);
+    await this.zigbeeMqtt.waitForConnection(houseId, 10_000);
+
+    return {
+      username,
+      password,
+      mqttUrl: 'central',
+      topicPrefix,
+      config: toPublicHouseMqttConfig(config, this.zigbeeMqtt.getConnectionStatus(houseId)),
+    };
   }
 
   @Put('house-mqtt/:houseId')
@@ -405,10 +447,19 @@ export class ZigbeeController {
       type: 'object',
       required: ['mqttUrl'],
       properties: {
-        mqttUrl: { type: 'string', example: 'mqtt://192.168.1.10:1883' },
+        mqttUrl: {
+          type: 'string',
+          example: 'central',
+          description:
+            'MQTT URL or alias "central" → CENTRAL_MQTT_URL (mqtt://mqtt-gateway:1883 in Docker)',
+        },
         mqttUsername: { type: 'string' },
         mqttPassword: { type: 'string' },
-        topicPrefix: { type: 'string', default: 'zigbee2mqtt' },
+        topicPrefix: {
+          type: 'string',
+          default: 'houses/{houseId}/zigbee2mqtt',
+          description: 'For central EMQX use houses/{houseId}/zigbee2mqtt',
+        },
         enabled: { type: 'boolean', default: true },
       },
     },
@@ -422,23 +473,42 @@ export class ZigbeeController {
     const mqttUrl = typeof b.mqttUrl === 'string' ? b.mqttUrl.trim() : '';
     if (!mqttUrl) throw new UnprocessableEntityException('mqttUrl обязателен');
 
-    const config = await this.mqttConfigRepo.upsert({
+    try {
+      resolveHouseMqttUrl(this.config, mqttUrl);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      throw new UnprocessableEntityException(message);
+    }
+
+    const topicPrefix = resolveHouseTopicPrefix(
+      this.config,
       houseId,
       mqttUrl,
-      mqttUsername: typeof b.mqttUsername === 'string' ? b.mqttUsername : undefined,
-      mqttPassword: typeof b.mqttPassword === 'string' ? b.mqttPassword : undefined,
-      topicPrefix: typeof b.topicPrefix === 'string' ? b.topicPrefix : 'zigbee2mqtt',
+      typeof b.topicPrefix === 'string' ? b.topicPrefix : undefined,
+    );
+
+    const existing = await this.mqttConfigRepo.findByHouseId(houseId);
+    const incomingPassword = typeof b.mqttPassword === 'string' ? b.mqttPassword.trim() : '';
+    const config = await this.mqttConfigRepo.upsert({
+      houseId,
+      mqttUrl: mqttUrl.replace(/\/+$/, ''),
+      mqttUsername:
+        typeof b.mqttUsername === 'string'
+          ? b.mqttUsername.trim() || undefined
+          : existing?.mqttUsername,
+      mqttPassword: incomingPassword ? incomingPassword : existing?.mqttPassword,
+      topicPrefix,
       enabled: b.enabled !== false,
     });
 
     if (config.enabled) {
       this.zigbeeMqtt.connect(config);
+      await this.zigbeeMqtt.waitForConnection(houseId, 10_000);
     } else {
       this.zigbeeMqtt.disconnectHouse(houseId);
     }
 
-    const { mqttPassword: _pwd, ...rest } = config;
-    return { ...rest, status: this.zigbeeMqtt.getConnectionStatus(houseId) };
+    return toPublicHouseMqttConfig(config, this.zigbeeMqtt.getConnectionStatus(houseId));
   }
 
   @Delete('house-mqtt/:houseId')
@@ -462,6 +532,7 @@ export class ZigbeeController {
     const config = await this.mqttConfigRepo.findByHouseId(houseId);
     if (!config) throw new NotFoundException(`MQTT-конфигурация для дома ${houseId} не найдена`);
     this.zigbeeMqtt.connect(config);
-    return { ok: true, houseId };
+    await this.zigbeeMqtt.waitForConnection(houseId, 10_000);
+    return toPublicHouseMqttConfig(config, this.zigbeeMqtt.getConnectionStatus(houseId));
   }
 }

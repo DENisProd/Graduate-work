@@ -19,6 +19,8 @@ pub struct HttpAppState {
     pub default_cloud_sync_url: String,
     /// Explicit `ZIGBEE_MQTT_URL` / config `mqtt_url`. When unset, MQTT uses gateway `/api/mqtt`.
     pub configured_mqtt_url: Option<String>,
+    pub default_mqtt_username: Option<String>,
+    pub default_mqtt_password: Option<String>,
     pub public_base_url: Option<String>,
     pub cloud_scenario: Arc<dyn CloudScenarioClient>,
     pub cloud_widget_dashboard: Arc<dyn CloudWidgetDashboardClient>,

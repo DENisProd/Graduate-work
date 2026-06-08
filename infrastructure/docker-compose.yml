@@ -1,124 +1,236 @@
-services:
-  # Postgres
-  postgres:
-    image: postgres:18
-    container_name: smart-home-postgres
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      # Passed to init-databases.sh on first volume init
-      KC_DB_USERNAME: ${KC_DB_USERNAME:-keycloak}
-      KC_DB_PASSWORD: ${KC_DB_PASSWORD:-keycloak}
-      ACCESS_CONTROL_DB_USERNAME: ${ACCESS_CONTROL_DB_USERNAME:-access_control_service}
-      ACCESS_CONTROL_DB_PASSWORD: ${ACCESS_CONTROL_DB_PASSWORD:-access_control_service}
-      DEVICE_DB_USERNAME: ${DEVICE_DB_USERNAME:-devices}
-      DEVICE_DB_PASSWORD: ${DEVICE_DB_PASSWORD:-devices}
-      HOME_DB_USERNAME: ${HOME_DB_USERNAME:-home_service}
-      HOME_DB_PASSWORD: ${HOME_DB_PASSWORD:-home_service}
-      ROOM_DB_USERNAME: ${ROOM_DB_USERNAME:-room_service}
-      ROOM_DB_PASSWORD: ${ROOM_DB_PASSWORD:-room_service}
-      USER_PROFILE_DB_USERNAME: ${USER_PROFILE_DB_USERNAME:-user_profile}
-      USER_PROFILE_DB_PASSWORD: ${USER_PROFILE_DB_PASSWORD:-user_profile}
-    volumes:
-      - pg_data:/var/lib/postgresql
-      - ./postgres/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # MongoDB
-  mongodb:
-    image: mongo:latest
-    container_name: smart-home-mongodb
-    ports:
-      - "${MONGODB_PORT:-27017}:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-device_service}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-password}
-      MONGO_INITDB_DATABASE: device_service
-    volumes:
-      - mongodb_data:/data/db
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  redis:
-    image: redis:latest
-    container_name: smart-home-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-
-  keycloak:
-    build:
-      context: ./keycloak
-      dockerfile: Dockerfile.keycloak
-    container_name: smart-home-keycloak
-    ports:
-      - "${KEYCLOAK_PORT:-8080}:8080"
-    environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
-      JAVA_OPTS_APPEND: >-
-        -Xms128m -Xmx512m
-        -XX:MaxMetaspaceSize=256m
-      KC_HOSTNAME: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8080}
-      KC_HOSTNAME_STRICT: "false"
-      KC_HTTP_ENABLED: "true"
-    command:
-      [
-        "start-dev",
-        "--import-realm",
-        "--hostname=${KEYCLOAK_PUBLIC_URL:-http://localhost:8080}",
-        "--http-enabled=true",
-        "--spi-theme--static-max-age=-1",
-        "--spi-theme--cache-themes=false",
-        "--spi-theme--cache-templates=false"
-      ]
-    mem_limit: 768m
-    volumes:
-      - keycloak_data:/opt/keycloak/data
-      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json
-      - ./keycloak/themes/domovoy:/opt/keycloak/themes/domovoy
-
-  # EMQX — central MQTT broker (Community Edition 5.7.0)
-  # Dashboard: http://localhost:18083  (admin / EMQX_DASHBOARD_PASSWORD)
-  mqtt-gateway:
-    image: emqx/emqx:5.7.0
-    container_name: smart-home-mqtt-gateway
-    restart: unless-stopped
-    ports:
-      - "${MQTT_GATEWAY_TCP_PORT:-1883}:1883"
-      - "${MQTT_GATEWAY_TLS_PORT:-8883}:8883"
-      - "${MQTT_GATEWAY_DASHBOARD_PORT:-18083}:18083"
-      - "${MQTT_GATEWAY_WS_PORT:-8083}:8083"
-    volumes:
-      - emqx_data:/opt/emqx/data
-      - emqx_log:/opt/emqx/log
-      - ./emqx/emqx.conf:/opt/emqx/etc/emqx.conf:ro
-    environment:
-      EMQX_DASHBOARD__DEFAULT_PASSWORD: ${EMQX_DASHBOARD_PASSWORD:-changeme}
-      EMQX_NODE__COOKIE: ${EMQX_NODE__COOKIE:-smart-home-dev-cookie-change-me}
-    healthcheck:
-      test: ["CMD-SHELL", "/opt/emqx/bin/emqx ctl status | grep -q \"is started\""]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
-
-volumes:
-  pg_data:
-  nginx_logs:
-  mongodb_data:
-  redis_data:
-  keycloak_data:
-  ollama_data:
-  emqx_data:
-  emqx_log:
+# Имя сети фиксировано: smart-home/docker-compose.yml подключается как external (infrastructure_default).
+networks:
+  default:
+    name: infrastructure_default
+
+services:
+
+  # Postgres
+
+  postgres:
+
+    image: postgres:18
+
+    container_name: smart-home-postgres
+
+    ports:
+
+      - "5432:5432"
+
+    environment:
+
+      POSTGRES_USER: postgres
+
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+
+      # Passed to init-databases.sh on first volume init
+
+      KC_DB_USERNAME: ${KC_DB_USERNAME:-keycloak}
+
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD:-keycloak}
+
+      ACCESS_CONTROL_DB_USERNAME: ${ACCESS_CONTROL_DB_USERNAME:-access_control_service}
+
+      ACCESS_CONTROL_DB_PASSWORD: ${ACCESS_CONTROL_DB_PASSWORD:-access_control_service}
+
+      DEVICE_DB_USERNAME: ${DEVICE_DB_USERNAME:-devices}
+
+      DEVICE_DB_PASSWORD: ${DEVICE_DB_PASSWORD:-devices}
+
+      HOME_DB_USERNAME: ${HOME_DB_USERNAME:-home_service}
+
+      HOME_DB_PASSWORD: ${HOME_DB_PASSWORD:-home_service}
+
+      ROOM_DB_USERNAME: ${ROOM_DB_USERNAME:-room_service}
+
+      ROOM_DB_PASSWORD: ${ROOM_DB_PASSWORD:-room_service}
+
+      USER_PROFILE_DB_USERNAME: ${USER_PROFILE_DB_USERNAME:-user_profile}
+
+      USER_PROFILE_DB_PASSWORD: ${USER_PROFILE_DB_PASSWORD:-user_profile}
+
+    volumes:
+
+      - pg_data:/var/lib/postgresql
+
+      - ./postgres/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh
+
+    healthcheck:
+
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+
+      interval: 10s
+
+      timeout: 5s
+
+      retries: 5
+
+
+
+  # MongoDB
+
+  mongodb:
+
+    image: mongo:latest
+
+    container_name: smart-home-mongodb
+
+    ports:
+
+      - "${MONGODB_PORT:-27017}:27017"
+
+    environment:
+
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-device_service}
+
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-password}
+
+      MONGO_INITDB_DATABASE: device_service
+
+    volumes:
+
+      - mongodb_data:/data/db
+
+    healthcheck:
+
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+
+      interval: 10s
+
+      timeout: 5s
+
+      retries: 5
+
+
+
+  redis:
+
+    image: redis:latest
+
+    container_name: smart-home-redis
+
+    ports:
+
+      - "6379:6379"
+
+    volumes:
+
+      - redis_data:/data
+
+
+
+  keycloak:
+
+    build:
+
+      context: ./keycloak
+
+      dockerfile: Dockerfile.keycloak
+
+    container_name: smart-home-keycloak
+
+    ports:
+
+      - "${KEYCLOAK_PORT:-8080}:8080"
+
+    environment:
+
+      KEYCLOAK_ADMIN: admin
+
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+
+      JAVA_OPTS_APPEND: >-
+
+        -Xms128m -Xmx512m
+
+        -XX:MaxMetaspaceSize=256m
+
+      KC_HOSTNAME: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8080}
+
+      KC_HOSTNAME_STRICT: "false"
+
+      KC_HTTP_ENABLED: "true"
+
+    command:
+
+      [
+
+        "start-dev",
+
+        "--import-realm",
+
+        "--hostname=${KEYCLOAK_PUBLIC_URL:-http://localhost:8080}",
+
+        "--http-enabled=true",
+
+        "--spi-theme--static-max-age=-1",
+
+        "--spi-theme--cache-themes=false",
+
+        "--spi-theme--cache-templates=false"
+
+      ]
+
+    mem_limit: 768m
+
+    volumes:
+
+      - keycloak_data:/opt/keycloak/data
+
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json
+
+      - ./keycloak/themes/domovoy:/opt/keycloak/themes/domovoy
+
+
+
+  # EMQX — central MQTT broker (Community Edition 5.7.0)
+  # Dashboard: http://localhost:18083  (admin / EMQX_DASHBOARD_PASSWORD)
+  mqtt-gateway:
+    image: emqx/emqx:5.7.0
+    container_name: smart-home-mqtt-gateway
+    restart: unless-stopped
+    ports:
+      - "${MQTT_GATEWAY_TCP_PORT:-1883}:1883"
+      - "${MQTT_GATEWAY_TLS_PORT:-8883}:8883"
+      - "${MQTT_GATEWAY_DASHBOARD_PORT:-18083}:18083"
+      - "${MQTT_GATEWAY_WS_PORT:-8083}:8083"
+    volumes:
+      - emqx_data:/opt/emqx/data
+      - emqx_log:/opt/emqx/log
+      - ./emqx/emqx.conf:/opt/emqx/etc/emqx.conf:ro
+    environment:
+      EMQX_DASHBOARD__DEFAULT_PASSWORD: ${EMQX_DASHBOARD_PASSWORD:-changeme}
+      EMQX_NODE__COOKIE: ${EMQX_NODE__COOKIE:-smart-home-dev-cookie-change-me}
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/emqx/bin/emqx ctl status | grep -q \"is started\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # Создаёт MQTT-пользователя scenario-service и ACL (один раз после старта EMQX).
+  mqtt-bootstrap:
+    image: curlimages/curl:8.11.1
+    container_name: smart-home-mqtt-bootstrap
+    depends_on:
+      mqtt-gateway:
+        condition: service_healthy
+    environment:
+      EMQX_HOST: mqtt-gateway
+      EMQX_DASHBOARD_PASSWORD: ${EMQX_DASHBOARD_PASSWORD:-changeme}
+      SCENARIO_SERVICE_MQTT_USERNAME: ${SCENARIO_SERVICE_MQTT_USERNAME:-scenario-service}
+      SCENARIO_SERVICE_MQTT_PASSWORD: ${SCENARIO_SERVICE_MQTT_PASSWORD:-}
+    volumes:
+      - ./emqx/bootstrap.sh:/bootstrap.sh:ro
+    entrypoint: ["/bin/sh", "/bootstrap.sh"]
+    restart: "no"
+
+volumes:
+  pg_data:
+  nginx_logs:
+  mongodb_data:
+  redis_data:
+  keycloak_data:
+  ollama_data:
+  emqx_data:
+  emqx_log:

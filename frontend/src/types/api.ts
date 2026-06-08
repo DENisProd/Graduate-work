@@ -529,6 +529,8 @@ export interface ZigbeeDeviceListItem {
 
 export interface HouseMqttStatus {
   connected: boolean;
+  url?: string;
+  lastError?: string;
 }
 
 export interface HouseMqttConfigResponse {
@@ -537,9 +539,18 @@ export interface HouseMqttConfigResponse {
   mqttUsername?: string;
   /** Password is not returned by backend. */
   mqttPassword?: undefined;
+  hasMqttPassword?: boolean;
   topicPrefix: string;
   enabled: boolean;
   status?: HouseMqttStatus;
+}
+
+export interface HouseMqttProvisionResponse {
+  username: string;
+  password: string;
+  mqttUrl: string;
+  topicPrefix: string;
+  config: HouseMqttConfigResponse;
 }
 
 export interface HouseMqttConfigUpsertRequest {

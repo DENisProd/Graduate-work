@@ -11,6 +11,7 @@ pub mod health;
 pub mod modbus_gateway_port;
 pub mod modbus_repository;
 pub mod mqtt_client;
+pub mod mqtt_connect_config;
 pub mod physical_device_repository;
 pub mod runtime_settings_repository;
 pub mod scenario_repository;

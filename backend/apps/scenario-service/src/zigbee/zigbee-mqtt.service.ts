@@ -6,8 +6,14 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as mqtt from 'mqtt';
 import type { IClientOptions, MqttClient } from 'mqtt';
+import {
+  mqttClientCredentials,
+  resolveHouseMqttUrl,
+  resolveHouseTopicPrefix,
+} from './central-mqtt';
 import { ZigbeeIngestService } from './zigbee-ingest.service';
 import { HouseMqttConfigRepository, HouseMqttConfig } from './house-mqtt-config.repository';
 
@@ -15,14 +21,23 @@ interface ConnectionEntry {
   client: MqttClient;
   topicPrefix: string;
   houseId: string;
+  mqttUrl: string;
+}
+
+export interface HouseMqttConnectionStatus {
+  connected: boolean;
+  url?: string;
+  lastError?: string;
 }
 
 @Injectable()
 export class ZigbeeMqttService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(ZigbeeMqttService.name);
   private readonly connections = new Map<string, ConnectionEntry>();
+  private readonly lastErrors = new Map<string, string>();
 
   constructor(
+    private readonly config: ConfigService,
     private readonly configRepo: HouseMqttConfigRepository,
     @Inject(forwardRef(() => ZigbeeIngestService))
     private readonly ingest: ZigbeeIngestService,
@@ -54,22 +69,40 @@ export class ZigbeeMqttService implements OnModuleInit, OnModuleDestroy {
   connect(config: HouseMqttConfig): void {
     this.disconnectHouse(config.houseId);
 
-    const topicPrefix = config.topicPrefix.replace(/\/+$/, '');
+    const houseId = config.houseId;
+    let mqttUrl: string;
+    try {
+      mqttUrl = resolveHouseMqttUrl(this.config, config.mqttUrl);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.lastErrors.set(houseId, message);
+      this.logger.error(`[${houseId}] ${message}`);
+      return;
+    }
+    const topicPrefix = resolveHouseTopicPrefix(
+      this.config,
+      houseId,
+      config.mqttUrl,
+      config.topicPrefix,
+    );
+    this.lastErrors.delete(houseId);
 
+    const creds = mqttClientCredentials(this.config, config);
     const opts: IClientOptions = {
       reconnectPeriod: 5000,
       connectTimeout: 10_000,
-      clientId: `scenario-${config.houseId.slice(0, 8)}-${Math.random().toString(36).slice(2, 8)}`,
+      clientId: `scenario-${houseId.slice(0, 8)}-${Math.random().toString(36).slice(2, 8)}`,
     };
-    if (config.mqttUsername) opts.username = config.mqttUsername;
-    if (config.mqttPassword) opts.password = config.mqttPassword;
+    if (creds.username) opts.username = creds.username;
+    if (creds.password) opts.password = creds.password;
 
-    const client = mqtt.connect(config.mqttUrl, opts);
-    const entry: ConnectionEntry = { client, topicPrefix, houseId: config.houseId };
-    this.connections.set(config.houseId, entry);
+    const client = mqtt.connect(mqttUrl, opts);
+    const entry: ConnectionEntry = { client, topicPrefix, houseId, mqttUrl };
+    this.connections.set(houseId, entry);
 
     client.on('connect', () => {
-      this.logger.log(`[${config.houseId}] MQTT подключён: ${config.mqttUrl}`);
+      this.lastErrors.delete(houseId);
+      this.logger.log(`[${houseId}] MQTT подключён: ${mqttUrl}`);
       const pattern = `${topicPrefix}/#`;
       client.subscribe(pattern, { qos: 0 }, (err) => {
         if (err) {
@@ -82,16 +115,60 @@ export class ZigbeeMqttService implements OnModuleInit, OnModuleDestroy {
     });
 
     client.on('message', (topic, payload) => {
-      this.logIncoming(config.houseId, topic, payload);
-      void this.ingest.processMqttMessage(config.houseId, topicPrefix, topic, payload);
+      this.logIncoming(houseId, topic, payload);
+      void this.ingest.processMqttMessage(houseId, topicPrefix, topic, payload);
     });
 
     client.on('error', (err) => {
-      this.logger.error(`[${config.houseId}] MQTT ошибка`, err);
+      const message = err instanceof Error ? err.message : String(err);
+      this.lastErrors.set(houseId, message);
+      this.logger.error(`[${houseId}] MQTT ошибка`, err);
+    });
+
+    client.on('offline', () => {
+      if (!client.connected) {
+        this.lastErrors.set(
+          houseId,
+          this.lastErrors.get(houseId) ?? 'MQTT broker offline or unreachable',
+        );
+      }
     });
 
     client.on('reconnect', () => {
-      this.logger.warn(`[${config.houseId}] MQTT переподключение…`);
+      this.logger.warn(`[${houseId}] MQTT переподключение…`);
+    });
+  }
+
+  waitForConnection(houseId: string, timeoutMs = 10_000): Promise<HouseMqttConnectionStatus> {
+    const entry = this.connections.get(houseId);
+    if (!entry) {
+      return Promise.resolve({
+        connected: false,
+        lastError: 'MQTT client not initialized',
+      });
+    }
+
+    if (entry.client.connected) {
+      return Promise.resolve(this.getConnectionStatus(houseId));
+    }
+
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        entry.client.off('connect', onConnect);
+        resolve(this.getConnectionStatus(houseId));
+      };
+
+      const timer = setTimeout(finish, timeoutMs);
+
+      const onConnect = () => {
+        finish();
+      };
+
+      entry.client.on('connect', onConnect);
     });
   }
 
@@ -109,18 +186,29 @@ export class ZigbeeMqttService implements OnModuleInit, OnModuleDestroy {
       existing.client.end(true);
       this.connections.delete(houseId);
     }
+    this.lastErrors.delete(houseId);
   }
 
-  getConnectionStatus(houseId: string): { connected: boolean; url?: string } {
+  getConnectionStatus(houseId: string): HouseMqttConnectionStatus {
     const entry = this.connections.get(houseId);
-    if (!entry) return { connected: false };
-    return { connected: entry.client.connected };
+    if (!entry) {
+      return {
+        connected: false,
+        lastError: this.lastErrors.get(houseId),
+      };
+    }
+    const lastError = entry.client.connected ? undefined : this.lastErrors.get(houseId);
+    return {
+      connected: entry.client.connected,
+      url: entry.mqttUrl,
+      lastError,
+    };
   }
 
-  getAllStatuses(): Record<string, { connected: boolean }> {
-    const result: Record<string, { connected: boolean }> = {};
-    for (const [houseId, entry] of this.connections.entries()) {
-      result[houseId] = { connected: entry.client.connected };
+  getAllStatuses(): Record<string, HouseMqttConnectionStatus> {
+    const result: Record<string, HouseMqttConnectionStatus> = {};
+    for (const houseId of this.connections.keys()) {
+      result[houseId] = this.getConnectionStatus(houseId);
     }
     return result;
   }

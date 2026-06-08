@@ -3,7 +3,8 @@ use std::time::Duration;
 
 use anyhow::Context;
 use local_server_application::ports::{MqttClient, RuntimeSettingsRepository};
-use local_server_application::{resolve_mqtt_url, resolve_scenario_service_url};
+use local_server_application::resolve_mqtt_connect_config;
+use local_server_application::resolve_scenario_service_url;
 use local_server_application::services::{
     run_delta_puller, run_outbox_pusher, run_physical_device_sync, run_scenario_sync,
     run_widget_dashboard_sync, CloudSyncUrlProvider, ScenarioEngine, ScenarioServiceUrlProvider,
@@ -111,12 +112,14 @@ async fn main() -> anyhow::Result<()> {
     let gateway_url = saved_settings.access_service_url
         .filter(|s| !s.trim().is_empty())
         .unwrap_or_else(|| cfg.cloud_sync_api_url.clone());
-    let effective_mqtt_url = resolve_mqtt_url(cfg.mqtt_url.as_deref(), &gateway_url);
-    if let Err(e) = state
-        .mqtt_manager
-        .reconfigure(effective_mqtt_url.as_deref())
-        .await
-    {
+    let mqtt_config = resolve_mqtt_connect_config(
+        cfg.mqtt_url.as_deref(),
+        &gateway_url,
+        &saved_settings,
+        cfg.mqtt_username.as_deref(),
+        cfg.mqtt_password.as_deref(),
+    );
+    if let Err(e) = state.mqtt_manager.reconfigure(mqtt_config).await {
         tracing::warn!(error = %e, "MQTT unavailable, continuing without it");
     }
 
@@ -222,6 +225,8 @@ async fn main() -> anyhow::Result<()> {
             cfg.access_service_url.clone(),
             cfg.cloud_sync_api_url.clone(),
             cfg.mqtt_url.clone(),
+            cfg.mqtt_username.clone(),
+            cfg.mqtt_password.clone(),
             cfg.local_server_public_url.clone(),
             cfg.scenario_service_url.clone(),
             cfg.serial_number.clone(),

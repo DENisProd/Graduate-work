@@ -2,7 +2,7 @@
 
 use async_trait::async_trait;
 use local_server_application::{
-    ports::{MqttClient, ModbusRepository, PhysicalDeviceRepository, ZigbeeRepository},
+    ports::{MqttClient, MqttConnectConfig, ModbusRepository, PhysicalDeviceRepository, ZigbeeRepository},
     services::ZigbeeRealtimeService,
     DomainError,
 };
@@ -49,16 +49,22 @@ impl RuntimeMqttManager {
         }
     }
 
-    pub async fn reconfigure(&self, mqtt_url: Option<&str>) -> Result<(), DomainError> {
+    pub async fn reconfigure(&self, config: Option<MqttConnectConfig>) -> Result<(), DomainError> {
         let _guard = self.reconnect_lock.lock().await;
-        match mqtt_url.map(str::trim).filter(|v| !v.is_empty()) {
-            Some(url) => self.connect(url).await,
-            None => self.disconnect().await,
+        match config {
+            Some(cfg) if !cfg.url.trim().is_empty() => self.connect(&cfg).await,
+            _ => self.disconnect().await,
         }
     }
 
-    async fn connect(&self, mqtt_url: &str) -> Result<(), DomainError> {
-        let new_client = RumqttcClient::connect(mqtt_url, &self.topic_prefix)
+    async fn connect(&self, config: &MqttConnectConfig) -> Result<(), DomainError> {
+        let mqtt_url = config.url.trim();
+        let new_client = RumqttcClient::connect(
+            mqtt_url,
+            &self.topic_prefix,
+            config.username.as_deref(),
+            config.password.as_deref(),
+        )
             .await
             .map_err(|e| DomainError::DependencyUnavailable(format!("MQTT connect: {e}")))?;
 
@@ -126,7 +132,7 @@ impl MqttClient for RuntimeMqttManager {
         RuntimeMqttManager::current_url(self).await
     }
 
-    async fn reconfigure(&self, mqtt_url: Option<&str>) -> Result<(), DomainError> {
-        RuntimeMqttManager::reconfigure(self, mqtt_url).await
+    async fn reconfigure(&self, config: Option<MqttConnectConfig>) -> Result<(), DomainError> {
+        RuntimeMqttManager::reconfigure(self, config).await
     }
 }

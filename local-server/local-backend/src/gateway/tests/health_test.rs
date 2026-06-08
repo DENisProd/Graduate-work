@@ -46,7 +46,10 @@ impl MqttClient for NoopMqtt {
     async fn current_url(&self) -> Option<String> {
         None
     }
-    async fn reconfigure(&self, _mqtt_url: Option<&str>) -> Result<(), DomainError> {
+    async fn reconfigure(
+        &self,
+        _config: Option<local_server_application::ports::MqttConnectConfig>,
+    ) -> Result<(), DomainError> {
         Ok(())
     }
 }
@@ -111,6 +114,8 @@ async fn health_endpoint_reports_db_ok() {
         default_access_service_url: "http://localhost:8085".to_string(),
         default_cloud_sync_url: "http://localhost:8082".to_string(),
         configured_mqtt_url: None,
+        default_mqtt_username: None,
+        default_mqtt_password: None,
         public_base_url: None,
         cloud_scenario: Arc::new(ReqwestCloudScenarioClient::with_settings(
             String::new(),

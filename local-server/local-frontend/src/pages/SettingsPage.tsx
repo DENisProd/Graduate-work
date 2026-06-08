@@ -111,6 +111,9 @@ export function SettingsPage() {
   const [accessServiceUrlDraft, setAccessServiceUrlDraft] = useState(() =>
     resolveAccessServiceUrl(useSettingsStore.getState().accessServiceUrl),
   )
+  const [mqttUsernameDraft, setMqttUsernameDraft] = useState('')
+  const [mqttPasswordDraft, setMqttPasswordDraft] = useState('')
+  const [hasMqttPassword, setHasMqttPassword] = useState(false)
   const [authCountdownSec, setAuthCountdownSec] = useState<number | null>(null)
 
   const { data: runtimeSettings } = useQuery({
@@ -125,6 +128,9 @@ export function SettingsPage() {
       setAccessServiceUrlDraft(runtimeSettings.accessServiceUrl)
       setAccessServiceUrl(runtimeSettings.accessServiceUrl)
     }
+    setMqttUsernameDraft(runtimeSettings.mqttUsername ?? '')
+    setHasMqttPassword(Boolean(runtimeSettings.hasMqttPassword))
+    setMqttPasswordDraft('')
     setAuthState({
       authSessionId: runtimeSettings.authSessionId ?? '',
       authStatus: runtimeSettings.authStatus ?? '',
@@ -138,11 +144,20 @@ export function SettingsPage() {
   const handleSaveGateway = async () => {
     const updated = await updateRuntimeSettings({
       accessServiceUrl: accessServiceUrlDraft,
+      mqttUsername: mqttUsernameDraft.trim() || null,
+      ...(mqttPasswordDraft.trim() ? { mqttPassword: mqttPasswordDraft } : {}),
     })
     if (updated.accessServiceUrl) {
       setAccessServiceUrl(updated.accessServiceUrl)
     }
-    toast.success(t('settings.toastGatewaySaved'))
+    setMqttUsernameDraft(updated.mqttUsername ?? '')
+    setHasMqttPassword(Boolean(updated.hasMqttPassword))
+    setMqttPasswordDraft('')
+    if (updated.mqttConnected) {
+      toast.success(t('settings.toastGatewaySaved'))
+    } else {
+      toast.warning(t('settings.toastGatewaySavedMqttDisconnected'))
+    }
   }
 
   const pollAuthStatus = useCallback(
@@ -272,6 +287,16 @@ export function SettingsPage() {
               <div>
                 <p className="mb-1 text-xs font-medium text-slate-600 dark:text-slate-400">
                   MQTT
+                  <span
+                    className={cn(
+                      'ml-2 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase',
+                      runtimeSettings.mqttConnected
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+                        : 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
+                    )}
+                  >
+                    {runtimeSettings.mqttConnected ? t('settings.mqttConnected') : t('settings.mqttDisconnected')}
+                  </span>
                 </p>
                 <p className="font-mono text-xs text-slate-500 dark:text-slate-400">
                   {runtimeSettings.mqttUrl}
@@ -287,6 +312,32 @@ export function SettingsPage() {
                 onChange={setAccessServiceUrlDraft}
                 placeholder="http://localhost:8082"
               />
+            </div>
+            <div>
+              <p className="mb-1 text-xs font-medium text-slate-600 dark:text-slate-400">
+                {t('settings.mqttUsername')}
+              </p>
+              <Input
+                value={mqttUsernameDraft}
+                onChange={setMqttUsernameDraft}
+                placeholder="scenario-service"
+                autoComplete="username"
+              />
+            </div>
+            <div>
+              <p className="mb-1 text-xs font-medium text-slate-600 dark:text-slate-400">
+                {t('settings.mqttPassword')}
+              </p>
+              <Input
+                type="password"
+                value={mqttPasswordDraft}
+                onChange={setMqttPasswordDraft}
+                placeholder={hasMqttPassword ? t('settings.mqttPasswordKeep') : t('settings.mqttPasswordPlaceholder')}
+                autoComplete="current-password"
+              />
+              <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                {t('settings.mqttCredentialsHint')}
+              </p>
             </div>
           </div>
           <div className="mt-4">

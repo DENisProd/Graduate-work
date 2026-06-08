@@ -5,6 +5,7 @@ import type {
   HouseDeviceRegistrationResponse,
   HouseMqttConfigResponse,
   HouseMqttConfigUpsertRequest,
+  HouseMqttProvisionResponse,
   PhysicalDeviceResponse,
   DeviceDataResponse,
   ZigbeeDeviceListItem,
@@ -145,8 +146,20 @@ export const houseMqttApi = {
       signal: options?.signal,
     }),
 
-  reconnect: (houseId: string, options?: { signal?: AbortSignal }): Promise<{ ok: true; houseId: string }> =>
+  reconnect: (
+    houseId: string,
+    options?: { signal?: AbortSignal },
+  ): Promise<HouseMqttConfigResponse> =>
     scenarioApi(`/zigbee/house-mqtt/${encodeURIComponent(houseId)}/reconnect`, {
+      method: 'POST',
+      signal: options?.signal,
+    }),
+
+  provision: (
+    houseId: string,
+    options?: { signal?: AbortSignal },
+  ): Promise<HouseMqttProvisionResponse> =>
+    scenarioApi(`/zigbee/house-mqtt/${encodeURIComponent(houseId)}/provision`, {
       method: 'POST',
       signal: options?.signal,
     }),

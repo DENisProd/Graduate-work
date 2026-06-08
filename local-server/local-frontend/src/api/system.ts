@@ -15,6 +15,8 @@ export interface SyncStatus {
 
 export interface RuntimeSettingsResponse {
   mqttUrl: string | null
+  mqttUsername: string | null
+  hasMqttPassword: boolean
   accessServiceUrl: string
   mqttConnected: boolean
   authSessionId: string | null
@@ -27,6 +29,9 @@ export interface RuntimeSettingsResponse {
 
 export interface UpdateRuntimeSettingsRequest {
   accessServiceUrl?: string | null
+  mqttUsername?: string | null
+  /** Empty or omitted — keep existing password */
+  mqttPassword?: string | null
 }
 
 export interface StartAuthResponse {

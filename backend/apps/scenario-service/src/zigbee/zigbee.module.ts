@@ -30,6 +30,7 @@ import { ZigbeeIngestService } from './zigbee-ingest.service';
 import { ZigbeeDeviceLogRepository } from './zigbee-device-log.repository';
 import { ZigbeeRealtimeService } from './zigbee-realtime.service';
 import { ZigbeeRealtimeGateway } from './zigbee-realtime.gateway';
+import { EmqxProvisionService } from './emqx-provision.service';
 import { HouseMqttConfigRepository } from './house-mqtt-config.repository';
 import { DeviceDataModule } from '../device-data/device-data.module';
 import { DeviceCatalogModule } from '../device-catalog/device-catalog.module';
@@ -58,6 +59,7 @@ import { DeviceCatalogModule } from '../device-catalog/device-catalog.module';
     ZigbeeRealtimeService,
     ZigbeeRealtimeGateway,
     HouseMqttConfigRepository,
+    EmqxProvisionService,
   ],
   exports: [ZigbeeService, ZigbeeIngestService],
 })

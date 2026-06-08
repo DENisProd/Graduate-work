@@ -5,6 +5,8 @@ use local_server_core::DomainError;
 use sqlx::SqlitePool;
 
 const KEY_ACCESS_SERVICE_URL: &str = "access_service_url";
+const KEY_MQTT_USERNAME: &str = "mqtt_username";
+const KEY_MQTT_PASSWORD: &str = "mqtt_password";
 const KEY_AUTH_SESSION_ID: &str = "auth_session_id";
 const KEY_AUTH_STATUS: &str = "auth_status";
 const KEY_AUTH_CODE: &str = "auth_code";
@@ -60,6 +62,8 @@ impl RuntimeSettingsRepository for SqliteRuntimeSettingsRepo {
     async fn load(&self) -> Result<RuntimeSettings, DomainError> {
         Ok(RuntimeSettings {
             access_service_url: self.get_value(KEY_ACCESS_SERVICE_URL).await?,
+            mqtt_username: self.get_value(KEY_MQTT_USERNAME).await?,
+            mqtt_password: self.get_value(KEY_MQTT_PASSWORD).await?,
             auth_session_id: self.get_value(KEY_AUTH_SESSION_ID).await?,
             auth_status: self.get_value(KEY_AUTH_STATUS).await?,
             auth_code: self.get_value(KEY_AUTH_CODE).await?,
@@ -71,6 +75,14 @@ impl RuntimeSettingsRepository for SqliteRuntimeSettingsRepo {
 
     async fn set_access_service_url(&self, value: Option<&str>) -> Result<(), DomainError> {
         self.set_value(KEY_ACCESS_SERVICE_URL, value).await
+    }
+
+    async fn set_mqtt_username(&self, value: Option<&str>) -> Result<(), DomainError> {
+        self.set_value(KEY_MQTT_USERNAME, value).await
+    }
+
+    async fn set_mqtt_password(&self, value: Option<&str>) -> Result<(), DomainError> {
+        self.set_value(KEY_MQTT_PASSWORD, value).await
     }
 
     async fn save_auth_session(

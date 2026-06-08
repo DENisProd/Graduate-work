@@ -38,6 +38,7 @@ export function useHouseMqttStatus(houseId: string | null, enabled = true) {
           return;
         }
         setState(cfg.status?.connected ? 'connected' : 'disconnected');
+        setError(cfg.status?.lastError ?? null);
       } catch (err) {
         if (signal?.aborted) return;
         if (err instanceof ApiError && err.status === 404) {

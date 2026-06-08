@@ -7,7 +7,9 @@ use chrono::{DateTime, Utc};
 use local_server_application::ports::{
     AuthPollResult, CompleteAuthArgs, UpsertFromCloudCmd, UpsertFromCloudWidgetDashboardCmd,
 };
-use local_server_application::{resolve_mqtt_url, resolve_scenario_service_url, DomainError};
+use local_server_application::{
+    resolve_mqtt_connect_config, resolve_scenario_service_url, DomainError,
+};
 use local_server_core::entities::scenario::ScenarioStatus;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -287,6 +289,8 @@ async fn trigger_sync(
 #[serde(rename_all = "camelCase")]
 pub struct RuntimeSettingsResponse {
     pub mqtt_url: Option<String>,
+    pub mqtt_username: Option<String>,
+    pub has_mqtt_password: bool,
     pub access_service_url: String,
     pub mqtt_connected: bool,
     pub auth_session_id: Option<String>,
@@ -309,6 +313,9 @@ pub struct SyncStatusResponse {
 #[serde(rename_all = "camelCase")]
 pub struct UpdateRuntimeSettingsRequest {
     pub access_service_url: Option<String>,
+    pub mqtt_username: Option<String>,
+    /// Empty or omitted — keep existing password.
+    pub mqtt_password: Option<String>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -374,6 +381,8 @@ async fn get_settings(
     let settings = state.runtime_settings.load().await?;
     Ok(Json(RuntimeSettingsResponse {
         mqtt_url: state.mqtt.current_url().await,
+        mqtt_username: settings.mqtt_username,
+        has_mqtt_password: settings.mqtt_password.is_some(),
         access_service_url: resolve_access_service_url(
             settings.access_service_url,
             &state.default_access_service_url,
@@ -401,21 +410,44 @@ async fn patch_settings(
             .into());
         }
     }
-    state
-        .runtime_settings
-        .set_access_service_url(access_service_url.as_deref())
-        .await?;
+    if body.access_service_url.is_some() {
+        state
+            .runtime_settings
+            .set_access_service_url(access_service_url.as_deref())
+            .await?;
+    }
 
+    if body.mqtt_username.is_some() {
+        state
+            .runtime_settings
+            .set_mqtt_username(normalize_opt(body.mqtt_username))
+            .await?;
+    }
+
+    if let Some(password) = body.mqtt_password {
+        let trimmed = password.trim();
+        if !trimmed.is_empty() {
+            state
+                .runtime_settings
+                .set_mqtt_password(Some(trimmed))
+                .await?;
+        }
+    }
+
+    let settings = state.runtime_settings.load().await?;
     let gateway_url = resolve_access_service_url(
-        access_service_url,
+        settings.access_service_url.clone(),
         &state.default_access_service_url,
     );
-    if let Some(mqtt_url) = resolve_mqtt_url(
+    if let Some(mqtt_config) = resolve_mqtt_connect_config(
         state.configured_mqtt_url.as_deref(),
         &gateway_url,
+        &settings,
+        state.default_mqtt_username.as_deref(),
+        state.default_mqtt_password.as_deref(),
     ) {
-        if let Err(e) = state.mqtt.reconfigure(Some(&mqtt_url)).await {
-            tracing::warn!(error = %e, mqtt_url = %mqtt_url, "MQTT reconfigure after gateway settings update failed");
+        if let Err(e) = state.mqtt.reconfigure(Some(mqtt_config)).await {
+            tracing::warn!(error = %e, "MQTT reconfigure after settings update failed");
         }
     }
 

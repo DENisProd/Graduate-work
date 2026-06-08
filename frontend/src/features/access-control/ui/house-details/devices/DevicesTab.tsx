@@ -11,6 +11,7 @@ import { useTranslation } from '@/hooks';
 import { DevicesListContent } from './DevicesListContent';
 import { DevicesListHeader } from './DevicesListHeader';
 import { DevicesPagination } from './DevicesPagination';
+import { formatMqttLastError, mqttReconnectToastKey } from '@/features/access-control/lib/mqtt-reconnect-feedback';
 import { HouseMqttBanner } from './HouseMqttBanner';
 
 interface DevicesTabProps {
@@ -59,10 +60,21 @@ export function DevicesTab({
     if (!houseId) return;
     setMqttReconnecting(true);
     try {
-      await houseMqttApi.reconnect(houseId);
+      const cfg = await houseMqttApi.reconnect(houseId);
       await refetchMqttStatus();
-      await loadDevices();
-      showToast(t('admin.accessControl.connectedDevices.mqttBanner.reconnectDone'), 'success');
+      const outcome = mqttReconnectToastKey(cfg);
+      if (outcome === 'success') {
+        await loadDevices();
+        showToast(t('admin.accessControl.connectedDevices.mqttBanner.reconnectSuccess'), 'success');
+      } else {
+        const detail = formatMqttLastError(cfg);
+        showToast(
+          detail
+            ? t('admin.accessControl.connectedDevices.mqttBanner.reconnectFailedDetail', { detail })
+            : t('admin.accessControl.connectedDevices.mqttBanner.reconnectFailed'),
+          'error',
+        );
+      }
     } catch {
       showToast(t('admin.accessControl.connectedDevices.mqttNotConnected'), 'error');
     } finally {

@@ -801,13 +801,26 @@
           "openSettings": "Настроить MQTT",
           "reconnect": "Переподключить",
           "reconnecting": "Переподключение…",
-          "reconnectDone": "Запрошено переподключение"
+          "reconnectDone": "Запрошено переподключение",
+          "reconnectSuccess": "MQTT подключён",
+          "reconnectFailed": "MQTT не подключён — проверьте, что брокер доступен с облачного сервера",
+          "reconnectFailedDetail": "MQTT не подключён: {{detail}}"
         },
         "houseMqttSettings": {
-          "description": "scenario-service подключается напрямую к брокеру Zigbee2MQTT (Mosquitto) для этого дома — не через api-gateway /api/mqtt.",
-          "brokerHint": "Пример для локального стека на той же машине: mqtt://host.docker.internal:1883",
-          "gatewayUrlWarning": "Не используйте URL api-gateway (/api/mqtt). Укажите MQTT-брокер, доступный для scenario-service.",
-          "invalidUrl": "URL должен начинаться с mqtt:// или mqtts://"
+          "description": "scenario-service подключается к центральному EMQX (mqtt-gateway) для этого дома — не через api-gateway /api/mqtt.",
+          "brokerHint": "Для облака укажите central (→ mqtt://mqtt-gateway:1883 внутри Docker) или mqtt://mqtt-gateway:1883. Префикс топиков: houses/{houseId}/zigbee2mqtt.",
+          "gatewayUrlWarning": "Не используйте URL api-gateway (/api/mqtt). Укажите central или mqtt://mqtt-gateway:1883.",
+          "invalidUrl": "URL: central, mqtt://… или mqtts://…",
+          "generateCredentials": "Сгенерировать в EMQX",
+          "generateCredentialsHint": "Создаёт пользователя EMQX с ACL только для этого дома и подключает scenario-service.",
+          "provisionDialogTitle": "MQTT-учётные данные созданы",
+          "provisionDialogDescription": "Пароль показывается один раз. Скопируйте его в настройки локального сервера (MQTT логин/пароль).",
+          "provisionUsername": "Логин",
+          "provisionPassword": "Пароль",
+          "copyCredentials": "Скопировать",
+          "credentialsCopied": "Скопировано",
+          "provisionSuccess": "Учётные данные EMQX созданы",
+          "provisionFailed": "Не удалось создать учётные данные EMQX"
         },
         "networkAddress": "Сетевой адрес",
         "ieeeAddress": "IEEE-адрес",

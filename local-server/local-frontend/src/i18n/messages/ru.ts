@@ -368,6 +368,14 @@ export const ru = {
     gatewayUrl: 'URL API Gateway',
     gatewayHint:
       'URL облачного api-gateway (например http://localhost:8082). HTTP — /api/access и /api/scenario; MQTT — автоматически через ws://…/api/mqtt.',
+    mqttUsername: 'MQTT логин',
+    mqttPassword: 'MQTT пароль',
+    mqttPasswordPlaceholder: 'Пароль EMQX',
+    mqttPasswordKeep: '•••••••• (оставь пустым, чтобы не менять)',
+    mqttCredentialsHint:
+      'Учётные данные EMQX для подключения к ws://…/api/mqtt. Нужны, если брокер требует авторизацию.',
+    mqttConnected: 'подключён',
+    mqttDisconnected: 'нет связи',
     saveGateway: 'Сохранить настройки шлюза',
     identity: 'Профиль',
     identityHint: 'UUID пользователя в заголовке X-User-Id для каждого запроса.',
@@ -393,6 +401,8 @@ export const ru = {
     toastServerUrlSaved: 'URL сервера сохранён',
     toastUserIdSaved: 'User ID сохранён',
     toastGatewaySaved: 'Настройки шлюза сохранены',
+    toastGatewaySavedMqttDisconnected:
+      'Настройки сохранены, но MQTT не подключён — проверьте логин/пароль EMQX',
     toastDeviceAuthorized: 'Устройство авторизовано',
     toastAuthDenied: 'В доступе отказано в облачном приложении',
     toastAuthExpired: 'Сессия истекла, начните заново',

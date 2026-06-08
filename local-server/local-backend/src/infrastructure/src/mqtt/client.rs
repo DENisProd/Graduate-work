@@ -26,6 +26,8 @@ impl RumqttcClient {
     pub async fn connect(
         mqtt_url: &str,
         topic_prefix: &str,
+        username: Option<&str>,
+        password: Option<&str>,
     ) -> Result<Arc<Self>, anyhow::Error> {
         let (host, port, transport) = parse_mqtt_url(mqtt_url)?;
         let client_id = format!("local-server-{}", uuid::Uuid::new_v4());
@@ -34,6 +36,12 @@ impl RumqttcClient {
         opts.set_keep_alive(Duration::from_secs(30));
         opts.set_clean_session(true);
         opts.set_max_packet_size(256 * 1024, 256 * 1024);
+        if username.is_some() || password.is_some() {
+            opts.set_credentials(
+                username.unwrap_or_default(),
+                password.unwrap_or_default(),
+            );
+        }
         if let Some(t) = transport {
             opts.set_transport(t);
         }
@@ -152,7 +160,7 @@ impl MqttClient for RumqttcClient {
         Some(self.broker_url.clone())
     }
 
-    async fn reconfigure(&self, _mqtt_url: Option<&str>) -> Result<(), DomainError> {
+    async fn reconfigure(&self, _config: Option<local_server_application::ports::MqttConnectConfig>) -> Result<(), DomainError> {
         Err(DomainError::Validation(
             "static MQTT client does not support runtime reconfiguration".into(),
         ))

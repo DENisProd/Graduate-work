@@ -14,6 +14,10 @@ pub struct Config {
     pub graceful_shutdown_secs: u64,
     #[serde(default)]
     pub mqtt_url: Option<String>,
+    #[serde(default)]
+    pub mqtt_username: Option<String>,
+    #[serde(default)]
+    pub mqtt_password: Option<String>,
     #[serde(default = "default_mqtt_prefix")]
     pub mqtt_topic_prefix: String,
     #[serde(default = "default_access_service_url")]
@@ -46,6 +50,12 @@ impl Config {
         }
         if let Ok(v) = std::env::var("ZIGBEE_MQTT_URL") {
             builder = builder.set_override("mqtt_url", v)?;
+        }
+        if let Ok(v) = std::env::var("ZIGBEE_MQTT_USERNAME") {
+            builder = builder.set_override("mqtt_username", v)?;
+        }
+        if let Ok(v) = std::env::var("ZIGBEE_MQTT_PASSWORD") {
+            builder = builder.set_override("mqtt_password", v)?;
         }
         if let Ok(v) = std::env::var("MQTT_TOPIC_PREFIX") {
             builder = builder.set_override("mqtt_topic_prefix", v)?;

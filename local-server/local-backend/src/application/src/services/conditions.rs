@@ -332,7 +332,10 @@ mod tests {
             None
         }
 
-        async fn reconfigure(&self, _mqtt_url: Option<&str>) -> Result<(), DomainError> {
+        async fn reconfigure(
+            &self,
+            _config: Option<crate::ports::MqttConnectConfig>,
+        ) -> Result<(), DomainError> {
             Ok(())
         }
     }

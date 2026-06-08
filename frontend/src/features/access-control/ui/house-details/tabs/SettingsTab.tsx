@@ -3,14 +3,27 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ServiceErrorCard, useToast } from '@/components/shared';
+import { formatMqttLastError, mqttReconnectToastKey } from '@/features/access-control/lib/mqtt-reconnect-feedback';
 import { ApiError, houseMqttApi } from '@/lib/api-client';
 import { useTranslation } from '@/hooks';
-import type { HouseMqttConfigResponse, HouseMqttConfigUpsertRequest } from '@/types/api';
+import type {
+  HouseMqttConfigResponse,
+  HouseMqttConfigUpsertRequest,
+  HouseMqttProvisionResponse,
+} from '@/types/api';
 
 interface SettingsTabProps {
   houseId: string | null;
@@ -19,30 +32,36 @@ interface SettingsTabProps {
 
 type LoadState = 'idle' | 'loading' | 'error';
 
-const DEFAULT_MQTT_PLACEHOLDER = 'mqtt://host.docker.internal:1883';
+const DEFAULT_MQTT_PLACEHOLDER = 'central';
+
+function defaultTopicPrefix(houseId: string | null): string {
+  return houseId ? `houses/${houseId}/zigbee2mqtt` : 'zigbee2mqtt';
+}
 
 function isGatewayMqttUrl(url: string): boolean {
   return /\/api\/mqtt/i.test(url.trim());
 }
 
 function isValidBrokerMqttUrl(url: string): boolean {
+  const trimmed = url.trim();
+  if (trimmed === 'central') return true;
   try {
-    const protocol = new URL(url.trim()).protocol;
+    const protocol = new URL(trimmed).protocol;
     return protocol === 'mqtt:' || protocol === 'mqtts:';
   } catch {
     return false;
   }
 }
 
-const emptyDraft = (): HouseMqttConfigUpsertRequest & {
+const emptyDraft = (houseId: string | null): HouseMqttConfigUpsertRequest & {
   enabled: boolean;
   topicPrefix: string;
 } => ({
-  mqttUrl: '',
+  mqttUrl: 'central',
   mqttUsername: '',
   mqttPassword: '',
   enabled: true,
-  topicPrefix: 'zigbee2mqtt',
+  topicPrefix: defaultTopicPrefix(houseId),
 });
 
 export function SettingsTab({ houseId, canManage = true }: SettingsTabProps) {
@@ -54,16 +73,18 @@ export function SettingsTab({ houseId, canManage = true }: SettingsTabProps) {
   const [errorDetails, setErrorDetails] = useState<string[] | null>(null);
   const [serverConfig, setServerConfig] = useState<HouseMqttConfigResponse | null>(null);
 
-  const [draft, setDraft] = useState(() => emptyDraft());
+  const [draft, setDraft] = useState(() => emptyDraft(houseId));
   const [saving, setSaving] = useState(false);
+  const [provisioning, setProvisioning] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [provisionResult, setProvisionResult] = useState<HouseMqttProvisionResponse | null>(null);
 
   const connected = Boolean(serverConfig?.status?.connected);
 
   const hydrateDraft = useCallback((cfg: HouseMqttConfigResponse | null) => {
     if (!cfg) {
-      setDraft(emptyDraft());
+      setDraft(emptyDraft(houseId));
       return;
     }
     setDraft({
@@ -71,9 +92,9 @@ export function SettingsTab({ houseId, canManage = true }: SettingsTabProps) {
       mqttUsername: cfg.mqttUsername ?? '',
       mqttPassword: '',
       enabled: cfg.enabled ?? true,
-      topicPrefix: cfg.topicPrefix ?? 'zigbee2mqtt',
+      topicPrefix: cfg.topicPrefix ?? defaultTopicPrefix(houseId),
     });
-  }, []);
+  }, [houseId]);
 
   const handleError = useCallback(
     (error: unknown) => {
@@ -147,7 +168,7 @@ export function SettingsTab({ houseId, canManage = true }: SettingsTabProps) {
     try {
       const dto: HouseMqttConfigUpsertRequest = {
         mqttUrl: draft.mqttUrl.trim(),
-        topicPrefix: draft.topicPrefix.trim() || 'zigbee2mqtt',
+        topicPrefix: draft.topicPrefix.trim() || defaultTopicPrefix(houseId),
         enabled: Boolean(draft.enabled),
         ...(draft.mqttUsername?.trim() ? { mqttUsername: draft.mqttUsername.trim() } : {}),
         ...(draft.mqttPassword?.trim() ? { mqttPassword: draft.mqttPassword.trim() } : {}),
@@ -155,7 +176,21 @@ export function SettingsTab({ houseId, canManage = true }: SettingsTabProps) {
       const cfg = await houseMqttApi.upsert(houseId, dto);
       setServerConfig(cfg);
       hydrateDraft(cfg);
-      showToast(locale === 'ru' ? 'Настройки сохранены' : 'Settings saved', 'success');
+      if (cfg.enabled && !cfg.status?.connected) {
+        const detail = formatMqttLastError(cfg);
+        showToast(
+          detail
+            ? (locale === 'ru'
+                ? `Сохранено, но MQTT не подключён: ${detail}`
+                : `Saved, but MQTT is not connected: ${detail}`)
+            : (locale === 'ru'
+                ? 'Сохранено, но MQTT не подключён'
+                : 'Saved, but MQTT is not connected'),
+          'error',
+        );
+      } else {
+        showToast(locale === 'ru' ? 'Настройки сохранены' : 'Settings saved', 'success');
+      }
     } catch (error) {
       handleError(error);
     } finally {
@@ -163,13 +198,76 @@ export function SettingsTab({ houseId, canManage = true }: SettingsTabProps) {
     }
   }, [draft, handleError, houseId, hydrateDraft, locale, showToast]);
 
+  const onProvision = useCallback(async () => {
+    if (!houseId) return;
+    setProvisioning(true);
+    try {
+      const result = await houseMqttApi.provision(houseId);
+      setProvisionResult(result);
+      setServerConfig(result.config);
+      hydrateDraft(result.config);
+      setDraft((prev) => ({
+        ...prev,
+        mqttUrl: result.mqttUrl,
+        mqttUsername: result.username,
+        mqttPassword: result.password,
+        topicPrefix: result.topicPrefix,
+        enabled: true,
+      }));
+      if (result.config.status?.connected) {
+        showToast(t('admin.accessControl.connectedDevices.houseMqttSettings.provisionSuccess'), 'success');
+      } else {
+        const detail = formatMqttLastError(result.config);
+        showToast(
+          detail
+            ? `${t('admin.accessControl.connectedDevices.houseMqttSettings.provisionFailed')}: ${detail}`
+            : t('admin.accessControl.connectedDevices.houseMqttSettings.provisionFailed'),
+          'error',
+        );
+      }
+    } catch (error) {
+      handleError(error);
+      showToast(t('admin.accessControl.connectedDevices.houseMqttSettings.provisionFailed'), 'error');
+    } finally {
+      setProvisioning(false);
+    }
+  }, [handleError, houseId, hydrateDraft, showToast, t]);
+
+  const copyProvisionCredentials = useCallback(async () => {
+    if (!provisionResult) return;
+    const text = [
+      `MQTT URL: central`,
+      `Username: ${provisionResult.username}`,
+      `Password: ${provisionResult.password}`,
+      `Topic prefix: ${provisionResult.topicPrefix}`,
+    ].join('\n');
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast(t('admin.accessControl.connectedDevices.houseMqttSettings.credentialsCopied'), 'success');
+    } catch {
+      showToast(t('common.error'), 'error');
+    }
+  }, [provisionResult, showToast, t]);
+
   const onReconnect = useCallback(async () => {
     if (!houseId) return;
     setReconnecting(true);
     try {
-      await houseMqttApi.reconnect(houseId);
+      const cfg = await houseMqttApi.reconnect(houseId);
+      setServerConfig(cfg);
+      hydrateDraft(cfg);
       await load();
-      showToast(locale === 'ru' ? 'Переподключение выполнено' : 'Reconnected', 'success');
+      if (mqttReconnectToastKey(cfg) === 'success') {
+        showToast(locale === 'ru' ? 'MQTT подключён' : 'MQTT connected', 'success');
+      } else {
+        const detail = formatMqttLastError(cfg);
+        showToast(
+          detail
+            ? (locale === 'ru' ? `MQTT не подключён: ${detail}` : `MQTT not connected: ${detail}`)
+            : (locale === 'ru' ? 'MQTT не подключён' : 'MQTT not connected'),
+          'error',
+        );
+      }
     } catch (error) {
       handleError(error);
     } finally {
@@ -224,6 +322,7 @@ export function SettingsTab({ houseId, canManage = true }: SettingsTabProps) {
   }
 
   const statusLabel = connected ? (locale === 'ru' ? 'Подключено' : 'Connected') : (locale === 'ru' ? 'Не подключено' : 'Disconnected');
+  const mqttLastError = serverConfig?.status?.lastError?.trim();
 
   return (
     <div className="space-y-6">
@@ -297,9 +396,31 @@ export function SettingsTab({ houseId, canManage = true }: SettingsTabProps) {
               ) : null}
             </div>
 
+            <div className="space-y-1.5 md:col-span-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-medium text-foreground">
+                  {locale === 'ru' ? 'Учётные данные EMQX' : 'EMQX credentials'}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void onProvision()}
+                  disabled={!canManage || provisioning || saving || reconnecting || deleting}
+                >
+                  {provisioning
+                    ? (locale === 'ru' ? 'Генерация…' : 'Generating…')
+                    : t('admin.accessControl.connectedDevices.houseMqttSettings.generateCredentials')}
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                {t('admin.accessControl.connectedDevices.houseMqttSettings.generateCredentialsHint')}
+              </p>
+            </div>
+
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-foreground">
-                {locale === 'ru' ? 'Логин (опционально)' : 'Username (optional)'}
+                {locale === 'ru' ? 'Логин' : 'Username'}
               </p>
               <Input
                 placeholder={locale === 'ru' ? 'username' : 'username'}
@@ -321,15 +442,26 @@ export function SettingsTab({ houseId, canManage = true }: SettingsTabProps) {
                 autoComplete="current-password"
               />
               <p className="text-[11px] text-muted-foreground">
-                {locale === 'ru'
-                  ? 'Пароль не возвращается сервером. Оставь пустым, если не хочешь менять.'
-                  : 'Password is not returned by the server. Leave empty if you don’t want to change it.'}
+                {serverConfig?.hasMqttPassword
+                  ? (locale === 'ru'
+                      ? 'Пароль сохранён. Оставь поле пустым, чтобы не менять, или нажми «Сгенерировать в EMQX».'
+                      : 'Password is stored. Leave empty to keep it, or use Generate in EMQX.')
+                  : (locale === 'ru'
+                      ? 'Пароль не задан. Нажми «Сгенерировать в EMQX» или введи вручную.'
+                      : 'No password set. Use Generate in EMQX or enter manually.')}
               </p>
             </div>
           </div>
 
+          {mqttLastError ? (
+            <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+              {locale === 'ru' ? 'Ошибка MQTT: ' : 'MQTT error: '}
+              {mqttLastError}
+            </p>
+          ) : null}
+
           <div className="flex flex-wrap gap-2">
-            <Button onClick={onSave} disabled={!canManage || saving || !isValid || reconnecting || deleting}>
+            <Button onClick={onSave} disabled={!canManage || saving || !isValid || reconnecting || deleting || provisioning}>
               {saving ? (locale === 'ru' ? 'Сохранение…' : 'Saving…') : t('common.save')}
             </Button>
             <Button
@@ -349,6 +481,43 @@ export function SettingsTab({ houseId, canManage = true }: SettingsTabProps) {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={provisionResult !== null} onOpenChange={(open) => !open && setProvisionResult(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {t('admin.accessControl.connectedDevices.houseMqttSettings.provisionDialogTitle')}
+            </DialogTitle>
+            <DialogDescription>
+              {t('admin.accessControl.connectedDevices.houseMqttSettings.provisionDialogDescription')}
+            </DialogDescription>
+          </DialogHeader>
+          {provisionResult ? (
+            <div className="space-y-3 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground">
+                  {t('admin.accessControl.connectedDevices.houseMqttSettings.provisionUsername')}
+                </p>
+                <p className="font-mono text-sm">{provisionResult.username}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">
+                  {t('admin.accessControl.connectedDevices.houseMqttSettings.provisionPassword')}
+                </p>
+                <p className="break-all font-mono text-sm">{provisionResult.password}</p>
+              </div>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button type="button" variant="secondary" onClick={() => void copyProvisionCredentials()}>
+              {t('admin.accessControl.connectedDevices.houseMqttSettings.copyCredentials')}
+            </Button>
+            <Button type="button" onClick={() => setProvisionResult(null)}>
+              {locale === 'ru' ? 'Готово' : 'Done'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

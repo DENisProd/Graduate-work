@@ -353,6 +353,14 @@ export const en = {
     gatewayUrl: 'API Gateway URL',
     gatewayHint:
       'Cloud api-gateway URL (e.g. http://localhost:8082). HTTP uses /api/access and /api/scenario; MQTT connects automatically via ws://…/api/mqtt.',
+    mqttUsername: 'MQTT username',
+    mqttPassword: 'MQTT password',
+    mqttPasswordPlaceholder: 'EMQX password',
+    mqttPasswordKeep: '•••••••• (leave empty to keep current)',
+    mqttCredentialsHint:
+      'EMQX credentials for ws://…/api/mqtt. Required when the broker enforces authentication.',
+    mqttConnected: 'connected',
+    mqttDisconnected: 'disconnected',
     saveGateway: 'Save gateway settings',
     identity: 'Identity',
     identityHint: 'User UUID sent as X-User-Id header with every request.',
@@ -378,6 +386,8 @@ export const en = {
     toastServerUrlSaved: 'Server URL saved',
     toastUserIdSaved: 'User ID saved',
     toastGatewaySaved: 'Gateway settings saved',
+    toastGatewaySavedMqttDisconnected:
+      'Settings saved, but MQTT is not connected — check EMQX username/password',
     toastDeviceAuthorized: 'Device authorized',
     toastAuthDenied: 'Authorization denied in cloud app',
     toastAuthExpired: 'Authorization session expired, start again',
