@@ -50,3 +50,41 @@ export async function listWidgetDashboards(houseId: string): Promise<LocalWidget
   })
   return data
 }
+
+export async function getWidgetDashboard(id: string): Promise<LocalWidgetDashboard> {
+  const { data } = await api.get<LocalWidgetDashboard>(`/api/v1/widget-dashboards/${id}`)
+  return data
+}
+
+export interface CreateWidgetDashboardBody {
+  houseId: string
+  userId: string
+  name: string
+  isDefault?: boolean
+  layouts?: Record<string, WidgetLayout[]>
+  widgets?: WidgetInstance[]
+}
+
+export async function createWidgetDashboard(body: CreateWidgetDashboardBody): Promise<LocalWidgetDashboard> {
+  const { data } = await api.post<LocalWidgetDashboard>('/api/v1/widget-dashboards', body)
+  return data
+}
+
+export interface UpdateWidgetDashboardBody {
+  name?: string
+  isDefault?: boolean
+  layouts?: Record<string, unknown>
+  widgets?: unknown[]
+}
+
+export async function updateWidgetDashboard(
+  id: string,
+  body: UpdateWidgetDashboardBody,
+): Promise<LocalWidgetDashboard> {
+  const { data } = await api.put<LocalWidgetDashboard>(`/api/v1/widget-dashboards/${id}`, body)
+  return data
+}
+
+export async function deleteWidgetDashboard(id: string): Promise<void> {
+  await api.delete(`/api/v1/widget-dashboards/${id}`)
+}

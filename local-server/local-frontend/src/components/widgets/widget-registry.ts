@@ -1,0 +1,220 @@
+import type { WidgetType } from '@/api/widget-dashboards'
+
+export interface WidgetMeta {
+  type: WidgetType
+  label: string
+  description: string
+  icon: string
+  defaultSize: { w: number; h: number }
+  minSize: { w: number; h: number }
+  defaultConfig: Record<string, unknown>
+}
+
+export interface WidgetTemplate {
+  id: string
+  type: WidgetType
+  label: string
+  description: string
+  icon: string
+  accent: 'green' | 'blue' | 'amber' | 'red' | 'slate'
+  defaultSize: { w: number; h: number }
+  minSize: { w: number; h: number }
+  config: Record<string, unknown>
+}
+
+export const WIDGET_REGISTRY: WidgetMeta[] = [
+  {
+    type: 'TELEMETRY_VALUE',
+    label: 'Показание датчика',
+    description: 'Текущее значение функции устройства — температура, влажность, состояние',
+    icon: 'Gauge',
+    defaultSize: { w: 4, h: 3 },
+    minSize: { w: 3, h: 2 },
+    defaultConfig: { physicalDeviceId: '', payloadKey: 'temperature', label: '', unit: '', displayVariant: 'numeric' },
+  },
+  {
+    type: 'DEVICE_STATUS',
+    label: 'Статус устройства',
+    description: 'Online / Offline, имя, последнее время активности',
+    icon: 'Wifi',
+    defaultSize: { w: 4, h: 3 },
+    minSize: { w: 3, h: 2 },
+    defaultConfig: { physicalDeviceId: '', label: '', showLastSeen: true },
+  },
+  {
+    type: 'CONTROL_BUTTON',
+    label: 'Кнопка команды',
+    description: 'Отправить Zigbee-команду по нажатию',
+    icon: 'MousePointerClick',
+    defaultSize: { w: 3, h: 2 },
+    minSize: { w: 2, h: 2 },
+    defaultConfig: { physicalDeviceId: '', ieeeAddr: '', label: 'Выполнить', commandPayload: { state: 'ON' }, buttonStyle: 'primary', confirmRequired: false },
+  },
+  {
+    type: 'CONTROL_TOGGLE',
+    label: 'Тумблер включения',
+    description: 'Переключить устройство между ON/OFF с отображением текущего состояния',
+    icon: 'ToggleRight',
+    defaultSize: { w: 4, h: 2 },
+    minSize: { w: 3, h: 2 },
+    defaultConfig: { physicalDeviceId: '', ieeeAddr: '', label: 'Включение', statePayloadKey: 'state', onPayload: { state: 'ON' }, offPayload: { state: 'OFF' } },
+  },
+  {
+    type: 'SCENARIO_TRIGGER',
+    label: 'Запуск сценария',
+    description: 'Кнопка для ручного запуска автоматизации',
+    icon: 'Zap',
+    defaultSize: { w: 4, h: 3 },
+    minSize: { w: 3, h: 2 },
+    defaultConfig: { scenarioId: '', label: 'Запустить', buttonStyle: 'primary', confirmRequired: false },
+  },
+  {
+    type: 'TEXT_LABEL',
+    label: 'Текстовый блок',
+    description: 'Заголовок или разделитель для группировки виджетов',
+    icon: 'Type',
+    defaultSize: { w: 6, h: 2 },
+    minSize: { w: 2, h: 1 },
+    defaultConfig: { text: 'Новый заголовок', align: 'left', fontSize: 'lg', style: 'title' },
+  },
+  {
+    type: 'GAUGE_DIAL',
+    label: 'Полукруговой датчик',
+    description: 'Показание датчика на полукруге с минимумом, максимумом и текущим значением',
+    icon: 'GaugeDial',
+    defaultSize: { w: 5, h: 4 },
+    minSize: { w: 4, h: 3 },
+    defaultConfig: { physicalDeviceId: '', payloadKey: 'temperature', label: 'Климат', unit: '°C', min: 15, max: 30, chips: [], accent: 'green' },
+  },
+  {
+    type: 'CIRCULAR_PROGRESS',
+    label: 'Круговой индикатор',
+    description: 'Большой круг с процентом — статус дома, прогресс задачи',
+    icon: 'CircleProgress',
+    defaultSize: { w: 7, h: 5 },
+    minSize: { w: 5, h: 4 },
+    defaultConfig: { title: 'Дом под контролем', subtitle: '', staticValue: 78, max: 100, unit: '%', badge: 'Защищено', accent: 'green' },
+  },
+  {
+    type: 'SLIDER_CONTROL',
+    label: 'Ползунок управления',
+    description: 'Слайдер для регулировки яркости, температуры, громкости',
+    icon: 'Sliders',
+    defaultSize: { w: 5, h: 3 },
+    minSize: { w: 4, h: 3 },
+    defaultConfig: { physicalDeviceId: '', ieeeAddr: '', label: 'Освещение', payloadKey: 'brightness', commandKey: 'brightness', min: 0, max: 254, step: 1, unit: '', subtitle: '', accent: 'green' },
+  },
+  {
+    type: 'DEVICE_HERO',
+    label: 'Карточка устройства',
+    description: 'Крупная карточка с иконкой, переключателем, тегами и мини-статистикой',
+    icon: 'CardHero',
+    defaultSize: { w: 7, h: 5 },
+    minSize: { w: 5, h: 4 },
+    defaultConfig: { physicalDeviceId: '', ieeeAddr: '', title: 'Устройство', subtitle: '', icon: 'lightbulb', showToggle: true, togglePayloadKey: 'state', onPayload: { state: 'ON' }, offPayload: { state: 'OFF' }, chips: [], stats: [], accent: 'green' },
+  },
+  {
+    type: 'MINI_LINE_CHART',
+    label: 'Мини-график',
+    description: 'Линейный график значений в реальном времени',
+    icon: 'LineChart',
+    defaultSize: { w: 8, h: 5 },
+    minSize: { w: 6, h: 4 },
+    defaultConfig: { physicalDeviceId: '', payloadKey: 'energy', title: 'Потребление', unit: 'кВт·ч', bufferSize: 60, accent: 'green' },
+  },
+  {
+    type: 'MODBUS_REGISTER_VALUE',
+    label: 'Modbus — значение регистра',
+    description: 'Показание Modbus-регистра с автообновлением',
+    icon: 'Gauge',
+    defaultSize: { w: 4, h: 3 },
+    minSize: { w: 3, h: 2 },
+    defaultConfig: { modbusDeviceId: '', modbusRegisterId: '', label: '', unit: '', refreshInterval: 30, accent: 'green' },
+  },
+  {
+    type: 'MODBUS_REGISTER_CONTROL',
+    label: 'Modbus — управление регистром',
+    description: 'Переключатель или поле ввода для записи в Modbus-регистр',
+    icon: 'ToggleRight',
+    defaultSize: { w: 4, h: 3 },
+    minSize: { w: 3, h: 2 },
+    defaultConfig: { modbusDeviceId: '', modbusRegisterId: '', label: '', controlType: 'coil', accent: 'green' },
+  },
+]
+
+export const WIDGET_META_MAP = Object.fromEntries(
+  WIDGET_REGISTRY.map(m => [m.type, m]),
+) as Record<WidgetType, WidgetMeta>
+
+export const WIDGET_TEMPLATES: WidgetTemplate[] = [
+  {
+    id: 'tpl.climate-dial',
+    type: 'GAUGE_DIAL',
+    label: 'Климат-контроль',
+    description: 'Полукруг с текущей температурой, диапазоном и метками режимов',
+    icon: 'GaugeDial',
+    accent: 'green',
+    defaultSize: { w: 5, h: 4 },
+    minSize: { w: 4, h: 3 },
+    config: { physicalDeviceId: '', payloadKey: 'temperature', label: 'Климат-контроль', unit: '°C', min: 15, max: 32, warnAt: 28, chips: ['Эко режим', 'Кондиционер'], accent: 'green' },
+  },
+  {
+    id: 'tpl.humidity-dial',
+    type: 'GAUGE_DIAL',
+    label: 'Влажность',
+    description: 'Полукруговой индикатор влажности 0–100%',
+    icon: 'GaugeDial',
+    accent: 'blue',
+    defaultSize: { w: 5, h: 4 },
+    minSize: { w: 4, h: 3 },
+    config: { physicalDeviceId: '', payloadKey: 'humidity', label: 'Влажность', unit: '%', min: 0, max: 100, warnAt: 70, criticalAt: 85, chips: [], accent: 'blue' },
+  },
+  {
+    id: 'tpl.home-secure',
+    type: 'CIRCULAR_PROGRESS',
+    label: 'Дом под контролем',
+    description: 'Круговой индикатор общего статуса безопасности',
+    icon: 'CircleProgress',
+    accent: 'green',
+    defaultSize: { w: 7, h: 5 },
+    minSize: { w: 5, h: 4 },
+    config: { title: 'Ваш дом', subtitle: 'под контролем', staticValue: 78, max: 100, unit: '%', badge: 'Защищено', accent: 'green' },
+  },
+  {
+    id: 'tpl.light-slider',
+    type: 'SLIDER_CONTROL',
+    label: 'Освещение (диммер)',
+    description: 'Ползунок яркости 0–254 — Zigbee-стандарт',
+    icon: 'Sliders',
+    accent: 'amber',
+    defaultSize: { w: 5, h: 3 },
+    minSize: { w: 4, h: 3 },
+    config: { physicalDeviceId: '', ieeeAddr: '', label: 'Освещение', subtitle: 'Тёплый свет', payloadKey: 'brightness', commandKey: 'brightness', min: 0, max: 254, step: 1, unit: '', accent: 'amber' },
+  },
+  {
+    id: 'tpl.light-hero',
+    type: 'DEVICE_HERO',
+    label: 'Свет (карточка)',
+    description: 'Большая карточка светильника с переключателем и режимами',
+    icon: 'CardHero',
+    accent: 'amber',
+    defaultSize: { w: 5, h: 5 },
+    minSize: { w: 5, h: 4 },
+    config: { physicalDeviceId: '', ieeeAddr: '', title: 'Освещение', subtitle: '', icon: 'lightbulb', showToggle: true, togglePayloadKey: 'state', onPayload: { state: 'ON' }, offPayload: { state: 'OFF' }, chips: ['Тёплый свет'], stats: [{ key: 'brightness', icon: 'bolt', caption: 'Яркость', unit: '%' }], accent: 'amber' },
+  },
+  {
+    id: 'tpl.power-chart',
+    type: 'MINI_LINE_CHART',
+    label: 'Энергопотребление',
+    description: 'Линейный график потребления в реальном времени',
+    icon: 'LineChart',
+    accent: 'green',
+    defaultSize: { w: 8, h: 5 },
+    minSize: { w: 6, h: 4 },
+    config: { physicalDeviceId: '', payloadKey: 'power', title: 'Потребление', unit: 'Вт', bufferSize: 60, accent: 'green' },
+  },
+]
+
+export const WIDGET_TEMPLATE_MAP = Object.fromEntries(
+  WIDGET_TEMPLATES.map(t => [t.id, t]),
+) as Record<string, WidgetTemplate>

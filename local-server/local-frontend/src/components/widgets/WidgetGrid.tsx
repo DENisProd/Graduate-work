@@ -856,7 +856,7 @@ function ModbusRegisterControlWidget({ config }: { config: Record<string, unknow
 
 // ── Widget dispatcher ─────────────────────────────────────────────────────────
 
-function WidgetRenderer({ widget }: { widget: WidgetInstance }) {
+export function WidgetRenderer({ widget }: { widget: WidgetInstance }) {
   switch (widget.type) {
     case 'TEXT_LABEL':        return <TextLabelWidget config={widget.config} />
     case 'TELEMETRY_VALUE':   return <TelemetryValueWidget config={widget.config} />
