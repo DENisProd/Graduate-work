@@ -14,7 +14,7 @@ services:
 
   # ── Zigbee-to-MQTT bridge ────────────────────────────────────────────────────
   zigbee2mqtt:
-    image: koenkk/zigbee2mqtt:2.9.1
+    image: koenkk/zigbee2mqtt:2.7.1
     restart: unless-stopped
     depends_on:
       - mosquitto
