@@ -19,9 +19,16 @@ exports.UPSTREAM_ROUTES = [
     {
         prefix: '/api/mqtt',
         service: 'mqtt',
-        pathRewrite: { '^/api/mqtt': '' },
+        pathRewrite: { '^/api/mqtt': '/mqtt' },
         ws: true,
     },
 ];
-exports.PUBLIC_PREFIXES = ['/health', '/api/v1/system/auth/', '/api/access/v1/device-auth/', '/socket.io'];
+// /api/mqtt — WebSocket upgrade has no Bearer JWT; EMQX auth is MQTT username/password.
+exports.PUBLIC_PREFIXES = [
+    '/health',
+    '/api/v1/system/auth/',
+    '/api/access/v1/device-auth/',
+    '/socket.io',
+    '/api/mqtt',
+];
 //# sourceMappingURL=routes.config.js.map

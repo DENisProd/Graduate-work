@@ -36,13 +36,32 @@ Object.defineProperty(exports, "__esModule", { value: true });
 require("reflect-metadata");
 const path_1 = require("path");
 const http = __importStar(require("http"));
+const https = __importStar(require("https"));
 const dotenv_1 = require("dotenv");
 const core_1 = require("@nestjs/core");
 const app_module_1 = require("./app.module");
 const gateway_config_1 = require("./config/gateway.config");
 const proxy_service_1 = require("./proxy/proxy.service");
+const ws_path_1 = require("./proxy/ws-path");
 (0, dotenv_1.config)({ path: (0, path_1.join)(process.cwd(), '../../.env') });
 (0, dotenv_1.config)({ path: (0, path_1.join)(process.cwd(), '.env'), override: true });
+function reportDebug(hypothesisId, location, msg, data) {
+    // #region debug-point A:gateway
+    fetch('http://127.0.0.1:7777/event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            sessionId: 'emqx-gateway-connect',
+            runId: 'pre-fix',
+            hypothesisId,
+            location,
+            msg: `[DEBUG] ${msg}`,
+            data,
+            ts: Date.now(),
+        }),
+    }).catch(() => { });
+    // #endregion
+}
 async function bootstrap() {
     const config = (0, gateway_config_1.loadGatewayConfig)();
     const app = await core_1.NestFactory.create(app_module_1.AppModule, {
@@ -64,6 +83,14 @@ async function bootstrap() {
     httpServer.on('upgrade', (req, socket, head) => {
         const url = req.url ?? '';
         const entry = proxyService.wsProxies.find(({ prefix }) => url.startsWith(prefix));
+        reportDebug('A', 'src/main.ts:upgrade', 'received websocket upgrade request', {
+            url,
+            matchedPrefix: entry?.prefix ?? null,
+            target: entry?.target ?? null,
+            upgrade: req.headers.upgrade ?? null,
+            connection: req.headers.connection ?? null,
+            host: req.headers.host ?? null,
+        });
         if (!entry) {
             socket.destroy();
             return;
@@ -83,14 +110,31 @@ async function bootstrap() {
         const reqHeaders = { ...req.headers };
         // Replace Host with the upstream host so the backend doesn't reject it
         reqHeaders.host = targetUrl.host;
-        const proxyReq = http.request({
+        const upstreamPath = (0, ws_path_1.buildUpstreamWsPath)(url, entry.target, entry.pathRewrite);
+        const isSecureUpstream = targetUrl.protocol === 'wss:' || targetUrl.protocol === 'https:';
+        const requestImpl = isSecureUpstream ? https.request : http.request;
+        const upstreamPort = Number(targetUrl.port) || (isSecureUpstream ? 443 : 80);
+        reportDebug('A', 'src/main.ts:upgrade', 'proxying websocket upgrade upstream', {
+            url,
+            target: entry.target,
+            upstreamProtocol: targetUrl.protocol,
+            upstreamHost: targetUrl.host,
+            upstreamPort,
+            upstreamPath,
+        });
+        const proxyReq = requestImpl({
             hostname: targetUrl.hostname,
-            port: Number(targetUrl.port) || 80,
-            path: url,
+            port: upstreamPort,
+            path: upstreamPath,
             method: req.method ?? 'GET',
             headers: reqHeaders,
         });
         proxyReq.on('upgrade', (proxyRes, proxySocket, proxyHead) => {
+            reportDebug('C', 'src/main.ts:upgrade', 'upstream accepted websocket upgrade', {
+                statusCode: proxyRes.statusCode ?? null,
+                target: entry.target,
+                upstreamPath,
+            });
             let head101 = 'HTTP/1.1 101 Switching Protocols\r\n';
             for (const [k, v] of Object.entries(proxyRes.headers)) {
                 const values = Array.isArray(v) ? v : [v];
@@ -143,10 +187,20 @@ async function bootstrap() {
             // Node may emit `response` with 101 even when `upgrade` already handled the handshake.
             if (proxyRes.statusCode === 101)
                 return;
+            reportDebug('C', 'src/main.ts:upgrade', 'upstream returned non-101 response', {
+                statusCode: proxyRes.statusCode ?? null,
+                target: entry.target,
+                upstreamPath,
+            });
             console.error('[WS] upstream non-101 response:', proxyRes.statusCode);
             socket.destroy();
         });
         proxyReq.on('error', (err) => {
+            reportDebug('C', 'src/main.ts:upgrade', 'upstream websocket connect error', {
+                target: entry.target,
+                upstreamPath,
+                error: err.message,
+            });
             console.error('[WS] upstream connect error:', err.message);
             socket.destroy();
         });

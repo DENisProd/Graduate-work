@@ -35,7 +35,7 @@ let ProxyService = ProxyService_1 = class ProxyService {
             const handler = this.createProxy(route.prefix, target, route.pathRewrite);
             this.routes.push({ prefix: route.prefix, handler });
             if (route.ws) {
-                this.wsProxies.push({ prefix: route.prefix, target });
+                this.wsProxies.push({ prefix: route.prefix, target, pathRewrite: route.pathRewrite });
             }
         }
         this.logger.log(`Routing: /api/scenario→${config.scenarioServiceUrl} /api/access→${config.accessServiceUrl} /api/mqtt→${config.mqttBrokerUrl}`);
