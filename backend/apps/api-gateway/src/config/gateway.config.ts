@@ -21,7 +21,7 @@ export function loadGatewayConfig(): GatewayConfig {
     MQTT_BROKER_URL: process.env.MQTT_BROKER_URL,
   });
   return {
-    port: Number(process.env.GATEWAY_PORT ?? 8080),
+    port: Number(process.env.GATEWAY_PORT ?? 8082),
     accessServiceUrl: process.env.ACCESS_SERVICE_URL ?? 'http://localhost:8086',
     scenarioServiceUrl: process.env.SCENARIO_SERVICE_URL ?? 'http://localhost:8095',
     mqttBrokerUrl: process.env.MQTT_BROKER_URL ?? 'ws://localhost:8083',

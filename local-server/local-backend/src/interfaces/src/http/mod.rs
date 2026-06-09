@@ -1,4 +1,4 @@
-﻿use std::sync::Arc;
+use std::sync::Arc;
 
 use axum::Router;
 use axum::http::{header, HeaderName, HeaderValue, Method};
@@ -130,7 +130,11 @@ pub fn router(
                 .merge(system::router(http_state))
                 .merge(devices::router(device_repo.clone()))
                 .merge(device_categories::router(device_repo))
-                .merge(physical_devices::router(phys_repo.clone()))
+                .merge(physical_devices::router(
+                    phys_repo.clone(),
+                    mqtt_client.clone(),
+                    mqtt_prefix.clone(),
+                ))
                 .merge(zigbee::router(zigbee_repo, phys_repo, mqtt_client.clone(), mqtt_prefix))
                 .merge(scenarios::router(
                     scenario_repo,

@@ -1,4 +1,4 @@
-﻿use std::sync::Arc;
+use std::sync::Arc;
 
 use axum::{
     extract::{Path, Query, State},
@@ -10,16 +10,20 @@ use local_server_application::ports::physical_device_repository::{
     CreatePhysicalDeviceCmd, PhysicalDeviceFilter, PhysicalDeviceRepository,
     UpdatePhysicalDeviceCmd,
 };
+use local_server_application::{ports::MqttClient, DomainError};
 use local_server_core::entities::physical_device::PhysicalDevice;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
 use super::error::AppError;
+use super::zigbee::remove_device_from_bridge;
 
 #[derive(Clone)]
 pub struct PhysicalDevicesState {
     pub repo: Arc<dyn PhysicalDeviceRepository>,
+    pub mqtt: Arc<dyn MqttClient>,
+    pub mqtt_prefix: String,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -105,8 +109,12 @@ pub struct ListQuery {
     pub room_id: Option<String>,
 }
 
-pub fn router(repo: Arc<dyn PhysicalDeviceRepository>) -> Router {
-    let state = PhysicalDevicesState { repo };
+pub fn router(
+    repo: Arc<dyn PhysicalDeviceRepository>,
+    mqtt: Arc<dyn MqttClient>,
+    mqtt_prefix: String,
+) -> Router {
+    let state = PhysicalDevicesState { repo, mqtt, mqtt_prefix };
     Router::new()
         .route("/physical-devices", get(list_physical_devices).post(create_physical_device))
         .route(
@@ -200,6 +208,17 @@ async fn delete_physical_device(
     State(s): State<PhysicalDevicesState>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
-    s.repo.delete(id).await?;
+    let device = s
+        .repo
+        .find_by_id(id)
+        .await?
+        .ok_or_else(|| DomainError::not_found("physical_device", id.to_string()))?;
+
+    if let Some(ieee) = device.protocol_address.as_deref().filter(|ieee| ieee.starts_with("0x")) {
+        remove_device_from_bridge(&s.mqtt, &s.mqtt_prefix, ieee, true).await;
+        s.repo.delete_by_ieee(ieee).await?;
+    } else {
+        s.repo.delete(id).await?;
+    }
     Ok(StatusCode::NO_CONTENT)
 }

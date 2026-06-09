@@ -100,8 +100,6 @@ export class DeviceAuthService {
       orderBy: { authorizedAt: 'desc' },
     });
 
-    // Deduplicate by serialNumber — keep the most recently authorized session per serial.
-    // Sessions without a serial number are never deduplicated.
     const seen = new Set<string>();
     const deduped = sessions.filter((s) => {
       if (!s.serialNumber) return true;

@@ -1,4 +1,4 @@
-﻿use std::sync::Arc;
+use std::sync::Arc;
 
 use axum::{
     extract::{Path, Query, State},
@@ -23,6 +23,12 @@ pub struct ZigbeeHttpState {
     pub phys_repo: Arc<dyn PhysicalDeviceRepository>,
     pub mqtt: Arc<dyn MqttClient>,
     pub prefix: String,
+}
+
+#[derive(Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct DeleteDeviceQuery {
+    force: Option<bool>,
 }
 
 #[derive(Serialize)]
@@ -113,12 +119,10 @@ async fn sync_from_bridge(
 async fn delete_device(
     State(s): State<ZigbeeHttpState>,
     Path(ieee): Path<String>,
+    Query(q): Query<DeleteDeviceQuery>,
 ) -> Result<StatusCode, AppError> {
-    let topic = format!("{}/bridge/request/device/remove", s.prefix);
-    let payload = serde_json::json!({ "id": ieee, "force": false });
-    if let Ok(bytes) = serde_json::to_vec(&payload) {
-        s.mqtt.publish(&topic, &bytes).await.ok();
-    }
+    let force = q.force.unwrap_or(true);
+    remove_device_from_bridge(&s.mqtt, &s.prefix, &ieee, force).await;
     s.phys_repo.delete_by_ieee(&ieee).await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -161,6 +165,19 @@ async fn permit_join(
     let topic = format!("{}/bridge/request/permit_join", s.prefix);
     s.mqtt.publish(&topic, br#"{"value":true,"time":254}"#).await?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+pub(crate) async fn remove_device_from_bridge(
+    mqtt: &Arc<dyn MqttClient>,
+    prefix: &str,
+    id: &str,
+    force: bool,
+) {
+    let topic = format!("{}/bridge/request/device/remove", prefix);
+    let payload = serde_json::json!({ "id": id, "force": force });
+    if let Ok(bytes) = serde_json::to_vec(&payload) {
+        mqtt.publish(&topic, &bytes).await.ok();
+    }
 }
 
 #[derive(Deserialize)]

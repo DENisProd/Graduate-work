@@ -1,4 +1,4 @@
-﻿use std::sync::Arc;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
@@ -24,6 +24,39 @@ pub struct RumqttcClient {
     connected: AtomicBool,
 }
 
+fn report_debug(hypothesis_id: &'static str, location: &'static str, msg: &'static str, data: serde_json::Value) {
+    // #region debug-point A:report
+    tokio::spawn(async move {
+        let mut debug_url = "http://127.0.0.1:7777/event".to_string();
+        let mut session_id = "emqx-gateway-connect".to_string();
+        if let Ok(env) = std::fs::read_to_string(".dbg/emqx-gateway-connect.env") {
+            for line in env.lines() {
+                if let Some(value) = line.strip_prefix("DEBUG_SERVER_URL=") {
+                    debug_url = value.trim().to_string();
+                } else if let Some(value) = line.strip_prefix("DEBUG_SESSION_ID=") {
+                    session_id = value.trim().to_string();
+                }
+            }
+        }
+        let payload = serde_json::json!({
+            "sessionId": session_id,
+            "runId": "pre-fix",
+            "hypothesisId": hypothesis_id,
+            "location": location,
+            "msg": format!("[DEBUG] {msg}"),
+            "data": data,
+            "ts": chrono::Utc::now().timestamp_millis(),
+        });
+        let _ = reqwest::Client::new()
+            .post(debug_url)
+            .header("Content-Type", "application/json")
+            .body(payload.to_string())
+            .send()
+            .await;
+    });
+    // #endregion
+}
+
 impl RumqttcClient {
     pub async fn connect(
         mqtt_url: &str,
@@ -33,6 +66,20 @@ impl RumqttcClient {
     ) -> Result<Arc<Self>, anyhow::Error> {
         let (host, port, transport) = parse_mqtt_url(mqtt_url)?;
         let client_id = format!("local-server-{}", uuid::Uuid::new_v4());
+        report_debug(
+            "B",
+            "mqtt/client.rs:connect",
+            "parsed MQTT connect target",
+            serde_json::json!({
+                "mqtt_url": mqtt_url,
+                "host": host,
+                "port": port,
+                "transport": if transport.is_some() { "websocket" } else { "tcp" },
+                "username_present": username.is_some(),
+                "password_present": password.is_some(),
+                "subscribe_topics": subscribe_topics,
+            }),
+        );
 
         let mut opts = MqttOptions::new(&client_id, &host, port);
         opts.set_keep_alive(Duration::from_secs(30));
@@ -87,17 +134,41 @@ impl RumqttcClient {
         match tokio::time::timeout(Duration::from_secs(15), connack_rx).await {
             Ok(Ok(Ok(()))) => {
                 client.connected.store(true, Ordering::SeqCst);
+                report_debug(
+                    "E",
+                    "mqtt/client.rs:connect",
+                    "received ConnAck before timeout",
+                    serde_json::json!({ "mqtt_url": mqtt_url }),
+                );
             }
             Ok(Ok(Err(e))) => {
                 client.shutdown();
+                report_debug(
+                    "E",
+                    "mqtt/client.rs:connect",
+                    "connect failed before ConnAck completed",
+                    serde_json::json!({ "mqtt_url": mqtt_url, "error": e.to_string() }),
+                );
                 return Err(e);
             }
             Ok(Err(_)) => {
                 client.shutdown();
+                report_debug(
+                    "E",
+                    "mqtt/client.rs:connect",
+                    "connection closed before ConnAck",
+                    serde_json::json!({ "mqtt_url": mqtt_url }),
+                );
                 return Err(anyhow::anyhow!("MQTT connection closed before ConnAck"));
             }
             Err(_) => {
                 client.shutdown();
+                report_debug(
+                    "E",
+                    "mqtt/client.rs:connect",
+                    "timed out waiting for ConnAck",
+                    serde_json::json!({ "mqtt_url": mqtt_url }),
+                );
                 return Err(anyhow::anyhow!(
                     "MQTT connection timed out waiting for broker acknowledgement"
                 ));
@@ -159,6 +230,12 @@ async fn run_eventloop(
                 backoff = 1;
                 if ack.code == ConnectReturnCode::Success {
                     connected.store(true, Ordering::SeqCst);
+                    report_debug(
+                        "E",
+                        "mqtt/client.rs:eventloop",
+                        "broker returned successful ConnAck",
+                        serde_json::json!({ "broker_url": broker_url, "code": format!("{:?}", ack.code) }),
+                    );
                     if let Some(tx) = connack_tx.take() {
                         let _ = tx.send(Ok(()));
                     }
@@ -169,6 +246,12 @@ async fn run_eventloop(
                 } else {
                     connected.store(false, Ordering::SeqCst);
                     let err = anyhow::anyhow!("MQTT broker rejected connection: {:?}", ack.code);
+                    report_debug(
+                        "E",
+                        "mqtt/client.rs:eventloop",
+                        "broker rejected ConnAck",
+                        serde_json::json!({ "broker_url": broker_url, "code": format!("{:?}", ack.code) }),
+                    );
                     if let Some(tx) = connack_tx.take() {
                         let _ = tx.send(Err(err));
                     }
@@ -183,6 +266,12 @@ async fn run_eventloop(
             Err(e) => {
                 connected.store(false, Ordering::SeqCst);
                 let err_msg = e.to_string();
+                report_debug(
+                    "B",
+                    "mqtt/client.rs:eventloop",
+                    "event loop returned MQTT error",
+                    serde_json::json!({ "broker_url": broker_url, "error": err_msg, "backoff_secs": backoff }),
+                );
                 if let Some(tx) = connack_tx.take() {
                     let _ = tx.send(Err(anyhow::anyhow!("{err_msg}")));
                 }
