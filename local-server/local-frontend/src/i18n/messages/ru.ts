@@ -373,7 +373,15 @@ export const ru = {
     mqttPasswordPlaceholder: 'Пароль EMQX',
     mqttPasswordKeep: '•••••••• (оставь пустым, чтобы не менять)',
     mqttCredentialsHint:
-      'Учётные данные EMQX. Нужны, если брокер требует авторизацию.',
+      'Это не логин Keycloak. Нужны учётные данные EMQX (формат local-xxxxxxxxxxxx). Получите их кнопкой ниже или в облачном приложении → настройки дома → MQTT.',
+    provisionMqtt: 'Получить MQTT из облака',
+    provisionMqttLoading: 'Получение…',
+    provisionMqttRequiresAuth: 'Сначала завершите облачную авторизацию выше.',
+    toastMqttProvisioned: 'Учётные данные EMQX получены, облачный MQTT подключён',
+    toastMqttProvisionedDisconnected:
+      'Учётные данные сохранены, но облачный MQTT не подключился — проверьте URL шлюза',
+    toastMqttProvisionFailed:
+      'Не удалось получить MQTT из облака. Проверьте авторизацию и URL API Gateway.',
     mqttLocal: 'Локальный MQTT',
     mqttCloud: 'Облачный MQTT',
     mqttConnected: 'подключён',

@@ -237,13 +237,22 @@ docker run --rm -p 8080:8080 \
 |-----|--------|
 | профиль `release-device` (`lto=false`, `codegen-units=16`) | в 2–4 раза быстрее, чем `release` с полным LTO |
 | linker **mold** | быстрее этап линковки |
-| BuildKit cache (`registry` + `git` + `target`) | повторные сборки только перекомпилируют изменённый код |
+| **Docker layer cache** для deps (stub-сборка) | повторная сборка после изменения только `src/` **не качает crates** |
+| `CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse` | быстрее индекс crates.io |
 
-Включите BuildKit и соберите из корня `local-server`:
+Соберите из корня `local-server`:
 
 ```bash
-DOCKER_BUILDKIT=1 docker compose build local-backend
+docker compose build local-backend
 ```
+
+**Когда cargo снова качает библиотеки (это нормально):**
+
+- изменился `Cargo.lock` или любой `Cargo.toml`
+- обновился базовый образ `rust:1-bookworm` (`docker compose build --pull`)
+- сборка с `--no-cache`
+
+**Когда скачивания быть не должно:** менялся только Rust-код в `src/` — Docker переиспользует слой stub-сборки deps.
 
 На платах с 1–2 GB RAM ограничьте параллелизм:
 

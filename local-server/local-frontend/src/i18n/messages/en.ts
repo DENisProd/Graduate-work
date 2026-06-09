@@ -358,7 +358,15 @@ export const en = {
     mqttPasswordPlaceholder: 'EMQX password',
     mqttPasswordKeep: '•••••••• (leave empty to keep current)',
     mqttCredentialsHint:
-      'EMQX credentials. Required when the broker enforces authentication.',
+      'Not your Keycloak login. Use EMQX credentials (format local-xxxxxxxxxxxx). Fetch them below or from the cloud app → house settings → MQTT.',
+    provisionMqtt: 'Fetch MQTT from cloud',
+    provisionMqttLoading: 'Fetching…',
+    provisionMqttRequiresAuth: 'Complete cloud authorization above first.',
+    toastMqttProvisioned: 'EMQX credentials fetched, cloud MQTT connected',
+    toastMqttProvisionedDisconnected:
+      'Credentials saved, but cloud MQTT did not connect — check gateway URL',
+    toastMqttProvisionFailed:
+      'Failed to fetch MQTT from cloud. Check authorization and API Gateway URL.',
     mqttLocal: 'Local MQTT',
     mqttCloud: 'Cloud MQTT',
     mqttConnected: 'connected',

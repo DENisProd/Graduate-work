@@ -5,7 +5,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use local_server_application::ports::{
-    CloudScenarioClient, CreateCloudScenarioCmd, RemoteScenario, RuntimeSettingsRepository,
+    CloudScenarioClient, CreateCloudScenarioCmd, HouseMqttCredentials, RemoteScenario,
+    RuntimeSettingsRepository,
 };
 use local_server_core::DomainError;
 
@@ -116,6 +117,12 @@ struct PageDto {
     total: i64,
 }
 
+#[derive(Deserialize)]
+struct ProvisionMqttResponse {
+    username: String,
+    password: String,
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct CreateScenarioRequest {
@@ -203,5 +210,42 @@ impl CloudScenarioClient for ReqwestCloudScenarioClient {
             .await
             .map(RemoteScenario::from)
             .map_err(|e| DomainError::Internal(format!("parse created scenario: {e}")))
+    }
+
+    async fn provision_house_mqtt(
+        &self,
+        base_url: &str,
+        house_id: &str,
+    ) -> Result<HouseMqttCredentials, DomainError> {
+        let url = Self::url(
+            base_url,
+            &format!("/zigbee/house-mqtt/{house_id}/provision"),
+        );
+        let token = self.bearer_token().await;
+        let res = self
+            .apply_auth(self.http.post(&url), token)
+            .send()
+            .await
+            .map_err(|e| {
+                DomainError::DependencyUnavailable(format!("mqtt provision: {e}"))
+            })?;
+
+        if !res.status().is_success() {
+            let status = res.status();
+            let body = res.text().await.unwrap_or_default();
+            return Err(DomainError::DependencyUnavailable(format!(
+                "scenario-service mqtt provision {status}: {body}"
+            )));
+        }
+
+        let data = res
+            .json::<ProvisionMqttResponse>()
+            .await
+            .map_err(|e| DomainError::Internal(format!("parse mqtt provision: {e}")))?;
+
+        Ok(HouseMqttCredentials {
+            username: data.username,
+            password: data.password,
+        })
     }
 }

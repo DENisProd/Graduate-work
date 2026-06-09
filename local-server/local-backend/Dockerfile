@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1.4
 # ── Build stage ──────────────────────────────────────────────────────────────
 FROM rust:1-bookworm AS builder
 WORKDIR /app
@@ -13,18 +12,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 ENV RUSTFLAGS="-C link-arg=-fuse-ld=mold"
+ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
 
-# 1. Copy workspace manifests — allows cargo to resolve the full dep tree.
-COPY Cargo.toml Cargo.lock rust-toolchain.toml ./
+# Toolchain layer — cached until rust-toolchain.toml changes.
+COPY rust-toolchain.toml ./
+RUN rustup show
 
-# Copy each crate's Cargo.toml (needed for workspace dep resolution).
+# Manifest layer — cached until Cargo.toml / Cargo.lock change.
+COPY Cargo.toml Cargo.lock ./
 COPY src/core/Cargo.toml           src/core/
 COPY src/application/Cargo.toml    src/application/
 COPY src/infrastructure/Cargo.toml src/infrastructure/
 COPY src/interfaces/Cargo.toml     src/interfaces/
 COPY src/gateway/Cargo.toml        src/gateway/
 
-# 2. Stub sources — compile dependencies once; cache survives code-only changes.
+# Stub sources — compile third-party deps once; Docker reuses this layer when only src/ changes.
 RUN mkdir -p \
       src/core/src src/application/src src/infrastructure/src \
       src/interfaces/src src/gateway/src && \
@@ -35,24 +37,18 @@ RUN mkdir -p \
       src/interfaces/src/lib.rs >/dev/null && \
     echo 'fn main(){}' > src/gateway/src/main.rs
 
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
-    --mount=type=cache,target=/app/target \
-    unset CARGO_BUILD_JOBS; \
+# Registry + target live in the image layer (not BuildKit cache mounts — those are often
+# empty on Orange Pi and force a full crate download on every build).
+RUN unset CARGO_BUILD_JOBS; \
     if [ -n "$BUILD_JOBS" ]; then export CARGO_BUILD_JOBS="$BUILD_JOBS"; fi && \
     cargo build --profile "${CARGO_PROFILE}" --bin local-server && \
     rm -rf src/*/src
 
-# 3. Real source + migrations (embedded by sqlx::migrate!() at compile time).
+# Real source + migrations (embedded by sqlx::migrate!() at compile time).
 COPY src        ./src
 COPY migrations ./migrations
 
-# Drop workspace member artifacts so Cargo cannot reuse stub rlibs.
-# target/ lives in a cache mount — copy the binary out before the layer ends.
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
-    --mount=type=cache,target=/app/target \
-    rm -rf "target/${CARGO_PROFILE}/deps/liblocal_server_"* \
+RUN rm -rf "target/${CARGO_PROFILE}/deps/liblocal_server_"* \
            "target/${CARGO_PROFILE}/deps/local_server-"* \
            "target/${CARGO_PROFILE}/.fingerprint/local-server-"* \
            "target/${CARGO_PROFILE}/local-server" && \

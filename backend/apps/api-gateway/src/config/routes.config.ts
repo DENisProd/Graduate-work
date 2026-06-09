@@ -30,4 +30,11 @@ export const UPSTREAM_ROUTES: UpstreamRoute[] = [
   },
 ];
 
-export const PUBLIC_PREFIXES = ['/health', '/api/v1/system/auth/', '/api/access/v1/device-auth/', '/socket.io'];
+// /api/mqtt — WebSocket upgrade has no Bearer JWT; EMQX auth is MQTT username/password.
+export const PUBLIC_PREFIXES = [
+  '/health',
+  '/api/v1/system/auth/',
+  '/api/access/v1/device-auth/',
+  '/socket.io',
+  '/api/mqtt',
+];

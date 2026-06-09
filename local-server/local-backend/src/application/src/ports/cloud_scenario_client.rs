@@ -17,6 +17,12 @@ pub struct RemoteScenario {
 }
 
 #[derive(Debug, Clone)]
+pub struct HouseMqttCredentials {
+    pub username: String,
+    pub password: String,
+}
+
+#[derive(Debug, Clone)]
 pub struct CreateCloudScenarioCmd {
     pub name: String,
     pub description: Option<String>,
@@ -35,4 +41,11 @@ pub trait CloudScenarioClient: Send + Sync {
         base_url: &str,
         cmd: CreateCloudScenarioCmd,
     ) -> Result<RemoteScenario, DomainError>;
+
+    /// Provision (or rotate) EMQX credentials for local-server MQTT bridge.
+    async fn provision_house_mqtt(
+        &self,
+        base_url: &str,
+        house_id: &str,
+    ) -> Result<HouseMqttCredentials, DomainError>;
 }

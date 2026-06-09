@@ -2,6 +2,17 @@ use crate::ports::{AccessSyncRepository, MqttConnectConfig, MqttRuntimeConfig, R
 
 const DEFAULT_LOCAL_MQTT: &str = "mqtt://mosquitto:1883";
 
+/// EMQX username for a local-server instance (matches scenario-service provisioning).
+pub fn local_server_mqtt_username(house_id: &str) -> String {
+    let short: String = house_id
+        .chars()
+        .filter(|c| *c != '-')
+        .take(12)
+        .collect::<String>()
+        .to_lowercase();
+    format!("local-{short}")
+}
+
 pub fn scenario_url_from_access(access: &str) -> String {
     let base = access.trim().trim_end_matches('/');
     let origin = base
@@ -220,6 +231,14 @@ mod tests {
         assert_eq!(cfg.url, "wss://api-home.example/api/mqtt");
         assert_eq!(cfg.username.as_deref(), Some("cloud-user"));
         assert_eq!(cfg.password.as_deref(), Some("cloud-pass"));
+    }
+
+    #[test]
+    fn local_server_mqtt_username_matches_scenario_service() {
+        assert_eq!(
+            local_server_mqtt_username("4fcc745f-e355-4d68-a1b7-c060e2ba3827"),
+            "local-4fcc745fe355"
+        );
     }
 
     #[test]

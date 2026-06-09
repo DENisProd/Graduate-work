@@ -1,9 +1,10 @@
 ﻿use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use async_trait::async_trait;
-use rumqttc::{AsyncClient, Event, EventLoop, MqttOptions, Packet, QoS, Transport};
-use tokio::sync::{broadcast, watch};
+use rumqttc::{AsyncClient, ConnectReturnCode, Event, EventLoop, MqttOptions, Packet, QoS, Transport};
+use tokio::sync::{broadcast, oneshot, watch};
 
 use local_server_application::ports::MqttClient;
 use local_server_core::DomainError;
@@ -20,6 +21,7 @@ pub struct RumqttcClient {
     broker_url: String,
     msg_tx: broadcast::Sender<MqttMessage>,
     shutdown_tx: watch::Sender<bool>,
+    connected: AtomicBool,
 }
 
 impl RumqttcClient {
@@ -49,6 +51,7 @@ impl RumqttcClient {
         let (inner, eventloop) = AsyncClient::new(opts, 128);
         let (msg_tx, _) = broadcast::channel::<MqttMessage>(256);
         let (shutdown_tx, shutdown_rx) = watch::channel(false);
+        let (connack_tx, connack_rx) = oneshot::channel();
 
         let prefix = subscribe_topics
             .first()
@@ -62,7 +65,44 @@ impl RumqttcClient {
             broker_url: mqtt_url.to_string(),
             msg_tx,
             shutdown_tx,
+            connected: AtomicBool::new(false),
         });
+
+        let tx = client.msg_tx.clone();
+        let inner2 = client.inner.clone();
+        let subscribe_topics_owned: Vec<String> = subscribe_topics.to_vec();
+        let connected_flag = Arc::new(AtomicBool::new(false));
+        let connected_for_loop = connected_flag.clone();
+        tokio::spawn(run_eventloop(
+            eventloop,
+            tx,
+            inner2,
+            subscribe_topics_owned,
+            shutdown_rx,
+            mqtt_url.to_owned(),
+            Some(connack_tx),
+            connected_for_loop,
+        ));
+
+        match tokio::time::timeout(Duration::from_secs(15), connack_rx).await {
+            Ok(Ok(Ok(()))) => {
+                client.connected.store(true, Ordering::SeqCst);
+            }
+            Ok(Ok(Err(e))) => {
+                client.shutdown();
+                return Err(e);
+            }
+            Ok(Err(_)) => {
+                client.shutdown();
+                return Err(anyhow::anyhow!("MQTT connection closed before ConnAck"));
+            }
+            Err(_) => {
+                client.shutdown();
+                return Err(anyhow::anyhow!(
+                    "MQTT connection timed out waiting for broker acknowledgement"
+                ));
+            }
+        }
 
         for topic in subscribe_topics {
             client
@@ -71,18 +111,6 @@ impl RumqttcClient {
                 .await
                 .map_err(|e| anyhow::anyhow!("MQTT subscribe {topic}: {e}"))?;
         }
-
-        let tx = client.msg_tx.clone();
-        let inner2 = client.inner.clone();
-        let subscribe_topics_owned: Vec<String> = subscribe_topics.to_vec();
-        tokio::spawn(run_eventloop(
-            eventloop,
-            tx,
-            inner2,
-            subscribe_topics_owned,
-            shutdown_rx,
-            mqtt_url.to_owned(),
-        ));
 
         tracing::info!(host = %host, port, topics = subscribe_topics.len(), "MQTT connected");
         Ok(client)
@@ -96,7 +124,12 @@ impl RumqttcClient {
         &self.prefix
     }
 
+    pub fn is_broker_connected(&self) -> bool {
+        self.connected.load(Ordering::SeqCst)
+    }
+
     pub fn shutdown(&self) {
+        self.connected.store(false, Ordering::SeqCst);
         let _ = self.shutdown_tx.send(true);
     }
 }
@@ -108,6 +141,8 @@ async fn run_eventloop(
     subscribe_topics: Vec<String>,
     mut shutdown_rx: watch::Receiver<bool>,
     broker_url: String,
+    mut connack_tx: Option<oneshot::Sender<Result<(), anyhow::Error>>>,
+    connected: Arc<AtomicBool>,
 ) {
     let mut backoff = 1u64;
     loop {
@@ -115,15 +150,29 @@ async fn run_eventloop(
             _ = shutdown_rx.changed() => {
                 if *shutdown_rx.borrow() {
                     tracing::info!("MQTT event loop shutdown requested");
+                    connected.store(false, Ordering::SeqCst);
                     break;
                 }
             }
             ev = eventloop.poll() => match ev {
-            Ok(Event::Incoming(Packet::ConnAck(_))) => {
+            Ok(Event::Incoming(Packet::ConnAck(ack))) => {
                 backoff = 1;
-                tracing::info!(broker = %broker_url, "MQTT reconnected, re-subscribing");
-                for topic in &subscribe_topics {
-                    client.subscribe(topic, QoS::AtLeastOnce).await.ok();
+                if ack.code == ConnectReturnCode::Success {
+                    connected.store(true, Ordering::SeqCst);
+                    if let Some(tx) = connack_tx.take() {
+                        let _ = tx.send(Ok(()));
+                    }
+                    tracing::info!(broker = %broker_url, "MQTT reconnected, re-subscribing");
+                    for topic in &subscribe_topics {
+                        client.subscribe(topic, QoS::AtLeastOnce).await.ok();
+                    }
+                } else {
+                    connected.store(false, Ordering::SeqCst);
+                    let err = anyhow::anyhow!("MQTT broker rejected connection: {:?}", ack.code);
+                    if let Some(tx) = connack_tx.take() {
+                        let _ = tx.send(Err(err));
+                    }
+                    tracing::warn!(broker = %broker_url, code = ?ack.code, "MQTT auth/connect rejected");
                 }
             }
             Ok(Event::Incoming(Packet::Publish(p))) => {
@@ -132,6 +181,11 @@ async fn run_eventloop(
             }
             Ok(_) => {}
             Err(e) => {
+                connected.store(false, Ordering::SeqCst);
+                let err_msg = e.to_string();
+                if let Some(tx) = connack_tx.take() {
+                    let _ = tx.send(Err(anyhow::anyhow!("{err_msg}")));
+                }
                 tracing::warn!(broker = %broker_url, error = %e, backoff_secs = backoff, "MQTT error, will retry");
                 tokio::time::sleep(Duration::from_secs(backoff)).await;
                 backoff = (backoff * 2).min(60);
@@ -151,7 +205,7 @@ impl MqttClient for RumqttcClient {
     }
 
     async fn is_connected(&self) -> bool {
-        true
+        self.is_broker_connected()
     }
 
     async fn current_url(&self) -> Option<String> {
@@ -178,16 +232,19 @@ impl MqttClient for RumqttcClient {
 
 fn parse_mqtt_url(url: &str) -> Result<(String, u16, Option<Transport>), anyhow::Error> {
     if url.starts_with("ws://") || url.starts_with("wss://") {
-        // Pass the full URL as host so rumqttc constructs the correct WS request.
-        // rumqttc detects a full URI in broker_addr and uses it verbatim.
         let is_tls = url.starts_with("wss://");
         let stripped = url
             .strip_prefix("wss://")
             .or_else(|| url.strip_prefix("ws://"))
             .unwrap_or(url);
         let host_port = stripped.split('/').next().unwrap_or(stripped);
-        let (_, port_str) = host_port.split_once(':').unwrap_or((host_port, "80"));
-        let port: u16 = port_str.parse().unwrap_or(80);
+        let default_port = if is_tls { 443 } else { 80 };
+        let (_, port_str) = host_port.split_once(':').unwrap_or((host_port, ""));
+        let port: u16 = if port_str.is_empty() {
+            default_port
+        } else {
+            port_str.parse().unwrap_or(default_port)
+        };
         let transport = if is_tls {
             Transport::Wss(Default::default())
         } else {

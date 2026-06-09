@@ -195,11 +195,17 @@ impl RuntimeMqttManager {
     }
 
     pub async fn is_connected(&self) -> bool {
-        self.local_client.read().await.is_some()
+        if let Some(client) = self.local_client.read().await.as_ref() {
+            return client.is_broker_connected();
+        }
+        false
     }
 
     pub async fn is_cloud_connected(&self) -> bool {
-        self.cloud_client.read().await.is_some()
+        if let Some(client) = self.cloud_client.read().await.as_ref() {
+            return client.is_broker_connected();
+        }
+        false
     }
 
     pub async fn current_url(&self) -> Option<String> {

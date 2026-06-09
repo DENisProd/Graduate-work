@@ -8,7 +8,8 @@ use local_server_application::ports::{
     AuthPollResult, CompleteAuthArgs, UpsertFromCloudCmd, UpsertFromCloudWidgetDashboardCmd,
 };
 use local_server_application::{
-    resolve_bridge_house_id, resolve_mqtt_runtime_config, resolve_scenario_service_url, DomainError,
+    local_server_mqtt_username, resolve_bridge_house_id, resolve_mqtt_runtime_config,
+    resolve_scenario_service_url, DomainError,
 };
 use local_server_core::entities::scenario::ScenarioStatus;
 use serde::{Deserialize, Serialize};
@@ -29,6 +30,7 @@ pub fn router(state: HttpAppState) -> Router {
         .route("/system/auth/logout", post(logout_auth))
         .route("/system/auth/callback", post(auth_callback))
         .route("/system/reset", post(reset_local_data_handler))
+        .route("/system/mqtt/provision", post(provision_mqtt_credentials_handler))
         .with_state(state)
 }
 
@@ -279,6 +281,9 @@ async fn trigger_sync(
         "cloud sync pull complete"
     );
 
+    if let Some(house) = houses.first() {
+        ensure_mqtt_credentials(&state, &house.id).await;
+    }
     reconfigure_mqtt_from_settings(&state).await;
 
     Ok(Json(SyncReport {
@@ -381,6 +386,71 @@ fn resolve_access_service_url(
     default_url: &str,
 ) -> String {
     settings_url.unwrap_or_else(|| default_url.to_string())
+}
+
+async fn ensure_mqtt_credentials(state: &HttpAppState, house_id: &str) {
+    let settings = match state.runtime_settings.load().await {
+        Ok(s) => s,
+        Err(e) => {
+            tracing::warn!(error = %e, "MQTT credentials: failed to load settings");
+            return;
+        }
+    };
+    if settings
+        .mqtt_username
+        .as_ref()
+        .is_some_and(|u| !u.trim().is_empty())
+        && settings
+            .mqtt_password
+            .as_ref()
+            .is_some_and(|p| !p.trim().is_empty())
+    {
+        return;
+    }
+
+    let scenario_service_url = resolve_scenario_service_url(
+        settings.access_service_url.as_deref(),
+        &state.default_cloud_sync_url,
+        &state.scenario_service_url,
+    );
+
+    match state
+        .cloud_scenario
+        .provision_house_mqtt(&scenario_service_url, house_id)
+        .await
+    {
+        Ok(creds) => {
+            if let Err(e) = state
+                .runtime_settings
+                .set_mqtt_username(Some(&creds.username))
+                .await
+            {
+                tracing::warn!(error = %e, "MQTT credentials: failed to save username");
+                return;
+            }
+            if let Err(e) = state
+                .runtime_settings
+                .set_mqtt_password(Some(&creds.password))
+                .await
+            {
+                tracing::warn!(error = %e, "MQTT credentials: failed to save password");
+                return;
+            }
+            tracing::info!(
+                username = %creds.username,
+                house_id,
+                "MQTT credentials provisioned from cloud"
+            );
+        }
+        Err(e) => {
+            tracing::warn!(
+                error = %e,
+                house_id,
+                expected_username = %local_server_mqtt_username(house_id),
+                "MQTT auto-provision failed — set EMQX credentials manually in settings"
+            );
+        }
+    }
 }
 
 async fn reconfigure_mqtt_from_settings(state: &HttpAppState) {
@@ -714,4 +784,67 @@ async fn reset_local_data_handler(
         .await
         .map_err(|e| DomainError::Internal(e.to_string()))?;
     Ok(Json(ResetLocalDataResponse { ok: true }))
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ProvisionMqttCredentialsResponse {
+    pub username: String,
+    pub password: String,
+    pub mqtt_cloud_connected: bool,
+}
+
+async fn provision_mqtt_credentials_handler(
+    State(state): State<HttpAppState>,
+) -> Result<Json<ProvisionMqttCredentialsResponse>, AppError> {
+    let settings = state.runtime_settings.load().await?;
+    let user_id = settings.auth_external_user_id.ok_or_else(|| {
+        DomainError::Validation(
+            "Not authorized with cloud. Call /system/auth/start first.".into(),
+        )
+    })?;
+    let runtime_access = settings.access_service_url.clone();
+    let access_service_url =
+        resolve_access_service_url(runtime_access.clone(), &state.default_access_service_url);
+    let houses = state
+        .cloud_sync
+        .fetch_user_houses(&access_service_url, &user_id)
+        .await?;
+    let house_id = houses
+        .first()
+        .map(|h| h.id.as_str())
+        .or_else(|| {
+            state
+                .configured_bridge_house_id
+                .as_deref()
+                .filter(|s| !s.is_empty())
+        })
+        .ok_or_else(|| {
+            DomainError::Validation("No synced house found for MQTT provisioning.".into())
+        })?;
+
+    let scenario_service_url = resolve_scenario_service_url(
+        runtime_access.as_deref(),
+        &state.default_cloud_sync_url,
+        &state.scenario_service_url,
+    );
+    let creds = state
+        .cloud_scenario
+        .provision_house_mqtt(&scenario_service_url, house_id)
+        .await?;
+    state
+        .runtime_settings
+        .set_mqtt_username(Some(&creds.username))
+        .await?;
+    state
+        .runtime_settings
+        .set_mqtt_password(Some(&creds.password))
+        .await?;
+    reconfigure_mqtt_from_settings(&state).await;
+
+    Ok(Json(ProvisionMqttCredentialsResponse {
+        username: creds.username,
+        password: creds.password,
+        mqtt_cloud_connected: state.mqtt.is_cloud_connected().await,
+    }))
 }

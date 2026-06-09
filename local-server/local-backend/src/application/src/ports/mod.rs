@@ -27,7 +27,7 @@ pub use cloud_physical_device_client::{
     CloudPhysicalDeviceClient, CreateCloudPhysicalDeviceCmd, RemotePhysicalDevice,
 };
 pub use cloud_scenario_client::{
-    CloudScenarioClient, CreateCloudScenarioCmd, RemoteScenario,
+    CloudScenarioClient, CreateCloudScenarioCmd, HouseMqttCredentials, RemoteScenario,
 };
 pub use cloud_sync_client::{
     CloudSyncClient, RemoteAccessRight, RemoteHouse, RemoteHouseMember, RemoteHouseRole,

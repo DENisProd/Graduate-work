@@ -124,6 +124,19 @@ export async function resetLocalData(): Promise<void> {
   await api.post('/api/v1/system/reset')
 }
 
+export interface ProvisionMqttCredentialsResponse {
+  username: string
+  password: string
+  mqttCloudConnected: boolean
+}
+
+export async function provisionMqttCredentials(): Promise<ProvisionMqttCredentialsResponse> {
+  const { data } = await api.post<ProvisionMqttCredentialsResponse>(
+    '/api/v1/system/mqtt/provision',
+  )
+  return data
+}
+
 export interface UpdateCheckResult {
   hasUpdate: boolean
   latestVersion?: string

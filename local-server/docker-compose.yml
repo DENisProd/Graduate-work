@@ -21,7 +21,9 @@ services:
     volumes:
       - ./zigbee2mqtt/data:/app/data
     devices:
-      - /dev/ttyACM0:/dev/ttyACM0
+      - ${ZIGBEE_DEVICE:-/dev/ttyACM0}:/dev/ttyACM0
+    group_add:
+      - dialout
     ports:
       - "8090:8080"   # Zigbee2MQTT web UI — host:8090 to avoid conflict with Caddy
 
