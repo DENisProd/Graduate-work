@@ -110,6 +110,14 @@ async function bootstrap() {
         const reqHeaders = { ...req.headers };
         // Replace Host with the upstream host so the backend doesn't reject it
         reqHeaders.host = targetUrl.host;
+        // EMQX MQTT-over-WebSocket requires the `mqtt` subprotocol; without it the
+        // upgrade fails (502/426 from nginx or EMQX).
+        if (entry.prefix === '/api/mqtt') {
+            const proto = reqHeaders['sec-websocket-protocol'];
+            if (!proto || (typeof proto === 'string' && !proto.split(',').map((s) => s.trim()).includes('mqtt'))) {
+                reqHeaders['sec-websocket-protocol'] = proto ? `${proto}, mqtt` : 'mqtt';
+            }
+        }
         const upstreamPath = (0, ws_path_1.buildUpstreamWsPath)(url, entry.target, entry.pathRewrite);
         const isSecureUpstream = targetUrl.protocol === 'wss:' || targetUrl.protocol === 'https:';
         const requestImpl = isSecureUpstream ? https.request : http.request;
