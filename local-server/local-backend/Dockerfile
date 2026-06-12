@@ -6,16 +6,22 @@ WORKDIR /app
 ARG CARGO_PROFILE=release-device
 ARG BUILD_JOBS
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN dpkg --add-architecture arm64 && \
+    apt-get update && apt-get install -y --no-install-recommends \
     pkg-config gcc-aarch64-linux-gnu \
+    libssl-dev:arm64 \
     && rm -rf /var/lib/apt/lists/*
 
 ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
 # Cross-linker and C compiler for the aarch64 target.
-# libsqlite3-sys uses the bundled feature, so cc-rs picks this up for the C build.
 ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
 ENV CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
 ENV AR_aarch64_unknown_linux_gnu=aarch64-linux-gnu-ar
+# pkg-config: replace default (x86) search path with ARM64 paths.
+# openssl-sys will find libssl-dev:arm64 via pkg-config and link statically.
+ENV PKG_CONFIG_ALLOW_CROSS=1
+ENV PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig
+ENV OPENSSL_STATIC=1
 
 # Toolchain layer — cached until rust-toolchain.toml changes.
 COPY rust-toolchain.toml ./
