@@ -15,6 +15,7 @@ local-server-application = { path = "../application" }
 local-server-core        = { path = "../core" }
 async-trait = { workspace = true }
 sqlx        = { version = "0.8", default-features = false, features = ["sqlite", "runtime-tokio", "migrate", "macros", "json", "chrono", "uuid"] }
+libsqlite3-sys = { version = "0.30", features = ["bundled"] }
 tokio       = { workspace = true }
 serde       = { workspace = true }
 serde_json  = { workspace = true }
@@ -22,6 +23,7 @@ thiserror   = { workspace = true }
 tracing     = { workspace = true }
 chrono      = { workspace = true }
 uuid        = { workspace = true }
+sha2        = "0.10"
 rumqttc     = { version = "0.24", features = ["websocket"] }
 dashmap     = "6"
 anyhow      = { workspace = true }

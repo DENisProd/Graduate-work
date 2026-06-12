@@ -1,22 +1,25 @@
 # ── Build stage ──────────────────────────────────────────────────────────────
-FROM rust:1-bookworm AS builder
+# Builder runs on the host platform (x86_64 in CI) and cross-compiles to ARM64.
+FROM --platform=$BUILDPLATFORM rust:1-bookworm AS builder
 WORKDIR /app
 
-# release-device: fast compile on ARM SBC (Orange Pi). Override with "release" for max opt.
 ARG CARGO_PROFILE=release-device
-# Limit parallel rustc jobs on low-RAM boards: --build-arg BUILD_JOBS=2
 ARG BUILD_JOBS
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    pkg-config libsqlite3-dev mold \
+    pkg-config gcc-aarch64-linux-gnu \
     && rm -rf /var/lib/apt/lists/*
 
-ENV RUSTFLAGS="-C link-arg=-fuse-ld=mold"
 ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
+# Cross-linker and C compiler for the aarch64 target.
+# libsqlite3-sys uses the bundled feature, so cc-rs picks this up for the C build.
+ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+ENV CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
+ENV AR_aarch64_unknown_linux_gnu=aarch64-linux-gnu-ar
 
 # Toolchain layer — cached until rust-toolchain.toml changes.
 COPY rust-toolchain.toml ./
-RUN rustup show
+RUN rustup target add aarch64-unknown-linux-gnu && rustup show
 
 # Manifest layer — cached until Cargo.toml / Cargo.lock change.
 COPY Cargo.toml Cargo.lock ./
@@ -37,32 +40,30 @@ RUN mkdir -p \
       src/interfaces/src/lib.rs >/dev/null && \
     echo 'fn main(){}' > src/gateway/src/main.rs
 
-# Registry + target live in the image layer (not BuildKit cache mounts — those are often
-# empty on Orange Pi and force a full crate download on every build).
 RUN unset CARGO_BUILD_JOBS; \
     if [ -n "$BUILD_JOBS" ]; then export CARGO_BUILD_JOBS="$BUILD_JOBS"; fi && \
-    cargo build --profile "${CARGO_PROFILE}" --bin local-server && \
+    cargo build --profile "${CARGO_PROFILE}" --target aarch64-unknown-linux-gnu --bin local-server && \
     rm -rf src/*/src
 
 # Real source + migrations (embedded by sqlx::migrate!() at compile time).
 COPY src        ./src
 COPY migrations ./migrations
 
-RUN rm -rf "target/${CARGO_PROFILE}/deps/liblocal_server_"* \
-           "target/${CARGO_PROFILE}/deps/local_server-"* \
-           "target/${CARGO_PROFILE}/.fingerprint/local-server-"* \
-           "target/${CARGO_PROFILE}/local-server" && \
+RUN rm -rf "target/aarch64-unknown-linux-gnu/${CARGO_PROFILE}/deps/liblocal_server_"* \
+           "target/aarch64-unknown-linux-gnu/${CARGO_PROFILE}/deps/local_server-"* \
+           "target/aarch64-unknown-linux-gnu/${CARGO_PROFILE}/.fingerprint/local-server-"* \
+           "target/aarch64-unknown-linux-gnu/${CARGO_PROFILE}/local-server" && \
     unset CARGO_BUILD_JOBS; \
     if [ -n "$BUILD_JOBS" ]; then export CARGO_BUILD_JOBS="$BUILD_JOBS"; fi && \
-    cargo build --profile "${CARGO_PROFILE}" --bin local-server && \
-    cp "target/${CARGO_PROFILE}/local-server" /app/local-server
+    cargo build --profile "${CARGO_PROFILE}" --target aarch64-unknown-linux-gnu --bin local-server && \
+    cp "target/aarch64-unknown-linux-gnu/${CARGO_PROFILE}/local-server" /app/local-server
 
 # ── Runtime stage ─────────────────────────────────────────────────────────────
-FROM debian:bookworm-slim
+FROM --platform=$TARGETPLATFORM debian:bookworm-slim
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libsqlite3-0 ca-certificates \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/local-server ./

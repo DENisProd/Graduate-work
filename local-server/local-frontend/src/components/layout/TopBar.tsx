@@ -1,4 +1,5 @@
-import { Sun, Moon, Menu } from 'lucide-react'
+import { Sun, Moon, Menu, LogOut, User } from 'lucide-react'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/hooks/useI18n'
 import { useSettingsStore } from '@/stores/settings.store'
@@ -15,10 +16,18 @@ export function TopBar({ onMenuClick }: TopBarProps) {
     authStatus,
     authDisplayName,
     authExternalUserId,
+    localUserId,
+    localUserName,
+    clearLocalSession,
   } = useSettingsStore()
 
   const resolvedUser = authDisplayName || authExternalUserId || ''
   const isAuthorized = authStatus === 'authorized'
+
+  const handleLogout = () => {
+    clearLocalSession()
+    toast.success(t('auth.toastSignedOut'))
+  }
 
   return (
     <header className="flex h-14 shrink-0 items-center border-b border-slate-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-950">
@@ -38,6 +47,20 @@ export function TopBar({ onMenuClick }: TopBarProps) {
               ? resolvedUser
               : `${resolvedUser} (${authStatus || t('topBar.auth')})`}
           </span>
+        </div>
+      ) : null}
+      {localUserId ? (
+        <div className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 py-1 pl-2.5 pr-1 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+          <User className="h-3.5 w-3.5 text-slate-400" />
+          <span className="truncate max-w-[160px] font-medium">{localUserName}</span>
+          <button
+            onClick={handleLogout}
+            className="ml-0.5 rounded p-1 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
+            aria-label={t('auth.signOut')}
+            title={t('auth.signOut')}
+          >
+            <LogOut className="h-3.5 w-3.5" />
+          </button>
         </div>
       ) : null}
       <div

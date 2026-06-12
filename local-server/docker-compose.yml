@@ -49,13 +49,9 @@ services:
 
   # ── Local backend (Rust/Axum) ─────────────────────────────────────────────────
   local-backend:
-    build:
-      context: ./local-backend
-      args:
-        # release-device (default): fast ARM build. Use "release" for max binary opt.
-        CARGO_PROFILE: ${LOCAL_BACKEND_CARGO_PROFILE:-release-device}
-        # Optional: BUILD_JOBS=2 for low-RAM boards — pass via:
-        # docker compose build --build-arg BUILD_JOBS=2 local-backend
+    image: ${LOCAL_BACKEND_IMAGE:-ghcr.io/denisprod/graduate-work/local-backend:latest}
+    # To rebuild locally from source:
+    # docker build -t local-backend ./local-backend && LOCAL_BACKEND_IMAGE=local-backend docker compose up -d
     container_name: local-backend
     restart: unless-stopped
     depends_on:

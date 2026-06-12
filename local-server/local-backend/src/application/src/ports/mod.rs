@@ -8,6 +8,7 @@ pub mod cloud_sync_client;
 pub mod cloud_widget_dashboard_client;
 pub mod device_repository;
 pub mod health;
+pub mod local_auth_repository;
 pub mod modbus_gateway_port;
 pub mod modbus_repository;
 pub mod mqtt_client;
@@ -38,6 +39,7 @@ pub use cloud_widget_dashboard_client::{
 };
 pub use device_repository::DeviceRepository;
 pub use health::{HealthChecker, HealthError};
+pub use local_auth_repository::{LocalAuthRepository, LocalAuthUser};
 pub use modbus_gateway_port::ModbusBridgePort;
 pub use modbus_repository::{
     CreateModbusDeviceCmd, CreateModbusRegisterCmd, ModbusRepository, SaveModbusStateCmd,

@@ -10,8 +10,9 @@ pub use http::{
 };
 pub use mqtt::{run_ingestion, run_mqtt_bridge, ModbusGateway, RumqttcClient};
 pub use persistence::{
-    OutboxWriter, SqliteAccessRepo, SqliteAccessSyncRepo, SqliteDeviceRepo, SqliteModbusRepo,
-    SqlitePhysicalDeviceRepo, SqliteRuntimeSettingsRepo, SqliteScenarioExecutionRepo,
-    SqliteScenarioRepo, SqliteSyncOutboxRepo, SqliteWidgetDashboardRepo, SqliteZigbeeRepo,
+    OutboxWriter, SqliteAccessRepo, SqliteAccessSyncRepo, SqliteDeviceRepo, SqliteLocalAuthRepo,
+    SqliteModbusRepo, SqlitePhysicalDeviceRepo, SqliteRuntimeSettingsRepo,
+    SqliteScenarioExecutionRepo, SqliteScenarioRepo, SqliteSyncOutboxRepo,
+    SqliteWidgetDashboardRepo, SqliteZigbeeRepo,
 };
 pub use sqlx::SqlitePool;

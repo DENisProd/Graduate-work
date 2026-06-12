@@ -46,6 +46,7 @@ export function SyncStatusPanel() {
       void queryClient.invalidateQueries({ queryKey: ['sync-status'] })
       void queryClient.invalidateQueries({ queryKey: ['houses'] })
       void queryClient.invalidateQueries({ queryKey: ['rooms'] })
+      void queryClient.invalidateQueries({ queryKey: ['auth-users'] })
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       toast.error(t('syncPanel.toastFailed', { message: msg }))

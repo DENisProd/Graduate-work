@@ -22,6 +22,11 @@ interface SettingsState {
   authDisplayName: string
   authExpiresAt: string
   isAuthPolling: boolean
+  /** Local login session (password auth against the local server). */
+  localUserId: string
+  localUserName: string
+  localUserIsOwner: boolean
+  localUserMustChange: boolean
   /** Active house for UI context (sidebar, etc.) */
   currentHouseId: string
   currentHouseName: string
@@ -30,6 +35,15 @@ interface SettingsState {
   setServerUrl: (url: string) => void
   setAccessServiceUrl: (url: string) => void
   setUserId: (id: string) => void
+  setLocalSession: (user: {
+    id: string
+    externalUserId: string
+    displayName: string | null
+    isOwner: boolean
+    mustChangePassword: boolean
+  }) => void
+  setLocalMustChange: (mustChange: boolean) => void
+  clearLocalSession: () => void
   setAuthState: (patch: Partial<Pick<
     SettingsState,
     | 'authSessionId'
@@ -65,6 +79,10 @@ export const useSettingsStore = create<SettingsState>()(
       authDisplayName: '',
       authExpiresAt: '',
       isAuthPolling: false,
+      localUserId: '',
+      localUserName: '',
+      localUserIsOwner: false,
+      localUserMustChange: false,
       currentHouseId: '',
       currentHouseName: '',
       theme: 'light',
@@ -73,6 +91,26 @@ export const useSettingsStore = create<SettingsState>()(
       setServerUrl: (url) => set({ serverUrl: normalizeServerUrl(url) }),
       setAccessServiceUrl: (url) => set({ accessServiceUrl: normalizeServerUrl(url) }),
       setUserId: (id) => set({ userId: id }),
+      setLocalSession: (user) =>
+        set({
+          localUserId: user.id,
+          localUserName: user.displayName || user.externalUserId,
+          localUserIsOwner: user.isOwner,
+          localUserMustChange: user.mustChangePassword,
+          // Drive the X-User-Id header from the logged-in identity.
+          userId: user.externalUserId || user.id,
+        }),
+      setLocalMustChange: (mustChange) => set({ localUserMustChange: mustChange }),
+      clearLocalSession: () =>
+        set({
+          localUserId: '',
+          localUserName: '',
+          localUserIsOwner: false,
+          localUserMustChange: false,
+          userId: '',
+          currentHouseId: '',
+          currentHouseName: '',
+        }),
       setAuthState: (patch) => set((state) => ({ ...state, ...patch })),
       resetAuthState: () =>
         set({

@@ -16,6 +16,7 @@ import {
   startDeviceAuthorization,
   updateRuntimeSettings,
 } from '@/api/system'
+import { changePassword } from '@/api/auth'
 import { SyncStatusPanel } from '@/components/shared/SyncStatusPanel'
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
@@ -89,6 +90,76 @@ function Button({
     >
       {children}
     </button>
+  )
+}
+
+function AccountSection() {
+  const { t } = useI18n()
+  const localUserId = useSettingsStore((s) => s.localUserId)
+  const localUserName = useSettingsStore((s) => s.localUserName)
+  const [current, setCurrent] = useState('')
+  const [next, setNext] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  if (!localUserId) return null
+
+  const handleChange = async () => {
+    if (next !== confirm) {
+      toast.error(t('auth.toastMismatch'))
+      return
+    }
+    setSaving(true)
+    try {
+      await changePassword(localUserId, current, next)
+      toast.success(t('auth.toastPasswordChanged'))
+      setCurrent('')
+      setNext('')
+      setConfirm('')
+    } catch {
+      toast.error(t('auth.toastChangeFailed'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <section>
+      <SectionTitle>{t('settings.account')}</SectionTitle>
+      <Card>
+        <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
+          {t('settings.accountHint', { name: localUserName })}
+        </p>
+        <div className="grid max-w-md gap-3">
+          <Input
+            type="password"
+            value={current}
+            onChange={setCurrent}
+            placeholder={t('auth.currentPasswordLabel')}
+            autoComplete="current-password"
+          />
+          <Input
+            type="password"
+            value={next}
+            onChange={setNext}
+            placeholder={t('auth.newPasswordLabel')}
+            autoComplete="new-password"
+          />
+          <Input
+            type="password"
+            value={confirm}
+            onChange={setConfirm}
+            placeholder={t('auth.confirmPasswordLabel')}
+            autoComplete="new-password"
+          />
+          <div>
+            <Button onClick={() => void handleChange()} disabled={!current || !next || !confirm || saving}>
+              {saving ? t('auth.saving') : t('auth.changePassword')}
+            </Button>
+          </div>
+        </div>
+      </Card>
+    </section>
   )
 }
 
@@ -568,6 +639,8 @@ export function SettingsPage() {
           </div>
         </Card>
       </section>
+
+      <AccountSection />
 
       <section>
         <SectionTitle>{t('settings.cloudSync')}</SectionTitle>

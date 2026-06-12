@@ -175,6 +175,12 @@ async fn trigger_sync(
     state.access_sync.mark_pulled("roles", &now).await?;
     state.access_sync.mark_pulled("members", &now).await?;
 
+    // Issue the default local password ("0000") to freshly synced users and
+    // force the cloud linker to change theirs on first login.
+    if let Err(e) = state.local_auth.ensure_defaults("0000").await {
+        tracing::warn!(error = %e, "trigger_sync: ensure_defaults failed");
+    }
+
     match state
         .cloud_sync
         .fetch_user_access_rights(&access_service_url, &user_id)

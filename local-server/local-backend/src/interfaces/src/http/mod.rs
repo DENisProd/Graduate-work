@@ -22,6 +22,7 @@ use utoipa_swagger_ui::SwaggerUi;
 use crate::HttpAppState;
 
 pub mod access;
+pub mod auth;
 pub mod device_categories;
 pub mod devices;
 pub mod error;
@@ -127,6 +128,7 @@ pub fn router(
         .nest(
             "/api/v1",
             Router::new()
+                .merge(auth::router(http_state.clone()))
                 .merge(system::router(http_state))
                 .merge(devices::router(device_repo.clone()))
                 .merge(device_categories::router(device_repo))

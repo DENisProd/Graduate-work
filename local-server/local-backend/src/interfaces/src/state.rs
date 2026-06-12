@@ -2,8 +2,8 @@
 
 use local_server_application::ports::{
     AccessSyncRepository, CloudAuthClient, CloudScenarioClient, CloudSyncClient,
-    CloudWidgetDashboardClient, HealthChecker, MqttClient, RuntimeSettingsRepository,
-    ScenarioRepository, WidgetDashboardRepository,
+    CloudWidgetDashboardClient, HealthChecker, LocalAuthRepository, MqttClient,
+    RuntimeSettingsRepository, ScenarioRepository, WidgetDashboardRepository,
 };
 
 #[derive(Clone)]
@@ -15,6 +15,7 @@ pub struct HttpAppState {
     pub cloud_auth: Arc<dyn CloudAuthClient>,
     pub cloud_sync: Arc<dyn CloudSyncClient>,
     pub access_sync: Arc<dyn AccessSyncRepository>,
+    pub local_auth: Arc<dyn LocalAuthRepository>,
     pub default_access_service_url: String,
     pub default_cloud_sync_url: String,
     /// Explicit `ZIGBEE_MQTT_URL` / config `mqtt_url`. When unset, MQTT uses gateway `/api/mqtt`.

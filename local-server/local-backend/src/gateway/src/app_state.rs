@@ -5,15 +5,15 @@ use local_server_application::{
     ports::{
         AccessRepository, AccessSyncRepository, CloudAuthClient, CloudPhysicalDeviceClient,
         CloudScenarioClient, CloudSyncClient, CloudWidgetDashboardClient, DeviceRepository,
-        HealthChecker, ModbusBridgePort, ModbusRepository, PhysicalDeviceRepository,
-        RuntimeSettingsRepository, ScenarioExecutionRepository, ScenarioRepository,
-        WidgetDashboardRepository, ZigbeeRepository,
+        HealthChecker, LocalAuthRepository, ModbusBridgePort, ModbusRepository,
+        PhysicalDeviceRepository, RuntimeSettingsRepository, ScenarioExecutionRepository,
+        ScenarioRepository, WidgetDashboardRepository, ZigbeeRepository,
     },
     services::{AccessEvaluator, ZigbeeRealtimeService},
 };
 use local_server_infrastructure::persistence::{
     OutboxWriter, SqliteAccessRepo, SqliteAccessSyncRepo, SqliteDeviceRepo, SqliteHealthChecker,
-    SqliteModbusRepo, SqlitePhysicalDeviceRepo, SqliteRuntimeSettingsRepo,
+    SqliteLocalAuthRepo, SqliteModbusRepo, SqlitePhysicalDeviceRepo, SqliteRuntimeSettingsRepo,
     SqliteScenarioExecutionRepo, SqliteScenarioRepo, SqliteSyncOutboxRepo,
     SqliteWidgetDashboardRepo, SqliteZigbeeRepo,
 };
@@ -44,6 +44,7 @@ pub struct AppState {
     pub cloud_widget_dashboard_client: Arc<dyn CloudWidgetDashboardClient>,
     pub widget_dashboard_repo: Arc<dyn WidgetDashboardRepository>,
     pub access_sync_repo: Arc<dyn AccessSyncRepository>,
+    pub local_auth_repo: Arc<dyn LocalAuthRepository>,
     pub access_repo: Arc<dyn AccessRepository>,
     pub access_evaluator: Arc<AccessEvaluator>,
     pub sync_outbox_repo: Arc<SqliteSyncOutboxRepo>,
@@ -110,6 +111,9 @@ impl AppState {
         let access_sync_repo = Arc::new(SqliteAccessSyncRepo::new(pool.clone()))
             as Arc<dyn AccessSyncRepository>;
 
+        let local_auth_repo = Arc::new(SqliteLocalAuthRepo::new(pool.clone()))
+            as Arc<dyn LocalAuthRepository>;
+
         let access_repo_inner = Arc::new(SqliteAccessRepo::new(pool.clone()));
         let access_repo = access_repo_inner.clone() as Arc<dyn AccessRepository>;
         let access_evaluator = Arc::new(AccessEvaluator::new(access_repo.clone()));
@@ -151,6 +155,7 @@ impl AppState {
             cloud_widget_dashboard_client,
             widget_dashboard_repo,
             access_sync_repo,
+            local_auth_repo,
             access_repo,
             access_evaluator,
             sync_outbox_repo,
@@ -183,6 +188,7 @@ impl AppState {
             cloud_auth: self.cloud_auth_client.clone(),
             cloud_sync: self.cloud_sync_client.clone(),
             access_sync: self.access_sync_repo.clone(),
+            local_auth: self.local_auth_repo.clone(),
             default_access_service_url,
             default_cloud_sync_url,
             configured_mqtt_url,
