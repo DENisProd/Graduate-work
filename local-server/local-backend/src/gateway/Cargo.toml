@@ -28,6 +28,8 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 anyhow   = { workspace = true }
 dotenvy  = "0.15"
 async-trait = { workspace = true }
+# utoipa-swagger-ui → reqwest (native-tls) needs OpenSSL; vendored builds cleanly when cross-compiling to ARM64.
+openssl-sys = { version = "0.9", features = ["vendored"] }
 
 [dev-dependencies]
 serde_json     = { workspace = true }
