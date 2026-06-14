@@ -172,7 +172,8 @@ export class EmqxProvisionService {
   private scenarioServiceAclRules(): EmqxAclRule[] {
     return [
       { permission: 'allow', action: 'subscribe', topic: 'houses/+/zigbee2mqtt/#' },
-      { permission: 'allow', action: 'publish', topic: 'houses/+/zigbee2mqtt/#' },
+      // Commands to local-server bridge (cloud → local zigbee2mqtt)
+      { permission: 'allow', action: 'publish', topic: 'houses/+/cmd/zigbee2mqtt/#' },
       { permission: 'allow', action: 'subscribe', topic: 'modbus/response' },
       { permission: 'allow', action: 'publish', topic: 'modbus/command' },
     ];

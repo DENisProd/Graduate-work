@@ -13,7 +13,9 @@ import {
   resolveHouseMqttUrl,
   resolveHouseTopicPrefix,
   scenarioServiceMqttCredentials,
+  usesCentralBroker,
 } from './central-mqtt';
+import { resolveZigbeeCommandTopic } from './mqtt-topics';
 import { ZigbeeIngestService } from './zigbee-ingest.service';
 import { HouseMqttConfigRepository, HouseMqttConfig } from './house-mqtt-config.repository';
 import { EmqxBootstrapService } from './emqx-bootstrap.service';
@@ -237,12 +239,21 @@ export class ZigbeeMqttService implements OnModuleInit, OnModuleDestroy {
     return result;
   }
 
+  private commandTopic(entry: ConnectionEntry, suffix: string): string {
+    return resolveZigbeeCommandTopic(
+      entry.houseId,
+      entry.topicPrefix,
+      suffix,
+      usesCentralBroker(this.config, entry.mqttUrl),
+    );
+  }
+
   requestBridgeDeviceList(houseId: string): { ok: true } | { ok: false; error: string } {
     const entry = this.connections.get(houseId);
     if (!entry?.client.connected) {
       return { ok: false, error: `MQTT не подключён для дома ${houseId}` };
     }
-    const topic = `${entry.topicPrefix}/bridge/request/devices`;
+    const topic = this.commandTopic(entry, 'bridge/request/devices');
     entry.client.publish(topic, '{}', { qos: 0 }, (err) => {
       if (err) this.logger.error(`[${houseId}] Ошибка publish ${topic}`, err);
     });
@@ -259,7 +270,7 @@ export class ZigbeeMqttService implements OnModuleInit, OnModuleDestroy {
     if (!entry?.client.connected) {
       return { ok: false, error: `MQTT не подключён для дома ${houseId}` };
     }
-    const topic = `${entry.topicPrefix}/bridge/request/permit_join`;
+    const topic = this.commandTopic(entry, 'bridge/request/permit_join');
     const t = Math.max(1, Math.min(254, Math.trunc(time)));
     const body = enable ? String(t) : 'false';
     entry.client.publish(topic, body, { qos: 0 }, (err) => {
@@ -278,7 +289,7 @@ export class ZigbeeMqttService implements OnModuleInit, OnModuleDestroy {
     if (!entry?.client.connected) {
       return { ok: false, error: `MQTT не подключён для дома ${houseId}` };
     }
-    const topic = `${entry.topicPrefix}/bridge/request/device/remove`;
+    const topic = this.commandTopic(entry, 'bridge/request/device/remove');
     const body = JSON.stringify({ id: idOrName, force });
     entry.client.publish(topic, body, { qos: 0 }, (err) => {
       if (err) this.logger.error(`[${houseId}] Ошибка publish ${topic}`, err);
@@ -296,7 +307,7 @@ export class ZigbeeMqttService implements OnModuleInit, OnModuleDestroy {
     if (!entry?.client.connected) {
       return { ok: false, error: `MQTT не подключён для дома ${houseId}` };
     }
-    const topic = `${entry.topicPrefix}/${topicName}/set`;
+    const topic = this.commandTopic(entry, `${topicName}/set`);
     const body = JSON.stringify(payload);
     entry.client.publish(topic, body, { qos: 0 }, (err) => {
       if (err) this.logger.error(`[${houseId}] Ошибка publish ${topic}`, err);

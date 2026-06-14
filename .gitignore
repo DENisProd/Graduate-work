@@ -9,6 +9,9 @@ knowledge/
 # Node.js dependencies
 node_modules/
 
+# Local-server build artifacts (docker image exports)
+local-server/dist/
+
 # EMQX runtime credentials (never commit)
 infrastructure/emqx/credentials.env
 .env
