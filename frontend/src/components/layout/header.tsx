@@ -4,6 +4,13 @@ import Link from 'next/link';
 import { ThemeToggle, LanguageSwitcher } from '@/components/ui';
 import { AccountBlock } from '@/features/auth';
 import { useTranslation } from '@/hooks';
+import { useFooterAudience } from '@/hooks/use-footer-audience';
+import {
+  AUDIENCE_AUTHENTICATED,
+  AUDIENCE_PLATFORM_ADMIN,
+  isFooterLinkVisible,
+  type FooterAudience,
+} from '@/lib/auth/footer-audience';
 import { AppLogo } from './app-logo';
 import { Button } from '@/components/ui/button';
 import {
@@ -42,17 +49,36 @@ const MenuIcon = () => (
 const NAV_LINK_BASE =
   'text-sm font-medium text-muted-foreground transition-colors hover:text-foreground';
 
+interface NavLinkItem {
+  href: string;
+  label: string;
+  visibleFor: readonly FooterAudience[];
+}
+
 interface NavLinksProps {
   closeOnClick?: boolean;
   t: TranslationFn;
+  audience: FooterAudience;
 }
 
-function NavLinks({ closeOnClick, t }: NavLinksProps) {
-  const links = [
-    { href: '/dashboard', label: t('navigation.dashboard') },
-    { href: '/settings',  label: t('navigation.settings')  },
-    { href: '/admin',     label: t('navigation.admin')      },
-  ];
+function NavLinks({ closeOnClick, t, audience }: NavLinksProps) {
+  const links: NavLinkItem[] = [
+    {
+      href: '/dashboard',
+      label: t('navigation.dashboard'),
+      visibleFor: AUDIENCE_AUTHENTICATED,
+    },
+    {
+      href: '/settings',
+      label: t('navigation.settings'),
+      visibleFor: AUDIENCE_AUTHENTICATED,
+    },
+    {
+      href: '/admin',
+      label: t('navigation.admin'),
+      visibleFor: AUDIENCE_PLATFORM_ADMIN,
+    },
+  ].filter(({ visibleFor }) => isFooterLinkVisible(visibleFor, audience));
 
   if (closeOnClick) {
     return (
@@ -85,6 +111,7 @@ function NavLinks({ closeOnClick, t }: NavLinksProps) {
 /* ── Header ──────────────────────────────────────────────────────── */
 export function Header() {
   const { t } = useTranslation();
+  const { audience, isLoading } = useFooterAudience();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -94,9 +121,11 @@ export function Header() {
           <div className="flex items-center gap-8">
             <AppLogo label={t('home.title')} labelClassName="hidden sm:inline" />
 
-            <nav className="hidden items-center gap-6 md:flex">
-              <NavLinks t={t} />
-            </nav>
+            {!isLoading && (
+              <nav className="hidden items-center gap-6 md:flex">
+                <NavLinks t={t} audience={audience} />
+              </nav>
+            )}
           </div>
 
           <div className="hidden items-center gap-2 md:flex">
@@ -126,9 +155,11 @@ export function Header() {
                   <AppLogo label={t('home.title')} />
                 </div>
 
-                <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
-                  <NavLinks closeOnClick t={t} />
-                </nav>
+                {!isLoading && (
+                  <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
+                    <NavLinks closeOnClick t={t} audience={audience} />
+                  </nav>
+                )}
 
                 <div className="flex items-center justify-between border-t px-5 py-4">
                   <span className="text-xs text-muted-foreground">

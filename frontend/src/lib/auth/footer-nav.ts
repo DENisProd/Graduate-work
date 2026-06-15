@@ -18,10 +18,12 @@ type TranslateFn = (
   params?: Record<string, string | number>,
 ) => string;
 
-const ALL: readonly FooterAudience[] = ['guest', 'user', 'platformAdmin'];
-const AUTHENTICATED: readonly FooterAudience[] = ['user', 'platformAdmin'];
-const PLATFORM_ADMIN: readonly FooterAudience[] = ['platformAdmin'];
-const GUEST_ONLY: readonly FooterAudience[] = ['guest'];
+import {
+  AUDIENCE_ALL as ALL,
+  AUDIENCE_AUTHENTICATED as AUTHENTICATED,
+  AUDIENCE_GUEST_ONLY as GUEST_ONLY,
+  AUDIENCE_PLATFORM_ADMIN as PLATFORM_ADMIN,
+} from '@/lib/auth/footer-audience';
 
 export function buildFooterSections(
   t: TranslateFn,
