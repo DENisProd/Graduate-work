@@ -413,9 +413,6 @@ export function SettingsPage() {
                     {runtimeSettings.mqttConnected ? t('settings.mqttConnected') : t('settings.mqttDisconnected')}
                   </span>
                 </p>
-                <p className="font-mono text-xs text-slate-500 dark:text-slate-400">
-                  {runtimeSettings.mqttUrl}
-                </p>
               </div>
             )}
             {runtimeSettings?.mqttCloudUrl && (
@@ -432,9 +429,6 @@ export function SettingsPage() {
                   >
                     {runtimeSettings.mqttCloudConnected ? t('settings.mqttConnected') : t('settings.mqttDisconnected')}
                   </span>
-                </p>
-                <p className="font-mono text-xs text-slate-500 dark:text-slate-400">
-                  {runtimeSettings.mqttCloudUrl}
                 </p>
               </div>
             )}

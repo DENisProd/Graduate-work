@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { ThemeToggle, LanguageSwitcher } from '@/components/ui';
 import { AccountBlock } from '@/features/auth';
+<<<<<<< HEAD
 import { useTranslation } from '@/hooks';
 import { useFooterAudience } from '@/hooks/use-footer-audience';
 import {
@@ -11,6 +12,9 @@ import {
   isFooterLinkVisible,
   type FooterAudience,
 } from '@/lib/auth/footer-audience';
+=======
+import { useFooterAudience, useTranslation } from '@/hooks';
+>>>>>>> ea458b7b607267017135efc8f853fe01768c17d7
 import { AppLogo } from './app-logo';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,6 +23,7 @@ import {
   SheetContent,
   SheetClose,
 } from '@/components/ui/sheet';
+import { isFooterLinkVisible } from '@/lib/auth/footer-audience';
 import { getTranslation } from '@/lib/i18n';
 
 type TranslationFn = (
@@ -57,10 +62,12 @@ interface NavLinkItem {
 
 interface NavLinksProps {
   closeOnClick?: boolean;
+  audience: 'guest' | 'user' | 'platformAdmin';
   t: TranslationFn;
   audience: FooterAudience;
 }
 
+<<<<<<< HEAD
 function NavLinks({ closeOnClick, t, audience }: NavLinksProps) {
   const links: NavLinkItem[] = [
     {
@@ -72,13 +79,36 @@ function NavLinks({ closeOnClick, t, audience }: NavLinksProps) {
       href: '/settings',
       label: t('navigation.settings'),
       visibleFor: AUDIENCE_AUTHENTICATED,
+=======
+function NavLinks({ closeOnClick, audience, t }: NavLinksProps) {
+  const links = [
+    {
+      href: '/dashboard',
+      label: t('navigation.dashboard'),
+      visibleFor: ['user', 'platformAdmin'],
+    },
+    {
+      href: '/dashboard/settings',
+      label: t('navigation.settings'),
+      visibleFor: ['user', 'platformAdmin'],
+>>>>>>> ea458b7b607267017135efc8f853fe01768c17d7
     },
     {
       href: '/admin',
       label: t('navigation.admin'),
+<<<<<<< HEAD
       visibleFor: AUDIENCE_PLATFORM_ADMIN,
     },
   ].filter(({ visibleFor }) => isFooterLinkVisible(visibleFor, audience));
+=======
+      visibleFor: ['platformAdmin'],
+    },
+  ].filter(({ visibleFor }) => isFooterLinkVisible(visibleFor, audience));
+
+  if (links.length === 0) {
+    return null;
+  }
+>>>>>>> ea458b7b607267017135efc8f853fe01768c17d7
 
   if (closeOnClick) {
     return (
@@ -112,6 +142,10 @@ function NavLinks({ closeOnClick, t, audience }: NavLinksProps) {
 export function Header() {
   const { t } = useTranslation();
   const { audience, isLoading } = useFooterAudience();
+<<<<<<< HEAD
+=======
+  const showNavLinks = !isLoading && audience !== 'guest';
+>>>>>>> ea458b7b607267017135efc8f853fe01768c17d7
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -121,11 +155,19 @@ export function Header() {
           <div className="flex items-center gap-8">
             <AppLogo label={t('home.title')} labelClassName="hidden sm:inline" />
 
+<<<<<<< HEAD
             {!isLoading && (
               <nav className="hidden items-center gap-6 md:flex">
                 <NavLinks t={t} audience={audience} />
               </nav>
             )}
+=======
+            {showNavLinks ? (
+              <nav className="hidden items-center gap-6 md:flex">
+                <NavLinks audience={audience} t={t} />
+              </nav>
+            ) : null}
+>>>>>>> ea458b7b607267017135efc8f853fe01768c17d7
           </div>
 
           <div className="hidden items-center gap-2 md:flex">
@@ -155,11 +197,19 @@ export function Header() {
                   <AppLogo label={t('home.title')} />
                 </div>
 
+<<<<<<< HEAD
                 {!isLoading && (
                   <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
                     <NavLinks closeOnClick t={t} audience={audience} />
                   </nav>
                 )}
+=======
+                {showNavLinks ? (
+                  <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
+                    <NavLinks closeOnClick audience={audience} t={t} />
+                  </nav>
+                ) : null}
+>>>>>>> ea458b7b607267017135efc8f853fe01768c17d7
 
                 <div className="flex items-center justify-between border-t px-5 py-4">
                   <span className="text-xs text-muted-foreground">

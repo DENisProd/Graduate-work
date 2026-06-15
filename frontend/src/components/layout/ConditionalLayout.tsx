@@ -7,9 +7,9 @@ import { LandingFooter } from './landing-footer';
 
 export function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAdmin = pathname?.startsWith('/admin') || pathname?.startsWith('/dashboard');
+  const isAppPage = pathname?.startsWith('/admin') || pathname?.startsWith('/dashboard');
 
-  if (isAdmin) {
+  if (isAppPage) {
     return <SharedElementTransition>{children}</SharedElementTransition>;
   }
 

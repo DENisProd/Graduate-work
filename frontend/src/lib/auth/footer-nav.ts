@@ -69,11 +69,6 @@ export function buildFooterSections(
           visibleFor: ALL,
         },
         {
-          name: t('footer.sections.platform.links.deviceAuth'),
-          href: '/device-auth',
-          visibleFor: AUTHENTICATED,
-        },
-        {
           name: t('footer.sections.platform.links.settings'),
           href: '/dashboard/settings',
           visibleFor: AUTHENTICATED,

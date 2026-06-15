@@ -21,7 +21,7 @@ export function SimpleArtErrorPage({
   if (!ready) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-accent border-t-transparent" />
       </div>
     );
   }
@@ -47,7 +47,7 @@ export function SimpleArtErrorPage({
 
         <div className="w-full">
           <div className="mx-auto w-full max-w-[760px]">
-            <Card className="border border-border bg-card/60 shadow-lg backdrop-blur dark:bg-card/35">
+            <Card className="bg-card/60 shadow-lg backdrop-blur dark:bg-card/35">
               <Card.Content className="p-4 md:p-6">
                 <div
                   className={[
@@ -250,8 +250,8 @@ export function SimpleArtErrorPage({
             </Card>
           </div>
 
-          <div className="mx-auto mt-8 w-full max-w-xl space-y-3">
-            <Card className="border border-border bg-card/60 shadow-sm backdrop-blur transition-colors hover:bg-card/75 dark:bg-card/35 dark:hover:bg-card/45">
+          <div className="mx-auto mt-8 grid w-full max-w-[760px] grid-cols-2 gap-3">
+            <Card className="bg-card/60 shadow-sm backdrop-blur transition-colors hover:bg-card/75 dark:bg-card/35 dark:hover:bg-card/45">
               <Card.Content className="flex items-center justify-between gap-4 p-4">
                 <div className="flex items-center gap-3">
                   <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary dark:bg-primary/15">

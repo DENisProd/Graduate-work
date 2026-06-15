@@ -139,10 +139,10 @@ export function PropertyPanel() {
 
     return (
       <Card className="w-64 h-full bg-transparent shadow-none border-none flex flex-col min-h-0">
-        <Card.Header className="p-0 pb-2">
+        <Card.Header className="px-4 pt-4 pb-2">
           <Card.Title className="text-lg font-semibold">{t('admin.roomPlanner.properties')}</Card.Title>
         </Card.Header>
-        <Card.Content className="p-0 flex flex-col gap-4 min-h-0 overflow-auto">
+        <Card.Content className="px-4 pb-4 flex flex-col gap-4 min-h-0 overflow-auto">
           {drawingRegion ? (
             <>
               <p className="text-sm text-muted-foreground">
@@ -273,12 +273,12 @@ export function PropertyPanel() {
   if (selectedDevice) {
     return (
       <Card className="w-64 h-full bg-transparent shadow-none border-none">
-        <Card.Header className="p-0 pb-2">
+        <Card.Header className="px-4 pt-4 pb-2">
           <Card.Title className="text-lg font-semibold">
             {t('admin.roomPlanner.deviceProperties')}
           </Card.Title>
         </Card.Header>
-        <Card.Content className="p-0 space-y-2">
+        <Card.Content className="px-4 pb-4 space-y-2">
           <div>
             <label className="text-xs font-medium text-muted-foreground">
               {t('admin.roomPlanner.deviceType')}
@@ -336,10 +336,10 @@ export function PropertyPanel() {
       selectedDoor.name || t('admin.roomPlanner.doorLabel', { index: doorIndex + 1 });
     return (
       <Card className="w-64 h-full bg-transparent shadow-none border-none">
-        <Card.Header className="p-0 pb-2">
+        <Card.Header className="px-4 pt-4 pb-2">
           <Card.Title className="text-lg font-semibold">{doorDisplayName}</Card.Title>
         </Card.Header>
-        <Card.Content className="p-0 space-y-2">
+        <Card.Content className="px-4 pb-4 space-y-2">
           <div>
             <label className="text-xs font-medium text-muted-foreground block mb-1">
               {t('admin.roomPlanner.name')}
@@ -424,10 +424,10 @@ export function PropertyPanel() {
       selectedWindow.name || t('admin.roomPlanner.windowLabel', { index: windowIndex + 1 });
     return (
       <Card className="w-64 h-full bg-transparent shadow-none border-none">
-        <Card.Header className="p-0 pb-2">
+        <Card.Header className="px-4 pt-4 pb-2">
           <Card.Title className="text-lg font-semibold">{windowDisplayName}</Card.Title>
         </Card.Header>
-        <Card.Content className="p-0 space-y-2">
+        <Card.Content className="px-4 pb-4 space-y-2">
           <div>
             <label className="text-xs font-medium text-muted-foreground block mb-1">
               {t('admin.roomPlanner.name')}
@@ -513,12 +513,12 @@ export function PropertyPanel() {
     
     return (
       <Card className="w-64 h-full bg-transparent shadow-none border-none">
-        <Card.Header className="p-0 pb-2">
+        <Card.Header className="px-4 pt-4 pb-2">
           <Card.Title className="text-lg font-semibold">
             {t('admin.roomPlanner.wallProperties')}
           </Card.Title>
         </Card.Header>
-        <Card.Content className="p-0 space-y-2">
+        <Card.Content className="px-4 pb-4 space-y-2">
           <div>
             <label className="text-xs font-medium text-muted-foreground block mb-1">
               {t('admin.roomPlanner.length')}

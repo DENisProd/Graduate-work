@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useUserStore } from '@/store/user-store';
-import { ChevronUp, LogOut, User } from 'lucide-react';
+import { ChevronUp, LayoutDashboard, LogOut, User } from 'lucide-react';
 import DashboardNavigation, { type Route } from '@/components/sidebar-02/nav-main';
 import { AppLogo } from '@/components/layout/app-logo';
 import {
@@ -231,6 +231,13 @@ export function AdminSidebar({
   }
 
   const routes: Route[] = [
+    {
+      id: 'back-to-dashboard',
+      title: t('navigation.dashboard'),
+      link: '/dashboard',
+      icon: <LayoutDashboard className="size-4" />,
+      isActive: false,
+    },
     {
       id: 'devices',
       title: t('admin.groups.devices'),

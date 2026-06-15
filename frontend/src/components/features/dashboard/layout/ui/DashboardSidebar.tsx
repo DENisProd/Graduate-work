@@ -10,7 +10,6 @@ import {
   ChevronUp,
   Cpu,
   DoorOpen,
-  Gauge,
   LayoutDashboard,
   LayoutGrid,
   LogOut,
