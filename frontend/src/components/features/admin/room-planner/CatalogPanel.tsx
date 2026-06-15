@@ -162,12 +162,12 @@ export function CatalogPanel() {
       style={{ pointerEvents: isHiddenMode ? 'none' : 'auto' }}
     >
       <Card className="w-[300px] h-full border border-border rounded-xl shadow-sm overflow-hidden">
-        <Card.Header className="p-2 pb-0">
+        <Card.Header className="px-4 pt-4 pb-0">
           <Card.Title className="text-sm font-semibold">
             {isOpeningsMode ? t('admin.roomPlanner.openingsCatalog') : t('admin.roomPlanner.catalog')}
           </Card.Title>
         </Card.Header>
-        <Card.Content className="p-2 overflow-hidden">
+        <Card.Content className="px-4 pb-4 overflow-hidden">
           <AnimatePresence mode="wait" initial={false} custom={slideDirection}>
             {isOpeningsMode ? (
               <motion.div

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { ThemeToggle, LanguageSwitcher } from '@/components/ui';
 import { AccountBlock } from '@/features/auth';
-import { useTranslation } from '@/hooks';
+import { useFooterAudience, useTranslation } from '@/hooks';
 import { AppLogo } from './app-logo';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,6 +12,7 @@ import {
   SheetContent,
   SheetClose,
 } from '@/components/ui/sheet';
+import { isFooterLinkVisible } from '@/lib/auth/footer-audience';
 import { getTranslation } from '@/lib/i18n';
 
 type TranslationFn = (
@@ -44,15 +45,32 @@ const NAV_LINK_BASE =
 
 interface NavLinksProps {
   closeOnClick?: boolean;
+  audience: 'guest' | 'user' | 'platformAdmin';
   t: TranslationFn;
 }
 
-function NavLinks({ closeOnClick, t }: NavLinksProps) {
+function NavLinks({ closeOnClick, audience, t }: NavLinksProps) {
   const links = [
-    { href: '/dashboard', label: t('navigation.dashboard') },
-    { href: '/settings',  label: t('navigation.settings')  },
-    { href: '/admin',     label: t('navigation.admin')      },
-  ];
+    {
+      href: '/dashboard',
+      label: t('navigation.dashboard'),
+      visibleFor: ['user', 'platformAdmin'],
+    },
+    {
+      href: '/dashboard/settings',
+      label: t('navigation.settings'),
+      visibleFor: ['user', 'platformAdmin'],
+    },
+    {
+      href: '/admin',
+      label: t('navigation.admin'),
+      visibleFor: ['platformAdmin'],
+    },
+  ].filter(({ visibleFor }) => isFooterLinkVisible(visibleFor, audience));
+
+  if (links.length === 0) {
+    return null;
+  }
 
   if (closeOnClick) {
     return (
@@ -85,6 +103,8 @@ function NavLinks({ closeOnClick, t }: NavLinksProps) {
 /* ── Header ──────────────────────────────────────────────────────── */
 export function Header() {
   const { t } = useTranslation();
+  const { audience, isLoading } = useFooterAudience();
+  const showNavLinks = !isLoading && audience !== 'guest';
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -94,9 +114,11 @@ export function Header() {
           <div className="flex items-center gap-8">
             <AppLogo label={t('home.title')} labelClassName="hidden sm:inline" />
 
-            <nav className="hidden items-center gap-6 md:flex">
-              <NavLinks t={t} />
-            </nav>
+            {showNavLinks ? (
+              <nav className="hidden items-center gap-6 md:flex">
+                <NavLinks audience={audience} t={t} />
+              </nav>
+            ) : null}
           </div>
 
           <div className="hidden items-center gap-2 md:flex">
@@ -126,9 +148,11 @@ export function Header() {
                   <AppLogo label={t('home.title')} />
                 </div>
 
-                <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
-                  <NavLinks closeOnClick t={t} />
-                </nav>
+                {showNavLinks ? (
+                  <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
+                    <NavLinks closeOnClick audience={audience} t={t} />
+                  </nav>
+                ) : null}
 
                 <div className="flex items-center justify-between border-t px-5 py-4">
                   <span className="text-xs text-muted-foreground">

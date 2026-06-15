@@ -7,6 +7,7 @@ import { useCurrentUserId, useTranslation } from '@/hooks';
 import { housesApi } from '@/lib/api-client';
 import { toArray } from '@/features/access-control';
 import { env } from '@/config/env.config';
+import { hasPlatformAdminRole } from '@/lib/auth/jwt-roles';
 import type { HouseResponse } from '@/types/api';
 
 type SessionWithToken = { accessToken?: string | null; roles?: string[] };
@@ -17,7 +18,7 @@ export function useDashboardLayout() {
   const currentUserId = useCurrentUserId();
   const { data: session } = useSession();
   const sessionToken = (session as SessionWithToken | null)?.accessToken ?? null;
-  const isAdmin = ((session as SessionWithToken | null)?.roles ?? []).includes('admin');
+  const isAdmin = hasPlatformAdminRole(sessionToken);
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
