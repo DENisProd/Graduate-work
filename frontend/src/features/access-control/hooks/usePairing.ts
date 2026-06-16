@@ -1,6 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { zigbeeDevicesApi } from '@/lib/api-client';
+import { normalizeApiList } from '@/features/access-control/lib/normalize-api-list';
+import type { ZigbeeDeviceListItem } from '@/types/api';
 import { zigbeeTelemetryManager } from '../lib/zigbee-telemetry-manager';
 import type { ZigbeePairingEvent, ZigbeePairingStatus } from '../lib/zigbee-telemetry-manager';
 
@@ -93,8 +96,20 @@ export function usePairing({ enabled, houseId }: UsePairingOptions): UsePairingR
           capabilities: event.capabilities ?? [],
         };
         if (idx === -1) return [...prev, next];
+        const prevDevice = prev[idx];
+        const merged: PairingDevice = {
+          ...prevDevice,
+          ...next,
+          physicalDeviceId: next.physicalDeviceId ?? prevDevice.physicalDeviceId,
+          model: next.model ?? prevDevice.model,
+          manufacturer: next.manufacturer ?? prevDevice.manufacturer,
+          capabilities:
+            next.capabilities.length > 0 ? next.capabilities : prevDevice.capabilities,
+          status: mergePairingStatus(prevDevice.status, next.status),
+          supported: next.supported || prevDevice.supported,
+        };
         const updated = [...prev];
-        updated[idx] = { ...updated[idx], ...next };
+        updated[idx] = merged;
         return updated;
       });
     });
@@ -127,17 +142,97 @@ export function usePairing({ enabled, houseId }: UsePairingOptions): UsePairingR
     };
   }, []);
 
+  const devicesRef = useRef(devices);
+  devicesRef.current = devices;
+
+  // WebSocket pairing events can be missed; poll cloud DB after bridge sync.
+  useEffect(() => {
+    if (!enabled || !houseId || !isActive) return;
+
+    let cancelled = false;
+
+    const refreshPendingFromCloud = async () => {
+      const pending = devicesRef.current.filter(
+        (d) => d.status === 'joining' || d.status === 'interviewing',
+      );
+      if (pending.length === 0) return;
+
+      try {
+        await zigbeeDevicesApi.requestSyncFromBridge(houseId);
+        await new Promise((r) => setTimeout(r, 700));
+        if (cancelled) return;
+
+        const result = await zigbeeDevicesApi.list({ houseId, limit: 100 });
+        const { items } = normalizeApiList<ZigbeeDeviceListItem>(result);
+        if (cancelled) return;
+
+        setDevices((prev) =>
+          prev.map((d) => {
+            if (d.status === 'done' || d.status === 'failed') return d;
+            const found = items.find(
+              (item) => (item.ieeeAddr ?? item.protocolAddress) === d.ieeeAddr,
+            );
+            if (!found) return d;
+
+            const physicalDeviceId =
+              found.physicalDeviceId ?? found.id ?? d.physicalDeviceId;
+            const model = found.modelId ?? found.model ?? d.model;
+            const manufacturer = found.manufacturerName ?? d.manufacturer;
+            const capabilities =
+              found.capabilities && found.capabilities.length > 0
+                ? found.capabilities
+                : d.capabilities;
+            const ready =
+              Boolean(physicalDeviceId) &&
+              (Boolean(model) || (capabilities?.length ?? 0) > 0);
+
+            if (!ready) {
+              return {
+                ...d,
+                physicalDeviceId,
+                model,
+                manufacturer,
+                capabilities: capabilities ?? [],
+                status:
+                  d.status === 'joining' && physicalDeviceId ? 'interviewing' : d.status,
+              };
+            }
+
+            return {
+              ...d,
+              status: 'done' as const,
+              physicalDeviceId,
+              model,
+              manufacturer,
+              capabilities: capabilities ?? [],
+              supported: true,
+            };
+          }),
+        );
+      } catch {
+        // Pairing UI should keep working even if sync/list fails.
+      }
+    };
+
+    void refreshPendingFromCloud();
+    const interval = setInterval(() => void refreshPendingFromCloud(), 2500);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [enabled, houseId, isActive]);
+
   const start = useCallback(
     async (time = 254) => {
       if (!isConnected) return { ok: false, error: 'Socket not connected' };
       if (!houseId) return { ok: false, error: 'houseId required' };
+      await zigbeeTelemetryManager.watchPairing();
       const result = await zigbeeTelemetryManager.startPairing(houseId, time);
       if (result.ok) {
         setDevices([]);
         setIsActive(true);
         activeRef.current = true;
         startCountdown(time);
-        void zigbeeTelemetryManager.watchPairing();
       }
       return result;
     },
@@ -164,4 +259,18 @@ function mapEventType(type: ZigbeePairingEvent['type']): PairingDeviceStatus {
     case 'interview_done': return 'done';
     case 'interview_failed': return 'failed';
   }
+}
+
+function mergePairingStatus(
+  current: PairingDeviceStatus,
+  incoming: PairingDeviceStatus,
+): PairingDeviceStatus {
+  const rank: Record<PairingDeviceStatus, number> = {
+    joining: 0,
+    interviewing: 1,
+    done: 2,
+    failed: 3,
+  };
+  if (incoming === 'failed') return 'failed';
+  return rank[incoming] >= rank[current] ? incoming : current;
 }

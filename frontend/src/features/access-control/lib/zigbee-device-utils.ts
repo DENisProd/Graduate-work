@@ -2,6 +2,39 @@ import type { ZigbeeDeviceListItem, ZigbeeStateWire } from '@/types/api';
 
 export const MONGO_OBJECT_ID_RE = /^[a-f0-9]{24}$/i;
 
+function collectExposedProperties(node: unknown, out: Set<string>) {
+  if (Array.isArray(node)) {
+    node.forEach((item) => collectExposedProperties(item, out));
+    return;
+  }
+  if (!node || typeof node !== 'object') return;
+  const expose = node as Record<string, unknown>;
+  const prop = expose.property;
+  if (typeof prop === 'string' && prop.length > 0) {
+    out.add(prop.toLowerCase());
+  } else if (
+    typeof expose.name === 'string' &&
+    expose.name.length > 0 &&
+    typeof expose.type === 'string' &&
+    expose.type !== 'composite' &&
+    expose.type !== 'light'
+  ) {
+    out.add(expose.name.toLowerCase());
+  }
+  for (const key of ['features', 'items', 'endpoints', 'values']) {
+    collectExposedProperties(expose[key], out);
+  }
+}
+
+export function deviceCapabilitySet(device: ZigbeeDeviceListItem): Set<string> {
+  const caps = new Set((device.capabilities ?? []).map((c) => c.toLowerCase()));
+  const definition = device.definition;
+  if (definition && Array.isArray(definition.exposes)) {
+    collectExposedProperties(definition.exposes, caps);
+  }
+  return caps;
+}
+
 export function zigbeeAddress(device: ZigbeeDeviceListItem): string {
   return device.ieeeAddr ?? device.protocolAddress ?? device.id;
 }

@@ -55,6 +55,15 @@ fn row_to_entity(row: &sqlx::sqlite::SqliteRow) -> Result<WidgetDashboard, Domai
         .map_err(db_err)?
         .unwrap_or(0);
 
+    let last_pushed_at = row
+        .try_get::<Option<String>, _>("last_pushed_at")
+        .map_err(db_err)?
+        .and_then(|s| {
+            chrono::DateTime::parse_from_rfc3339(&s)
+                .ok()
+                .map(|dt| dt.with_timezone(&Utc))
+        });
+
     Ok(WidgetDashboard {
         id,
         house_id: row.try_get("house_id").map_err(db_err)?,
@@ -66,12 +75,13 @@ fn row_to_entity(row: &sqlx::sqlite::SqliteRow) -> Result<WidgetDashboard, Domai
         cloud_id: row.try_get("cloud_id").map_err(db_err)?,
         created_at,
         updated_at,
+        last_pushed_at,
     })
 }
 
 const SELECT_COLS: &str =
     "id, house_id, user_id, name, is_default, layouts, widgets, cloud_id, \
-     created_at, updated_at";
+     created_at, updated_at, last_pushed_at";
 
 #[async_trait]
 impl WidgetDashboardRepository for SqliteWidgetDashboardRepo {
@@ -221,11 +231,25 @@ impl WidgetDashboardRepository for SqliteWidgetDashboardRepo {
         .map_err(db_err)?;
 
         if let Some(id_str) = existing_id {
+            let id = Uuid::parse_str(&id_str)
+                .map_err(|e| DomainError::Internal(format!("invalid uuid: {e}")))?;
+            if let Some(existing) = self.find_by_id(&id).await? {
+                if cmd.cloud_updated_at <= existing.updated_at {
+                    tracing::debug!(
+                        cloud_id,
+                        local_updated_at = %existing.updated_at.to_rfc3339(),
+                        cloud_updated_at = %cmd.cloud_updated_at.to_rfc3339(),
+                        "widget_dashboard: skip cloud pull — local is newer"
+                    );
+                    return Ok(existing);
+                }
+            }
+
             sqlx::query(
                 "UPDATE widget_dashboards SET \
                  house_id = ?, user_id = ?, name = ?, is_default = ?, \
-                 layouts = ?, widgets = ?, updated_at = ? \
-                 WHERE id = ? AND updated_at <= ?",
+                 layouts = ?, widgets = ?, updated_at = ?, last_pushed_at = ? \
+                 WHERE id = ?",
             )
             .bind(&cmd.house_id)
             .bind(&cmd.user_id)
@@ -234,14 +258,12 @@ impl WidgetDashboardRepository for SqliteWidgetDashboardRepo {
             .bind(&layouts_json)
             .bind(&widgets_json)
             .bind(&cloud_ts)
-            .bind(&id_str)
             .bind(&cloud_ts)
+            .bind(&id_str)
             .execute(&self.pool)
             .await
             .map_err(db_err)?;
 
-            let id = Uuid::parse_str(&id_str)
-                .map_err(|e| DomainError::Internal(format!("invalid uuid: {e}")))?;
             self.find_by_id(&id)
                 .await?
                 .ok_or_else(|| DomainError::not_found("widget_dashboard", id_str))
@@ -252,8 +274,8 @@ impl WidgetDashboardRepository for SqliteWidgetDashboardRepo {
             sqlx::query(
                 "INSERT INTO widget_dashboards \
                  (id, cloud_id, house_id, user_id, name, is_default, \
-                  layouts, widgets, created_at, updated_at) \
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                  layouts, widgets, created_at, updated_at, last_pushed_at) \
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             )
             .bind(&id_str)
             .bind(cloud_id)
@@ -264,6 +286,7 @@ impl WidgetDashboardRepository for SqliteWidgetDashboardRepo {
             .bind(&layouts_json)
             .bind(&widgets_json)
             .bind(&now)
+            .bind(&cloud_ts)
             .bind(&cloud_ts)
             .execute(&self.pool)
             .await
@@ -302,6 +325,16 @@ impl WidgetDashboardRepository for SqliteWidgetDashboardRepo {
     async fn set_cloud_id(&self, id: &Uuid, cloud_id: &str) -> Result<(), DomainError> {
         sqlx::query("UPDATE widget_dashboards SET cloud_id = ? WHERE id = ?")
             .bind(cloud_id)
+            .bind(id.to_string())
+            .execute(&self.pool)
+            .await
+            .map_err(db_err)?;
+        Ok(())
+    }
+
+    async fn mark_pushed_at(&self, id: &Uuid, at: chrono::DateTime<Utc>) -> Result<(), DomainError> {
+        sqlx::query("UPDATE widget_dashboards SET last_pushed_at = ? WHERE id = ?")
+            .bind(at.to_rfc3339())
             .bind(id.to_string())
             .execute(&self.pool)
             .await

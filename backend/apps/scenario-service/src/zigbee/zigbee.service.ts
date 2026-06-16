@@ -236,6 +236,28 @@ export class ZigbeeService {
     this.pairingStatus$.next(status);
   }
 
+  private emitPairingReadyFromDevice(
+    dev: ZigbeeDevice,
+    wasKnownBefore: boolean,
+    interviewCompleted: boolean,
+  ): void {
+    if (dev.type === ZigbeeDeviceType.Coordinator) return;
+    const known =
+      Boolean(dev.modelId) || (dev.capabilities?.length ?? 0) > 0;
+    if (!known && !interviewCompleted) return;
+    if (wasKnownBefore && known) return;
+    this.pairingEvents$.next({
+      type: 'interview_done',
+      ieeeAddr: dev.ieeeAddr,
+      friendlyName: dev.friendlyName ?? dev.ieeeAddr,
+      physicalDeviceId: dev.id,
+      model: dev.modelId ?? null,
+      manufacturer: dev.manufacturerName ?? null,
+      capabilities: dev.capabilities ?? [],
+      supported: known,
+    });
+  }
+
   async applyBridgeEvent(
     houseId: string,
     payload: Record<string, unknown>,
@@ -435,6 +457,11 @@ export class ZigbeeService {
 
       const capabilities = capabilitiesFromBridgeDefinition(definition);
 
+      const before = await this.devices.findByIeeeAddr(ieeeRaw);
+      const wasKnownBefore =
+        Boolean(before?.modelId) || (before?.capabilities?.length ?? 0) > 0;
+      const interviewCompleted = o.interview_completed === true;
+
       await this.upsertDevice({
         ieeeAddr: ieeeRaw,
         friendlyName,
@@ -450,6 +477,11 @@ export class ZigbeeService {
         ...(lastSeen !== undefined ? { lastSeen } : {}),
         ...(capabilities ? { capabilities } : {}),
       });
+
+      const after = await this.devices.findByIeeeAddr(ieeeRaw);
+      if (after) {
+        this.emitPairingReadyFromDevice(after, wasKnownBefore, interviewCompleted);
+      }
     }
   }
 

@@ -18,6 +18,7 @@ import {
 import { connectivityFromLastOnline, connectivityLabel } from '@/lib/device-connectivity';
 import { TelemetryFlashOverlay, useTelemetryPulseKey } from './TelemetryFlashOverlay';
 import { DeviceTelemetryBlock } from './DeviceTelemetryBlock';
+import { ZigbeeLightControls } from './ZigbeeLightControls';
 
 function zigbeeModel(device: ZigbeeDeviceListItem): string | null {
   return device.modelId ?? device.model ?? null;
@@ -295,6 +296,14 @@ export function DeviceListCard({
         ) : null}
         {showTelemetry ? (
           <DeviceTelemetryBlock live={live} socketConnected={isSocketConnected} />
+        ) : null}
+        {isZigbeeDevice(device) ? (
+          <ZigbeeLightControls
+            device={device}
+            live={live}
+            disabled={isPending || !isSocketConnected || isOffline}
+            onCommand={(payload) => sendCommand({ physicalDeviceId: device.id }, payload)}
+          />
         ) : null}
       </CardContent>
     </Card>

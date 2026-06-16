@@ -10,7 +10,7 @@ use local_server_application::ports::{
 };
 use local_server_core::DomainError;
 
-use super::cloud_auth_request::{apply_bearer, resolve_bearer_token, scenario_api_url};
+use super::cloud_auth_request::{apply_cloud_auth, resolve_bearer_token, scenario_api_url};
 
 #[derive(Clone)]
 pub struct ReqwestCloudWidgetDashboardClient {
@@ -120,7 +120,7 @@ impl CloudWidgetDashboardClient for ReqwestCloudWidgetDashboardClient {
             &format!("/widget-dashboards?houseId={}", house_id),
         );
         let token = resolve_bearer_token(self.settings.as_ref(), &self.api_key).await;
-        let res = apply_bearer(self.http.get(&url), token)
+        let res = apply_cloud_auth(self.http.get(&url), token, None)
             .send()
             .await
             .map_err(|e| DomainError::DependencyUnavailable(format!("widget-dash list: {e}")))?;
@@ -155,7 +155,11 @@ impl CloudWidgetDashboardClient for ReqwestCloudWidgetDashboardClient {
         };
 
         let token = resolve_bearer_token(self.settings.as_ref(), &self.api_key).await;
-        let res = apply_bearer(self.http.post(&url).json(&body), token)
+        let res = apply_cloud_auth(
+            self.http.post(&url).json(&body),
+            token,
+            Some(&cmd.user_id),
+        )
             .send()
             .await
             .map_err(|e| DomainError::DependencyUnavailable(format!("widget-dash create: {e}")))?;
@@ -189,7 +193,7 @@ impl CloudWidgetDashboardClient for ReqwestCloudWidgetDashboardClient {
         };
 
         let token = resolve_bearer_token(self.settings.as_ref(), &self.api_key).await;
-        let res = apply_bearer(self.http.put(&url).json(&body), token)
+        let res = apply_cloud_auth(self.http.put(&url).json(&body), token, None)
             .send()
             .await
             .map_err(|e| DomainError::DependencyUnavailable(format!("widget-dash update: {e}")))?;

@@ -112,7 +112,9 @@ export function AddZigbeeDeviceModal({ open, onClose, onSuccess }: AddZigbeeDevi
     })
   }, [devices, existingIeee])
 
-  const canSelect = (d: PairingDevice) => d.status === 'done' && Boolean(d.physicalDeviceId)
+  const canSelect = (d: PairingDevice) =>
+    Boolean(d.physicalDeviceId) &&
+    (d.status === 'done' || Boolean(d.model))
 
   const handleSelect = async (d: PairingDevice) => {
     setSelected(d)

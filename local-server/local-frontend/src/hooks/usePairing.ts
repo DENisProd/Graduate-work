@@ -151,8 +151,17 @@ export function usePairing({ enabled = true }: UsePairingOptions = {}) {
           capabilities: idx >= 0 ? prev[idx].capabilities : [],
         }
         if (idx === -1) return [...prev, next]
+        const prevDevice = prev[idx]
+        const merged: PairingDevice = {
+          ...prevDevice,
+          ...next,
+          physicalDeviceId: next.physicalDeviceId ?? prevDevice.physicalDeviceId,
+          model: next.model ?? prevDevice.model,
+          manufacturer: next.manufacturer ?? prevDevice.manufacturer,
+          status: mergePairingStatus(prevDevice.status, next.status),
+        }
         const updated = [...prev]
-        updated[idx] = { ...updated[idx], ...next }
+        updated[idx] = merged
         return updated
       })
 
@@ -197,6 +206,72 @@ export function usePairing({ enabled = true }: UsePairingOptions = {}) {
     }
   }, [enabled, emit])
 
+  const devicesRef = useRef(devices)
+  devicesRef.current = devices
+
+  useEffect(() => {
+    if (!enabled || !isActive) return
+
+    let cancelled = false
+
+    const refreshPendingFromDb = async () => {
+      const pending = devicesRef.current.filter(
+        (d) => d.status === 'joining' || d.status === 'interviewing',
+      )
+      if (pending.length === 0) return
+
+      try {
+        await syncFromBridge()
+        await new Promise((r) => setTimeout(r, 500))
+        if (cancelled) return
+
+        const list = await listZigbeeDevices()
+        if (cancelled) return
+
+        setDevices((prev) =>
+          prev.map((d) => {
+            if (d.status === 'done' || d.status === 'failed') return d
+            const found = list.find((item) => item.ieeeAddr === d.ieeeAddr)
+            if (!found) return d
+
+            const physicalDeviceId = found.id ?? d.physicalDeviceId
+            const model = found.model ?? d.model
+            const manufacturer = found.manufacturerName ?? d.manufacturer
+            const ready = Boolean(physicalDeviceId) && (Boolean(model) || found.interviewCompleted)
+
+            if (!ready) {
+              return {
+                ...d,
+                physicalDeviceId,
+                model,
+                manufacturer,
+                status:
+                  d.status === 'joining' && physicalDeviceId ? 'interviewing' : d.status,
+              }
+            }
+
+            return {
+              ...d,
+              status: 'done',
+              physicalDeviceId,
+              model,
+              manufacturer,
+            }
+          }),
+        )
+      } catch {
+        // Pairing should continue even if sync/list fails.
+      }
+    }
+
+    void refreshPendingFromDb()
+    const interval = setInterval(() => void refreshPendingFromDb(), 2500)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [enabled, isActive])
+
   // Load existing zigbee devices to filter duplicates during pairing.
   const loadExistingIeee = useCallback(async (): Promise<Set<string>> => {
     try {
@@ -223,4 +298,18 @@ export function usePairing({ enabled = true }: UsePairingOptions = {}) {
     startPairing: () => start(),
     stopPairing: stop,
   }
+}
+
+function mergePairingStatus(
+  current: PairingDeviceStatus,
+  incoming: PairingDeviceStatus,
+): PairingDeviceStatus {
+  const rank: Record<PairingDeviceStatus, number> = {
+    joining: 0,
+    interviewing: 1,
+    done: 2,
+    failed: 3,
+  }
+  if (incoming === 'failed') return 'failed'
+  return rank[incoming] >= rank[current] ? incoming : current
 }

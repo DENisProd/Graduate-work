@@ -21,8 +21,8 @@ import { cn } from '@/lib/utils'
 import {
   getHealth,
   getSyncStatus,
-  getPhysicalDevicesCount,
   getZigbeeDevicesCount,
+  getModbusDevicesCount,
   getScenariosCount,
 } from '@/api/system'
 import { listLocalHouses } from '@/api/local-access'
@@ -237,15 +237,15 @@ export function DashboardPage() {
     retry: 1,
   })
 
-  const physDevices = useQuery({
-    queryKey: ['physical-devices', 'count'],
-    queryFn: getPhysicalDevicesCount,
-    retry: 1,
-  })
-
   const zigbeeDevices = useQuery({
     queryKey: ['zigbee-devices', 'count'],
     queryFn: getZigbeeDevicesCount,
+    retry: 1,
+  })
+
+  const modbusDevices = useQuery({
+    queryKey: ['modbus-devices', 'count'],
+    queryFn: getModbusDevicesCount,
     retry: 1,
   })
 
@@ -254,6 +254,10 @@ export function DashboardPage() {
     queryFn: getScenariosCount,
     retry: 1,
   })
+
+  const totalDevices = (zigbeeDevices.data ?? 0) + (modbusDevices.data ?? 0)
+  const devicesLoading = zigbeeDevices.isPending || modbusDevices.isPending
+  const devicesError = zigbeeDevices.isError && modbusDevices.isError
 
   const systemVariant: StatusVariant = health.isError
     ? 'error'
@@ -375,11 +379,11 @@ export function DashboardPage() {
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <CountCard
-            title={t('dashboard.physicalDevices')}
-            count={physDevices.data}
+            title={t('dashboard.totalDevices')}
+            count={totalDevices}
             icon={<Cpu className="h-4 w-4" />}
-            loading={physDevices.isPending}
-            error={physDevices.isError}
+            loading={devicesLoading}
+            error={devicesError}
           />
           <CountCard
             title={t('dashboard.zigbeeDevices')}

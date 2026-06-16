@@ -30,6 +30,19 @@ pub fn apply_bearer(
     }
 }
 
+pub fn apply_cloud_auth(
+    req: reqwest::RequestBuilder,
+    token: Option<String>,
+    user_id: Option<&str>,
+) -> reqwest::RequestBuilder {
+    let req = apply_bearer(req, token);
+    if let Some(uid) = user_id.map(str::trim).filter(|s| !s.is_empty()) {
+        req.header("X-User-Id", uid)
+    } else {
+        req
+    }
+}
+
 pub fn scenario_api_url(base: &str, path: &str) -> String {
     format!("{}/v1{}", base.trim_end_matches('/'), path)
 }

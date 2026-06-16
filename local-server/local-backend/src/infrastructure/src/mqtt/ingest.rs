@@ -96,7 +96,7 @@ async fn handle_message(
     let suffix = suffix.trim_start_matches('/');
 
     match suffix {
-        "bridge/devices" => handle_bridge_devices(&msg.payload, phys_repo, state).await,
+        "bridge/devices" => handle_bridge_devices(&msg.payload, phys_repo, svc, state).await,
         "bridge/event" => handle_bridge_event(&msg.payload, svc).await,
         "bridge/state" => handle_bridge_state(&msg.payload, svc).await,
         s if s.starts_with("bridge/") => {}
@@ -118,6 +118,7 @@ async fn handle_message(
 async fn handle_bridge_devices(
     payload: &[u8],
     phys_repo: &Arc<dyn PhysicalDeviceRepository>,
+    svc: &Arc<ZigbeeRealtimeService>,
     state: &mut IngestState,
 ) {
     let devices: Vec<Value> = match serde_json::from_slice(payload) {
@@ -193,11 +194,11 @@ async fn handle_bridge_devices(
 
         let cmd = UpsertFromBridgeCmd {
             ieee_address: ieee.clone(),
-            friendly_name: Some(friendly),
+            friendly_name: Some(friendly.clone()),
             device_type: dev["type"].as_str().map(str::to_owned),
             network_address: dev["network_address"].as_i64(),
-            manufacturer_name: manufacturer,
-            model,
+            manufacturer_name: manufacturer.clone(),
+            model: model.clone(),
             firmware_version: dev["software_build_id"].as_str().map(str::to_owned),
             power_source: dev["power_source"].as_str().map(str::to_owned),
             interview_completed,
@@ -206,6 +207,16 @@ async fn handle_bridge_devices(
 
         if let Err(e) = phys_repo.upsert_by_ieee(cmd).await {
             tracing::warn!(ieee = %ieee, error = %e, "failed to upsert device from bridge/devices");
+        } else if interview_completed && is_new_in_session {
+            svc.publish_pairing(PairingEvent {
+                event_type: "interview_successful".to_owned(),
+                ieee_address: Some(ieee),
+                friendly_name: Some(friendly),
+                model,
+                manufacturer_name: manufacturer,
+                message: None,
+                timestamp: Utc::now(),
+            });
         }
     }
 
@@ -249,9 +260,11 @@ async fn handle_bridge_event(payload: &[u8], svc: &Arc<ZigbeeRealtimeService>) {
         "device_leave" => Some("device_leave"),
         "device_interview" => {
             match data["status"].as_str() {
-                Some("interview_started") => Some("interview_started"),
-                Some("interview_successful") | Some("interview_done") => Some("interview_successful"),
-                Some("interview_failed") => Some("interview_failed"),
+                Some("started") | Some("interview_started") => Some("interview_started"),
+                Some("successful")
+                | Some("interview_successful")
+                | Some("interview_done") => Some("interview_successful"),
+                Some("failed") | Some("interview_failed") => Some("interview_failed"),
                 _ => None,
             }
         }

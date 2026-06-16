@@ -14,4 +14,5 @@ pub struct WidgetDashboard {
     pub cloud_id: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub last_pushed_at: Option<DateTime<Utc>>,
 }

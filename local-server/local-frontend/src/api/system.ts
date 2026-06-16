@@ -153,17 +153,14 @@ export async function applyUpdate(): Promise<void> {
   await api.post('/api/v1/system/update/apply')
 }
 
-export async function getPhysicalDevicesCount(): Promise<number> {
-  const { data } = await api.get<PaginatedResponse<unknown> | unknown[]>(
-    '/api/v1/physical-devices',
-    { params: { page: 0, size: 1 } },
-  )
-  if (Array.isArray(data)) return data.length
-  return data?.totalElements ?? 0
+export async function getZigbeeDevicesCount(): Promise<number> {
+  const { data } = await api.get<Array<{ type?: string }>>('/api/v1/zigbee/devices')
+  if (!Array.isArray(data)) return 0
+  return data.filter((d) => d.type !== 'Coordinator').length
 }
 
-export async function getZigbeeDevicesCount(): Promise<number> {
-  const { data } = await api.get<unknown[]>('/api/v1/zigbee/devices')
+export async function getModbusDevicesCount(): Promise<number> {
+  const { data } = await api.get<unknown[]>('/api/v1/modbus/devices')
   return Array.isArray(data) ? data.length : 0
 }
 

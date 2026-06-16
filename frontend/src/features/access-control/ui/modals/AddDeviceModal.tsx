@@ -197,7 +197,10 @@ export function AddDeviceModal({
   }, [devices, existing.ieee, existing.physicalIds]);
 
   const canSelect = (d: PairingDevice) =>
-    d.status === 'done' && Boolean(d.physicalDeviceId);
+    Boolean(d.physicalDeviceId) &&
+    (d.status === 'done' ||
+      Boolean(d.model) ||
+      (d.capabilities?.length ?? 0) > 0);
 
   const handleSelect = async (d: PairingDevice) => {
     setSelected(d);

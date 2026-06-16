@@ -1,7 +1,8 @@
 ﻿use std::sync::Arc;
 use std::time::Duration;
 
-use chrono::DateTime;
+use chrono::{DateTime, Utc};
+use local_server_core::entities::widget_dashboard::WidgetDashboard;
 use serde_json::Value;
 
 use crate::ports::{
@@ -34,11 +35,25 @@ pub async fn run_widget_dashboard_sync(
                 None
             }
         };
+        push_local_to_cloud(
+            &repo,
+            &cloud,
+            &base_url,
+            modbus_map.as_ref(),
+            &user_id_provider,
+        )
+        .await;
+        push_linked_to_cloud(
+            &repo,
+            &cloud,
+            &base_url,
+            modbus_map.as_ref(),
+            &user_id_provider,
+        )
+        .await;
         for house_id in &house_ids {
             pull_from_cloud(&repo, &cloud, &base_url, house_id).await;
         }
-        push_local_to_cloud(&repo, &cloud, &base_url, modbus_map.as_ref()).await;
-        push_linked_to_cloud(&repo, &cloud, &base_url, modbus_map.as_ref()).await;
         tokio::time::sleep(Duration::from_secs(interval_secs)).await;
     }
 }
@@ -59,6 +74,39 @@ async fn resolve_house_ids(
         .collect()
 }
 
+fn is_placeholder_user_id(user_id: &str) -> bool {
+    user_id.trim().is_empty() || user_id == "local"
+}
+
+async fn resolve_cloud_user_id(
+    local_user_id: &str,
+    user_id_provider: &Arc<dyn UserIdProvider>,
+) -> Option<String> {
+    if let Some(uid) = user_id_provider.get().await {
+        if !uid.trim().is_empty() {
+            return Some(uid);
+        }
+    }
+    if !is_placeholder_user_id(local_user_id) {
+        return Some(local_user_id.to_string());
+    }
+    None
+}
+
+fn parse_cloud_timestamp(value: &str) -> DateTime<Utc> {
+    DateTime::parse_from_rfc3339(value)
+        .map(|dt| dt.with_timezone(&Utc))
+        .or_else(|_| value.parse::<DateTime<Utc>>())
+        .unwrap_or_else(|_| Utc::now())
+}
+
+fn local_dashboard_needs_push(local: &WidgetDashboard) -> bool {
+    match local.last_pushed_at {
+        None => true,
+        Some(pushed) => local.updated_at > pushed,
+    }
+}
+
 async fn pull_from_cloud(
     repo: &Arc<dyn WidgetDashboardRepository>,
     cloud: &Arc<dyn CloudWidgetDashboardClient>,
@@ -69,9 +117,7 @@ async fn pull_from_cloud(
         Ok(remotes) => {
             let count = remotes.len();
             for remote in remotes {
-                let cloud_updated_at = DateTime::parse_from_rfc3339(&remote.updated_at)
-                    .map(|dt| dt.with_timezone(&chrono::Utc))
-                    .unwrap_or_else(|_| chrono::Utc::now());
+                let cloud_updated_at = parse_cloud_timestamp(&remote.updated_at);
 
                 if let Err(e) = repo
                     .upsert_from_cloud(
@@ -125,6 +171,7 @@ async fn push_local_to_cloud(
     cloud: &Arc<dyn CloudWidgetDashboardClient>,
     base_url: &str,
     modbus_map: Option<&(Vec<(String, String)>, Vec<(String, String)>)>,
+    user_id_provider: &Arc<dyn UserIdProvider>,
 ) {
     let locals = match repo.list_without_cloud_id().await {
         Ok(v) => v,
@@ -135,10 +182,19 @@ async fn push_local_to_cloud(
     };
 
     for local in locals {
+        let Some(cloud_user_id) = resolve_cloud_user_id(&local.user_id, user_id_provider).await
+        else {
+            tracing::warn!(
+                local_id = %local.id,
+                "widget_dashboard_sync: skip push — no cloud user id (re-authorize local server)"
+            );
+            continue;
+        };
+
         let widgets = remap_widgets(&local.widgets, modbus_map);
         let cmd = CreateCloudWidgetDashboardCmd {
             house_id: local.house_id.clone(),
-            user_id: local.user_id.clone(),
+            user_id: cloud_user_id,
             name: local.name.clone(),
             is_default: local.is_default,
             layouts: local.layouts.clone(),
@@ -152,6 +208,15 @@ async fn push_local_to_cloud(
                         error = %e,
                         local_id = %local.id,
                         "widget_dashboard_sync: set_cloud_id failed"
+                    );
+                } else if let Err(e) = repo
+                    .mark_pushed_at(&local.id, parse_cloud_timestamp(&created.updated_at))
+                    .await
+                {
+                    tracing::warn!(
+                        error = %e,
+                        local_id = %local.id,
+                        "widget_dashboard_sync: mark_pushed_at failed"
                     );
                 } else {
                     tracing::info!(
@@ -184,6 +249,7 @@ async fn push_linked_to_cloud(
     cloud: &Arc<dyn CloudWidgetDashboardClient>,
     base_url: &str,
     modbus_map: Option<&(Vec<(String, String)>, Vec<(String, String)>)>,
+    user_id_provider: &Arc<dyn UserIdProvider>,
 ) {
     let linked = match repo.list_with_cloud_id().await {
         Ok(v) => v,
@@ -193,10 +259,29 @@ async fn push_linked_to_cloud(
         }
     };
 
+    if linked.is_empty() {
+        return;
+    }
+
+    if resolve_cloud_user_id("", user_id_provider).await.is_none() {
+        tracing::warn!(
+            "widget_dashboard_sync: skip linked push — no cloud user id (re-authorize local server)"
+        );
+        return;
+    }
+
     for local in linked {
         let Some(cloud_id) = local.cloud_id.clone() else {
             continue;
         };
+        if !local_dashboard_needs_push(&local) {
+            tracing::debug!(
+                local_id = %local.id,
+                cloud_id = %cloud_id,
+                "widget_dashboard_sync: skip linked push — already synced"
+            );
+            continue;
+        }
         let widgets = remap_widgets(&local.widgets, modbus_map);
         let cmd = UpdateCloudWidgetDashboardCmd {
             name: Some(local.name.clone()),
@@ -206,7 +291,17 @@ async fn push_linked_to_cloud(
         };
 
         match cloud.update(base_url, &cloud_id, cmd).await {
-            Ok(_) => {
+            Ok(updated) => {
+                if let Err(e) = repo
+                    .mark_pushed_at(&local.id, parse_cloud_timestamp(&updated.updated_at))
+                    .await
+                {
+                    tracing::warn!(
+                        error = %e,
+                        local_id = %local.id,
+                        "widget_dashboard_sync: mark_pushed_at failed"
+                    );
+                }
                 tracing::info!(
                     local_id = %local.id,
                     cloud_id = %cloud_id,

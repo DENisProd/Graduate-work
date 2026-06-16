@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useState, useEffect, type ReactNode } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import {
   X, Power, Sun, Thermometer, Droplets, Eye, Palette,
@@ -11,6 +11,13 @@ import { useI18n } from '@/hooks/useI18n'
 import { useDeviceStatesStore } from '@/stores/device-states.store'
 import { sendCommand } from '@/api/zigbee'
 import type { PhysicalDevice } from '@/types'
+import {
+  hasZigbeeColorCapability,
+  hexToHs,
+  hsToHex,
+  readZigbeeColor,
+  zigbeeColorCommand,
+} from '@/lib/zigbee-color'
 
 function hasCap(caps: string[], ...keys: string[]) {
   return keys.some((k) => caps.some((c) => c.toLowerCase().includes(k.toLowerCase())))
@@ -180,6 +187,13 @@ export function DeviceControlDrawer({ device, open, onClose }: Props) {
   const hasPowerControl = Boolean(stateFeature) || hasCap(capabilities, 'state')
   const hasBrightnessControl = Boolean(brightnessFeature) || hasCap(capabilities, 'brightness')
   const hasColorTempControl = Boolean(colorTempFeature)
+  const hueFeature = exposeFeatures.find((f) => f.property === 'hue' && isWritable(f))
+  const saturationFeature = exposeFeatures.find(
+    (f) => f.property === 'saturation' && isWritable(f),
+  )
+  const hasColorControl =
+    hasZigbeeColorCapability(capabilities) ||
+    Boolean(hueFeature && saturationFeature)
 
   const mutation = useMutation({
     mutationFn: (payload: Record<string, unknown>) =>
@@ -224,7 +238,20 @@ export function DeviceControlDrawer({ device, open, onClose }: Props) {
   const colorTemp = typeof colorTempRaw === 'number' ? colorTempRaw : (colorTempFeature?.min ?? 153)
   const colorTempMin = colorTempFeature?.min ?? 153
   const colorTempMax = colorTempFeature?.max ?? 500
-  const hasPrimaryControls = hasPowerControl || hasBrightnessControl || hasColorTempControl || enumFeatures.length > 0
+  const colorState = readZigbeeColor(
+    (state?.payload as Record<string, unknown> | undefined) ?? undefined,
+  )
+  const colorHex = hsToHex(colorState.hue, colorState.saturation)
+  const [pickerHex, setPickerHex] = useState(colorHex)
+  useEffect(() => {
+    setPickerHex(colorHex)
+  }, [colorHex])
+  const hasPrimaryControls =
+    hasPowerControl ||
+    hasBrightnessControl ||
+    hasColorTempControl ||
+    hasColorControl ||
+    enumFeatures.length > 0
 
   // Universal sensor readings - show every defined field as a card
   type Reading = { key: string; label: string; value: string; icon: ReactNode; accent?: string }
@@ -449,6 +476,63 @@ export function DeviceControlDrawer({ device, open, onClose }: Props) {
                     onPointerUp={(e) => send({ color_temp: Number((e.target as HTMLInputElement).value) })}
                     className="w-full accent-amber-500"
                   />
+                </div>
+              )}
+
+              {hasColorControl && (
+                <div className="space-y-2">
+                  <p className="flex items-center justify-between text-xs font-medium uppercase tracking-wide text-slate-500">
+                    <span className="flex items-center gap-2">
+                      <Palette className="h-3.5 w-3.5" /> {t('deviceDrawer.color')}
+                    </span>
+                    <span>
+                      H {Math.round(colorState.hue)} · S {Math.round(colorState.saturation)}%
+                    </span>
+                  </p>
+                  <input
+                    type="color"
+                    value={pickerHex}
+                    disabled={mutation.isPending}
+                    className="h-10 w-full cursor-pointer rounded-lg border border-slate-300 bg-transparent p-1 dark:border-slate-700"
+                    onChange={(e) => setPickerHex(e.target.value)}
+                    onPointerUp={(e) => {
+                      const next = hexToHs((e.target as HTMLInputElement).value)
+                      const cmd = zigbeeColorCommand(next.hue, next.saturation)
+                      send(cmd)
+                    }}
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="space-y-1 text-xs text-slate-500">
+                      <span>Hue</span>
+                      <input
+                        type="range"
+                        min={0}
+                        max={360}
+                        value={colorState.hue}
+                        disabled={mutation.isPending}
+                        className="w-full accent-purple-500"
+                        onPointerUp={(e) => {
+                          const hue = Number((e.target as HTMLInputElement).value)
+                          send(zigbeeColorCommand(hue, colorState.saturation))
+                        }}
+                      />
+                    </label>
+                    <label className="space-y-1 text-xs text-slate-500">
+                      <span>Sat</span>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={colorState.saturation}
+                        disabled={mutation.isPending}
+                        className="w-full accent-purple-500"
+                        onPointerUp={(e) => {
+                          const saturation = Number((e.target as HTMLInputElement).value)
+                          send(zigbeeColorCommand(colorState.hue, saturation))
+                        }}
+                      />
+                    </label>
+                  </div>
                 </div>
               )}
 
