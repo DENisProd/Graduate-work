@@ -92,6 +92,17 @@ const ICON_SVG: Record<string, React.ReactNode> = {
       d="M3 17 9 11 13 15 21 7M21 7v4M21 7h-4"
     />
   ),
+  FloorPlan: (
+    <>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 9.75h18M9 3.75v16.5M15 3.75v16.5M3 9.75V18a2.25 2.25 0 0 0 2.25 2.25h13.5A2.25 2.25 0 0 0 21 18V9.75"
+      />
+      <circle cx="7.5" cy="14" r="1" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
+    </>
+  ),
 };
 
 const TEMPLATE_ACCENT: Record<WidgetTemplate['accent'], string> = {

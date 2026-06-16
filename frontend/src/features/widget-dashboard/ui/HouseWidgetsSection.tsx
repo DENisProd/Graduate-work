@@ -12,74 +12,7 @@ import {
 } from '@/lib/api/scenario-service';
 import { WidgetDashboard } from '@/features/widget-dashboard/ui/WidgetDashboard';
 import { ServiceErrorCard } from '@/components/shared';
-
-function nanoid(): string {
-  return Math.random().toString(36).slice(2, 10);
-}
-
-type TranslateFn = ReturnType<typeof useTranslation>['t'];
-
-function buildDefaultWidgets(t: TranslateFn) {
-  const w1 = nanoid();
-  const w2 = nanoid();
-  const w3 = nanoid();
-
-  const widgets: WidgetDashboardType['widgets'] = [
-    {
-      id: w1,
-      type: 'TEXT_LABEL',
-      config: {
-        type: 'TEXT_LABEL',
-        text: `${t('dashboard.overview.widgets.weatherTitle')}: ${t('dashboard.overview.widgets.weatherHint')}`,
-        align: 'left',
-        fontSize: 'lg',
-        style: 'title',
-      },
-    },
-    {
-      id: w2,
-      type: 'TEXT_LABEL',
-      config: {
-        type: 'TEXT_LABEL',
-        text: `${t('dashboard.overview.widgets.automationTitle')}: ${t('dashboard.overview.widgets.automationHint')}`,
-        align: 'left',
-        fontSize: 'lg',
-        style: 'title',
-      },
-    },
-    {
-      id: w3,
-      type: 'TEXT_LABEL',
-      config: {
-        type: 'TEXT_LABEL',
-        text: `${t('dashboard.overview.widgets.tipTitle')}: ${t('dashboard.overview.widgets.tipBody')}`,
-        align: 'left',
-        fontSize: 'md',
-        style: 'body',
-      },
-    },
-  ];
-
-  const layouts = {
-    lg: [
-      { i: w1, x: 0, y: 0, w: 8, h: 2, minW: 4, minH: 2 },
-      { i: w2, x: 8, y: 0, w: 8, h: 2, minW: 4, minH: 2 },
-      { i: w3, x: 16, y: 0, w: 8, h: 3, minW: 4, minH: 2 },
-    ],
-    md: [
-      { i: w1, x: 0, y: 0, w: 6, h: 2, minW: 4, minH: 2 },
-      { i: w2, x: 6, y: 0, w: 6, h: 2, minW: 4, minH: 2 },
-      { i: w3, x: 0, y: 2, w: 12, h: 3, minW: 4, minH: 2 },
-    ],
-    sm: [
-      { i: w1, x: 0, y: 0, w: 6, h: 2, minW: 4, minH: 2 },
-      { i: w2, x: 0, y: 2, w: 6, h: 2, minW: 4, minH: 2 },
-      { i: w3, x: 0, y: 4, w: 6, h: 3, minW: 4, minH: 2 },
-    ],
-  };
-
-  return { widgets, layouts };
-}
+import { buildDefaultWidgets } from '@/features/widget-dashboard/lib/build-default-widgets';
 
 export function HouseWidgetsSection({
   houseId,
@@ -113,9 +46,12 @@ export function HouseWidgetsSection({
         scenariosApi.getAll({ houseId, limit: 100 }),
       ]);
 
-      setDevices(devRes.items ?? []);
+      const loadedDevices = devRes.items ?? [];
+      const loadedScenarios = scRes.items ?? [];
+
+      setDevices(loadedDevices);
       setZigbeeDevices(zigbeeRes.items ?? []);
-      setScenarios(scRes.items ?? []);
+      setScenarios(loadedScenarios);
 
       if (dashboards.length > 0) {
         setDashboard(dashboards.find((d) => d.isDefault) ?? dashboards[0]);
@@ -127,7 +63,12 @@ export function HouseWidgetsSection({
         });
 
         if ((created.widgets?.length ?? 0) === 0) {
-          const seed = buildDefaultWidgets(t);
+          const seed = buildDefaultWidgets({
+            t,
+            houseId,
+            devices: loadedDevices,
+            scenarios: loadedScenarios,
+          });
           created = await widgetDashboardsApi.update(created.id, {
             widgets: seed.widgets,
             layouts: seed.layouts as unknown as Record<string, unknown>,
@@ -180,4 +121,3 @@ export function HouseWidgetsSection({
     </section>
   );
 }
-

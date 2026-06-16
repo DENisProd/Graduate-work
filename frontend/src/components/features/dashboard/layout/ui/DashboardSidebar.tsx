@@ -399,14 +399,14 @@ export function buildDashboardRoutes(
         section: propertiesSection,
         isActive: sh() && /\/rooms(?:\/|$)/.test(pathname),
       },
-      {
-        id: 'house-room-planner',
-        title: t('navigation.room_planner'),
-        link: `${base}/room-planner`,
-        icon: <Map className="size-4" />,
-        section: propertiesSection,
-        isActive: pathname.startsWith(`${base}/room-planner`),
-      },
+      // {
+      //   id: 'house-room-planner',
+      //   title: t('navigation.room_planner'),
+      //   link: `${base}/room-planner`,
+      //   icon: <Map className="size-4" />,
+      //   section: propertiesSection,
+      //   isActive: pathname.startsWith(`${base}/room-planner`),
+      // },
       {
         id: 'house-members',
         title: t('admin.accessControl.members'),

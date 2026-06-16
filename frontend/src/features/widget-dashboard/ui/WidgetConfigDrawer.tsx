@@ -15,6 +15,7 @@ import type {
   DeviceHeroConfig,
   DeviceHeroStat,
   MiniLineChartConfig,
+  HouseFloorPlanConfig,
 } from '../types/widget.types';
 import type { PhysicalDeviceResponse, ScenarioResponse, ZigbeeStateWire } from '@/types/api';
 
@@ -882,6 +883,42 @@ export function WidgetConfigDrawer({ widget, devices, scenarios, states, onClose
                   { value: 'red', label: 'Красный' },
                 ]}
               />
+            </Field>
+          </>
+        );
+      }
+      case 'HOUSE_FLOOR_PLAN': {
+        const c = config as HouseFloorPlanConfig;
+        return (
+          <>
+            <Field label="Заголовок">
+              <Input
+                value={c.label ?? ''}
+                onChange={(v) => patch({ label: v })}
+                placeholder="Планировка дома"
+              />
+            </Field>
+            <Field label="">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={c.showDeviceLabels}
+                  onChange={(e) => patch({ showDeviceLabels: e.target.checked })}
+                  className="rounded"
+                />
+                Показывать названия устройств
+              </label>
+            </Field>
+            <Field label="">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={c.showMetrics}
+                  onChange={(e) => patch({ showMetrics: e.target.checked })}
+                  className="rounded"
+                />
+                Показывать показатели в реальном времени
+              </label>
             </Field>
           </>
         );

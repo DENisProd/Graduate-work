@@ -13,16 +13,10 @@ export function TopBar({ onMenuClick }: TopBarProps) {
   const {
     theme,
     setTheme,
-    authStatus,
-    authDisplayName,
-    authExternalUserId,
     localUserId,
     localUserName,
     clearLocalSession,
   } = useSettingsStore()
-
-  const resolvedUser = authDisplayName || authExternalUserId || ''
-  const isAuthorized = authStatus === 'authorized'
 
   const handleLogout = () => {
     clearLocalSession()

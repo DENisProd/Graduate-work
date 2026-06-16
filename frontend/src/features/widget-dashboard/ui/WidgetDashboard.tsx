@@ -26,6 +26,7 @@ import { CircularProgressWidget } from './widgets/CircularProgressWidget';
 import { SliderControlWidget } from './widgets/SliderControlWidget';
 import { DeviceHeroWidget } from './widgets/DeviceHeroWidget';
 import { MiniLineChartWidget } from './widgets/MiniLineChartWidget';
+import { FloorPlanWidget } from './widgets/FloorPlanWidget';
 import type { PhysicalDeviceResponse, ScenarioResponse, ZigbeeDeviceListItem } from '@/types/api';
 import type {
   TelemetryValueConfig,
@@ -39,6 +40,7 @@ import type {
   SliderControlConfig,
   DeviceHeroConfig,
   MiniLineChartConfig,
+  HouseFloorPlanConfig,
 } from '../types/widget.types';
 import { widgetDashboardsApi } from '@/lib/api/scenario-service';
 import { useToast } from '@/components/shared';
@@ -99,6 +101,9 @@ export function WidgetDashboard({ dashboard, devices, zigbeeDevices, scenarios }
         type: template.type,
         config: { type: template.type, ...template.config } as WidgetInstance['config'],
       };
+      if (template.type === 'HOUSE_FLOOR_PLAN') {
+        (newWidget.config as HouseFloorPlanConfig).houseId = dashboard.houseId;
+      }
       size = template.defaultSize;
       minSize = template.minSize;
     } else {
@@ -108,6 +113,9 @@ export function WidgetDashboard({ dashboard, devices, zigbeeDevices, scenarios }
         type: typeOrTemplateId as WidgetType,
         config: { type: typeOrTemplateId as WidgetType, ...meta.defaultConfig } as WidgetInstance['config'],
       };
+      if (typeOrTemplateId === 'HOUSE_FLOOR_PLAN') {
+        (newWidget.config as HouseFloorPlanConfig).houseId = dashboard.houseId;
+      }
       size = meta.defaultSize;
       minSize = meta.minSize;
     }
@@ -291,6 +299,16 @@ export function WidgetDashboard({ dashboard, devices, zigbeeDevices, scenarios }
       case 'MINI_LINE_CHART': {
         const cfg = widget.config as MiniLineChartConfig;
         return <MiniLineChartWidget config={cfg} state={getDeviceState(cfg.physicalDeviceId)} />;
+      }
+      case 'HOUSE_FLOOR_PLAN': {
+        const cfg = widget.config as HouseFloorPlanConfig;
+        return (
+          <FloorPlanWidget
+            config={{ ...cfg, houseId: cfg.houseId || dashboard.houseId }}
+            deviceMap={deviceMap}
+            states={states}
+          />
+        );
       }
       default:
         return <div className="p-3 text-sm text-muted-foreground">Неизвестный виджет</div>;

@@ -183,6 +183,20 @@ export const WIDGET_REGISTRY: WidgetMeta[] = [
       accent: 'green',
     },
   },
+  {
+    type: 'HOUSE_FLOOR_PLAN',
+    label: 'Планировка дома',
+    description: 'План этажа с устройствами и их показателями в реальном времени',
+    icon: 'FloorPlan',
+    defaultSize: { w: 15, h: 9 },
+    minSize: { w: 8, h: 6 },
+    defaultConfig: {
+      houseId: '',
+      label: 'Планировка',
+      showDeviceLabels: true,
+      showMetrics: true,
+    },
+  },
 ];
 
 export const WIDGET_META_MAP = Object.fromEntries(
@@ -350,6 +364,22 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
       stats: [{ key: 'progress', icon: 'leaf', caption: 'Завершено', unit: '%' }],
       accent: 'green',
     } as Omit<import('../types/widget.types').DeviceHeroConfig, 'type'>,
+  },
+  {
+    id: 'tpl.floor-plan',
+    type: 'HOUSE_FLOOR_PLAN',
+    label: 'Планировка с телеметрией',
+    description: 'Интерактивная карта дома: устройства, статусы и показатели рядом с точками',
+    icon: 'FloorPlan',
+    accent: 'blue',
+    defaultSize: { w: 15, h: 9 },
+    minSize: { w: 8, h: 6 },
+    config: {
+      houseId: '',
+      label: 'Планировка дома',
+      showDeviceLabels: true,
+      showMetrics: true,
+    } as Omit<import('../types/widget.types').HouseFloorPlanConfig, 'type'>,
   },
   {
     id: 'tpl.power-chart',

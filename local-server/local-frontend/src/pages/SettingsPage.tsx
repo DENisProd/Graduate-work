@@ -11,7 +11,6 @@ import {
   getDeviceAuthorizationStatus,
   getRuntimeSettings,
   logoutDeviceAuthorization,
-  provisionMqttCredentials,
   resetLocalData,
   startDeviceAuthorization,
   updateRuntimeSettings,
@@ -194,7 +193,6 @@ export function SettingsPage() {
   const [authCountdownSec, setAuthCountdownSec] = useState<number | null>(null)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [resetting, setResetting] = useState(false)
-  const [provisioningMqtt, setProvisioningMqtt] = useState(false)
 
   const { data: runtimeSettings } = useQuery({
     queryKey: ['runtime-settings'],
@@ -237,26 +235,6 @@ export function SettingsPage() {
       toast.success(t('settings.toastGatewaySaved'))
     } else {
       toast.warning(t('settings.toastGatewaySavedMqttDisconnected'))
-    }
-  }
-
-  const handleProvisionMqtt = async () => {
-    setProvisioningMqtt(true)
-    try {
-      const res = await provisionMqttCredentials()
-      setMqttUsernameDraft(res.username)
-      setMqttPasswordDraft(res.password)
-      setHasMqttPassword(true)
-      await queryClient.invalidateQueries({ queryKey: ['runtime-settings'] })
-      if (res.mqttCloudConnected) {
-        toast.success(t('settings.toastMqttProvisioned'))
-      } else {
-        toast.warning(t('settings.toastMqttProvisionedDisconnected'))
-      }
-    } catch {
-      toast.error(t('settings.toastMqttProvisionFailed'))
-    } finally {
-      setProvisioningMqtt(false)
     }
   }
 
@@ -471,13 +449,6 @@ export function SettingsPage() {
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
             <Button onClick={() => void handleSaveGateway()}>{t('settings.saveGateway')}</Button>
-            {/* <Button
-              variant="secondary"
-              disabled={authStatus !== 'authorized' || provisioningMqtt}
-              onClick={() => void handleProvisionMqtt()}
-            >
-              {provisioningMqtt ? t('settings.provisionMqttLoading') : t('settings.provisionMqtt')}
-            </Button> */}
           </div>
           {authStatus !== 'authorized' ? (
             <p className="mt-2 text-[11px] text-amber-700 dark:text-amber-300">

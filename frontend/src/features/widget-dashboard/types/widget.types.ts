@@ -10,6 +10,7 @@ export type WidgetType =
   | 'SLIDER_CONTROL'
   | 'DEVICE_HERO'
   | 'MINI_LINE_CHART'
+  | 'HOUSE_FLOOR_PLAN'
   | 'MODBUS_REGISTER_VALUE'
   | 'MODBUS_REGISTER_CONTROL';
 
@@ -154,6 +155,14 @@ export interface MiniLineChartConfig {
   accent: 'green' | 'blue' | 'amber' | 'red';
 }
 
+export interface HouseFloorPlanConfig {
+  type: 'HOUSE_FLOOR_PLAN';
+  houseId: string;
+  label?: string;
+  showDeviceLabels: boolean;
+  showMetrics: boolean;
+}
+
 export interface ModbusRegisterValueConfig {
   type: 'MODBUS_REGISTER_VALUE';
   modbusDeviceId: string;
@@ -185,6 +194,7 @@ export type WidgetConfig =
   | SliderControlConfig
   | DeviceHeroConfig
   | MiniLineChartConfig
+  | HouseFloorPlanConfig
   | ModbusRegisterValueConfig
   | ModbusRegisterControlConfig;
 
