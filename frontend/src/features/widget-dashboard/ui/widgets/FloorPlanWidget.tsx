@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { HouseFloorPlanConfig } from '../../types/widget.types';
 import type { PhysicalDeviceResponse, ZigbeeStateWire } from '@/types/api';
 import { houseFloorPlansApi } from '@/lib/api/scenario-service';
-import type { Room } from '@/domain/room-planner';
+import type { Device, Room } from '@/domain/room-planner';
 import { useTranslation } from '@/hooks';
+import { FloorPlanDevicePanel } from './FloorPlanDevicePanel';
+import { useFloorPlanSlideshow } from './use-floor-plan-slideshow';
 
 const FloorPlanReadonlyCanvas = dynamic(
   () =>
@@ -32,13 +34,32 @@ interface Props {
 export function FloorPlanWidget({ config, deviceMap, states }: Props) {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 400, height: 300 });
   const [room, setRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const devices = room?.devices ?? [];
+  const slideshowEnabled = devices.length > 0;
+  const { phase, deviceIndex } = useFloorPlanSlideshow(devices.length, slideshowEnabled);
+  const focusDevice = phase === 'focus' ? devices[deviceIndex] ?? null : null;
+  const showSidePanel = phase === 'focus' && focusDevice != null;
+
+  const focusPhysicalDevice = useMemo(() => {
+    if (!focusDevice) return undefined;
+    const physicalDeviceId = focusDevice.metadata?.physicalDeviceId as string | undefined;
+    return physicalDeviceId ? deviceMap[physicalDeviceId] : undefined;
+  }, [deviceMap, focusDevice]);
+
+  const focusState = useMemo(() => {
+    if (!focusDevice) return undefined;
+    const physicalDeviceId = focusDevice.metadata?.physicalDeviceId as string | undefined;
+    return physicalDeviceId ? states.get(physicalDeviceId) : undefined;
+  }, [focusDevice, states]);
+
   useEffect(() => {
-    const el = containerRef.current;
+    const el = canvasContainerRef.current;
     if (!el) return;
     const observer = new ResizeObserver(([entry]) => {
       const { width, height } = entry.contentRect;
@@ -46,7 +67,7 @@ export function FloorPlanWidget({ config, deviceMap, states }: Props) {
     });
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
+  }, [showSidePanel]);
 
   useEffect(() => {
     let cancelled = false;
@@ -99,15 +120,36 @@ export function FloorPlanWidget({ config, deviceMap, states }: Props) {
           </p>
         </div>
       ) : (
-        <FloorPlanReadonlyCanvas
-          room={room!}
-          deviceMap={deviceMap}
-          states={states}
-          width={size.width}
-          height={size.height}
-          showDeviceLabels={config.showDeviceLabels}
-          showMetrics={config.showMetrics}
-        />
+        <div className="flex h-full w-full">
+          <div
+            ref={canvasContainerRef}
+            className="h-full overflow-hidden transition-[width] duration-700 ease-in-out"
+            style={{ width: showSidePanel ? '50%' : '100%' }}
+          >
+            <FloorPlanReadonlyCanvas
+              room={room!}
+              deviceMap={deviceMap}
+              states={states}
+              width={size.width}
+              height={size.height}
+              phase={phase}
+              focusDevice={focusDevice}
+            />
+          </div>
+          {showSidePanel && focusDevice && (
+            <div
+              className="h-full w-1/2 transition-opacity duration-500 ease-in-out"
+              key={focusDevice.id}
+            >
+              <FloorPlanDevicePanel
+                device={focusDevice}
+                physicalDevice={focusPhysicalDevice}
+                state={focusState}
+                showMetrics={config.showMetrics}
+              />
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

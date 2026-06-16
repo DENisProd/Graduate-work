@@ -5,6 +5,7 @@ import type { DeviceHeroConfig, DeviceHeroStat } from '../../types/widget.types'
 import type { PhysicalDeviceResponse, ZigbeeStateWire } from '@/types/api';
 import type { ZigbeeCommandAck } from '@/features/access-control/lib/zigbee-telemetry-manager';
 import { readPayloadValue } from '../../lib/useWidgetTelemetry';
+import { modbusApi } from '@/lib/api-client';
 
 interface Props {
   config: DeviceHeroConfig;
@@ -165,22 +166,30 @@ export function DeviceHeroWidget({ config, device, state, onCommand }: Props) {
   const [optimistic, setOptimistic] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const live = isOnFromState(state, config.togglePayloadKey);
+  const isModbusToggle = config.toggleSource === 'modbus';
+  const live = isModbusToggle ? false : isOnFromState(state, config.togglePayloadKey);
   const isOn = optimistic !== null ? optimistic : live;
 
   const subtitle = config.subtitle || device?.model || device?.friendlyName || '';
 
+  const toggleReady = isModbusToggle
+    ? !!(config.toggleModbusDeviceId && config.toggleModbusRegisterId)
+    : !!config.togglePayloadKey;
+
   async function toggle() {
-    if (!config.showToggle || busy) return;
-    if (!config.togglePayloadKey || !config.onPayload || !config.offPayload) return;
+    if (!config.showToggle || busy || !toggleReady) return;
     const next = !isOn;
     setOptimistic(next);
     setBusy(true);
     try {
-      await onCommand(
-        { physicalDeviceId: config.physicalDeviceId, deviceIeeeAddr: config.ieeeAddr },
-        next ? config.onPayload : config.offPayload,
-      );
+      if (isModbusToggle) {
+        await modbusApi.writeRegister(config.toggleModbusDeviceId!, config.toggleModbusRegisterId!, { coil: next });
+      } else {
+        await onCommand(
+          { physicalDeviceId: config.physicalDeviceId, deviceIeeeAddr: config.ieeeAddr },
+          { [config.togglePayloadKey!]: next ? config.toggleOnValue : config.toggleOffValue },
+        );
+      }
     } catch {
       setOptimistic(!next);
     } finally {
@@ -219,7 +228,7 @@ export function DeviceHeroWidget({ config, device, state, onCommand }: Props) {
         {config.showToggle && (
           <button
             onClick={toggle}
-            disabled={busy || !config.togglePayloadKey}
+            disabled={busy || !toggleReady}
             aria-label={isOn ? 'Выключить' : 'Включить'}
             className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
               isOn ? 'bg-slate-900' : 'bg-slate-300'

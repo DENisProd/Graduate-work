@@ -12,6 +12,7 @@ import { getPhysicalDevice } from '@/api/physical-devices'
 import { getZigbeeStates, sendCommand } from '@/api/zigbee'
 import { triggerScenario } from '@/api/scenarios'
 import type { LocalWidgetDashboard, WidgetInstance, WidgetLayout } from '@/api/widget-dashboards'
+import { coerceCommandValue, type CommandValueType } from './command-value'
 
 const ROW_H = 64 // px per RGL row unit (gap is 12px per gutter)
 
@@ -199,10 +200,16 @@ function DeviceStatusWidget({ config }: { config: Record<string, unknown> }) {
 // ── CONTROL_BUTTON ────────────────────────────────────────────────────────────
 
 function ControlButtonWidget({ config }: { config: Record<string, unknown> }) {
+  const source = String(config.source ?? 'zigbee')
   const physicalDeviceId = config.physicalDeviceId as string | undefined
   const configIeeeAddr = config.ieeeAddr as string | undefined
   const label = String(config.label ?? 'Execute')
-  const commandPayload = (config.commandPayload ?? {}) as Record<string, unknown>
+  const commandKey = String(config.commandKey ?? 'state')
+  const commandValue = String(config.commandValue ?? 'ON')
+  const commandValueType = (config.commandValueType as CommandValueType) ?? 'text'
+  const modbusDeviceId = config.modbusDeviceId as string | undefined
+  const modbusRegisterId = config.modbusRegisterId as string | undefined
+  const modbusRegisterType = String(config.modbusRegisterType ?? 'coil')
   const buttonStyle = String(config.buttonStyle ?? 'primary')
   const confirmRequired = config.confirmRequired === true
 
@@ -210,8 +217,18 @@ function ControlButtonWidget({ config }: { config: Record<string, unknown> }) {
   const ieeeAddr = configIeeeAddr || device?.protocolAddress
   const [confirming, setConfirming] = useState(false)
 
+  const ready = source === 'modbus' ? !!(modbusDeviceId && modbusRegisterId) : !!ieeeAddr
+
   const mutation = useMutation({
-    mutationFn: () => sendCommand(ieeeAddr!, commandPayload),
+    mutationFn: () => {
+      if (source === 'modbus') {
+        const body = modbusRegisterType === 'holding'
+          ? { value: Number(commandValue) }
+          : { coil: commandValue === 'true' }
+        return writeModbusRegister(modbusDeviceId!, modbusRegisterId!, body)
+      }
+      return sendCommand(ieeeAddr!, { [commandKey]: coerceCommandValue(commandValue, commandValueType) })
+    },
     onSuccess: () => { toast.success(`${label}: OK`); setConfirming(false) },
     onError: () => { toast.error('Command failed'); setConfirming(false) },
   })
@@ -245,11 +262,11 @@ function ControlButtonWidget({ config }: { config: Record<string, unknown> }) {
         ) : (
           <button
             onClick={() => {
-              if (!ieeeAddr) return toast.error('No device address')
+              if (!ready) return toast.error(source === 'modbus' ? 'No register selected' : 'No device address')
               if (confirmRequired && !confirming) return setConfirming(true)
               mutation.mutate()
             }}
-            disabled={mutation.isPending || !ieeeAddr}
+            disabled={mutation.isPending || !ready}
             className={cn(
               'flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50',
               colorClass,
@@ -267,25 +284,37 @@ function ControlButtonWidget({ config }: { config: Record<string, unknown> }) {
 // ── CONTROL_TOGGLE ────────────────────────────────────────────────────────────
 
 function ControlToggleWidget({ config }: { config: Record<string, unknown> }) {
+  const source = String(config.source ?? 'zigbee')
   const physicalDeviceId = config.physicalDeviceId as string | undefined
   const configIeeeAddr = config.ieeeAddr as string | undefined
   const label = String(config.label ?? 'Toggle')
   const statePayloadKey = String(config.statePayloadKey ?? 'state')
-  const onPayload = (config.onPayload ?? { state: 'ON' }) as Record<string, unknown>
-  const offPayload = (config.offPayload ?? { state: 'OFF' }) as Record<string, unknown>
+  const onValue = String(config.onValue ?? 'ON')
+  const offValue = String(config.offValue ?? 'OFF')
+  const modbusDeviceId = config.modbusDeviceId as string | undefined
+  const modbusRegisterId = config.modbusRegisterId as string | undefined
+
+  const [optimistic, setOptimistic] = useState<boolean | null>(null)
 
   const { device, state } = useDeviceState(physicalDeviceId || undefined)
   const ieeeAddr = configIeeeAddr || device?.protocolAddress
 
-  const rawState = readPayload(state, statePayloadKey)
-  const isOn =
-    rawState === 'ON' ||
+  const rawState = source === 'modbus' ? null : readPayload(state, statePayloadKey)
+  const actualIsOn =
     rawState === true ||
-    (typeof rawState === 'string' && rawState.toLowerCase() === 'on')
+    (typeof rawState === 'string' && rawState.toUpperCase() === onValue.toUpperCase())
+  const isOn = optimistic !== null ? optimistic : actualIsOn
+
+  const ready = source === 'modbus' ? !!(modbusDeviceId && modbusRegisterId) : !!ieeeAddr
 
   const mutation = useMutation({
-    mutationFn: (on: boolean) => sendCommand(ieeeAddr!, on ? onPayload : offPayload),
-    onError: () => toast.error('Command failed'),
+    mutationFn: (on: boolean) => {
+      if (source === 'modbus') return writeModbusRegister(modbusDeviceId!, modbusRegisterId!, { coil: on })
+      return sendCommand(ieeeAddr!, { [statePayloadKey]: on ? onValue : offValue })
+    },
+    onMutate: (on: boolean) => setOptimistic(on),
+    onError: (_err, on) => { toast.error('Command failed'); setOptimistic(!on) },
+    onSettled: () => setTimeout(() => setOptimistic(null), 2000),
   })
 
   return (
@@ -301,8 +330,8 @@ function ControlToggleWidget({ config }: { config: Record<string, unknown> }) {
           {label}
         </p>
         <button
-          onClick={() => { if (ieeeAddr) mutation.mutate(!isOn) }}
-          disabled={mutation.isPending || !ieeeAddr}
+          onClick={() => { if (ready) mutation.mutate(!isOn) }}
+          disabled={mutation.isPending || !ready}
           className={cn(
             'relative h-7 w-12 rounded-full transition-colors disabled:opacity-50',
             isOn ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600',
@@ -590,25 +619,40 @@ function DeviceHeroWidget({ config }: { config: Record<string, unknown> }) {
   const subtitle = config.subtitle as string | undefined
   const icon = String(config.icon ?? 'lightbulb')
   const showToggle = config.showToggle === true
+  const toggleSource = String(config.toggleSource ?? 'zigbee')
   const togglePayloadKey = String(config.togglePayloadKey ?? 'state')
-  const onPayload = (config.onPayload ?? { state: 'ON' }) as Record<string, unknown>
-  const offPayload = (config.offPayload ?? { state: 'OFF' }) as Record<string, unknown>
+  const toggleOnValue = String(config.toggleOnValue ?? 'ON')
+  const toggleOffValue = String(config.toggleOffValue ?? 'OFF')
+  const toggleModbusDeviceId = config.toggleModbusDeviceId as string | undefined
+  const toggleModbusRegisterId = config.toggleModbusRegisterId as string | undefined
   const chips = (config.chips as string[]) ?? []
   const stats = (config.stats as Array<{ key: string; caption: string; unit?: string }>) ?? []
   const accent = String(config.accent ?? 'green')
 
+  const [optimistic, setOptimistic] = useState<boolean | null>(null)
+  const isModbusToggle = toggleSource === 'modbus'
+
   const { device, state } = useDeviceState(physicalDeviceId || undefined)
   const ieeeAddr = configIeeeAddr || device?.protocolAddress
 
-  const rawState = readPayload(state, togglePayloadKey)
-  const isOn =
-    rawState === 'ON' ||
+  const rawState = isModbusToggle ? null : readPayload(state, togglePayloadKey)
+  const actualIsOn =
     rawState === true ||
-    (typeof rawState === 'string' && rawState.toLowerCase() === 'on')
+    (typeof rawState === 'string' && rawState.toUpperCase() === toggleOnValue.toUpperCase())
+  const isOn = optimistic !== null ? optimistic : actualIsOn
+
+  const toggleReady = isModbusToggle
+    ? !!(toggleModbusDeviceId && toggleModbusRegisterId)
+    : !!ieeeAddr
 
   const toggleMutation = useMutation({
-    mutationFn: (on: boolean) => sendCommand(ieeeAddr!, on ? onPayload : offPayload),
-    onError: () => toast.error('Command failed'),
+    mutationFn: (on: boolean) => {
+      if (isModbusToggle) return writeModbusRegister(toggleModbusDeviceId!, toggleModbusRegisterId!, { coil: on })
+      return sendCommand(ieeeAddr!, { [togglePayloadKey]: on ? toggleOnValue : toggleOffValue })
+    },
+    onMutate: (on: boolean) => setOptimistic(on),
+    onError: (_err, on) => setOptimistic(!on),
+    onSettled: () => setTimeout(() => setOptimistic(null), 2000),
   })
 
   const accentBg =
@@ -629,8 +673,8 @@ function DeviceHeroWidget({ config }: { config: Record<string, unknown> }) {
           </div>
           {showToggle && (
             <button
-              onClick={() => { if (ieeeAddr) toggleMutation.mutate(!isOn) }}
-              disabled={toggleMutation.isPending || !ieeeAddr}
+              onClick={() => { if (toggleReady) toggleMutation.mutate(!isOn) }}
+              disabled={toggleMutation.isPending || !toggleReady}
               className={cn(
                 'relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-50',
                 isOn ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600',

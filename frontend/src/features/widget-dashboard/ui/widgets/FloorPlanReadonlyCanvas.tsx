@@ -5,8 +5,9 @@ import { Stage, Layer, Line, Group, Circle, Text, Rect } from 'react-konva';
 import type { Device, Point, Room } from '@/domain/room-planner';
 import type { PhysicalDeviceResponse, ZigbeeStateWire } from '@/types/api';
 import { domovoyRoomPlanner, roomDeviceColor } from '@/lib/domovoy-canvas-palette';
-import { getDeviceStatusLines } from '../../lib/device-status-lines';
 import { useTheme } from '@/hooks';
+import { useAnimatedViewport, type Viewport } from './use-animated-viewport';
+import type { FloorPlanSlideshowPhase } from './use-floor-plan-slideshow';
 
 const DEVICE_ICONS: Record<string, string> = {
   socket: '🔌',
@@ -17,21 +18,14 @@ const DEVICE_ICONS: Record<string, string> = {
   dimmer: '💡',
 };
 
-const TONE_FILL: Record<NonNullable<ReturnType<typeof getDeviceStatusLines>[number]['tone']>, string> = {
-  ok: '#059669',
-  warn: '#d97706',
-  muted: '#64748b',
-  danger: '#dc2626',
-};
-
 interface Props {
   room: Room;
   deviceMap: Record<string, PhysicalDeviceResponse>;
   states: Map<string, ZigbeeStateWire>;
   width: number;
   height: number;
-  showDeviceLabels: boolean;
-  showMetrics: boolean;
+  phase: FloorPlanSlideshowPhase;
+  focusDevice?: Device | null;
 }
 
 function collectPoints(room: Room): Point[] {
@@ -45,7 +39,7 @@ function collectPoints(room: Room): Point[] {
   return points;
 }
 
-function computeViewport(points: Point[], width: number, height: number) {
+function computeOverviewViewport(points: Point[], width: number, height: number): Viewport {
   if (points.length === 0) {
     return { scale: 1, offsetX: width / 2, offsetY: height / 2 };
   }
@@ -74,94 +68,56 @@ function computeViewport(points: Point[], width: number, height: number) {
   };
 }
 
+function computeFocusViewport(device: Device, width: number, height: number): Viewport {
+  const focusScale = Math.min(width / 180, height / 180, 2.8);
+  return {
+    scale: focusScale,
+    offsetX: width / 2 - device.position.x * focusScale,
+    offsetY: height / 2 - device.position.y * focusScale,
+  };
+}
+
 function DeviceMarker({
   device,
   physicalDevice,
   state,
-  showDeviceLabels,
-  showMetrics,
-  resolvedTheme,
+  isFocused,
+  isDimmed,
 }: {
   device: Device;
   physicalDevice?: PhysicalDeviceResponse;
   state?: ZigbeeStateWire;
-  showDeviceLabels: boolean;
-  showMetrics: boolean;
-  resolvedTheme: string;
+  isFocused: boolean;
+  isDimmed: boolean;
 }) {
   const physicalDeviceId = device.metadata?.physicalDeviceId as string | undefined;
-  const name =
-    physicalDevice?.friendlyName ||
-    physicalDevice?.name ||
-    (device.metadata?.name as string | undefined) ||
-    'Устройство';
-  const statusLines = showMetrics
-    ? getDeviceStatusLines(device.type, physicalDevice, state)
-    : [];
   const icon = DEVICE_ICONS[device.type] || '📦';
   const color = roomDeviceColor(device.type);
-  const isOnline = statusLines[0]?.tone === 'ok';
-  const labelWidth = 118;
-  const labelHeight = 16 + statusLines.length * 13;
+  const isOnline = state?.timestamp != null || physicalDevice?.lastSeen != null;
+  const radius = isFocused ? 24 : 18;
+  const opacity = isDimmed ? 0.35 : 0.95;
 
   return (
-    <Group x={device.position.x} y={device.position.y}>
-      <Circle
-        radius={18}
-        fill={color}
-        stroke={isOnline ? '#22c55e' : '#94a3b8'}
-        strokeWidth={2}
-        opacity={0.95}
-      />
-      <Text text={icon} fontSize={14} x={-7} y={-7} listening={false} />
-      {(showDeviceLabels || showMetrics) && (
-        <Group x={22} y={-labelHeight / 2}>
-          <Rect
-            width={labelWidth}
-            height={labelHeight}
-            fill={resolvedTheme === 'dark' ? 'rgba(15,23,42,0.92)' : 'rgba(255,255,255,0.94)'}
-            stroke={resolvedTheme === 'dark' ? 'rgba(148,163,184,0.35)' : 'rgba(148,163,184,0.55)'}
-            strokeWidth={1}
-            cornerRadius={6}
-            shadowBlur={4}
-            shadowOpacity={0.15}
-          />
-          {showDeviceLabels && (
-            <Text
-              text={name}
-              fontSize={11}
-              fontStyle="bold"
-              fill={resolvedTheme === 'dark' ? '#f8fafc' : '#0f172a'}
-              x={8}
-              y={6}
-              width={labelWidth - 12}
-              ellipsis
-              listening={false}
-            />
-          )}
-          {showMetrics &&
-            statusLines.map((line, index) => (
-              <Text
-                key={`${line.text}-${index}`}
-                text={line.text}
-                fontSize={10}
-                fill={line.tone ? TONE_FILL[line.tone] : '#64748b'}
-                x={8}
-                y={(showDeviceLabels ? 22 : 8) + index * 13}
-                width={labelWidth - 12}
-                listening={false}
-              />
-            ))}
-        </Group>
-      )}
-      {physicalDeviceId && !physicalDevice && (
+    <Group x={device.position.x} y={device.position.y} opacity={opacity}>
+      {isFocused && (
         <Circle
-          x={0}
-          y={-22}
-          radius={4}
-          fill="#f59e0b"
+          radius={34}
+          stroke="#3b82f6"
+          strokeWidth={2}
+          dash={[6, 4]}
           listening={false}
         />
+      )}
+      <Circle
+        radius={radius}
+        fill={color}
+        stroke={isOnline ? '#22c55e' : '#94a3b8'}
+        strokeWidth={isFocused ? 3 : 2}
+        opacity={0.95}
+      />
+      <Text text={icon} fontSize={isFocused ? 16 : 14} x={isFocused ? -8 : -7} y={isFocused ? -8 : -7} listening={false} />
+      {physicalDeviceId && !physicalDevice && (
+        <Circle x={0} y={-22} radius={4} fill="#f59e0b" listening={false} />
       )}
     </Group>
   );
@@ -173,12 +129,20 @@ export function FloorPlanReadonlyCanvas({
   states,
   width,
   height,
-  showDeviceLabels,
-  showMetrics,
+  phase,
+  focusDevice,
 }: Props) {
   const { resolvedTheme } = useTheme();
   const points = useMemo(() => collectPoints(room), [room]);
-  const viewport = useMemo(() => computeViewport(points, width, height), [points, width, height]);
+
+  const targetViewport = useMemo(() => {
+    if (phase === 'focus' && focusDevice) {
+      return computeFocusViewport(focusDevice, width, height);
+    }
+    return computeOverviewViewport(points, width, height);
+  }, [focusDevice, height, phase, points, width]);
+
+  const viewport = useAnimatedViewport(targetViewport, 900);
   const surface =
     resolvedTheme === 'dark'
       ? domovoyRoomPlanner.canvasSurfaceDark
@@ -198,21 +162,24 @@ export function FloorPlanReadonlyCanvas({
               lineCap="butt"
               lineJoin="miter"
               listening={false}
+              opacity={phase === 'focus' ? 0.85 : 1}
             />
           ))}
           {room.devices.map((device) => {
             const physicalDeviceId = device.metadata?.physicalDeviceId as string | undefined;
             const physicalDevice = physicalDeviceId ? deviceMap[physicalDeviceId] : undefined;
             const state = physicalDeviceId ? states.get(physicalDeviceId) : undefined;
+            const isFocused = phase === 'focus' && focusDevice?.id === device.id;
+            const isDimmed = phase === 'focus' && !isFocused;
+
             return (
               <DeviceMarker
                 key={device.id}
                 device={device}
                 physicalDevice={physicalDevice}
                 state={state}
-                showDeviceLabels={showDeviceLabels}
-                showMetrics={showMetrics}
-                resolvedTheme={resolvedTheme}
+                isFocused={isFocused}
+                isDimmed={isDimmed}
               />
             );
           })}

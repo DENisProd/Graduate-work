@@ -27,6 +27,7 @@ import { SliderControlWidget } from './widgets/SliderControlWidget';
 import { DeviceHeroWidget } from './widgets/DeviceHeroWidget';
 import { MiniLineChartWidget } from './widgets/MiniLineChartWidget';
 import { FloorPlanWidget } from './widgets/FloorPlanWidget';
+import { ModbusRegisterValueWidget, ModbusRegisterControlWidget } from './widgets/ModbusRegisterWidget';
 import type { PhysicalDeviceResponse, ScenarioResponse, ZigbeeDeviceListItem } from '@/types/api';
 import type {
   TelemetryValueConfig,
@@ -41,6 +42,8 @@ import type {
   DeviceHeroConfig,
   MiniLineChartConfig,
   HouseFloorPlanConfig,
+  ModbusRegisterValueConfig,
+  ModbusRegisterControlConfig,
 } from '../types/widget.types';
 import { widgetDashboardsApi } from '@/lib/api/scenario-service';
 import { useToast } from '@/components/shared';
@@ -310,6 +313,10 @@ export function WidgetDashboard({ dashboard, devices, zigbeeDevices, scenarios }
           />
         );
       }
+      case 'MODBUS_REGISTER_VALUE':
+        return <ModbusRegisterValueWidget config={widget.config as ModbusRegisterValueConfig} />;
+      case 'MODBUS_REGISTER_CONTROL':
+        return <ModbusRegisterControlWidget config={widget.config as ModbusRegisterControlConfig} />;
       default:
         return <div className="p-3 text-sm text-muted-foreground">Неизвестный виджет</div>;
     }

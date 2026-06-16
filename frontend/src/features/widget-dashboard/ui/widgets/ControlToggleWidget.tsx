@@ -5,6 +5,7 @@ import type { ControlToggleConfig } from '../../types/widget.types';
 import type { ZigbeeStateWire } from '@/types/api';
 import type { ZigbeeCommandAck } from '@/features/access-control/lib/zigbee-telemetry-manager';
 import { readPayloadValue } from '../../lib/useWidgetTelemetry';
+import { modbusApi } from '@/lib/api-client';
 
 interface Props {
   config: ControlToggleConfig;
@@ -19,10 +20,11 @@ export function ControlToggleWidget({ config, state, onCommand }: Props) {
   const [optimistic, setOptimistic] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const rawValue = state ? readPayloadValue(state, config.statePayloadKey) : null;
+  const rawValue =
+    config.source !== 'modbus' && state ? readPayloadValue(state, config.statePayloadKey) : null;
   const actualIsOn =
     rawValue === true ||
-    (typeof rawValue === 'string' && rawValue.toUpperCase() === 'ON');
+    (typeof rawValue === 'string' && rawValue.toUpperCase() === config.onValue?.toUpperCase());
 
   const isOn = optimistic !== null ? optimistic : actualIsOn;
 
@@ -32,10 +34,15 @@ export function ControlToggleWidget({ config, state, onCommand }: Props) {
     setOptimistic(next);
     setLoading(true);
     try {
-      await onCommand(
-        { physicalDeviceId: config.physicalDeviceId, deviceIeeeAddr: config.ieeeAddr },
-        next ? config.onPayload : config.offPayload,
-      );
+      if (config.source === 'modbus') {
+        if (!config.modbusDeviceId || !config.modbusRegisterId) throw new Error('Не выбран Modbus регистр');
+        await modbusApi.writeRegister(config.modbusDeviceId, config.modbusRegisterId, { coil: next });
+      } else {
+        await onCommand(
+          { physicalDeviceId: config.physicalDeviceId, deviceIeeeAddr: config.ieeeAddr },
+          { [config.statePayloadKey]: next ? config.onValue : config.offValue },
+        );
+      }
     } catch {
       setOptimistic(!next);
     } finally {

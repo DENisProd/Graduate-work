@@ -16,8 +16,13 @@ import type {
   DeviceHeroStat,
   MiniLineChartConfig,
   HouseFloorPlanConfig,
+  ModbusRegisterValueConfig,
+  ModbusRegisterControlConfig,
+  CommandValueType,
+  WidgetCommandSource,
 } from '../types/widget.types';
-import type { PhysicalDeviceResponse, ScenarioResponse, ZigbeeStateWire } from '@/types/api';
+import type { PhysicalDeviceResponse, ScenarioResponse, ZigbeeStateWire, ModbusDeviceResponse, ModbusRegisterResponse } from '@/types/api';
+import { modbusApi } from '@/lib/api-client';
 
 interface Props {
   widget: WidgetInstance | null;
@@ -281,12 +286,186 @@ function PayloadKeySelect({
   );
 }
 
+function SourceSwitch({ value, onChange }: { value: WidgetCommandSource; onChange: (v: WidgetCommandSource) => void }) {
+  return (
+    <div className="flex gap-1 rounded-lg border border-border p-1">
+      {(['zigbee', 'modbus'] as const).map((opt) => (
+        <button
+          key={opt}
+          type="button"
+          onClick={() => onChange(opt)}
+          className={`flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+            value === opt ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent'
+          }`}
+        >
+          {opt === 'zigbee' ? 'Zigbee устройство' : 'Modbus регистр'}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function CommandValueEditor({
+  commandKey,
+  commandValue,
+  commandValueType,
+  onChange,
+}: {
+  commandKey: string;
+  commandValue: string;
+  commandValueType: CommandValueType;
+  onChange: (updates: { commandKey?: string; commandValue?: string; commandValueType?: CommandValueType }) => void;
+}) {
+  const isQuickOn = commandValueType === 'text' && commandValue === 'ON';
+  const isQuickOff = commandValueType === 'text' && commandValue === 'OFF';
+  const isCustom = !isQuickOn && !isQuickOff;
+
+  return (
+    <>
+      <Field label="Ключ команды">
+        <Input value={commandKey} onChange={(v) => onChange({ commandKey: v })} placeholder="state" />
+      </Field>
+      <Field label="Значение">
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => onChange({ commandValue: 'ON', commandValueType: 'text' })}
+            className={`flex-1 rounded-lg border px-3 py-1.5 text-sm font-medium ${isQuickOn ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-accent'}`}
+          >
+            ВКЛ
+          </button>
+          <button
+            type="button"
+            onClick={() => onChange({ commandValue: 'OFF', commandValueType: 'text' })}
+            className={`flex-1 rounded-lg border px-3 py-1.5 text-sm font-medium ${isQuickOff ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-accent'}`}
+          >
+            ВЫКЛ
+          </button>
+          <button
+            type="button"
+            onClick={() => { if (!isCustom) onChange({ commandValue: '', commandValueType: 'text' }); }}
+            className={`flex-1 rounded-lg border px-3 py-1.5 text-sm font-medium ${isCustom ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-accent'}`}
+          >
+            Другое…
+          </button>
+        </div>
+      </Field>
+      {isCustom && (
+        <div className="grid grid-cols-[120px_1fr] gap-2">
+          <select
+            value={commandValueType}
+            onChange={(e) => onChange({ commandValueType: e.target.value as CommandValueType })}
+            className="w-full px-2 py-1.5 text-xs bg-background border border-border rounded-lg"
+          >
+            <option value="text">Текст</option>
+            <option value="number">Число</option>
+            <option value="boolean">Логическое</option>
+          </select>
+          {commandValueType === 'boolean' ? (
+            <select
+              value={commandValue === 'true' ? 'true' : 'false'}
+              onChange={(e) => onChange({ commandValue: e.target.value })}
+              className="w-full px-2 py-1.5 text-sm bg-background border border-border rounded-lg"
+            >
+              <option value="true">true</option>
+              <option value="false">false</option>
+            </select>
+          ) : (
+            <input
+              type={commandValueType === 'number' ? 'number' : 'text'}
+              value={commandValue}
+              onChange={(e) => onChange({ commandValue: e.target.value })}
+              className="w-full px-3 py-1.5 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
+function ModbusTargetEditor({
+  modbusDeviceId,
+  modbusRegisterId,
+  allowedTypes,
+  modbusDevices,
+  registers,
+  onSelectDevice,
+  onSelectRegister,
+}: {
+  modbusDeviceId: string;
+  modbusRegisterId: string;
+  allowedTypes: Array<'coil' | 'holding'>;
+  modbusDevices: ModbusDeviceResponse[];
+  registers: ModbusRegisterResponse[];
+  onSelectDevice: (deviceId: string) => void;
+  onSelectRegister: (registerId: string, registerType?: 'coil' | 'holding') => void;
+}) {
+  const deviceOptions = modbusDevices.map((d) => ({ value: d.id, label: d.name }));
+  const registerOptions = registers
+    .filter((r) => r.writable && allowedTypes.includes(r.registerType as 'coil' | 'holding'))
+    .map((r) => ({ value: r.id, label: `${r.name} (${r.registerType} @${r.address})` }));
+
+  return (
+    <>
+      <Field label="Modbus устройство">
+        <Select value={modbusDeviceId} onChange={onSelectDevice} options={deviceOptions} />
+      </Field>
+      <Field label="Регистр">
+        <Select
+          value={modbusRegisterId}
+          onChange={(v) => {
+            const reg = registers.find((r) => r.id === v);
+            onSelectRegister(v, reg?.registerType as 'coil' | 'holding' | undefined);
+          }}
+          options={registerOptions}
+        />
+      </Field>
+    </>
+  );
+}
+
+function widgetUsesModbus(type: WidgetInstance['type']): boolean {
+  return (
+    type === 'CONTROL_BUTTON' ||
+    type === 'CONTROL_TOGGLE' ||
+    type === 'DEVICE_HERO' ||
+    type === 'MODBUS_REGISTER_VALUE' ||
+    type === 'MODBUS_REGISTER_CONTROL'
+  );
+}
+
+function getActiveModbusDeviceId(cfg: WidgetInstance['config'] | null): string {
+  if (!cfg) return '';
+  if (cfg.type === 'DEVICE_HERO') return (cfg as DeviceHeroConfig).toggleModbusDeviceId ?? '';
+  if (cfg.type === 'CONTROL_BUTTON' || cfg.type === 'CONTROL_TOGGLE' || cfg.type === 'MODBUS_REGISTER_VALUE' || cfg.type === 'MODBUS_REGISTER_CONTROL') {
+    return (cfg as unknown as { modbusDeviceId?: string }).modbusDeviceId ?? '';
+  }
+  return '';
+}
+
 export function WidgetConfigDrawer({ widget, devices, scenarios, states, onClose, onSave }: Props) {
   const [config, setConfig] = useState<WidgetInstance['config'] | null>(null);
+  const [modbusDevices, setModbusDevices] = useState<ModbusDeviceResponse[]>([]);
+  const [modbusRegistersByDevice, setModbusRegistersByDevice] = useState<Record<string, ModbusRegisterResponse[]>>({});
 
   useEffect(() => {
     if (widget) setConfig(JSON.parse(JSON.stringify(widget.config)) as typeof widget.config);
   }, [widget]);
+
+  useEffect(() => {
+    if (!widget || !widgetUsesModbus(widget.type)) return;
+    modbusApi.listDevices().then(setModbusDevices).catch(() => {});
+  }, [widget]);
+
+  const activeModbusDeviceId = getActiveModbusDeviceId(config);
+
+  useEffect(() => {
+    if (!activeModbusDeviceId) return;
+    modbusApi.listRegisters(activeModbusDeviceId).then((regs) => {
+      setModbusRegistersByDevice((prev) => ({ ...prev, [activeModbusDeviceId]: regs }));
+    }).catch(() => {});
+  }, [activeModbusDeviceId]);
 
   if (!widget || !config) return null;
 
@@ -303,6 +482,8 @@ export function WidgetConfigDrawer({ widget, devices, scenarios, states, onClose
     value: s.id,
     label: s.name,
   }));
+
+  const modbusDeviceOptions = modbusDevices.map((d) => ({ value: d.id, label: d.name }));
 
   const selectedDevice = devices.find(
     (d) => d.id === (config as unknown as Record<string, unknown>).physicalDeviceId,
@@ -379,30 +560,74 @@ export function WidgetConfigDrawer({ widget, devices, scenarios, states, onClose
       }
       case 'CONTROL_BUTTON': {
         const c = config as ControlButtonConfig;
+        const source = c.source ?? 'zigbee';
+        const registersForDevice = modbusRegistersByDevice[c.modbusDeviceId ?? ''] ?? [];
         return (
           <>
-            <Field label="Устройство">
-              <Select
-                value={c.physicalDeviceId}
-                onChange={(v) => {
-                  const dev = devices.find((d) => d.id === v);
-                  patch({ physicalDeviceId: v, ieeeAddr: dev?.protocolAddress ?? '' });
-                }}
-                options={deviceOptions}
-              />
+            <Field label="Источник команды">
+              <SourceSwitch value={source} onChange={(v) => patch({ source: v })} />
             </Field>
+            {source === 'zigbee' ? (
+              <>
+                <Field label="Устройство">
+                  <Select
+                    value={c.physicalDeviceId}
+                    onChange={(v) => {
+                      const dev = devices.find((d) => d.id === v);
+                      patch({ physicalDeviceId: v, ieeeAddr: dev?.protocolAddress ?? '' });
+                    }}
+                    options={deviceOptions}
+                  />
+                </Field>
+                <CommandValueEditor
+                  commandKey={c.commandKey ?? 'state'}
+                  commandValue={c.commandValue ?? 'ON'}
+                  commandValueType={c.commandValueType ?? 'text'}
+                  onChange={(p) => patch(p)}
+                />
+              </>
+            ) : (
+              <>
+                <ModbusTargetEditor
+                  modbusDeviceId={c.modbusDeviceId ?? ''}
+                  modbusRegisterId={c.modbusRegisterId ?? ''}
+                  allowedTypes={['coil', 'holding']}
+                  modbusDevices={modbusDevices}
+                  registers={registersForDevice}
+                  onSelectDevice={(v) => patch({ modbusDeviceId: v, modbusRegisterId: '', modbusRegisterType: undefined })}
+                  onSelectRegister={(v, type) => patch({ modbusRegisterId: v, modbusRegisterType: type })}
+                />
+                {c.modbusRegisterType === 'holding' ? (
+                  <Field label="Значение (число)">
+                    <NumberInput
+                      value={c.commandValue ? Number(c.commandValue) : undefined}
+                      onChange={(v) => patch({ commandValue: v != null ? String(v) : '' })}
+                    />
+                  </Field>
+                ) : (
+                  <Field label="Значение">
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => patch({ commandValue: 'true' })}
+                        className={`flex-1 rounded-lg border px-3 py-1.5 text-sm font-medium ${c.commandValue === 'true' ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-accent'}`}
+                      >
+                        ВКЛ
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => patch({ commandValue: 'false' })}
+                        className={`flex-1 rounded-lg border px-3 py-1.5 text-sm font-medium ${c.commandValue === 'false' ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-accent'}`}
+                      >
+                        ВЫКЛ
+                      </button>
+                    </div>
+                  </Field>
+                )}
+              </>
+            )}
             <Field label="Текст кнопки">
               <Input value={c.label} onChange={(v) => patch({ label: v })} placeholder="Включить" />
-            </Field>
-            <Field label='Команда (JSON, например: {"state":"ON"})'>
-              <textarea
-                value={JSON.stringify(c.commandPayload, null, 2)}
-                onChange={(e) => {
-                  try { patch({ commandPayload: JSON.parse(e.target.value) }); } catch {}
-                }}
-                rows={3}
-                className="w-full px-3 py-1.5 text-xs font-mono bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary resize-none"
-              />
             </Field>
             <Field label="Стиль кнопки">
               <Select
@@ -431,30 +656,57 @@ export function WidgetConfigDrawer({ widget, devices, scenarios, states, onClose
       }
       case 'CONTROL_TOGGLE': {
         const c = config as ControlToggleConfig;
+        const source = c.source ?? 'zigbee';
         const ctKeyOptions = getPayloadKeyOptions(states.get(c.physicalDeviceId));
+        const registersForDevice = modbusRegistersByDevice[c.modbusDeviceId ?? ''] ?? [];
         return (
           <>
-            <Field label="Устройство">
-              <Select
-                value={c.physicalDeviceId}
-                onChange={(v) => {
-                  const dev = devices.find((d) => d.id === v);
-                  patch({ physicalDeviceId: v, ieeeAddr: dev?.protocolAddress ?? '', statePayloadKey: '' });
-                }}
-                options={deviceOptions}
-              />
+            <Field label="Источник">
+              <SourceSwitch value={source} onChange={(v) => patch({ source: v })} />
             </Field>
             <Field label="Подпись">
               <Input value={c.label} onChange={(v) => patch({ label: v })} placeholder="Свет в гостиной" />
             </Field>
-            <Field label="Ключ состояния">
-              <PayloadKeySelect
-                value={c.statePayloadKey}
-                onChange={(v) => patch({ statePayloadKey: v })}
-                options={ctKeyOptions}
-                placeholder="state"
+            {source === 'zigbee' ? (
+              <>
+                <Field label="Устройство">
+                  <Select
+                    value={c.physicalDeviceId}
+                    onChange={(v) => {
+                      const dev = devices.find((d) => d.id === v);
+                      patch({ physicalDeviceId: v, ieeeAddr: dev?.protocolAddress ?? '', statePayloadKey: '' });
+                    }}
+                    options={deviceOptions}
+                  />
+                </Field>
+                <Field label="Ключ состояния">
+                  <PayloadKeySelect
+                    value={c.statePayloadKey}
+                    onChange={(v) => patch({ statePayloadKey: v })}
+                    options={ctKeyOptions}
+                    placeholder="state"
+                  />
+                </Field>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Значение ВКЛ">
+                    <Input value={c.onValue ?? 'ON'} onChange={(v) => patch({ onValue: v })} placeholder="ON" />
+                  </Field>
+                  <Field label="Значение ВЫКЛ">
+                    <Input value={c.offValue ?? 'OFF'} onChange={(v) => patch({ offValue: v })} placeholder="OFF" />
+                  </Field>
+                </div>
+              </>
+            ) : (
+              <ModbusTargetEditor
+                modbusDeviceId={c.modbusDeviceId ?? ''}
+                modbusRegisterId={c.modbusRegisterId ?? ''}
+                allowedTypes={['coil']}
+                modbusDevices={modbusDevices}
+                registers={registersForDevice}
+                onSelectDevice={(v) => patch({ modbusDeviceId: v, modbusRegisterId: '' })}
+                onSelectRegister={(v) => patch({ modbusRegisterId: v })}
               />
-            </Field>
+            )}
           </>
         );
       }
@@ -784,34 +1036,39 @@ export function WidgetConfigDrawer({ widget, devices, scenarios, states, onClose
             </Field>
             {c.showToggle && (
               <>
-                <Field label="Ключ состояния">
-                  <PayloadKeySelect
-                    value={c.togglePayloadKey ?? ''}
-                    onChange={(v) => patch({ togglePayloadKey: v })}
-                    options={opts}
-                    placeholder="state"
-                  />
+                <Field label="Источник переключателя">
+                  <SourceSwitch value={c.toggleSource ?? 'zigbee'} onChange={(v) => patch({ toggleSource: v })} />
                 </Field>
-                <Field label="Команда ON (JSON)">
-                  <textarea
-                    value={JSON.stringify(c.onPayload ?? {}, null, 2)}
-                    onChange={(e) => {
-                      try { patch({ onPayload: JSON.parse(e.target.value) }); } catch {}
-                    }}
-                    rows={2}
-                    className="w-full px-3 py-1.5 text-xs font-mono bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+                {(c.toggleSource ?? 'zigbee') === 'zigbee' ? (
+                  <>
+                    <Field label="Ключ состояния">
+                      <PayloadKeySelect
+                        value={c.togglePayloadKey ?? ''}
+                        onChange={(v) => patch({ togglePayloadKey: v })}
+                        options={opts}
+                        placeholder="state"
+                      />
+                    </Field>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label="Значение ВКЛ">
+                        <Input value={c.toggleOnValue ?? 'ON'} onChange={(v) => patch({ toggleOnValue: v })} placeholder="ON" />
+                      </Field>
+                      <Field label="Значение ВЫКЛ">
+                        <Input value={c.toggleOffValue ?? 'OFF'} onChange={(v) => patch({ toggleOffValue: v })} placeholder="OFF" />
+                      </Field>
+                    </div>
+                  </>
+                ) : (
+                  <ModbusTargetEditor
+                    modbusDeviceId={c.toggleModbusDeviceId ?? ''}
+                    modbusRegisterId={c.toggleModbusRegisterId ?? ''}
+                    allowedTypes={['coil']}
+                    modbusDevices={modbusDevices}
+                    registers={modbusRegistersByDevice[c.toggleModbusDeviceId ?? ''] ?? []}
+                    onSelectDevice={(v) => patch({ toggleModbusDeviceId: v, toggleModbusRegisterId: '' })}
+                    onSelectRegister={(v) => patch({ toggleModbusRegisterId: v })}
                   />
-                </Field>
-                <Field label="Команда OFF (JSON)">
-                  <textarea
-                    value={JSON.stringify(c.offPayload ?? {}, null, 2)}
-                    onChange={(e) => {
-                      try { patch({ offPayload: JSON.parse(e.target.value) }); } catch {}
-                    }}
-                    rows={2}
-                    className="w-full px-3 py-1.5 text-xs font-mono bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary resize-none"
-                  />
-                </Field>
+                )}
               </>
             )}
             <Field label="Теги (до 3)">
@@ -919,6 +1176,94 @@ export function WidgetConfigDrawer({ widget, devices, scenarios, states, onClose
                 />
                 Показывать показатели в реальном времени
               </label>
+            </Field>
+          </>
+        );
+      }
+      case 'MODBUS_REGISTER_VALUE': {
+        const c = config as ModbusRegisterValueConfig;
+        const registersForDevice = modbusRegistersByDevice[c.modbusDeviceId ?? ''] ?? [];
+        const registerOptions = registersForDevice.map((r) => ({
+          value: r.id,
+          label: `${r.name} (${r.registerType} @${r.address})`,
+        }));
+        return (
+          <>
+            <Field label="Modbus устройство">
+              <Select
+                value={c.modbusDeviceId}
+                onChange={(v) => patch({ modbusDeviceId: v, modbusRegisterId: '' })}
+                options={modbusDeviceOptions}
+              />
+            </Field>
+            <Field label="Регистр">
+              <Select value={c.modbusRegisterId} onChange={(v) => patch({ modbusRegisterId: v })} options={registerOptions} />
+            </Field>
+            <Field label="Подпись">
+              <Input value={c.label ?? ''} onChange={(v) => patch({ label: v })} />
+            </Field>
+            <Field label="Единица">
+              <Input value={c.unit ?? ''} onChange={(v) => patch({ unit: v })} />
+            </Field>
+            <Field label="Интервал обновления (сек)">
+              <NumberInput value={c.refreshInterval} onChange={(v) => patch({ refreshInterval: v ?? 30 })} placeholder="30" />
+            </Field>
+            <Field label="Цвет акцента">
+              <Select
+                value={c.accent}
+                onChange={(v) => patch({ accent: v })}
+                options={[
+                  { value: 'green', label: 'Зелёный' },
+                  { value: 'blue', label: 'Синий' },
+                  { value: 'amber', label: 'Жёлтый' },
+                  { value: 'red', label: 'Красный' },
+                ]}
+              />
+            </Field>
+          </>
+        );
+      }
+      case 'MODBUS_REGISTER_CONTROL': {
+        const c = config as ModbusRegisterControlConfig;
+        const registersForDevice = modbusRegistersByDevice[c.modbusDeviceId ?? ''] ?? [];
+        const registerOptions = registersForDevice
+          .filter((r) => r.writable)
+          .map((r) => ({ value: r.id, label: `${r.name} (${r.registerType} @${r.address})` }));
+        return (
+          <>
+            <Field label="Modbus устройство">
+              <Select
+                value={c.modbusDeviceId}
+                onChange={(v) => patch({ modbusDeviceId: v, modbusRegisterId: '' })}
+                options={modbusDeviceOptions}
+              />
+            </Field>
+            <Field label="Регистр">
+              <Select value={c.modbusRegisterId} onChange={(v) => patch({ modbusRegisterId: v })} options={registerOptions} />
+            </Field>
+            <Field label="Подпись">
+              <Input value={c.label ?? ''} onChange={(v) => patch({ label: v })} />
+            </Field>
+            <Field label="Тип управления">
+              <Select
+                value={c.controlType}
+                onChange={(v) => patch({ controlType: v })}
+                options={[
+                  { value: 'coil', label: 'Coil (переключатель)' },
+                  { value: 'holding', label: 'Holding (числовой ввод)' },
+                ]}
+              />
+            </Field>
+            <Field label="Цвет">
+              <Select
+                value={c.accent}
+                onChange={(v) => patch({ accent: v })}
+                options={[
+                  { value: 'green', label: 'Зелёный' },
+                  { value: 'blue', label: 'Синий' },
+                  { value: 'amber', label: 'Жёлтый' },
+                ]}
+              />
             </Field>
           </>
         );

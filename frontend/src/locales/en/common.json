@@ -293,6 +293,7 @@
         "floorPlanEmptyTitle": "No floor plan yet",
         "floorPlanEmptyHint": "Open the floor plan editor in the admin panel and place devices on the map.",
         "floorPlanLoadError": "Failed to load floor plan",
+        "floorPlanDeviceFallback": "Device",
         "devicesOnlineTitle": "Devices online",
         "devicesOnlineSubtitle": "{{online}} of {{total}} online",
         "noDevicesSubtitle": "Connect devices to this house",

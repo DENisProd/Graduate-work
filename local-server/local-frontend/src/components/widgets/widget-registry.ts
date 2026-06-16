@@ -48,7 +48,7 @@ export const WIDGET_REGISTRY: WidgetMeta[] = [
     icon: 'MousePointerClick',
     defaultSize: { w: 3, h: 2 },
     minSize: { w: 2, h: 2 },
-    defaultConfig: { physicalDeviceId: '', ieeeAddr: '', label: 'Выполнить', commandPayload: { state: 'ON' }, buttonStyle: 'primary', confirmRequired: false },
+    defaultConfig: { source: 'zigbee', physicalDeviceId: '', ieeeAddr: '', label: 'Выполнить', commandKey: 'state', commandValue: 'ON', commandValueType: 'text', buttonStyle: 'primary', confirmRequired: false },
   },
   {
     type: 'CONTROL_TOGGLE',
@@ -57,7 +57,7 @@ export const WIDGET_REGISTRY: WidgetMeta[] = [
     icon: 'ToggleRight',
     defaultSize: { w: 4, h: 2 },
     minSize: { w: 3, h: 2 },
-    defaultConfig: { physicalDeviceId: '', ieeeAddr: '', label: 'Включение', statePayloadKey: 'state', onPayload: { state: 'ON' }, offPayload: { state: 'OFF' } },
+    defaultConfig: { source: 'zigbee', physicalDeviceId: '', ieeeAddr: '', label: 'Включение', statePayloadKey: 'state', onValue: 'ON', offValue: 'OFF' },
   },
   {
     type: 'SCENARIO_TRIGGER',
@@ -111,7 +111,7 @@ export const WIDGET_REGISTRY: WidgetMeta[] = [
     icon: 'CardHero',
     defaultSize: { w: 7, h: 5 },
     minSize: { w: 5, h: 4 },
-    defaultConfig: { physicalDeviceId: '', ieeeAddr: '', title: 'Устройство', subtitle: '', icon: 'lightbulb', showToggle: true, togglePayloadKey: 'state', onPayload: { state: 'ON' }, offPayload: { state: 'OFF' }, chips: [], stats: [], accent: 'green' },
+    defaultConfig: { physicalDeviceId: '', ieeeAddr: '', title: 'Устройство', subtitle: '', icon: 'lightbulb', showToggle: true, toggleSource: 'zigbee', togglePayloadKey: 'state', toggleOnValue: 'ON', toggleOffValue: 'OFF', chips: [], stats: [], accent: 'green' },
   },
   {
     type: 'MINI_LINE_CHART',
@@ -200,7 +200,7 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
     accent: 'amber',
     defaultSize: { w: 5, h: 5 },
     minSize: { w: 5, h: 4 },
-    config: { physicalDeviceId: '', ieeeAddr: '', title: 'Освещение', subtitle: '', icon: 'lightbulb', showToggle: true, togglePayloadKey: 'state', onPayload: { state: 'ON' }, offPayload: { state: 'OFF' }, chips: ['Тёплый свет'], stats: [{ key: 'brightness', icon: 'bolt', caption: 'Яркость', unit: '%' }], accent: 'amber' },
+    config: { physicalDeviceId: '', ieeeAddr: '', title: 'Освещение', subtitle: '', icon: 'lightbulb', showToggle: true, toggleSource: 'zigbee', togglePayloadKey: 'state', toggleOnValue: 'ON', toggleOffValue: 'OFF', chips: ['Тёплый свет'], stats: [{ key: 'brightness', icon: 'bolt', caption: 'Яркость', unit: '%' }], accent: 'amber' },
   },
   {
     id: 'tpl.power-chart',

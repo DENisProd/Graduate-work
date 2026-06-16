@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import type { ControlButtonConfig } from '../../types/widget.types';
 import type { ZigbeeCommandAck } from '@/features/access-control/lib/zigbee-telemetry-manager';
+import { coerceCommandValue } from '../../lib/command-value';
+import { modbusApi } from '@/lib/api-client';
 
 interface Props {
   config: ControlButtonConfig;
@@ -28,11 +30,21 @@ export function ControlButtonWidget({ config, onCommand }: Props) {
     setLoading(true);
     setLastResult(null);
     try {
-      const ack = await onCommand(
-        { physicalDeviceId: config.physicalDeviceId, deviceIeeeAddr: config.ieeeAddr },
-        config.commandPayload,
-      );
-      setLastResult(ack.ok ? 'ok' : 'error');
+      if (config.source === 'modbus') {
+        if (!config.modbusDeviceId || !config.modbusRegisterId) throw new Error('Не выбран Modbus регистр');
+        const body =
+          config.modbusRegisterType === 'holding'
+            ? { value: Number(config.commandValue) }
+            : { coil: config.commandValue === 'true' };
+        await modbusApi.writeRegister(config.modbusDeviceId, config.modbusRegisterId, body);
+        setLastResult('ok');
+      } else {
+        const ack = await onCommand(
+          { physicalDeviceId: config.physicalDeviceId, deviceIeeeAddr: config.ieeeAddr },
+          { [config.commandKey]: coerceCommandValue(config.commandValue, config.commandValueType) },
+        );
+        setLastResult(ack.ok ? 'ok' : 'error');
+      }
     } catch {
       setLastResult('error');
     } finally {

@@ -500,9 +500,7 @@ export function RegistersPanel({
                 <th className="px-3 py-2.5 text-left text-xs font-medium text-slate-500 dark:text-slate-400">{t('modbus.colName')}</th>
                 <th className="px-3 py-2.5 text-left text-xs font-medium text-slate-500 dark:text-slate-400">{t('modbus.colType')}</th>
                 <th className="px-3 py-2.5 text-left text-xs font-medium text-slate-500 dark:text-slate-400">{t('modbus.colAddress')}</th>
-                <th className="px-3 py-2.5 text-left text-xs font-medium text-slate-500 dark:text-slate-400">{t('modbus.colUnit')}</th>
                 <th className="px-3 py-2.5 text-left text-xs font-medium text-slate-500 dark:text-slate-400">{t('modbus.colLastValue')}</th>
-                <th className="px-3 py-2.5 text-left text-xs font-medium text-slate-500 dark:text-slate-400">{t('modbus.colTimestamp')}</th>
                 <th className="px-3 py-2.5" />
               </tr>
             </thead>
@@ -512,10 +510,16 @@ export function RegistersPanel({
                 const displayValue = state
                   ? state.scaledValues.map((v) => v.toFixed(2)).join(', ')
                   : '—'
+                const canWrite =
+                  (reg.registerType === 'holding' || reg.registerType === 'coil') && reg.writable
                 return (
                   <tr
                     key={reg.id}
-                    className="bg-white hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-900"
+                    onClick={() => canWrite && setWritingReg(reg)}
+                    className={cn(
+                      'bg-white hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-900',
+                      canWrite && 'cursor-pointer',
+                    )}
                   >
                     <td className="px-3 py-2.5 font-medium text-slate-900 dark:text-slate-100">
                       {reg.name}
@@ -527,20 +531,22 @@ export function RegistersPanel({
                       {reg.address}
                       {reg.count > 1 && <span className="text-slate-400"> ×{reg.count}</span>}
                     </td>
-                    <td className="px-3 py-2.5 text-xs text-slate-500 dark:text-slate-400">
-                      {reg.unit ?? '—'}
-                    </td>
                     <td className="px-3 py-2.5 font-mono text-xs text-slate-700 dark:text-slate-300">
-                      {displayValue}
-                      {reg.unit && state && (
-                        <span className="ml-0.5 text-slate-400"> {reg.unit}</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2.5 text-xs text-slate-400">
-                      {formatTs(state?.timestamp, dateLocale)}
+                      <div>
+                        {displayValue}
+                        {reg.unit && state && (
+                          <span className="ml-0.5 text-slate-400"> {reg.unit}</span>
+                        )}
+                      </div>
+                      <div className="mt-0.5 font-sans text-xs text-slate-400">
+                        {formatTs(state?.timestamp, dateLocale)}
+                      </div>
                     </td>
                     <td className="px-3 py-2.5">
-                      <div className="flex items-center gap-1">
+                      <div
+                        className="flex items-center gap-1"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <button
                           onClick={() => readMutation.mutate(reg)}
                           disabled={readingId === reg.id}

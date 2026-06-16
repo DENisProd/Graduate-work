@@ -293,6 +293,7 @@
         "floorPlanEmptyTitle": "Планировка ещё не создана",
         "floorPlanEmptyHint": "Откройте редактор планировки в админ-панели и разместите устройства на плане.",
         "floorPlanLoadError": "Не удалось загрузить планировку",
+        "floorPlanDeviceFallback": "Устройство",
         "devicesOnlineTitle": "Устройства онлайн",
         "devicesOnlineSubtitle": "{{online}} из {{total}} в сети",
         "noDevicesSubtitle": "Подключите устройства к дому",

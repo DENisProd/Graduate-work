@@ -43,24 +43,37 @@ export interface DeviceStatusConfig {
   showLastSeen: boolean;
 }
 
+export type CommandValueType = 'text' | 'number' | 'boolean';
+export type WidgetCommandSource = 'zigbee' | 'modbus';
+
 export interface ControlButtonConfig {
   type: 'CONTROL_BUTTON';
+  source: WidgetCommandSource;
   physicalDeviceId: string;
   ieeeAddr?: string;
   label: string;
-  commandPayload: Record<string, unknown>;
+  /** Zigbee payload key, e.g. "state" */
+  commandKey: string;
+  commandValue: string;
+  commandValueType: CommandValueType;
+  modbusDeviceId?: string;
+  modbusRegisterId?: string;
+  modbusRegisterType?: 'coil' | 'holding';
   buttonStyle: 'primary' | 'danger' | 'ghost';
   confirmRequired?: boolean;
 }
 
 export interface ControlToggleConfig {
   type: 'CONTROL_TOGGLE';
+  source: WidgetCommandSource;
   physicalDeviceId: string;
   ieeeAddr?: string;
   label: string;
   statePayloadKey: string;
-  onPayload: Record<string, unknown>;
-  offPayload: Record<string, unknown>;
+  onValue: string;
+  offValue: string;
+  modbusDeviceId?: string;
+  modbusRegisterId?: string;
 }
 
 export interface ScenarioTriggerConfig {
@@ -136,9 +149,12 @@ export interface DeviceHeroConfig {
   subtitle?: string;
   icon: 'camera' | 'lightbulb' | 'fan' | 'lock' | 'speaker' | 'sparkles' | 'thermometer' | 'broom';
   showToggle: boolean;
+  toggleSource?: WidgetCommandSource;
   togglePayloadKey?: string;
-  onPayload?: Record<string, unknown>;
-  offPayload?: Record<string, unknown>;
+  toggleOnValue?: string;
+  toggleOffValue?: string;
+  toggleModbusDeviceId?: string;
+  toggleModbusRegisterId?: string;
   chips?: string[];
   stats?: DeviceHeroStat[];
   accent: 'green' | 'blue' | 'amber' | 'slate';
