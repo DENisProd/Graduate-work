@@ -1,11 +1,13 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use local_server_application::ports::{
-    CloudModbusClient, CreateCloudModbusDeviceCmd, CreateCloudModbusRegisterCmd, ModbusRepository,
+use crate::ports::{
+    CloudModbusClient, CreateCloudModbusDeviceCmd, CreateCloudModbusRegisterCmd,
+    ModbusRepository, RemoteModbusRegister,
 };
-use local_server_application::services::ScenarioServiceUrlProvider;
+use crate::services::ScenarioServiceUrlProvider;
 use local_server_core::entities::modbus::ModbusRegister;
+use local_server_core::DomainError;
 
 pub type ModbusIdMap = (Vec<(String, String)>, Vec<(String, String)>);
 
@@ -28,7 +30,7 @@ pub async fn sync_once(
     repo: &Arc<dyn ModbusRepository>,
     cloud: &Arc<dyn CloudModbusClient>,
     base_url: &str,
-) -> Result<ModbusIdMap, local_server_core::DomainError> {
+) -> Result<ModbusIdMap, DomainError> {
     let locals = repo.list_devices().await?;
     let mut cloud_devices = cloud.list_devices(base_url).await.unwrap_or_default();
     let mut device_map: Vec<(String, String)> = Vec::new();
@@ -78,10 +80,10 @@ async fn sync_register(
     base_url: &str,
     cloud: &Arc<dyn CloudModbusClient>,
     cloud_device_id: &str,
-    cloud_regs: &[local_server_application::ports::RemoteModbusRegister],
+    cloud_regs: &[RemoteModbusRegister],
     local: &ModbusRegister,
     register_map: &mut Vec<(String, String)>,
-) -> Result<(), local_server_core::DomainError> {
+) -> Result<(), DomainError> {
     let local_id = local.id.to_string();
     let reg_type = local.register_type.as_str().to_string();
     if let Some(existing) = cloud_regs.iter().find(|r| {
@@ -107,10 +109,11 @@ async fn sync_register(
             },
         )
         .await?;
+    let cloud_id = created.cloud_id.clone();
     register_map.push((local_id, created.cloud_id));
     tracing::info!(
         local_id = %local.id,
-        cloud_id = %created.cloud_id,
+        cloud_id = %cloud_id,
         "modbus_sync: pushed register to cloud"
     );
     Ok(())
