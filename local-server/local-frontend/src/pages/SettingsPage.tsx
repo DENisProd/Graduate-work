@@ -471,13 +471,13 @@ export function SettingsPage() {
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
             <Button onClick={() => void handleSaveGateway()}>{t('settings.saveGateway')}</Button>
-            <Button
+            {/* <Button
               variant="secondary"
               disabled={authStatus !== 'authorized' || provisioningMqtt}
               onClick={() => void handleProvisionMqtt()}
             >
               {provisioningMqtt ? t('settings.provisionMqttLoading') : t('settings.provisionMqtt')}
-            </Button>
+            </Button> */}
           </div>
           {authStatus !== 'authorized' ? (
             <p className="mt-2 text-[11px] text-amber-700 dark:text-amber-300">

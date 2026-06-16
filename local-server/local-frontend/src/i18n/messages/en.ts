@@ -383,7 +383,7 @@ export const en = {
     mqttPasswordPlaceholder: 'EMQX password',
     mqttPasswordKeep: '•••••••• (leave empty to keep current)',
     mqttCredentialsHint:
-      'Not your Keycloak login. Use EMQX credentials (format local-xxxxxxxxxxxx). Fetch them below or from the cloud app → house settings → MQTT.',
+      'Fetch them from the cloud app → house settings → MQTT.',
     provisionMqtt: 'Fetch MQTT from cloud',
     provisionMqttLoading: 'Fetching…',
     provisionMqttRequiresAuth: 'Complete cloud authorization above first.',

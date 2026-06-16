@@ -59,6 +59,39 @@ function SignalBars({ quality }: { quality?: number }) {
   )
 }
 
+function collectExposedProperties(node: unknown, out: Set<string>) {
+  if (Array.isArray(node)) {
+    node.forEach((item) => collectExposedProperties(item, out))
+    return
+  }
+  if (!node || typeof node !== 'object') return
+
+  const expose = node as Record<string, unknown>
+  const prop = expose.property
+  if (typeof prop === 'string' && prop.length > 0) {
+    out.add(prop)
+  } else if (
+    typeof expose.name === 'string' &&
+    expose.name.length > 0 &&
+    typeof expose.type === 'string' &&
+    expose.type !== 'composite' &&
+    expose.type !== 'light'
+  ) {
+    out.add(expose.name)
+  }
+
+  for (const key of ['features', 'items', 'endpoints', 'values']) {
+    collectExposedProperties(expose[key], out)
+  }
+}
+
+function capabilitiesFromDefinition(definition: Record<string, unknown> | undefined): string[] {
+  if (!definition || !Array.isArray(definition.exposes)) return []
+  const capabilities = new Set<string>()
+  collectExposedProperties(definition.exposes, capabilities)
+  return [...capabilities].sort()
+}
+
 function toPhysicalDevice(d: ZigbeeDevice): PhysicalDevice {
   return {
     id: d.id,
@@ -70,7 +103,7 @@ function toPhysicalDevice(d: ZigbeeDevice): PhysicalDevice {
     model: d.model,
     friendlyName: d.friendlyName,
     firmwareVersion: d.firmwareVersion,
-    capabilities: [],
+    capabilities: capabilitiesFromDefinition(d.definition),
   }
 }
 

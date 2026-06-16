@@ -7,7 +7,9 @@ export async function listZigbeeDevices(): Promise<ZigbeeDevice[]> {
 }
 
 export async function getZigbeeDevice(ieeeAddr: string): Promise<ZigbeeDevice> {
-  const { data } = await api.get<ZigbeeDevice>(`/api/v1/zigbee/devices/${ieeeAddr}`)
+  const { data } = await api.get<ZigbeeDevice>(
+    `/api/v1/zigbee/devices/${encodeURIComponent(ieeeAddr)}`,
+  )
   return data
 }
 
@@ -15,7 +17,7 @@ export async function sendCommand(
   ieeeAddr: string,
   payload: Record<string, unknown>,
 ): Promise<void> {
-  await api.post(`/api/v1/zigbee/devices/${ieeeAddr}/command`, { payload })
+  await api.post(`/api/v1/zigbee/devices/${encodeURIComponent(ieeeAddr)}/command`, { payload })
 }
 
 export async function permitJoin(): Promise<void> {
@@ -28,7 +30,7 @@ export async function syncFromBridge(): Promise<{ count?: number }> {
 }
 
 export async function deleteZigbeeDevice(ieeeAddr: string): Promise<void> {
-  await api.delete(`/api/v1/zigbee/devices/${ieeeAddr}`)
+  await api.delete(`/api/v1/zigbee/devices/${encodeURIComponent(ieeeAddr)}`)
 }
 
 export async function getZigbeeStates(

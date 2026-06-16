@@ -398,7 +398,7 @@ export const ru = {
     mqttPasswordPlaceholder: 'Пароль EMQX',
     mqttPasswordKeep: '•••••••• (оставь пустым, чтобы не менять)',
     mqttCredentialsHint:
-      'Это не логин Keycloak. Нужны учётные данные EMQX (формат local-xxxxxxxxxxxx). Получите их кнопкой ниже или в облачном приложении → настройки дома → MQTT.',
+      'Получите их в облачном приложении → настройки дома → MQTT.',
     provisionMqtt: 'Получить MQTT из облака',
     provisionMqttLoading: 'Получение…',
     provisionMqttRequiresAuth: 'Сначала завершите облачную авторизацию выше.',

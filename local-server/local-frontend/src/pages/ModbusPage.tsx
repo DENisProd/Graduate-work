@@ -295,9 +295,9 @@ function WriteRegisterModal({
   )
 
   const mutation = useMutation({
-    mutationFn: () => {
+    mutationFn: (nextCoil?: boolean) => {
       if (register.registerType === 'coil') {
-        return writeModbusRegister(deviceId, register.id, { coil })
+        return writeModbusRegister(deviceId, register.id, { coil: nextCoil ?? coil })
       }
       const trimmed = value.trim()
       if (trimmed.includes(',')) {
@@ -330,26 +330,34 @@ function WriteRegisterModal({
           {register.registerType === 'coil' ? (
             <div className="flex gap-2">
               <button
-                onClick={() => setCoil(true)}
+                onClick={() => {
+                  setCoil(true)
+                  mutation.mutate(true)
+                }}
+                disabled={mutation.isPending}
                 className={cn(
                   'flex-1 rounded-lg py-2 text-sm font-medium transition-colors',
                   coil
                     ? 'bg-emerald-600 text-white'
-                    : 'border border-slate-300 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800',
+                    : 'border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800',
                 )}
               >
-                {t('modbus.writeOn')}
+                {mutation.isPending && coil ? '…' : t('modbus.writeOn')}
               </button>
               <button
-                onClick={() => setCoil(false)}
+                onClick={() => {
+                  setCoil(false)
+                  mutation.mutate(false)
+                }}
+                disabled={mutation.isPending}
                 className={cn(
                   'flex-1 rounded-lg py-2 text-sm font-medium transition-colors',
                   !coil
                     ? 'bg-red-600 text-white'
-                    : 'border border-slate-300 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800',
+                    : 'border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800',
                 )}
               >
-                {t('modbus.writeOff')}
+                {mutation.isPending && !coil ? '…' : t('modbus.writeOff')}
               </button>
             </div>
           ) : (
@@ -385,8 +393,9 @@ function WriteRegisterModal({
             {t('common.cancel')}
           </button>
           <button
-            onClick={() => mutation.mutate()}
-            disabled={mutation.isPending || (register.registerType !== 'coil' && !value.trim())}
+            onClick={() => mutation.mutate(undefined)}
+            disabled={mutation.isPending || !value.trim()}
+            hidden={register.registerType === 'coil'}
             className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
           >
             {mutation.isPending ? '…' : t('modbus.write')}

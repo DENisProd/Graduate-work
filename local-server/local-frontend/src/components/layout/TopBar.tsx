@@ -39,16 +39,6 @@ export function TopBar({ onMenuClick }: TopBarProps) {
         <Menu className="h-5 w-5" />
       </button>
       <div className="flex flex-1 items-center justify-end gap-3">
-      {resolvedUser ? (
-        <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-900/20 dark:text-emerald-300">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-          <span className="truncate max-w-[220px]">
-            {isAuthorized
-              ? resolvedUser
-              : `${resolvedUser} (${authStatus || t('topBar.auth')})`}
-          </span>
-        </div>
-      ) : null}
       {localUserId ? (
         <div className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 py-1 pl-2.5 pr-1 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
           <User className="h-3.5 w-3.5 text-slate-400" />

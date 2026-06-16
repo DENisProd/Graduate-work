@@ -34,6 +34,14 @@ export function DeviceControlDrawer({ device, open, onClose }: Props) {
   const setDeviceState = useDeviceStatesStore((s) => s.setDeviceState)
   const [rawJson, setRawJson] = useState('')
   const [showRaw, setShowRaw] = useState(false)
+  const capabilities = [
+    ...(device?.capabilities ?? []),
+    ...Object.keys(state?.payload ?? {}),
+    ...KNOWN_STATE_KEYS.values(),
+  ].filter((key) => {
+    if (key in (state?.payload ?? {})) return true
+    return (state as unknown as Record<string, unknown> | undefined)?.[key] !== undefined
+  })
 
   const mutation = useMutation({
     mutationFn: (payload: Record<string, unknown>) =>
@@ -152,7 +160,7 @@ export function DeviceControlDrawer({ device, open, onClose }: Props) {
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-5">
-              {hasCap(device.capabilities, 'state') && (
+              {hasCap(capabilities, 'state') && (
                 <div className="space-y-2">
                   <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500">
                     <Power className="h-3.5 w-3.5" /> {t('deviceDrawer.power')}
@@ -178,7 +186,7 @@ export function DeviceControlDrawer({ device, open, onClose }: Props) {
                 </div>
               )}
 
-              {hasCap(device.capabilities, 'brightness') && (
+              {hasCap(capabilities, 'brightness') && (
                 <div className="space-y-2">
                   <p className="flex items-center justify-between text-xs font-medium uppercase tracking-wide text-slate-500">
                     <span className="flex items-center gap-2">
