@@ -93,12 +93,13 @@ export class AddDeviceUseCase {
     room: RoomEntity,
     type: DeviceType,
     position: Point,
-    anchor: DeviceAnchor = 'free'
+    anchor: DeviceAnchor = 'free',
+    extraMetadata?: Record<string, unknown>,
   ): RoomEntity {
     const finalPosition =
       anchor === 'wall' ? this.snapStrategy.snap(position, room.walls) : position;
 
-    const device = DeviceFactory.create(type, finalPosition, anchor);
+    const device = DeviceFactory.create(type, finalPosition, anchor, extraMetadata);
     return room.addDevice({
       id: device.id,
       type: device.type,

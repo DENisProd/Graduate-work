@@ -102,6 +102,7 @@ echo "Applying ACL rules for ${MQTT_USER}..."
 acl_payload='{
   "rules": [
     {"permission": "allow", "action": "subscribe", "topic": "houses/+/zigbee2mqtt/#"},
+    {"permission": "allow", "action": "publish", "topic": "houses/+/cmd/zigbee2mqtt/#"},
     {"permission": "allow", "action": "publish", "topic": "houses/+/zigbee2mqtt/#"},
     {"permission": "allow", "action": "subscribe", "topic": "modbus/response"},
     {"permission": "allow", "action": "publish", "topic": "modbus/command"}
@@ -123,6 +124,7 @@ else
   post_payload=$(cat <<EOF
 [{"username":"${MQTT_USER}","rules":[
   {"permission":"allow","action":"subscribe","topic":"houses/+/zigbee2mqtt/#"},
+  {"permission":"allow","action":"publish","topic":"houses/+/cmd/zigbee2mqtt/#"},
   {"permission":"allow","action":"publish","topic":"houses/+/zigbee2mqtt/#"},
   {"permission":"allow","action":"subscribe","topic":"modbus/response"},
   {"permission":"allow","action":"publish","topic":"modbus/command"}

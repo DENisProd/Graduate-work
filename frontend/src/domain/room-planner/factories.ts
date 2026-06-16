@@ -9,10 +9,14 @@ export class DeviceFactory {
   static create(
     type: DeviceType,
     position: Point,
-    anchor: DeviceAnchor = 'free'
+    anchor: DeviceAnchor = 'free',
+    extraMetadata?: Record<string, unknown>,
   ): DeviceEntity {
     const id = `dev_${Date.now()}_${++this.idCounter}`;
-    const metadata = this.getDefaultMetadata(type);
+    const metadata = {
+      ...this.getDefaultMetadata(type),
+      ...extraMetadata,
+    };
     return new DeviceEntity(id, type, position, anchor, metadata);
   }
 

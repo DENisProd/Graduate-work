@@ -603,6 +603,7 @@
       "noHouseDevices": "В этом доме нет устройств",
       "toggleCategory": "Свернуть/развернуть",
       "deviceTypeFallback": "Тип",
+      "deviceAlreadyPlaced": "Уже на плане",
       "unassigned": "Не назначено",
       "export": "Экспорт JSON",
       "reset": "Сброс",
@@ -656,7 +657,13 @@
       "windows": "Окна",
       "draw": "Рисовать",
       "connect": "От точки",
-      "exportSuccess": "План экспортирован"
+      "exportSuccess": "План экспортирован",
+      "savePlan": "Сохранить план",
+      "saving": "Сохранение…",
+      "saveSuccess": "Планировка сохранена",
+      "saveError": "Не удалось сохранить планировку",
+      "saveConflict": "Планировка изменена в другой сессии. Обновите страницу и сохраните снова.",
+      "autosaveSuccess": "Планировка автоматически сохранена"
     },
     "accessControl": {
       "title": "Управление доступом",

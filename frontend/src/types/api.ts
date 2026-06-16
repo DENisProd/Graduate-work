@@ -567,6 +567,31 @@ export interface HouseMqttConfigUpsertRequest {
   enabled?: boolean;
 }
 
+export interface HouseFloorPlanSnapshot {
+  room: {
+    walls: unknown[];
+    devices: unknown[];
+    doors: unknown[];
+    windows: unknown[];
+  };
+  timestamp: number;
+  roomRegions?: unknown[];
+}
+
+export interface HouseFloorPlanResponse {
+  id: string;
+  houseId: string;
+  version: number;
+  snapshot: HouseFloorPlanSnapshot;
+  updatedAt: string;
+  updatedBy?: string;
+}
+
+export interface HouseFloorPlanUpsertRequest {
+  snapshot: HouseFloorPlanSnapshot;
+  version?: number;
+}
+
 export interface PhysicalDeviceResponse {
   id: string;
   name?: string | null;

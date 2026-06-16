@@ -14,6 +14,7 @@ import { LlmModule } from './llm/llm.module';
 import { WidgetDashboardModule } from './widget-dashboard/widget-dashboard.module';
 import { ScenarioEngineModule } from './scenario-engine/scenario-engine.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { HouseFloorPlanModule } from './house-floor-plan/house-floor-plan.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     WidgetDashboardModule,
     ScenarioEngineModule,
     DashboardModule,
+    HouseFloorPlanModule,
   ],
   controllers: [AppController],
   providers: [AppService],

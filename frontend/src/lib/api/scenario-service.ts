@@ -6,6 +6,8 @@ import type {
   HouseMqttConfigResponse,
   HouseMqttConfigUpsertRequest,
   HouseMqttProvisionResponse,
+  HouseFloorPlanResponse,
+  HouseFloorPlanUpsertRequest,
   PhysicalDeviceResponse,
   DeviceDataResponse,
   ZigbeeDeviceListItem,
@@ -161,6 +163,33 @@ export const houseMqttApi = {
   ): Promise<HouseMqttProvisionResponse> =>
     scenarioApi(`/zigbee/house-mqtt/${encodeURIComponent(houseId)}/provision`, {
       method: 'POST',
+      signal: options?.signal,
+    }),
+};
+
+export const houseFloorPlansApi = {
+  get: (houseId: string, options?: { signal?: AbortSignal }): Promise<HouseFloorPlanResponse> =>
+    scenarioApi(`/house-floor-plans/${encodeURIComponent(houseId)}`, {
+      signal: options?.signal,
+    }),
+
+  upsert: (
+    houseId: string,
+    dto: HouseFloorPlanUpsertRequest,
+    options?: { signal?: AbortSignal },
+  ): Promise<HouseFloorPlanResponse> =>
+    scenarioApi(`/house-floor-plans/${encodeURIComponent(houseId)}`, {
+      method: 'PUT',
+      signal: options?.signal,
+      body: JSON.stringify(dto),
+    }),
+
+  delete: (
+    houseId: string,
+    options?: { signal?: AbortSignal },
+  ): Promise<{ ok: true; houseId: string }> =>
+    scenarioApi(`/house-floor-plans/${encodeURIComponent(houseId)}`, {
+      method: 'DELETE',
       signal: options?.signal,
     }),
 };

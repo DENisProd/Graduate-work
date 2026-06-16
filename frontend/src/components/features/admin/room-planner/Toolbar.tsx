@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { DoorOpen, Grid3X3, Hand, Home, Minus, MousePointer2, Plug, Plus, Redo2, Ruler, Square, Undo2 } from 'lucide-react';
+import { DoorOpen, Grid3X3, Hand, Home, Minus, MousePointer2, Plug, Plus, Redo2, Ruler, Save, Square, Undo2 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/animate-ui/components/radix/tabs';
 import { useRoomPlannerStore } from '@/store/room-planner-store';
 import { useTranslation } from '@/hooks';
@@ -35,6 +35,9 @@ export function Toolbar() {
   const pendingRegionPoints = useRoomPlannerStore((state) => state.pendingRegionPoints);
   const closeRoomRegion = useRoomPlannerStore((state) => state.closeRoomRegion);
   const cancelRoomRegion = useRoomPlannerStore((state) => state.cancelRoomRegion);
+  const isDirty = useRoomPlannerStore((state) => state.isDirty);
+  const isSaving = useRoomPlannerStore((state) => state.isSaving);
+  const saveProject = useRoomPlannerStore((state) => state.saveProject);
 
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
@@ -66,6 +69,17 @@ export function Toolbar() {
     }
     reset();
     setConfirmReset(false);
+  };
+
+  const handleSave = async () => {
+    const result = await saveProject();
+    if (result === true) {
+      showToast(t('admin.roomPlanner.saveSuccess'), 'success');
+    } else if (result === 'conflict') {
+      showToast(t('admin.roomPlanner.saveConflict'), 'warning');
+    } else {
+      showToast(t('admin.roomPlanner.saveError'), 'error');
+    }
   };
 
   const tabsValue = mode === 'doors' || mode === 'windows' ? 'openings' : mode;
@@ -199,6 +213,18 @@ export function Toolbar() {
       >
         <Ruler className="size-4" />
         {t('admin.roomPlanner.measurements')}
+      </Button>
+
+      <div className="mx-2 h-6 w-px bg-border" />
+
+      <Button
+        size="sm"
+        variant="primary"
+        onPress={handleSave}
+        isDisabled={isSaving || !isDirty}
+      >
+        <Save className="size-4" />
+        {isSaving ? t('admin.roomPlanner.saving') : t('admin.roomPlanner.savePlan')}
       </Button>
 
       <div className="mx-2 h-6 w-px bg-border" />

@@ -10,6 +10,7 @@ import type {
   ProjectExport,
   Door,
   Window,
+  PendingDevicePlacement,
 } from '@/domain/room-planner';
 import {
   CreateProjectUseCase,
@@ -25,7 +26,13 @@ import {
   RestoreSnapshotUseCase,
 } from '@/application/room-planner';
 import type { Command, RoomRegion } from '@/domain/room-planner';
-import { debouncedAutosave, LocalStorageService } from '@/infrastructure/room-planner/storage';
+import {
+  LocalStorageService,
+  loadProjectFromServer,
+  saveProjectToServer,
+  deleteProjectFromServer,
+} from '@/infrastructure/room-planner/storage';
+import { ApiError } from '@/lib/api/core';
 
 const MAX_HISTORY = 20;
 
@@ -44,7 +51,7 @@ interface RoomPlannerState {
   selectedWallId: string | null;
   selectedWallPoint: Point | null;
   selectedWallPointIndex: number | null;
-  pendingDeviceType: DeviceType | null;
+  pendingDevice: PendingDevicePlacement | null;
   pendingWallStart: Point | null;
   showMeasurements: boolean;
   showGrid: boolean;
@@ -52,6 +59,11 @@ interface RoomPlannerState {
   pendingRegionPoints: Point[];
   selectedRegionId: string | null;
   selectedRegionPointIndex: number | null;
+  isDirty: boolean;
+  lastSavedAt: number | null;
+  isSaving: boolean;
+  isLoading: boolean;
+  planVersion: number | null;
 
   addRoomRegionPoint: (point: Point) => void;
   closeRoomRegion: () => void;
@@ -63,7 +75,7 @@ interface RoomPlannerState {
   moveRegionPoint: (regionId: string, pointIndex: number, newPosition: Point, save?: boolean) => void;
   addRegionPoint: (regionId: string, afterIndex: number, position: Point) => void;
   removeRegionPoint: (regionId: string, pointIndex: number) => void;
-  initialize: (houseId: string) => void;
+  initialize: (houseId: string) => Promise<void>;
   execute: (command: Command) => void;
   addWallPoint: (point: Point, fromPoint?: Point) => void;
   setPendingWallStart: (point: Point | null) => void;
@@ -83,9 +95,14 @@ interface RoomPlannerState {
   selectDoor: (doorId: string | null) => void;
   selectWindow: (windowId: string | null) => void;
   selectWall: (wallId: string | null) => void;
-  setPendingDeviceType: (type: DeviceType | null) => void;
+  setPendingDevice: (device: PendingDevicePlacement | null) => void;
   closeRoom: () => void;
-  addDevice: (type: DeviceType, position: Point, anchor?: DeviceAnchor) => void;
+  addDevice: (
+    type: DeviceType,
+    position: Point,
+    anchor?: DeviceAnchor,
+    placement?: { physicalDeviceId: string; name?: string | null },
+  ) => void;
   removeDevice: (deviceId: string) => void;
   moveDevice: (deviceId: string, position: Point) => void;
   undo: () => void;
@@ -97,6 +114,8 @@ interface RoomPlannerState {
   reset: () => void;
   loadFromSnapshot: (snapshot: ProjectSnapshot) => void;
   saveSnapshot: () => void;
+  saveProject: () => Promise<true | false | 'conflict'>;
+  buildCurrentSnapshot: () => ProjectSnapshot;
   saveDevicePosition: (deviceId: string) => void;
 }
 
@@ -168,7 +187,7 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
   selectedWallId: null,
   selectedWallPoint: null,
   selectedWallPointIndex: null,
-  pendingDeviceType: null,
+  pendingDevice: null,
   pendingWallStart: null,
   showMeasurements: true,
   showGrid: true,
@@ -176,35 +195,59 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
   pendingRegionPoints: [],
   selectedRegionId: null,
   selectedRegionPointIndex: null,
+  isDirty: false,
+  lastSavedAt: null,
+  isSaving: false,
+  isLoading: false,
+  planVersion: null,
 
-  initialize: (houseId: string) => {
+  initialize: async (houseId: string) => {
     const state = get();
-    set({ houseId });
+    set({ houseId, isLoading: true, planVersion: null });
+
+    try {
+      const remote = await loadProjectFromServer(houseId);
+      if (remote) {
+        state.loadFromSnapshot(remote.snapshot);
+        set({ planVersion: remote.version, isLoading: false });
+        return;
+      }
+    } catch (error) {
+      console.warn('Failed to load floor plan from server, using local cache:', error);
+    }
+
     const saved = LocalStorageService.load(houseId);
     if (saved) {
       state.loadFromSnapshot(saved);
-    } else {
-      const newRoom = createProjectUseCase.execute();
-      set({
-        room: newRoom,
-        history: [],
-        historyIndex: -1,
-        mode: 'walls',
-        wallEditMode: 'draw',
-        zoom: 100,
-        selectedDeviceId: null,
-        selectedDoorId: null,
-        selectedWindowId: null,
-        selectedWallId: null,
-        selectedWallPoint: null,
-        selectedWallPointIndex: null,
-        pendingDeviceType: null,
-        pendingWallStart: null,
-        roomRegions: [],
-        pendingRegionPoints: [],
-        selectedRegionId: null,
-      });
+      set({ isDirty: true, isLoading: false, planVersion: null });
+      return;
     }
+
+    const newRoom = createProjectUseCase.execute();
+    const initialSnapshot = createSnapshotUseCase.execute(newRoom);
+    set({
+      room: newRoom,
+      history: [initialSnapshot],
+      historyIndex: 0,
+      mode: 'walls',
+      wallEditMode: 'draw',
+      zoom: 100,
+      selectedDeviceId: null,
+      selectedDoorId: null,
+      selectedWindowId: null,
+      selectedWallId: null,
+      selectedWallPoint: null,
+      selectedWallPointIndex: null,
+      pendingDevice: null,
+      pendingWallStart: null,
+      roomRegions: [],
+      pendingRegionPoints: [],
+      selectedRegionId: null,
+      isDirty: false,
+      lastSavedAt: null,
+      isLoading: false,
+      planVersion: null,
+    });
   },
 
   execute: (command: Command) => {
@@ -334,8 +377,8 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
     set({ selectedWallId: wallId, selectedDoorId: null, selectedWindowId: null, selectedDeviceId: null });
   },
 
-  setPendingDeviceType: (type: DeviceType | null) => {
-    set({ pendingDeviceType: type });
+  setPendingDevice: (device: PendingDevicePlacement | null) => {
+    set({ pendingDevice: device });
   },
 
   setSelectedWallPointIndex: (index: number | null) => {
@@ -375,10 +418,29 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
     state.saveSnapshot();
   },
 
-  addDevice: (type: DeviceType, position: Point, anchor: DeviceAnchor = 'free') => {
+  addDevice: (
+    type: DeviceType,
+    position: Point,
+    anchor: DeviceAnchor = 'free',
+    placement?: { physicalDeviceId: string; name?: string | null },
+  ) => {
     const state = get();
-    const newRoom = addDeviceUseCase.execute(state.room, type, position, anchor);
-    set({ room: newRoom });
+    if (placement?.physicalDeviceId) {
+      const alreadyPlaced = state.room.devices.some(
+        (device) => device.metadata?.physicalDeviceId === placement.physicalDeviceId,
+      );
+      if (alreadyPlaced) return;
+    }
+
+    const metadata = placement
+      ? {
+          physicalDeviceId: placement.physicalDeviceId,
+          ...(placement.name ? { label: placement.name } : {}),
+        }
+      : undefined;
+
+    const newRoom = addDeviceUseCase.execute(state.room, type, position, anchor, metadata);
+    set({ room: newRoom, pendingDevice: null });
     state.saveSnapshot();
   },
 
@@ -417,6 +479,7 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
         roomRegions: snapshot.roomRegions ?? [],
         pendingRegionPoints: [],
         selectedRegionId: null,
+        isDirty: true,
       });
     }
   },
@@ -433,6 +496,7 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
         roomRegions: snapshot.roomRegions ?? [],
         pendingRegionPoints: [],
         selectedRegionId: null,
+        isDirty: true,
       });
     }
   },
@@ -442,7 +506,7 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
     if (mode === 'walls' && state.mode !== 'walls') {
       set({ mode, pendingWallStart: null });
     } else if (mode === 'rooms') {
-      set({ mode, pendingWallStart: null, pendingDeviceType: null });
+      set({ mode, pendingWallStart: null, pendingDevice: null });
     } else if ((state.mode as ProjectMode) === 'rooms') {
       set({ mode, pendingRegionPoints: [], selectedRegionId: null, selectedRegionPointIndex: null });
     } else {
@@ -567,15 +631,23 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
       selectedWallId: null,
       selectedWallPoint: null,
       selectedWallPointIndex: null,
-      pendingDeviceType: null,
+      pendingDevice: null,
       pendingWallStart: null,
       showMeasurements: true,
       roomRegions: [],
       pendingRegionPoints: [],
       selectedRegionId: null,
       selectedRegionPointIndex: null,
+      isDirty: false,
+      lastSavedAt: null,
+      planVersion: null,
     });
-    if (state.houseId) LocalStorageService.remove(state.houseId);
+    if (state.houseId) {
+      void deleteProjectFromServer(state.houseId).catch((error) => {
+        console.error('Failed to delete floor plan from server:', error);
+        LocalStorageService.remove(state.houseId!);
+      });
+    }
   },
 
   loadFromSnapshot: (snapshot: ProjectSnapshot) => {
@@ -586,7 +658,48 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
       pendingRegionPoints: [],
       selectedRegionId: null,
       selectedRegionPointIndex: null,
+      history: [snapshot],
+      historyIndex: 0,
+      isDirty: false,
+      lastSavedAt: snapshot.timestamp,
     });
+  },
+
+  buildCurrentSnapshot: () => {
+    const state = get();
+    const snapshot = createSnapshotUseCase.execute(state.room);
+    snapshot.roomRegions = state.roomRegions ?? [];
+    return snapshot;
+  },
+
+  saveProject: async () => {
+    const state = get();
+    if (!state.houseId) return false;
+
+    set({ isSaving: true });
+    try {
+      const snapshot = get().buildCurrentSnapshot();
+      snapshot.timestamp = Date.now();
+      const { version } = await saveProjectToServer(
+        state.houseId,
+        snapshot,
+        state.planVersion ?? undefined,
+      );
+      set({
+        isDirty: false,
+        lastSavedAt: snapshot.timestamp,
+        planVersion: version,
+        isSaving: false,
+      });
+      return true;
+    } catch (error) {
+      console.error('Failed to save room planner project:', error);
+      set({ isSaving: false });
+      if (error instanceof ApiError && error.status === 409) {
+        return 'conflict';
+      }
+      return false;
+    }
   },
 
   saveSnapshot: () => {
@@ -604,9 +717,7 @@ export const useRoomPlannerStore = create<RoomPlannerState>((set, get) => ({
     set({
       history: newHistory,
       historyIndex: newHistory.length - 1,
+      isDirty: true,
     });
-
-    const { houseId } = get();
-    if (houseId) debouncedAutosave(houseId, snapshot);
   },
 }));

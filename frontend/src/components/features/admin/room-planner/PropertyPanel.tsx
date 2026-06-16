@@ -138,11 +138,11 @@ export function PropertyPanel() {
     const canCloseRegion = pendingRegionPoints.length >= 3;
 
     return (
-      <Card className="w-64 h-full bg-transparent shadow-none border-none flex flex-col min-h-0">
-        <Card.Header className="px-4 pt-4 pb-2">
+      <Card className="w-64 h-full bg-transparent shadow-none border-none flex flex-col min-h-0 py-0">
+        <Card.Header className="px-4 pt-0 pb-2">
           <Card.Title className="text-lg font-semibold">{t('admin.roomPlanner.properties')}</Card.Title>
         </Card.Header>
-        <Card.Content className="px-4 pb-4 flex flex-col gap-4 min-h-0 overflow-auto">
+        <Card.Content className="px-4 pb-4 flex flex-col gap-2 min-h-0 overflow-auto">
           {drawingRegion ? (
             <>
               <p className="text-sm text-muted-foreground">

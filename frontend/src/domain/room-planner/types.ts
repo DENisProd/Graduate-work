@@ -45,6 +45,12 @@ export type Device = {
   metadata?: Record<string, unknown>;
 };
 
+export type PendingDevicePlacement = {
+  physicalDeviceId: string;
+  type: DeviceType;
+  name?: string | null;
+};
+
 export type Room = {
   walls: Wall[];
   devices: Device[];

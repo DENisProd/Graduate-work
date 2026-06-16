@@ -1,9 +1,13 @@
 
-
 import type { ProjectSnapshot } from '@/domain/room-planner';
+import { houseFloorPlansApi } from '@/lib/api/scenario-service';
+import { ApiError } from '@/lib/api/core';
+import type { HouseFloorPlanSnapshot } from '@/types/api';
 
 const STORAGE_KEY_PREFIX = 'room-planner-project';
-const AUTOSAVE_INTERVAL = 5000;
+
+/** Interval for periodic autosave (3 minutes). */
+export const AUTOSAVE_INTERVAL_MS = 3 * 60 * 1000;
 
 function getStorageKey(houseId: string): string {
   return `${STORAGE_KEY_PREFIX}-${houseId}`;
@@ -41,17 +45,56 @@ export class LocalStorageService {
   }
 }
 
-const autosaveTimers: Record<string, NodeJS.Timeout> = {};
-
-export function debouncedAutosave(houseId: string, snapshot: ProjectSnapshot): void {
-  if (autosaveTimers[houseId]) {
-    clearTimeout(autosaveTimers[houseId]);
-  }
-  autosaveTimers[houseId] = setTimeout(() => {
-    LocalStorageService.save(houseId, snapshot);
-    delete autosaveTimers[houseId];
-  }, AUTOSAVE_INTERVAL);
+function toApiSnapshot(snapshot: ProjectSnapshot): HouseFloorPlanSnapshot {
+  return snapshot as unknown as HouseFloorPlanSnapshot;
 }
 
+function fromApiSnapshot(snapshot: HouseFloorPlanSnapshot): ProjectSnapshot {
+  return snapshot as unknown as ProjectSnapshot;
+}
 
+export async function loadProjectFromServer(
+  houseId: string,
+): Promise<{ snapshot: ProjectSnapshot; version: number } | null> {
+  try {
+    const plan = await houseFloorPlansApi.get(houseId);
+    const snapshot = fromApiSnapshot(plan.snapshot);
+    LocalStorageService.save(houseId, snapshot);
+    return { snapshot, version: plan.version };
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return null;
+    }
+    throw error;
+  }
+}
 
+export async function saveProjectToServer(
+  houseId: string,
+  snapshot: ProjectSnapshot,
+  version?: number,
+): Promise<{ version: number }> {
+  const response = await houseFloorPlansApi.upsert(houseId, {
+    snapshot: toApiSnapshot(snapshot),
+    version,
+  });
+  LocalStorageService.save(houseId, snapshot);
+  return { version: response.version };
+}
+
+export async function deleteProjectFromServer(houseId: string): Promise<void> {
+  try {
+    await houseFloorPlansApi.delete(houseId);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      LocalStorageService.remove(houseId);
+      return;
+    }
+    throw error;
+  }
+  LocalStorageService.remove(houseId);
+}
+
+export function saveProjectSnapshot(houseId: string, snapshot: ProjectSnapshot): void {
+  LocalStorageService.save(houseId, snapshot);
+}

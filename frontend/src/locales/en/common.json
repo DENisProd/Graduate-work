@@ -603,6 +603,7 @@
       "noHouseDevices": "No devices in this house",
       "toggleCategory": "Collapse/expand",
       "deviceTypeFallback": "Type",
+      "deviceAlreadyPlaced": "Already on plan",
       "unassigned": "Unassigned",
       "export": "Export JSON",
       "reset": "Reset",
@@ -656,7 +657,13 @@
       "windows": "Windows",
       "draw": "Draw",
       "connect": "From Point",
-      "exportSuccess": "Plan exported"
+      "exportSuccess": "Plan exported",
+      "savePlan": "Save plan",
+      "saving": "Saving…",
+      "saveSuccess": "Floor plan saved",
+      "saveError": "Failed to save floor plan",
+      "saveConflict": "Floor plan was changed in another session. Reload the page and save again.",
+      "autosaveSuccess": "Floor plan auto-saved"
     },
     "accessControl": {
       "title": "Access Control",

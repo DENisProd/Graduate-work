@@ -41,8 +41,8 @@ export function CanvasStage({ width, height }: CanvasStageProps) {
   const addWindow = useRoomPlannerStore((state) => state.addWindow);
   const selectDoor = useRoomPlannerStore((state) => state.selectDoor);
   const selectWindow = useRoomPlannerStore((state) => state.selectWindow);
-  const pendingDeviceType = useRoomPlannerStore((state) => state.pendingDeviceType);
-  const setPendingDeviceType = useRoomPlannerStore((state) => state.setPendingDeviceType);
+  const pendingDevice = useRoomPlannerStore((state) => state.pendingDevice);
+  const setPendingDevice = useRoomPlannerStore((state) => state.setPendingDevice);
   const showMeasurements = useRoomPlannerStore((state) => state.showMeasurements);
   const showGrid = useRoomPlannerStore((state) => state.showGrid);
   const addRoomRegionPoint = useRoomPlannerStore((state) => state.addRoomRegionPoint);
@@ -67,7 +67,7 @@ export function CanvasStage({ width, height }: CanvasStageProps) {
         if (mode === 'walls') {
           useRoomPlannerStore.getState().setPendingWallStart(null);
         } else if (mode === 'devices') {
-          useRoomPlannerStore.getState().setPendingDeviceType(null);
+          useRoomPlannerStore.getState().setPendingDevice(null);
         } else if (mode === 'rooms') {
           useRoomPlannerStore.getState().cancelRoomRegion();
         }
@@ -199,10 +199,12 @@ export function CanvasStage({ width, height }: CanvasStageProps) {
         selectDevice(null);
         selectWall(null);
       }
-    } else if (mode === 'devices' && pendingDeviceType) {
+    } else if (mode === 'devices' && pendingDevice) {
       const anchor: 'wall' | 'free' = room.walls.length > 0 ? 'wall' : 'free';
-      addDevice(pendingDeviceType, { x, y }, anchor);
-      setPendingDeviceType(null);
+      addDevice(pendingDevice.type, { x, y }, anchor, {
+        physicalDeviceId: pendingDevice.physicalDeviceId,
+        name: pendingDevice.name,
+      });
     } else if (mode === 'doors' || mode === 'windows') {
       let closestWall: typeof room.walls[0] | null = null;
       let closestDistance = Infinity;
@@ -286,7 +288,9 @@ export function CanvasStage({ width, height }: CanvasStageProps) {
     if (!pointerPos) return;
 
     const deviceType = e.evt.dataTransfer?.getData('device-type') as DeviceType | undefined;
-    if (!deviceType) return;
+    const physicalDeviceId = e.evt.dataTransfer?.getData('physical-device-id');
+    const deviceName = e.evt.dataTransfer?.getData('device-name') || undefined;
+    if (!deviceType || !physicalDeviceId) return;
 
     const { x, y } = pointerPos;
 
@@ -296,8 +300,10 @@ export function CanvasStage({ width, height }: CanvasStageProps) {
 
     const anchor: 'wall' | 'free' = room.walls.length > 0 ? 'wall' : 'free';
 
-    addDevice(deviceType, { x, y }, anchor);
-    setPendingDeviceType(null);
+    addDevice(deviceType, { x, y }, anchor, {
+      physicalDeviceId,
+      name: deviceName || null,
+    });
   };
 
   return (
@@ -458,7 +464,7 @@ export function CanvasStage({ width, height }: CanvasStageProps) {
             lastValidPosition={lastValidOpeningPos}
           />
           <DevicePreviewLayer
-            type={pendingDeviceType}
+            type={pendingDevice?.type ?? null}
             mousePosition={mousePosition}
           />
           <DeviceLayer devices={room.devices} mode={mode} />

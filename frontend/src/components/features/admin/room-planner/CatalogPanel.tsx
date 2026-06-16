@@ -22,8 +22,9 @@ export function CatalogPanel() {
   const catalog = useRoomPlannerStore((state) => state.catalog);
   const mode = useRoomPlannerStore((state) => state.mode);
   const houseId = useRoomPlannerStore((state) => state.houseId);
-  const pendingDeviceType = useRoomPlannerStore((state) => state.pendingDeviceType);
-  const setPendingDeviceType = useRoomPlannerStore((state) => state.setPendingDeviceType);
+  const room = useRoomPlannerStore((state) => state.room);
+  const pendingDevice = useRoomPlannerStore((state) => state.pendingDevice);
+  const setPendingDevice = useRoomPlannerStore((state) => state.setPendingDevice);
   const setMode = useRoomPlannerStore((state) => state.setMode);
   const [deviceTypes, setDeviceTypes] = useState<DeviceTypeResponse[]>([]);
   const [physicalDevices, setPhysicalDevices] = useState<PhysicalDeviceResponse[]>([]);
@@ -61,6 +62,14 @@ export function CatalogPanel() {
       .catch(() => setPhysicalDevices([]))
       .finally(() => setDevicesLoading(false));
   }, [houseId]);
+
+  const placedPhysicalDeviceIds = useMemo(() => {
+    return new Set(
+      room.devices
+        .map((device) => device.metadata?.physicalDeviceId)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0),
+    );
+  }, [room.devices]);
 
   const deviceTypesById = useMemo(() => {
     const map = new Map<number, DeviceTypeResponse>();
@@ -106,7 +115,6 @@ export function CatalogPanel() {
     return 'socket';
   };
 
-  const isHiddenMode = mode === 'walls' || mode === 'select' || mode === 'pan';
   const isOpeningsMode = mode === 'doors' || mode === 'windows';
   const prevIsOpeningsMode = useRef(isOpeningsMode);
   const contentVariants = {
@@ -134,40 +142,55 @@ export function CatalogPanel() {
     }
   }, [isOpeningsMode]);
 
-  const handleDeviceClick = (type: DeviceType) => {
-    if (pendingDeviceType === type) {
-      setPendingDeviceType(null);
-    } else {
-      setPendingDeviceType(type);
-      setMode('devices');
+  const handleDeviceClick = (device: PhysicalDeviceResponse, type: DeviceType) => {
+    if (placedPhysicalDeviceIds.has(device.id)) return;
+
+    if (pendingDevice?.physicalDeviceId === device.id) {
+      setPendingDevice(null);
+      return;
     }
+
+    setPendingDevice({
+      physicalDeviceId: device.id,
+      type,
+      name: device.name,
+    });
+    setMode('devices');
   };
 
-  const handleDragStart = (e: React.DragEvent, type: DeviceType) => {
+  const handleDragStart = (
+    e: React.DragEvent,
+    device: PhysicalDeviceResponse,
+    type: DeviceType,
+  ) => {
+    if (placedPhysicalDeviceIds.has(device.id)) {
+      e.preventDefault();
+      return;
+    }
+
     e.dataTransfer.setData('device-type', type);
+    e.dataTransfer.setData('physical-device-id', device.id);
+    if (device.name) {
+      e.dataTransfer.setData('device-name', device.name);
+    }
     e.dataTransfer.effectAllowed = 'copy';
-    setPendingDeviceType(type);
+    setPendingDevice({
+      physicalDeviceId: device.id,
+      type,
+      name: device.name,
+    });
+    setMode('devices');
   };
 
   return (
-    <motion.div
-      layout
-      initial={false}
-      animate={{
-        width: isHiddenMode ? 0 : 300,
-        opacity: isHiddenMode ? 0 : 1,
-      }}
-      transition={{ duration: 0.2, ease: 'easeInOut' }}
-      className="h-full overflow-hidden"
-      style={{ pointerEvents: isHiddenMode ? 'none' : 'auto' }}
-    >
-      <Card className="w-[300px] h-full border border-border rounded-xl shadow-sm overflow-hidden">
-        <Card.Header className="px-4 pt-4 pb-0">
+    <div className="h-full w-[300px] shrink-0">
+      <Card className="h-full w-full overflow-hidden rounded-xl border border-border shadow-sm">
+        <Card.Header className="px-4 pt-0 pb-0">
           <Card.Title className="text-sm font-semibold">
             {isOpeningsMode ? t('admin.roomPlanner.openingsCatalog') : t('admin.roomPlanner.catalog')}
           </Card.Title>
         </Card.Header>
-        <Card.Content className="px-4 pb-4 overflow-hidden">
+        <Card.Content className="overflow-hidden px-4 pb-4">
           <AnimatePresence mode="wait" initial={false} custom={slideDirection}>
             {isOpeningsMode ? (
               <motion.div
@@ -180,43 +203,39 @@ export function CatalogPanel() {
                 transition={{ duration: 0.3, ease: 'easeInOut' }}
                 className="space-y-2"
               >
-                    <div
-                      onClick={() => setMode('doors')}
-                      className={`flex items-center gap-2 p-2 rounded-lg bg-muted/60 cursor-pointer transition-colors ${
-                        mode === 'doors'
-                          ? 'bg-accent/20'
-                          : 'hover:bg-accent/10'
-                      }`}
-                    >
-                      <DoorOpen className="size-5 text-muted-foreground" />
-                      <div className="flex flex-col flex-1">
-                        <span className="text-sm font-medium">{t('admin.roomPlanner.standardDoor')}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {mode === 'doors'
-                            ? t('admin.roomPlanner.selected')
-                            : t('admin.roomPlanner.clickToSelect')}
-                        </span>
-                      </div>
-                    </div>
+                <div
+                  onClick={() => setMode('doors')}
+                  className={`flex cursor-pointer items-center gap-2 rounded-lg bg-muted/60 p-2 transition-colors ${
+                    mode === 'doors' ? 'bg-accent/20' : 'hover:bg-accent/10'
+                  }`}
+                >
+                  <DoorOpen className="size-5 text-muted-foreground" />
+                  <div className="flex flex-1 flex-col">
+                    <span className="text-sm font-medium">{t('admin.roomPlanner.standardDoor')}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {mode === 'doors'
+                        ? t('admin.roomPlanner.selected')
+                        : t('admin.roomPlanner.clickToSelect')}
+                    </span>
+                  </div>
+                </div>
 
-                    <div
-                      onClick={() => setMode('windows')}
-                      className={`flex items-center gap-2 p-2 rounded-lg bg-muted/60 cursor-pointer transition-colors ${
-                        mode === 'windows'
-                          ? 'bg-accent/20'
-                          : 'hover:bg-accent/10'
-                      }`}
-                    >
-                      <AppWindow className="size-5 text-muted-foreground" />
-                      <div className="flex flex-col flex-1">
-                        <span className="text-sm font-medium">{t('admin.roomPlanner.standardWindow')}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {mode === 'windows'
-                            ? t('admin.roomPlanner.selected')
-                            : t('admin.roomPlanner.clickToSelect')}
-                        </span>
-                      </div>
-                    </div>
+                <div
+                  onClick={() => setMode('windows')}
+                  className={`flex cursor-pointer items-center gap-2 rounded-lg bg-muted/60 p-2 transition-colors ${
+                    mode === 'windows' ? 'bg-accent/20' : 'hover:bg-accent/10'
+                  }`}
+                >
+                  <AppWindow className="size-5 text-muted-foreground" />
+                  <div className="flex flex-1 flex-col">
+                    <span className="text-sm font-medium">{t('admin.roomPlanner.standardWindow')}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {mode === 'windows'
+                        ? t('admin.roomPlanner.selected')
+                        : t('admin.roomPlanner.clickToSelect')}
+                    </span>
+                  </div>
+                </div>
               </motion.div>
             ) : (
               <motion.div
@@ -229,88 +248,102 @@ export function CatalogPanel() {
                 transition={{ duration: 0.3, ease: 'easeInOut' }}
                 className="space-y-2"
               >
-                    {devicesLoading && (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <div className="h-3 w-3 animate-spin rounded-full border-2 border-accent border-t-transparent" />
-                        {t('admin.roomPlanner.loadingDevices')}
-                      </div>
-                    )}
-                    {!devicesLoading && categories.length === 0 && (
-                      <div className="text-xs text-muted-foreground">{t('admin.roomPlanner.noHouseDevices')}</div>
-                    )}
-                    {!devicesLoading && categories.length > 0 && (
-                      <Accordion
-                        type="multiple"
-                        value={openCategories}
-                        onValueChange={(value) => setOpenCategories(value as string[])}
-                        className="space-y-2"
-                      >
-                        {categories.map((category) => {
-                          const title =
-                            getDisplayName(
-                              category.type?.translations as Record<string, { name?: string }> | undefined,
-                              category.type?.name,
-                              category.type?.code,
-                              locale
-                            ) || `${t('admin.roomPlanner.deviceTypeFallback')} ${category.id}`;
-                          return (
-                            <AccordionItem key={category.id} value={String(category.id)} className="border-0">
-                              <AccordionTrigger className="rounded bg-background px-2 py-1 text-sm font-medium hover:bg-accent/10">
-                                <div className="flex w-full items-center justify-between">
-                                  <div className="flex items-center gap-2">
-                                    <span>{title}</span>
-                                    <span className="text-xs text-muted-foreground">
-                                      {category.devices.length}
-                                    </span>
-                                  </div>
-                                </div>
-                              </AccordionTrigger>
-                              <AccordionContent className="mt-2 space-y-2 border-l border-border pl-3">
-                                {category.devices.map((device) => {
-                                  const plannerType = toPlannerDeviceType(category.type);
-                                  const isSelected = pendingDeviceType === plannerType;
-                                  return (
-                                    <div
-                                      key={device.id}
-                                      onClick={() => handleDeviceClick(plannerType)}
-                                      draggable
-                                      onDragStart={(e) => handleDragStart(e, plannerType)}
-                                      className={`flex items-center gap-2 p-2 rounded-lg bg-muted/60 cursor-pointer transition-colors ${
-                                        isSelected
-                                          ? 'bg-accent/20'
-                                          : 'hover:bg-accent/10'
-                                      }`}
-                                    >
-                                      <span className="text-xl">
-                                        {catalog.items.find((item) => item.type === plannerType)?.icon ?? '📦'}
+                {devicesLoading && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+                    {t('admin.roomPlanner.loadingDevices')}
+                  </div>
+                )}
+                {!devicesLoading && categories.length === 0 && (
+                  <div className="text-xs text-muted-foreground">{t('admin.roomPlanner.noHouseDevices')}</div>
+                )}
+                {!devicesLoading && categories.length > 0 && (
+                  <Accordion
+                    type="multiple"
+                    value={openCategories}
+                    onValueChange={(value) => setOpenCategories(value as string[])}
+                    className="space-y-2"
+                  >
+                    {categories.map((category) => {
+                      const title =
+                        getDisplayName(
+                          category.type?.translations as Record<string, { name?: string }> | undefined,
+                          category.type?.name,
+                          category.type?.code,
+                          locale,
+                        ) || `${t('admin.roomPlanner.deviceTypeFallback')} ${category.id}`;
+                      const placedInCategory = category.devices.filter((device) =>
+                        placedPhysicalDeviceIds.has(device.id),
+                      ).length;
+
+                      return (
+                        <AccordionItem key={category.id} value={String(category.id)} className="border-0">
+                          <AccordionTrigger className="rounded bg-background px-2 py-1 text-sm font-medium hover:bg-accent/10">
+                            <div className="flex w-full items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span>{title}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {placedInCategory}/{category.devices.length}
+                                </span>
+                              </div>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="mt-2 space-y-2 border-l border-border pl-3">
+                            {category.devices.map((device) => {
+                              const plannerType = toPlannerDeviceType(category.type);
+                              const isPlaced = placedPhysicalDeviceIds.has(device.id);
+                              const isSelected = pendingDevice?.physicalDeviceId === device.id;
+
+                              return (
+                                <div
+                                  key={device.id}
+                                  onClick={() => handleDeviceClick(device, plannerType)}
+                                  draggable={!isPlaced}
+                                  onDragStart={(e) => handleDragStart(e, device, plannerType)}
+                                  className={`flex items-center gap-2 rounded-lg bg-muted/60 p-2 transition-colors ${
+                                    isPlaced
+                                      ? 'cursor-not-allowed opacity-50'
+                                      : isSelected
+                                        ? 'cursor-pointer bg-accent/20'
+                                        : 'cursor-pointer hover:bg-accent/10'
+                                  }`}
+                                  aria-disabled={isPlaced}
+                                >
+                                  <span className="text-xl">
+                                    {catalog.items.find((item) => item.type === plannerType)?.icon ?? '📦'}
+                                  </span>
+                                  <div className="flex flex-1 flex-col">
+                                    <span className="text-sm font-medium">{device.name}</span>
+                                    {device.description && (
+                                      <span className="w-fit rounded bg-muted/60 px-1.5 py-0.5 text-xs text-muted-foreground">
+                                        {device.description}
                                       </span>
-                                      <div className="flex flex-col flex-1">
-                                        <span className="text-sm font-medium">{device.name}</span>
-                                        {device.description && (
-                                          <span className="text-xs text-muted-foreground bg-muted/60 rounded px-1.5 py-0.5 w-fit">
-                                            {device.description}
-                                          </span>
-                                        )}
-                                      </div>
-                                      {isSelected && (
-                                        <span className="text-xs text-muted-foreground">
-                                          {t('admin.roomPlanner.clickCanvas')}
-                                        </span>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </AccordionContent>
-                            </AccordionItem>
-                          );
-                        })}
-                      </Accordion>
-                    )}
+                                    )}
+                                    {isPlaced && (
+                                      <span className="text-xs text-muted-foreground">
+                                        {t('admin.roomPlanner.deviceAlreadyPlaced')}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {isSelected && !isPlaced && (
+                                    <span className="text-xs text-muted-foreground">
+                                      {t('admin.roomPlanner.clickCanvas')}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
         </Card.Content>
       </Card>
-    </motion.div>
+    </div>
   );
 }
