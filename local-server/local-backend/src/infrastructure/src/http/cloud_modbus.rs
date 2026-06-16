@@ -40,6 +40,7 @@ struct ModbusDeviceDto {
     id: String,
     name: String,
     slave_id: i64,
+    house_id: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -59,6 +60,14 @@ struct CreateModbusDeviceRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     description: Option<String>,
     enabled: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    house_id: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct UpdateModbusDeviceRequest {
+    house_id: String,
 }
 
 #[derive(Serialize)]
@@ -85,7 +94,11 @@ impl CloudModbusClient for ReqwestCloudModbusClient {
             .await
             .map_err(|e| DomainError::DependencyUnavailable(format!("modbus list: {e}")))?;
         if !res.status().is_success() {
-            return Ok(Vec::new());
+            let status = res.status();
+            let body = res.text().await.unwrap_or_default();
+            return Err(DomainError::DependencyUnavailable(format!(
+                "modbus list {status}: {body}"
+            )));
         }
         res.json::<Vec<ModbusDeviceDto>>()
             .await
@@ -95,6 +108,7 @@ impl CloudModbusClient for ReqwestCloudModbusClient {
                         cloud_id: d.id,
                         name: d.name,
                         slave_id: d.slave_id,
+                        house_id: d.house_id,
                     })
                     .collect()
             })
@@ -112,6 +126,7 @@ impl CloudModbusClient for ReqwestCloudModbusClient {
             slave_id: cmd.slave_id,
             description: cmd.description,
             enabled: cmd.enabled,
+            house_id: cmd.house_id,
         };
         let token = resolve_bearer_token(self.settings.as_ref(), &self.api_key).await;
         let res = apply_bearer(self.http.post(&url).json(&body), token)
@@ -131,8 +146,34 @@ impl CloudModbusClient for ReqwestCloudModbusClient {
                 cloud_id: d.id,
                 name: d.name,
                 slave_id: d.slave_id,
+                house_id: d.house_id,
             })
             .map_err(|e| DomainError::Internal(format!("parse created modbus: {e}")))
+    }
+
+    async fn update_device_house(
+        &self,
+        base_url: &str,
+        cloud_id: &str,
+        house_id: &str,
+    ) -> Result<(), DomainError> {
+        let url = scenario_api_url(base_url, &format!("/modbus/devices/{cloud_id}"));
+        let body = UpdateModbusDeviceRequest {
+            house_id: house_id.to_string(),
+        };
+        let token = resolve_bearer_token(self.settings.as_ref(), &self.api_key).await;
+        let res = apply_bearer(self.http.patch(&url).json(&body), token)
+            .send()
+            .await
+            .map_err(|e| DomainError::DependencyUnavailable(format!("modbus patch: {e}")))?;
+        if !res.status().is_success() {
+            let status = res.status();
+            let body = res.text().await.unwrap_or_default();
+            return Err(DomainError::DependencyUnavailable(format!(
+                "modbus patch {status}: {body}"
+            )));
+        }
+        Ok(())
     }
 
     async fn list_registers(
@@ -147,7 +188,11 @@ impl CloudModbusClient for ReqwestCloudModbusClient {
             .await
             .map_err(|e| DomainError::DependencyUnavailable(format!("modbus regs list: {e}")))?;
         if !res.status().is_success() {
-            return Ok(Vec::new());
+            let status = res.status();
+            let body = res.text().await.unwrap_or_default();
+            return Err(DomainError::DependencyUnavailable(format!(
+                "modbus regs list {status}: {body}"
+            )));
         }
         res.json::<Vec<ModbusRegisterDto>>()
             .await

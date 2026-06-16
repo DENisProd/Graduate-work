@@ -42,6 +42,7 @@ export function DevicesTab({
 
   const {
     devices,
+    modbusDevices,
     devicesLoading,
     devicesError,
     devicesErrorDetails,
@@ -128,6 +129,7 @@ export function DevicesTab({
         <DevicesListContent
           houseId={houseId}
           devices={devices}
+          modbusDevices={modbusDevices}
           servers={servers}
           loading={devicesLoading || serversLoading}
           error={devicesError}

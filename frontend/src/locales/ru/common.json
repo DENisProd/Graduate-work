@@ -815,6 +815,11 @@
       "connectedDevices": {
         "sectionTitle": "Устройства",
         "protocolZigbee": "Zigbee",
+        "protocolModbus": "Modbus",
+        "modbusSlaveId": "Slave ID: {{slaveId}}",
+        "modbusEnabled": "Активен",
+        "modbusDisabled": "Отключён",
+        "modbusManagedLocally": "Управляется через локальный сервер",
         "syncFromBridge": "Синхронизировать с мостом",
         "syncRequested": "Запрос списка устройств отправлен на мост",
         "syncUnavailable": "Мост или MQTT недоступны",

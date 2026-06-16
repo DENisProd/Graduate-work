@@ -272,7 +272,7 @@ export class ZigbeeMqttService implements OnModuleInit, OnModuleDestroy {
     }
     const topic = this.commandTopic(entry, 'bridge/request/permit_join');
     const t = Math.max(1, Math.min(254, Math.trunc(time)));
-    const body = enable ? String(t) : 'false';
+    const body = enable ? JSON.stringify({ time: t }) : JSON.stringify({ time: 0 });
     entry.client.publish(topic, body, { qos: 0 }, (err) => {
       if (err) this.logger.error(`[${houseId}] Ошибка publish ${topic}`, err);
     });

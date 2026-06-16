@@ -14,7 +14,7 @@ import {
   ModbusRegisterStateDocument,
   ModbusRegisterStateModel,
 } from '../mongo/schemas/modbus-register.mongo';
-import type { CreateModbusDeviceDto, CreateModbusRegisterDto } from './dto/modbus.dto';
+import type { CreateModbusDeviceDto, CreateModbusRegisterDto, UpdateModbusDeviceDto } from './dto/modbus.dto';
 
 @Injectable()
 export class ModbusDeviceRepository {
@@ -27,8 +27,9 @@ export class ModbusDeviceRepository {
     private readonly stateModel: Model<ModbusRegisterStateDocument>,
   ) {}
 
-  async listDevices(): Promise<ModbusDeviceDocument[]> {
-    return this.deviceModel.find().sort({ createdAt: 1 }).exec();
+  async listDevices(houseId?: string): Promise<ModbusDeviceDocument[]> {
+    const filter = houseId ? { houseId } : {};
+    return this.deviceModel.find(filter).sort({ createdAt: 1 }).exec();
   }
 
   async findDevice(id: string): Promise<ModbusDeviceDocument | null> {
@@ -41,7 +42,22 @@ export class ModbusDeviceRepository {
       slaveId: dto.slaveId,
       description: dto.description ?? null,
       enabled: dto.enabled ?? true,
+      houseId: dto.houseId ?? null,
     });
+  }
+
+  async updateDevice(
+    id: string,
+    dto: UpdateModbusDeviceDto,
+  ): Promise<ModbusDeviceDocument | null> {
+    const update: Partial<ModbusDeviceModel> = {};
+    if (dto.houseId !== undefined) update.houseId = dto.houseId;
+    if (Object.keys(update).length === 0) {
+      return this.findDevice(id);
+    }
+    return this.deviceModel
+      .findByIdAndUpdate(id, { $set: update }, { new: true })
+      .exec();
   }
 
   async deleteDevice(id: string): Promise<void> {

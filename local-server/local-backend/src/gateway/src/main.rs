@@ -216,8 +216,20 @@ async fn main() -> anyhow::Result<()> {
         let cloud = state.cloud_modbus_client.clone();
         let url_provider = scenario_url_provider.clone();
         let interval = cfg.sync_interval_secs;
+        let access_sync = state.access_sync_repo.clone();
+        let user_id_provider = Arc::new(RuntimeSettingsUserIdProvider {
+            settings: state.runtime_settings_repo.clone(),
+        }) as Arc<dyn UserIdProvider>;
         tokio::spawn(async move {
-            run_modbus_sync(repo, cloud, interval, url_provider).await;
+            run_modbus_sync(
+                repo,
+                cloud,
+                interval,
+                url_provider,
+                access_sync,
+                user_id_provider,
+            )
+            .await;
         });
     }
 

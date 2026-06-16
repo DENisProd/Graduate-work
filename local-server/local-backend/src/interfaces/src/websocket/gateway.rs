@@ -74,7 +74,7 @@ pub fn setup_namespace(
                 let prefix = prefix.clone();
                 async move {
                     let topic = format!("{}/bridge/request/permit_join", prefix);
-                    mqtt.publish(&topic, br#"{"value":true,"time":300}"#).await.ok();
+                    mqtt.publish(&topic, br#"{"time":254}"#).await.ok();
                 }
             }
         });
@@ -87,7 +87,7 @@ pub fn setup_namespace(
                 let prefix = prefix.clone();
                 async move {
                     let topic = format!("{}/bridge/request/permit_join", prefix);
-                    mqtt.publish(&topic, br#"{"value":false}"#).await.ok();
+                    mqtt.publish(&topic, br#"{"time":0}"#).await.ok();
                 }
             }
         });

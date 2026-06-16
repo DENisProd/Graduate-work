@@ -20,6 +20,9 @@ export class ModbusDeviceModel {
   @Prop({ default: true })
   enabled: boolean;
 
+  @Prop({ type: String, default: null, index: true })
+  houseId?: string | null;
+
   createdAt: Date;
   updatedAt: Date;
 }

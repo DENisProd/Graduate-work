@@ -2,15 +2,17 @@
 
 import { ServiceErrorCard } from '@/components/shared';
 import { useTranslation } from '@/hooks';
-import type { ZigbeeDeviceListItem, ZigbeeStateWire } from '@/types/api';
+import type { ZigbeeDeviceListItem, ZigbeeStateWire, ModbusDeviceResponse } from '@/types/api';
 import type { DevicesLoadError } from '@/features/access-control/model/use-devices-tab';
 import type { ConnectedLocalServerItem } from '@/lib/api/access-service';
 import { DeviceListCard } from './DeviceListCard';
+import { ModbusDeviceListCard } from './ModbusDeviceListCard';
 import { LocalServerDeviceCard } from './LocalServerDeviceCard';
 
 interface DevicesListContentProps {
   houseId: string | null;
   devices: ZigbeeDeviceListItem[];
+  modbusDevices: ModbusDeviceResponse[];
   servers: ConnectedLocalServerItem[];
   loading: boolean;
   error: DevicesLoadError;
@@ -25,6 +27,7 @@ interface DevicesListContentProps {
 export function DevicesListContent({
   houseId,
   devices,
+  modbusDevices,
   servers,
   loading,
   error,
@@ -37,6 +40,7 @@ export function DevicesListContent({
 }: DevicesListContentProps) {
   const { t } = useTranslation();
   const hasDevices = devices.length > 0;
+  const hasModbus = modbusDevices.length > 0;
   const hasServers = servers.length > 0;
 
   if (!houseId || !detailsPathPrefix) {
@@ -74,7 +78,7 @@ export function DevicesListContent({
     );
   }
 
-  if (!hasDevices && !hasServers) {
+  if (!hasDevices && !hasModbus && !hasServers) {
     return (
       <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
         {t('admin.noData')}
@@ -106,6 +110,9 @@ export function DevicesListContent({
             server={server}
             detailsPathPrefix={detailsPathPrefix}
           />
+        ))}
+        {modbusDevices.map((device) => (
+          <ModbusDeviceListCard key={`modbus-${device.id}`} device={device} />
         ))}
         {devices.map((device) => (
           <DeviceListCard

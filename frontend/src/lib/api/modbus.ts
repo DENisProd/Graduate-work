@@ -13,8 +13,12 @@ import { physicalDevicesApiCall } from './core';
 const base = (path: string) => physicalDevicesApiCall<any>(`/v1/modbus${path}`);
 
 export const modbusApi = {
-  listDevices: (): Promise<ModbusDeviceResponse[]> =>
-    base('/devices'),
+  listDevices: (params?: { houseId?: string }): Promise<ModbusDeviceResponse[]> => {
+    const q = params?.houseId
+      ? `?houseId=${encodeURIComponent(params.houseId)}`
+      : '';
+    return base(`/devices${q}`);
+  },
 
   getDevice: (id: string): Promise<ModbusDeviceResponse> =>
     base(`/devices/${id}`),

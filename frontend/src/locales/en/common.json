@@ -813,6 +813,11 @@
       "connectedDevices": {
         "sectionTitle": "Devices",
         "protocolZigbee": "Zigbee",
+        "protocolModbus": "Modbus",
+        "modbusSlaveId": "Slave ID: {{slaveId}}",
+        "modbusEnabled": "Active",
+        "modbusDisabled": "Disabled",
+        "modbusManagedLocally": "Managed via local server",
         "syncFromBridge": "Sync from bridge",
         "syncRequested": "Device list request sent to the bridge",
         "syncUnavailable": "Bridge or MQTT unavailable",

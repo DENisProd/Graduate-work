@@ -12,6 +12,7 @@ import type {
   ModbusDeviceResponseDto,
   ModbusRegisterResponseDto,
   ModbusRegisterStateResponseDto,
+  UpdateModbusDeviceDto,
   WriteModbusRegisterDto,
 } from './dto/modbus.dto';
 
@@ -22,6 +23,7 @@ function mapDevice(doc: any): ModbusDeviceResponseDto {
     slaveId: doc.slaveId,
     description: doc.description ?? null,
     enabled: doc.enabled,
+    houseId: doc.houseId ?? null,
     createdAt: doc.createdAt.toISOString(),
     updatedAt: doc.updatedAt.toISOString(),
   };
@@ -60,8 +62,8 @@ export class ModbusService {
     private readonly gateway: ModbusGatewayService,
   ) {}
 
-  async listDevices(): Promise<ModbusDeviceResponseDto[]> {
-    return (await this.repo.listDevices()).map(mapDevice);
+  async listDevices(houseId?: string): Promise<ModbusDeviceResponseDto[]> {
+    return (await this.repo.listDevices(houseId)).map(mapDevice);
   }
 
   async getDevice(id: string): Promise<ModbusDeviceResponseDto> {
@@ -72,6 +74,12 @@ export class ModbusService {
 
   async createDevice(dto: CreateModbusDeviceDto): Promise<ModbusDeviceResponseDto> {
     return mapDevice(await this.repo.createDevice(dto));
+  }
+
+  async updateDevice(id: string, dto: UpdateModbusDeviceDto): Promise<ModbusDeviceResponseDto> {
+    const doc = await this.repo.updateDevice(id, dto);
+    if (!doc) throw new NotFoundException(`Modbus device ${id} not found`);
+    return mapDevice(doc);
   }
 
   async deleteDevice(id: string): Promise<void> {

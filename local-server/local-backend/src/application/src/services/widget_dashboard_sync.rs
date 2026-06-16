@@ -25,10 +25,15 @@ pub async fn run_widget_dashboard_sync(
     loop {
         let base_url = scenario_service_url.get().await;
         tracing::debug!(scenario_base = %base_url, "widget_dashboard_sync: cycle start");
-        let modbus_map = sync_once(&modbus_repo, &modbus_cloud, &base_url)
-            .await
-            .ok();
         let house_ids = resolve_house_ids(&access_sync, &user_id_provider).await;
+        let house_id = house_ids.first().map(|s| s.as_str());
+        let modbus_map = match sync_once(&modbus_repo, &modbus_cloud, &base_url, house_id).await {
+            Ok(map) => Some(map),
+            Err(e) => {
+                tracing::warn!(error = %e, "widget_dashboard_sync: modbus_sync failed");
+                None
+            }
+        };
         for house_id in &house_ids {
             pull_from_cloud(&repo, &cloud, &base_url, house_id).await;
         }

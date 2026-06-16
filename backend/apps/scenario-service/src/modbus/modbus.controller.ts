@@ -5,9 +5,11 @@ import {
   Get,
   HttpCode,
   Param,
+  Patch,
   Post,
+  Query,
 } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ModbusService } from './modbus.service';
 import {
   CreateModbusDeviceDto,
@@ -15,6 +17,7 @@ import {
   ModbusDeviceResponseDto,
   ModbusRegisterResponseDto,
   ModbusRegisterStateResponseDto,
+  UpdateModbusDeviceDto,
   WriteModbusRegisterDto,
 } from './dto/modbus.dto';
 
@@ -25,9 +28,10 @@ export class ModbusController {
 
   @Get('devices')
   @ApiOperation({ summary: 'List modbus devices' })
+  @ApiQuery({ name: 'houseId', required: false })
   @ApiResponse({ status: 200, type: [ModbusDeviceResponseDto] })
-  listDevices(): Promise<ModbusDeviceResponseDto[]> {
-    return this.service.listDevices();
+  listDevices(@Query('houseId') houseId?: string): Promise<ModbusDeviceResponseDto[]> {
+    return this.service.listDevices(houseId?.trim() || undefined);
   }
 
   @Post('devices')
@@ -36,6 +40,18 @@ export class ModbusController {
   @ApiResponse({ status: 201, type: ModbusDeviceResponseDto })
   createDevice(@Body() dto: CreateModbusDeviceDto): Promise<ModbusDeviceResponseDto> {
     return this.service.createDevice(dto);
+  }
+
+  @Patch('devices/:id')
+  @ApiOperation({ summary: 'Update modbus device' })
+  @ApiParam({ name: 'id' })
+  @ApiBody({ type: UpdateModbusDeviceDto })
+  @ApiResponse({ status: 200, type: ModbusDeviceResponseDto })
+  updateDevice(
+    @Param('id') id: string,
+    @Body() dto: UpdateModbusDeviceDto,
+  ): Promise<ModbusDeviceResponseDto> {
+    return this.service.updateDevice(id, dto);
   }
 
   @Get('devices/:id')

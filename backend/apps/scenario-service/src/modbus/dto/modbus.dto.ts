@@ -4,11 +4,16 @@ import type { RegisterType } from '../../mongo/schemas/modbus-register.mongo';
 import {
   createModbusDeviceSchema,
   createModbusRegisterSchema,
+  updateModbusDeviceSchema,
   writeModbusRegisterSchema,
 } from '../schemas/modbus.schema';
 
 export class CreateModbusDeviceDto extends createZodDto(
   createModbusDeviceSchema,
+) {}
+
+export class UpdateModbusDeviceDto extends createZodDto(
+  updateModbusDeviceSchema,
 ) {}
 
 export class CreateModbusRegisterDto extends createZodDto(
@@ -25,6 +30,7 @@ export class ModbusDeviceResponseDto {
   @ApiProperty() slaveId: number;
   @ApiPropertyOptional() description?: string | null;
   @ApiProperty() enabled: boolean;
+  @ApiPropertyOptional() houseId?: string | null;
   @ApiProperty() createdAt: string;
   @ApiProperty() updatedAt: string;
 }

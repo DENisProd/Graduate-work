@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/hooks';
 import { useToast } from '@/components/shared';
 import type { HouseDetailsTab } from '@/store/access-control-store';
-import { ApiError, zigbeeDevicesApi } from '@/lib/api-client';
-import type { ZigbeeDeviceListItem } from '@/types/api';
+import { ApiError, zigbeeDevicesApi, modbusApi } from '@/lib/api-client';
+import type { ZigbeeDeviceListItem, ModbusDeviceResponse } from '@/types/api';
 import { useHouseMqttStatus } from '@/features/access-control/hooks/useHouseMqttStatus';
 import { useZigbeeSocketConnection } from '@/features/access-control/hooks/useZigbeeSocketConnection';
 import { useZigbeeTelemetry } from '@/features/access-control/hooks/useZigbeeTelemetry';
@@ -22,6 +22,7 @@ export function useDevicesTab(houseId: string | null, activeTab: HouseDetailsTab
   const router = useRouter();
 
   const [devices, setDevices] = useState<ZigbeeDeviceListItem[]>([]);
+  const [modbusDevices, setModbusDevices] = useState<ModbusDeviceResponse[]>([]);
   const [devicesTotal, setDevicesTotal] = useState(0);
   const [devicesPage, setDevicesPage] = useState(1);
   const [devicesLoading, setDevicesLoading] = useState(false);
@@ -116,16 +117,20 @@ export function useDevicesTab(houseId: string | null, activeTab: HouseDetailsTab
 
         if (signal?.aborted) return;
 
-        const result = await zigbeeDevicesApi.list({
-          houseId,
-          page: devicesPage,
-          limit: DEVICES_LIMIT,
-          signal,
-        });
+        const [result, modbus] = await Promise.all([
+          zigbeeDevicesApi.list({
+            houseId,
+            page: devicesPage,
+            limit: DEVICES_LIMIT,
+            signal,
+          }),
+          modbusApi.listDevices({ houseId }).catch(() => [] as ModbusDeviceResponse[]),
+        ]);
         const normalized = normalizeApiList<ZigbeeDeviceListItem>(result);
         if (signal?.aborted) return;
         setDevices(normalized.items);
         setDevicesTotal(normalized.total);
+        setModbusDevices(modbus);
       } catch (error) {
         if (signal?.aborted) return;
         handleError(error, setDevicesError);
@@ -151,6 +156,7 @@ export function useDevicesTab(houseId: string | null, activeTab: HouseDetailsTab
 
   return {
     devices,
+    modbusDevices,
     devicesLoading,
     devicesError,
     devicesErrorDetails,

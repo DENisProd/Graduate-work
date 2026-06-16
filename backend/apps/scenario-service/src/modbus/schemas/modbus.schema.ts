@@ -12,8 +12,14 @@ export const createModbusDeviceSchema = z.object({
   slaveId: z.coerce.number().int().min(1),
   description: z.string().optional(),
   enabled: z.boolean().optional(),
+  houseId: z.string().min(1).optional(),
 });
 export type CreateModbusDeviceInput = z.infer<typeof createModbusDeviceSchema>;
+
+export const updateModbusDeviceSchema = z.object({
+  houseId: z.string().min(1).optional(),
+});
+export type UpdateModbusDeviceInput = z.infer<typeof updateModbusDeviceSchema>;
 
 export const createModbusRegisterSchema = z.object({
   name: z.string().min(1),

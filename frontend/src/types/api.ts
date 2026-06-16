@@ -674,6 +674,7 @@ export interface ModbusDeviceResponse {
   slaveId: number;
   description?: string | null;
   enabled: boolean;
+  houseId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -683,6 +684,7 @@ export interface CreateModbusDeviceRequest {
   slaveId: number;
   description?: string;
   enabled?: boolean;
+  houseId?: string;
 }
 
 export interface ModbusRegisterResponse {

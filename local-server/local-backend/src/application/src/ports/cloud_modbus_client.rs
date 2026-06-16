@@ -8,6 +8,7 @@ pub struct RemoteModbusDevice {
     pub cloud_id: String,
     pub name: String,
     pub slave_id: i64,
+    pub house_id: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -24,6 +25,7 @@ pub struct CreateCloudModbusDeviceCmd {
     pub slave_id: i64,
     pub description: Option<String>,
     pub enabled: bool,
+    pub house_id: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -47,6 +49,13 @@ pub trait CloudModbusClient: Send + Sync {
         base_url: &str,
         cmd: CreateCloudModbusDeviceCmd,
     ) -> Result<RemoteModbusDevice, DomainError>;
+
+    async fn update_device_house(
+        &self,
+        base_url: &str,
+        cloud_id: &str,
+        house_id: &str,
+    ) -> Result<(), DomainError>;
 
     async fn list_registers(
         &self,

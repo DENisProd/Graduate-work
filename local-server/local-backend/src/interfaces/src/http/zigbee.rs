@@ -163,7 +163,7 @@ async fn permit_join(
     State(s): State<ZigbeeHttpState>,
 ) -> Result<StatusCode, AppError> {
     let topic = format!("{}/bridge/request/permit_join", s.prefix);
-    s.mqtt.publish(&topic, br#"{"value":true,"time":254}"#).await?;
+    s.mqtt.publish(&topic, br#"{"time":254}"#).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
