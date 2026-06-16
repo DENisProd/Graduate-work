@@ -25,6 +25,7 @@ import { GaugeDialWidget } from './widgets/GaugeDialWidget';
 import { CircularProgressWidget } from './widgets/CircularProgressWidget';
 import { SliderControlWidget } from './widgets/SliderControlWidget';
 import { DeviceHeroWidget } from './widgets/DeviceHeroWidget';
+import { DeviceGroupWidget } from './widgets/DeviceGroupWidget';
 import { MiniLineChartWidget } from './widgets/MiniLineChartWidget';
 import { FloorPlanWidget } from './widgets/FloorPlanWidget';
 import { ModbusRegisterValueWidget, ModbusRegisterControlWidget } from './widgets/ModbusRegisterWidget';
@@ -40,6 +41,7 @@ import type {
   CircularProgressConfig,
   SliderControlConfig,
   DeviceHeroConfig,
+  DeviceGroupConfig,
   MiniLineChartConfig,
   HouseFloorPlanConfig,
   ModbusRegisterValueConfig,
@@ -298,6 +300,10 @@ export function WidgetDashboard({ dashboard, devices, zigbeeDevices, scenarios }
             onCommand={sendCommand}
           />
         );
+      }
+      case 'DEVICE_GROUP': {
+        const cfg = widget.config as DeviceGroupConfig;
+        return <DeviceGroupWidget config={cfg} states={states} onCommand={sendCommand} />;
       }
       case 'MINI_LINE_CHART': {
         const cfg = widget.config as MiniLineChartConfig;

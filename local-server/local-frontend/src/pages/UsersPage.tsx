@@ -1,17 +1,15 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format, parseISO } from 'date-fns'
-import { UserPlus, Trash2, Loader2, X, ShieldCheck, ShieldOff, Plus, User } from 'lucide-react'
+import { Trash2, Loader2, X, ShieldCheck, ShieldOff, User } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/hooks/useI18n'
 import {
   listLocalHouses,
   listLocalMembers,
-  addLocalMember,
   removeLocalMember,
   listLocalRoles,
-  createLocalRole,
   deleteLocalRole,
   listMemberRoles,
   assignLocalRole,
@@ -115,21 +113,10 @@ function MemberRoleBadges({
 function RolesTab({ houseId }: { houseId: string }) {
   const { t } = useI18n()
   const qc = useQueryClient()
-  const [newName, setNewName] = useState('')
 
   const { data: roles = [], isPending } = useQuery({
     queryKey: ['local-roles', houseId],
     queryFn: () => listLocalRoles(houseId),
-  })
-
-  const createMutation = useMutation({
-    mutationFn: () => createLocalRole(houseId, newName.trim()),
-    onSuccess: () => {
-      toast.success(t('users.toastRoleCreated'))
-      setNewName('')
-      qc.invalidateQueries({ queryKey: ['local-roles', houseId] })
-    },
-    onError: () => toast.error(t('users.toastRoleCreateFailed')),
   })
 
   const deleteMutation = useMutation({
@@ -142,7 +129,7 @@ function RolesTab({ houseId }: { houseId: string }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
+      {/* <div className="flex gap-2">
         <input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
@@ -162,7 +149,7 @@ function RolesTab({ houseId }: { houseId: string }) {
           )}
           {createMutation.isPending ? t('users.creatingRole') : t('users.addRole')}
         </button>
-      </div>
+      </div> */}
 
       {isPending ? (
         <div className="space-y-2">
@@ -205,7 +192,6 @@ function RolesTab({ houseId }: { houseId: string }) {
 function MembersTab({ houseId }: { houseId: string }) {
   const { t } = useI18n()
   const qc = useQueryClient()
-  const [newId, setNewId] = useState('')
   const [confirmRemove, setConfirmRemove] = useState<LocalMember | null>(null)
 
   const { data: members = [], isPending } = useQuery({
@@ -216,16 +202,6 @@ function MembersTab({ houseId }: { houseId: string }) {
   const { data: allRoles = [] } = useQuery({
     queryKey: ['local-roles', houseId],
     queryFn: () => listLocalRoles(houseId),
-  })
-
-  const addMutation = useMutation({
-    mutationFn: () => addLocalMember(houseId, newId.trim()),
-    onSuccess: () => {
-      toast.success(t('users.toastAdded'))
-      setNewId('')
-      qc.invalidateQueries({ queryKey: ['local-members', houseId] })
-    },
-    onError: () => toast.error(t('users.toastAddFailed')),
   })
 
   const removeMutation = useMutation({
@@ -242,7 +218,7 @@ function MembersTab({ houseId }: { houseId: string }) {
   return (
     <div className="space-y-4">
       {/* Add member */}
-      <div className="flex gap-2">
+      {/* <div className="flex gap-2">
         <input
           value={newId}
           onChange={(e) => setNewId(e.target.value)}
@@ -262,7 +238,7 @@ function MembersTab({ houseId }: { houseId: string }) {
           )}
           {addMutation.isPending ? t('users.adding') : t('users.addMember')}
         </button>
-      </div>
+      </div> */}
 
       {/* List */}
       {isPending ? (

@@ -114,6 +114,15 @@ export const WIDGET_REGISTRY: WidgetMeta[] = [
     defaultConfig: { physicalDeviceId: '', ieeeAddr: '', title: 'Устройство', subtitle: '', icon: 'lightbulb', showToggle: true, toggleSource: 'zigbee', togglePayloadKey: 'state', toggleOnValue: 'ON', toggleOffValue: 'OFF', chips: [], stats: [], accent: 'green' },
   },
   {
+    type: 'DEVICE_GROUP',
+    label: 'Группа устройств',
+    description: 'Несколько устройств в одной карточке: переключайте каждое отдельно или все сразу одной кнопкой',
+    icon: 'CardHero',
+    defaultSize: { w: 6, h: 6 },
+    minSize: { w: 4, h: 4 },
+    defaultConfig: { title: 'Группа устройств', icon: 'lightbulb', showGroupToggle: true, items: [], accent: 'green' },
+  },
+  {
     type: 'MINI_LINE_CHART',
     label: 'Мини-график',
     description: 'Линейный график значений в реальном времени',

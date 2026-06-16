@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { ControlToggleConfig } from '../../types/widget.types';
 import type { ZigbeeStateWire } from '@/types/api';
 import type { ZigbeeCommandAck } from '@/features/access-control/lib/zigbee-telemetry-manager';
@@ -17,14 +17,31 @@ interface Props {
 }
 
 export function ControlToggleWidget({ config, state, onCommand }: Props) {
+  const isModbus = config.source === 'modbus';
   const [optimistic, setOptimistic] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
+  const [modbusOn, setModbusOn] = useState<boolean | null>(null);
+
+  const refetchModbus = useCallback(async () => {
+    if (!isModbus || !config.modbusDeviceId || !config.modbusRegisterId) return;
+    try {
+      const result = await modbusApi.readRegister(config.modbusDeviceId, config.modbusRegisterId);
+      setModbusOn((result.rawValues?.[0] ?? 0) !== 0);
+    } catch {
+      // keep last known value on read failure
+    }
+  }, [isModbus, config.modbusDeviceId, config.modbusRegisterId]);
+
+  useEffect(() => {
+    refetchModbus();
+  }, [refetchModbus]);
 
   const rawValue =
-    config.source !== 'modbus' && state ? readPayloadValue(state, config.statePayloadKey) : null;
-  const actualIsOn =
-    rawValue === true ||
-    (typeof rawValue === 'string' && rawValue.toUpperCase() === config.onValue?.toUpperCase());
+    !isModbus && state ? readPayloadValue(state, config.statePayloadKey) : null;
+  const actualIsOn = isModbus
+    ? modbusOn === true
+    : rawValue === true ||
+      (typeof rawValue === 'string' && rawValue.toUpperCase() === config.onValue?.toUpperCase());
 
   const isOn = optimistic !== null ? optimistic : actualIsOn;
 
@@ -34,9 +51,10 @@ export function ControlToggleWidget({ config, state, onCommand }: Props) {
     setOptimistic(next);
     setLoading(true);
     try {
-      if (config.source === 'modbus') {
+      if (isModbus) {
         if (!config.modbusDeviceId || !config.modbusRegisterId) throw new Error('Не выбран Modbus регистр');
         await modbusApi.writeRegister(config.modbusDeviceId, config.modbusRegisterId, { coil: next });
+        await refetchModbus();
       } else {
         await onCommand(
           { physicalDeviceId: config.physicalDeviceId, deviceIeeeAddr: config.ieeeAddr },
@@ -47,7 +65,11 @@ export function ControlToggleWidget({ config, state, onCommand }: Props) {
       setOptimistic(!next);
     } finally {
       setLoading(false);
-      setTimeout(() => setOptimistic(null), 2000);
+      if (isModbus) {
+        setOptimistic(null);
+      } else {
+        setTimeout(() => setOptimistic(null), 2000);
+      }
     }
   }
 

@@ -9,6 +9,7 @@ export type WidgetType =
   | 'CIRCULAR_PROGRESS'
   | 'SLIDER_CONTROL'
   | 'DEVICE_HERO'
+  | 'DEVICE_GROUP'
   | 'MINI_LINE_CHART'
   | 'HOUSE_FLOOR_PLAN'
   | 'MODBUS_REGISTER_VALUE'
@@ -160,6 +161,28 @@ export interface DeviceHeroConfig {
   accent: 'green' | 'blue' | 'amber' | 'slate';
 }
 
+export interface DeviceGroupItem {
+  id: string;
+  label: string;
+  source: WidgetCommandSource;
+  physicalDeviceId?: string;
+  ieeeAddr?: string;
+  statePayloadKey?: string;
+  onValue?: string;
+  offValue?: string;
+  modbusDeviceId?: string;
+  modbusRegisterId?: string;
+}
+
+export interface DeviceGroupConfig {
+  type: 'DEVICE_GROUP';
+  title: string;
+  icon: 'camera' | 'lightbulb' | 'fan' | 'lock' | 'speaker' | 'sparkles' | 'thermometer' | 'broom';
+  showGroupToggle: boolean;
+  items: DeviceGroupItem[];
+  accent: 'green' | 'blue' | 'amber' | 'slate';
+}
+
 export interface MiniLineChartConfig {
   type: 'MINI_LINE_CHART';
   physicalDeviceId: string;
@@ -209,6 +232,7 @@ export type WidgetConfig =
   | CircularProgressConfig
   | SliderControlConfig
   | DeviceHeroConfig
+  | DeviceGroupConfig
   | MiniLineChartConfig
   | HouseFloorPlanConfig
   | ModbusRegisterValueConfig

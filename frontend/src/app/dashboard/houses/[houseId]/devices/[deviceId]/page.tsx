@@ -25,12 +25,14 @@ export default function DashboardDeviceDetailsPage() {
   }
 
   return (
-    <DeviceDetails
-      houseId={houseId}
-      deviceId={deviceId}
-      backHref={`/dashboard/houses/${encodeURIComponent(houseId)}/devices`}
-      backLabel={t('common.back')}
-    />
+    <div className="mx-auto max-w-3xl">
+      <DeviceDetails
+        houseId={houseId}
+        deviceId={deviceId}
+        backHref={`/dashboard/houses/${encodeURIComponent(houseId)}/devices`}
+        backLabel={t('common.back')}
+      />
+    </div>
   );
 }
 

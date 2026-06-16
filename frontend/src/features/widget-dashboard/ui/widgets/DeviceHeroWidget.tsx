@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { DeviceHeroConfig, DeviceHeroStat } from '../../types/widget.types';
 import type { PhysicalDeviceResponse, ZigbeeStateWire } from '@/types/api';
 import type { ZigbeeCommandAck } from '@/features/access-control/lib/zigbee-telemetry-manager';
@@ -38,7 +38,7 @@ const ACCENT_ICON: Record<DeviceHeroConfig['accent'], string> = {
   slate: 'bg-slate-500/15 text-slate-700',
 };
 
-const HERO_ICON: Record<DeviceHeroConfig['icon'], React.ReactNode> = {
+export const HERO_ICON: Record<DeviceHeroConfig['icon'], React.ReactNode> = {
   camera: (
     <path
       strokeLinecap="round"
@@ -165,9 +165,25 @@ function readNumeric(state: ZigbeeStateWire | undefined, key: string): number | 
 export function DeviceHeroWidget({ config, device, state, onCommand }: Props) {
   const [optimistic, setOptimistic] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
+  const [modbusOn, setModbusOn] = useState<boolean | null>(null);
 
   const isModbusToggle = config.toggleSource === 'modbus';
-  const live = isModbusToggle ? false : isOnFromState(state, config.togglePayloadKey);
+
+  const refetchModbus = useCallback(async () => {
+    if (!isModbusToggle || !config.toggleModbusDeviceId || !config.toggleModbusRegisterId) return;
+    try {
+      const result = await modbusApi.readRegister(config.toggleModbusDeviceId, config.toggleModbusRegisterId);
+      setModbusOn((result.rawValues?.[0] ?? 0) !== 0);
+    } catch {
+      // keep last known value on read failure
+    }
+  }, [isModbusToggle, config.toggleModbusDeviceId, config.toggleModbusRegisterId]);
+
+  useEffect(() => {
+    refetchModbus();
+  }, [refetchModbus]);
+
+  const live = isModbusToggle ? modbusOn === true : isOnFromState(state, config.togglePayloadKey);
   const isOn = optimistic !== null ? optimistic : live;
 
   const subtitle = config.subtitle || device?.model || device?.friendlyName || '';
@@ -184,6 +200,7 @@ export function DeviceHeroWidget({ config, device, state, onCommand }: Props) {
     try {
       if (isModbusToggle) {
         await modbusApi.writeRegister(config.toggleModbusDeviceId!, config.toggleModbusRegisterId!, { coil: next });
+        await refetchModbus();
       } else {
         await onCommand(
           { physicalDeviceId: config.physicalDeviceId, deviceIeeeAddr: config.ieeeAddr },
@@ -194,7 +211,11 @@ export function DeviceHeroWidget({ config, device, state, onCommand }: Props) {
       setOptimistic(!next);
     } finally {
       setBusy(false);
-      setTimeout(() => setOptimistic(null), 2000);
+      if (isModbusToggle) {
+        setOptimistic(null);
+      } else {
+        setTimeout(() => setOptimistic(null), 2000);
+      }
     }
   }
 

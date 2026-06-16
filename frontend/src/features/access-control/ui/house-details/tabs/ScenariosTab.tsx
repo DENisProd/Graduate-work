@@ -31,6 +31,7 @@ interface ScenariosTabProps {
   houseId: string | null;
   activeTab: string;
   canManage?: boolean;
+  scenariosPathPrefix?: string | null;
 }
 
 type UiScenario = ScenarioResponse & {
@@ -44,7 +45,12 @@ const asDefinitionV1 = (v: unknown): ScenarioDefinitionV1 | undefined => {
   return v as ScenarioDefinitionV1;
 };
 
-export function ScenariosTab({ houseId, activeTab, canManage = true }: ScenariosTabProps) {
+export function ScenariosTab({
+  houseId,
+  activeTab,
+  canManage = true,
+  scenariosPathPrefix,
+}: ScenariosTabProps) {
   const { t, locale } = useTranslation();
   const { showToast } = useToast();
   const router = useRouter();
@@ -168,19 +174,21 @@ export function ScenariosTab({ houseId, activeTab, canManage = true }: Scenarios
   const totalPages = (total: number, limit: number) => Math.max(1, Math.ceil(total / limit));
   const scenariosPages = totalPages(scenariosTotal, scenariosLimit);
 
+  const resolvedScenariosPathPrefix =
+    scenariosPathPrefix ??
+    (houseId ? `/admin/access-control/houses/${encodeURIComponent(houseId)}/scenarios` : null);
+
   const openCreate = useCallback(() => {
-    if (!houseId) return;
-    router.push(`/admin/access-control/houses/${encodeURIComponent(houseId)}/scenarios/new`);
-  }, [houseId, router]);
+    if (!resolvedScenariosPathPrefix) return;
+    router.push(`${resolvedScenariosPathPrefix}/new`);
+  }, [resolvedScenariosPathPrefix, router]);
 
   const openEdit = useCallback(
     (scenario: UiScenario) => {
-      if (!houseId) return;
-      router.push(
-        `/admin/access-control/houses/${encodeURIComponent(houseId)}/scenarios/${encodeURIComponent(scenario.id)}`
-      );
+      if (!resolvedScenariosPathPrefix) return;
+      router.push(`${resolvedScenariosPathPrefix}/${encodeURIComponent(scenario.id)}`);
     },
-    [houseId, router]
+    [resolvedScenariosPathPrefix, router]
   );
 
   const setOnline = useCallback(async (scenario: UiScenario, online: boolean) => {

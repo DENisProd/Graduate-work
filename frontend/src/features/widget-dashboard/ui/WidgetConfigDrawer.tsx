@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Radio, Cable } from 'lucide-react';
 import type {
   WidgetInstance,
   TelemetryValueConfig,
@@ -14,6 +15,8 @@ import type {
   SliderControlConfig,
   DeviceHeroConfig,
   DeviceHeroStat,
+  DeviceGroupConfig,
+  DeviceGroupItem,
   MiniLineChartConfig,
   HouseFloorPlanConfig,
   ModbusRegisterValueConfig,
@@ -38,6 +41,15 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div className="flex flex-col gap-1">
       <label className="text-xs font-medium text-muted-foreground">{label}</label>
       {children}
+    </div>
+  );
+}
+
+function SectionHeader({ title, hint }: { title: string; hint?: string }) {
+  return (
+    <div className="pt-3 border-t border-border first:border-t-0 first:pt-0">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
+      {hint && <p className="mt-0.5 text-[11px] text-muted-foreground/80">{hint}</p>}
     </div>
   );
 }
@@ -288,17 +300,25 @@ function PayloadKeySelect({
 
 function SourceSwitch({ value, onChange }: { value: WidgetCommandSource; onChange: (v: WidgetCommandSource) => void }) {
   return (
-    <div className="flex gap-1 rounded-lg border border-border p-1">
+    <div role="tablist" className="flex gap-1 rounded-lg border border-border p-1">
       {(['zigbee', 'modbus'] as const).map((opt) => (
         <button
           key={opt}
           type="button"
+          role="tab"
+          aria-selected={value === opt}
           onClick={() => onChange(opt)}
-          className={`flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+          className={`flex flex-1 flex-col items-center gap-0.5 rounded-md px-2 py-2 transition-colors ${
             value === opt ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent'
           }`}
         >
-          {opt === 'zigbee' ? 'Zigbee устройство' : 'Modbus регистр'}
+          <span className="flex items-center gap-1.5 text-xs font-medium">
+            {opt === 'zigbee' ? <Radio className="h-3.5 w-3.5" /> : <Cable className="h-3.5 w-3.5" />}
+            {opt === 'zigbee' ? 'Zigbee' : 'Modbus'}
+          </span>
+          <span className="text-[10px] font-normal opacity-80">
+            {opt === 'zigbee' ? 'беспроводное устройство' : 'реле / провод (RS-485)'}
+          </span>
         </button>
       ))}
     </div>
@@ -430,8 +450,92 @@ function widgetUsesModbus(type: WidgetInstance['type']): boolean {
     type === 'CONTROL_BUTTON' ||
     type === 'CONTROL_TOGGLE' ||
     type === 'DEVICE_HERO' ||
+    type === 'DEVICE_GROUP' ||
     type === 'MODBUS_REGISTER_VALUE' ||
     type === 'MODBUS_REGISTER_CONTROL'
+  );
+}
+
+function nanoid(): string {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+function GroupItemsEditor({
+  items,
+  onChange,
+  deviceOptions,
+  devices,
+  modbusDevices,
+  registersByDeviceId,
+}: {
+  items: DeviceGroupItem[];
+  onChange: (items: DeviceGroupItem[]) => void;
+  deviceOptions: { value: string; label: string }[];
+  devices: PhysicalDeviceResponse[];
+  modbusDevices: ModbusDeviceResponse[];
+  registersByDeviceId: Record<string, ModbusRegisterResponse[]>;
+}) {
+  function update(i: number, patch: Partial<DeviceGroupItem>) {
+    onChange(items.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
+  }
+  function remove(i: number) {
+    onChange(items.filter((_, idx) => idx !== i));
+  }
+  function add() {
+    onChange([...items, { id: nanoid(), label: '', source: 'zigbee' }]);
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {items.map((item, i) => (
+        <div key={item.id} className="border border-border rounded-lg p-3 flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <Input value={item.label} onChange={(v) => update(i, { label: v })} placeholder={`Устройство ${i + 1}`} />
+            <button
+              onClick={() => remove(i)}
+              className="px-2 py-1.5 text-xs rounded-lg text-rose-600 hover:bg-rose-50 shrink-0"
+            >
+              Удалить
+            </button>
+          </div>
+          <SourceSwitch value={item.source} onChange={(v) => update(i, { source: v })} />
+          {item.source === 'zigbee' ? (
+            <>
+              <Select
+                value={item.physicalDeviceId ?? ''}
+                onChange={(v) => {
+                  const dev = devices.find((d) => d.id === v);
+                  update(i, { physicalDeviceId: v, ieeeAddr: dev?.protocolAddress ?? '' });
+                }}
+                options={deviceOptions}
+              />
+              <p className="text-[10px] text-muted-foreground">Ключ состояния / значение ВКЛ / значение ВЫКЛ</p>
+              <div className="grid grid-cols-3 gap-2">
+                <Input value={item.statePayloadKey ?? ''} onChange={(v) => update(i, { statePayloadKey: v })} placeholder="state" />
+                <Input value={item.onValue ?? ''} onChange={(v) => update(i, { onValue: v })} placeholder="ON" />
+                <Input value={item.offValue ?? ''} onChange={(v) => update(i, { offValue: v })} placeholder="OFF" />
+              </div>
+            </>
+          ) : (
+            <ModbusTargetEditor
+              modbusDeviceId={item.modbusDeviceId ?? ''}
+              modbusRegisterId={item.modbusRegisterId ?? ''}
+              allowedTypes={['coil']}
+              modbusDevices={modbusDevices}
+              registers={registersByDeviceId[item.modbusDeviceId ?? ''] ?? []}
+              onSelectDevice={(v) => update(i, { modbusDeviceId: v, modbusRegisterId: '' })}
+              onSelectRegister={(v) => update(i, { modbusRegisterId: v })}
+            />
+          )}
+        </div>
+      ))}
+      <button
+        onClick={add}
+        className="text-xs px-2 py-1 rounded-lg border border-dashed border-border hover:bg-accent"
+      >
+        + Добавить устройство
+      </button>
+    </div>
   );
 }
 
@@ -466,6 +570,20 @@ export function WidgetConfigDrawer({ widget, devices, scenarios, states, onClose
       setModbusRegistersByDevice((prev) => ({ ...prev, [activeModbusDeviceId]: regs }));
     }).catch(() => {});
   }, [activeModbusDeviceId]);
+
+  const groupItems = config?.type === 'DEVICE_GROUP' ? (config as DeviceGroupConfig).items ?? [] : [];
+  const groupModbusDeviceIdsKey = Array.from(
+    new Set(groupItems.filter((i) => i.source === 'modbus' && i.modbusDeviceId).map((i) => i.modbusDeviceId as string)),
+  ).join(',');
+
+  useEffect(() => {
+    if (!groupModbusDeviceIdsKey) return;
+    for (const id of groupModbusDeviceIdsKey.split(',')) {
+      modbusApi.listRegisters(id).then((regs) => {
+        setModbusRegistersByDevice((prev) => ({ ...prev, [id]: regs }));
+      }).catch(() => {});
+    }
+  }, [groupModbusDeviceIdsKey]);
 
   if (!widget || !config) return null;
 
@@ -987,7 +1105,11 @@ export function WidgetConfigDrawer({ widget, devices, scenarios, states, onClose
         const opts = getPayloadKeyOptions(states.get(c.physicalDeviceId));
         return (
           <>
-            <Field label="Устройство">
+            <SectionHeader
+              title="Отображение карточки"
+              hint="Необязательно. Это Zigbee-устройство задаёт иконку, заголовок и метрики ниже. Если карточка управляет только Modbus-реле, можно оставить пустым."
+            />
+            <Field label="Устройство (Zigbee)">
               <Select
                 value={c.physicalDeviceId}
                 onChange={(v) => {
@@ -1036,6 +1158,10 @@ export function WidgetConfigDrawer({ widget, devices, scenarios, states, onClose
             </Field>
             {c.showToggle && (
               <>
+                <SectionHeader
+                  title="Переключатель"
+                  hint="Источник переключателя выбирается отдельно от устройства выше — например, карточка показывает Zigbee-датчик, а переключатель управляет Modbus-реле."
+                />
                 <Field label="Источник переключателя">
                   <SourceSwitch value={c.toggleSource ?? 'zigbee'} onChange={(v) => patch({ toggleSource: v })} />
                 </Field>
@@ -1071,16 +1197,81 @@ export function WidgetConfigDrawer({ widget, devices, scenarios, states, onClose
                 )}
               </>
             )}
+            <SectionHeader title="Оформление" />
             <Field label="Теги (до 3)">
               <ChipsEditor value={c.chips ?? []} onChange={(v) => patch({ chips: v })} />
             </Field>
-            <Field label="Метрики (до 3)">
-              <StatsEditor
-                value={c.stats ?? []}
-                onChange={(v) => patch({ stats: v })}
-                payloadOptions={opts}
+            {c.physicalDeviceId && (
+              <Field label="Метрики (до 3)">
+                <StatsEditor
+                  value={c.stats ?? []}
+                  onChange={(v) => patch({ stats: v })}
+                  payloadOptions={opts}
+                />
+                <p className="text-[10px] text-muted-foreground/80">Необязательно: до 3 маленьких чисел внизу карточки — например, яркость или заряд батареи устройства, выбранного в самом начале. Если они не нужны, просто не добавляйте ни одной.</p>
+              </Field>
+            )}
+            <Field label="Цвет">
+              <Select
+                value={c.accent}
+                onChange={(v) => patch({ accent: v })}
+                options={[
+                  { value: 'green', label: 'Зелёный' },
+                  { value: 'blue', label: 'Синий' },
+                  { value: 'amber', label: 'Жёлтый' },
+                  { value: 'slate', label: 'Серый (нейтральный)' },
+                ]}
               />
             </Field>
+          </>
+        );
+      }
+      case 'DEVICE_GROUP': {
+        const c = config as DeviceGroupConfig;
+        return (
+          <>
+            <Field label="Заголовок">
+              <Input value={c.title} onChange={(v) => patch({ title: v })} placeholder="Группа устройств" />
+            </Field>
+            <Field label="Иконка">
+              <Select
+                value={c.icon}
+                onChange={(v) => patch({ icon: v as DeviceGroupConfig['icon'] })}
+                options={[
+                  { value: 'camera', label: 'Камера' },
+                  { value: 'lightbulb', label: 'Лампочка' },
+                  { value: 'fan', label: 'Вентилятор' },
+                  { value: 'lock', label: 'Замок' },
+                  { value: 'speaker', label: 'Колонка' },
+                  { value: 'sparkles', label: 'Уборка/освежитель' },
+                  { value: 'thermometer', label: 'Термометр' },
+                  { value: 'broom', label: 'Метла (пылесос)' },
+                ]}
+              />
+            </Field>
+            <Field label="">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={c.showGroupToggle !== false}
+                  onChange={(e) => patch({ showGroupToggle: e.target.checked })}
+                  className="rounded"
+                />
+                Показывать общий переключатель «всё сразу»
+              </label>
+            </Field>
+            <SectionHeader
+              title="Устройства"
+              hint="Каждое устройство переключается отдельно; общий переключатель выше управляет всеми сразу."
+            />
+            <GroupItemsEditor
+              items={c.items ?? []}
+              onChange={(v) => patch({ items: v })}
+              deviceOptions={deviceOptions}
+              devices={devices}
+              modbusDevices={modbusDevices}
+              registersByDeviceId={modbusRegistersByDevice}
+            />
             <Field label="Цвет">
               <Select
                 value={c.accent}

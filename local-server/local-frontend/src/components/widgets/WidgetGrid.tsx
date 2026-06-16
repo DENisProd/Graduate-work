@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import {
   Zap, ToggleRight, MousePointerClick,
@@ -293,28 +293,43 @@ function ControlToggleWidget({ config }: { config: Record<string, unknown> }) {
   const offValue = String(config.offValue ?? 'OFF')
   const modbusDeviceId = config.modbusDeviceId as string | undefined
   const modbusRegisterId = config.modbusRegisterId as string | undefined
+  const isModbus = source === 'modbus'
 
   const [optimistic, setOptimistic] = useState<boolean | null>(null)
 
   const { device, state } = useDeviceState(physicalDeviceId || undefined)
   const ieeeAddr = configIeeeAddr || device?.protocolAddress
 
-  const rawState = source === 'modbus' ? null : readPayload(state, statePayloadKey)
-  const actualIsOn =
-    rawState === true ||
-    (typeof rawState === 'string' && rawState.toUpperCase() === onValue.toUpperCase())
+  const modbusRegQ = useQuery({
+    queryKey: ['toggle-modbus-reg', modbusDeviceId, modbusRegisterId],
+    queryFn: () => readModbusRegister(modbusDeviceId!, modbusRegisterId!),
+    enabled: isModbus && !!modbusDeviceId && !!modbusRegisterId,
+    staleTime: 10_000,
+  })
+
+  const rawState = isModbus ? null : readPayload(state, statePayloadKey)
+  const actualIsOn = isModbus
+    ? (modbusRegQ.data?.rawValues?.[0] ?? 0) !== 0
+    : rawState === true || (typeof rawState === 'string' && rawState.toUpperCase() === onValue.toUpperCase())
   const isOn = optimistic !== null ? optimistic : actualIsOn
 
-  const ready = source === 'modbus' ? !!(modbusDeviceId && modbusRegisterId) : !!ieeeAddr
+  const ready = isModbus ? !!(modbusDeviceId && modbusRegisterId) : !!ieeeAddr
 
   const mutation = useMutation({
-    mutationFn: (on: boolean) => {
-      if (source === 'modbus') return writeModbusRegister(modbusDeviceId!, modbusRegisterId!, { coil: on })
-      return sendCommand(ieeeAddr!, { [statePayloadKey]: on ? onValue : offValue })
+    mutationFn: async (on: boolean) => {
+      if (isModbus) {
+        await writeModbusRegister(modbusDeviceId!, modbusRegisterId!, { coil: on })
+        await modbusRegQ.refetch()
+        return
+      }
+      await sendCommand(ieeeAddr!, { [statePayloadKey]: on ? onValue : offValue })
     },
     onMutate: (on: boolean) => setOptimistic(on),
     onError: (_err, on) => { toast.error('Command failed'); setOptimistic(!on) },
-    onSettled: () => setTimeout(() => setOptimistic(null), 2000),
+    onSettled: () => {
+      if (isModbus) setOptimistic(null)
+      else setTimeout(() => setOptimistic(null), 2000)
+    },
   })
 
   return (
@@ -635,10 +650,17 @@ function DeviceHeroWidget({ config }: { config: Record<string, unknown> }) {
   const { device, state } = useDeviceState(physicalDeviceId || undefined)
   const ieeeAddr = configIeeeAddr || device?.protocolAddress
 
+  const toggleModbusRegQ = useQuery({
+    queryKey: ['hero-toggle-modbus-reg', toggleModbusDeviceId, toggleModbusRegisterId],
+    queryFn: () => readModbusRegister(toggleModbusDeviceId!, toggleModbusRegisterId!),
+    enabled: isModbusToggle && !!toggleModbusDeviceId && !!toggleModbusRegisterId,
+    staleTime: 10_000,
+  })
+
   const rawState = isModbusToggle ? null : readPayload(state, togglePayloadKey)
-  const actualIsOn =
-    rawState === true ||
-    (typeof rawState === 'string' && rawState.toUpperCase() === toggleOnValue.toUpperCase())
+  const actualIsOn = isModbusToggle
+    ? (toggleModbusRegQ.data?.rawValues?.[0] ?? 0) !== 0
+    : rawState === true || (typeof rawState === 'string' && rawState.toUpperCase() === toggleOnValue.toUpperCase())
   const isOn = optimistic !== null ? optimistic : actualIsOn
 
   const toggleReady = isModbusToggle
@@ -646,13 +668,20 @@ function DeviceHeroWidget({ config }: { config: Record<string, unknown> }) {
     : !!ieeeAddr
 
   const toggleMutation = useMutation({
-    mutationFn: (on: boolean) => {
-      if (isModbusToggle) return writeModbusRegister(toggleModbusDeviceId!, toggleModbusRegisterId!, { coil: on })
-      return sendCommand(ieeeAddr!, { [togglePayloadKey]: on ? toggleOnValue : toggleOffValue })
+    mutationFn: async (on: boolean) => {
+      if (isModbusToggle) {
+        await writeModbusRegister(toggleModbusDeviceId!, toggleModbusRegisterId!, { coil: on })
+        await toggleModbusRegQ.refetch()
+        return
+      }
+      await sendCommand(ieeeAddr!, { [togglePayloadKey]: on ? toggleOnValue : toggleOffValue })
     },
     onMutate: (on: boolean) => setOptimistic(on),
     onError: (_err, on) => setOptimistic(!on),
-    onSettled: () => setTimeout(() => setOptimistic(null), 2000),
+    onSettled: () => {
+      if (isModbusToggle) setOptimistic(null)
+      else setTimeout(() => setOptimistic(null), 2000)
+    },
   })
 
   const accentBg =
@@ -717,6 +746,179 @@ function DeviceHeroWidget({ config }: { config: Record<string, unknown> }) {
             })}
           </div>
         )}
+      </div>
+    </Shell>
+  )
+}
+
+// ── DEVICE_GROUP ──────────────────────────────────────────────────────────────
+
+type DeviceGroupItem = {
+  id: string
+  label: string
+  source: 'zigbee' | 'modbus'
+  physicalDeviceId?: string
+  ieeeAddr?: string
+  statePayloadKey?: string
+  onValue?: string
+  offValue?: string
+  modbusDeviceId?: string
+  modbusRegisterId?: string
+}
+
+async function readGroupItemState(item: DeviceGroupItem): Promise<boolean | null> {
+  try {
+    if (item.source === 'modbus') {
+      if (!item.modbusDeviceId || !item.modbusRegisterId) return null
+      const result = await readModbusRegister(item.modbusDeviceId, item.modbusRegisterId)
+      return (result.rawValues?.[0] ?? 0) !== 0
+    }
+    if (!item.ieeeAddr) return null
+    const states = await getZigbeeStates(item.ieeeAddr, 1)
+    const s = states?.[0]
+    if (!s) return null
+    const key = item.statePayloadKey || 'state'
+    const raw = readPayload(s, key)
+    const onValue = item.onValue || 'ON'
+    return raw === true || (typeof raw === 'string' && raw.toUpperCase() === onValue.toUpperCase())
+  } catch {
+    return null
+  }
+}
+
+async function writeGroupItem(item: DeviceGroupItem, next: boolean): Promise<void> {
+  if (item.source === 'modbus') {
+    if (!item.modbusDeviceId || !item.modbusRegisterId) throw new Error('No register selected')
+    await writeModbusRegister(item.modbusDeviceId, item.modbusRegisterId, { coil: next })
+    return
+  }
+  if (!item.ieeeAddr) throw new Error('No device address')
+  await sendCommand(item.ieeeAddr, { [item.statePayloadKey || 'state']: next ? (item.onValue || 'ON') : (item.offValue || 'OFF') })
+}
+
+function isGroupItemReady(item: DeviceGroupItem): boolean {
+  return item.source === 'modbus' ? !!(item.modbusDeviceId && item.modbusRegisterId) : !!item.ieeeAddr
+}
+
+function DeviceGroupWidget({ config }: { config: Record<string, unknown> }) {
+  const title = String(config.title ?? 'Группа устройств')
+  const icon = String(config.icon ?? 'lightbulb')
+  const accent = String(config.accent ?? 'green')
+  const showGroupToggle = config.showGroupToggle !== false
+  const items = (config.items as DeviceGroupItem[]) ?? []
+
+  const [itemStates, setItemStates] = useState<Record<string, boolean | null>>({})
+  const [busyIds, setBusyIds] = useState<Record<string, boolean>>({})
+  const [groupBusy, setGroupBusy] = useState(false)
+
+  const itemsKey = items.map((i) => [i.id, i.source, i.physicalDeviceId, i.ieeeAddr, i.modbusDeviceId, i.modbusRegisterId].join(':')).join('|')
+
+  const refreshAll = useCallback(async () => {
+    const results = await Promise.all(items.map(async (item) => [item.id, await readGroupItemState(item)] as const))
+    setItemStates((prev) => {
+      const next = { ...prev }
+      for (const [id, val] of results) if (val !== null) next[id] = val
+      return next
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itemsKey])
+
+  useEffect(() => {
+    refreshAll()
+    const id = setInterval(refreshAll, 15_000)
+    return () => clearInterval(id)
+  }, [refreshAll])
+
+  async function setItem(item: DeviceGroupItem, next: boolean) {
+    if (!isGroupItemReady(item)) return
+    setBusyIds((b) => ({ ...b, [item.id]: true }))
+    setItemStates((s) => ({ ...s, [item.id]: next }))
+    try {
+      await writeGroupItem(item, next)
+    } catch {
+      toast.error('Command failed')
+      setItemStates((s) => ({ ...s, [item.id]: !next }))
+    } finally {
+      setBusyIds((b) => ({ ...b, [item.id]: false }))
+    }
+  }
+
+  async function setAll(next: boolean) {
+    setGroupBusy(true)
+    await Promise.all(items.filter(isGroupItemReady).map((item) => setItem(item, next)))
+    setGroupBusy(false)
+  }
+
+  const readyItems = items.filter(isGroupItemReady)
+  const allOn = readyItems.length > 0 && readyItems.every((i) => itemStates[i.id] === true)
+
+  const accentBg =
+    accent === 'blue'
+      ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+      : accent === 'amber'
+        ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
+        : accent === 'slate'
+          ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+          : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
+
+  return (
+    <Shell>
+      <div className="flex h-full flex-col gap-2 p-4">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', accentBg)}>
+              {HERO_ICONS[icon] ?? <Activity className="h-5 w-5" />}
+            </div>
+            <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{title}</p>
+          </div>
+          {showGroupToggle && items.length > 0 && (
+            <button
+              onClick={() => setAll(!allOn)}
+              disabled={groupBusy}
+              title="Переключить все"
+              className={cn(
+                'relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-50',
+                allOn ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600',
+              )}
+            >
+              <span
+                className={cn(
+                  'absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all',
+                  allOn ? 'left-6' : 'left-1',
+                )}
+              />
+            </button>
+          )}
+        </div>
+        <div className="flex flex-1 flex-col divide-y divide-slate-100 overflow-y-auto dark:divide-slate-800">
+          {items.length === 0 && (
+            <p className="py-2 text-xs text-slate-400">Добавьте устройства в настройках виджета</p>
+          )}
+          {items.map((item) => {
+            const isOn = itemStates[item.id] === true
+            const ready = isGroupItemReady(item)
+            return (
+              <div key={item.id} className="flex items-center justify-between gap-2 py-1.5">
+                <span className="truncate text-sm text-slate-700 dark:text-slate-300">{item.label || '—'}</span>
+                <button
+                  onClick={() => setItem(item, !isOn)}
+                  disabled={!!busyIds[item.id] || !ready}
+                  className={cn(
+                    'relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50',
+                    isOn ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600',
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-all',
+                      isOn ? 'left-6' : 'left-1',
+                    )}
+                  />
+                </button>
+              </div>
+            )
+          })}
+        </div>
       </div>
     </Shell>
   )
@@ -912,6 +1114,7 @@ export function WidgetRenderer({ widget }: { widget: WidgetInstance }) {
     case 'CIRCULAR_PROGRESS': return <CircularProgressWidget config={widget.config} />
     case 'SLIDER_CONTROL':    return <SliderControlWidget config={widget.config} />
     case 'DEVICE_HERO':       return <DeviceHeroWidget config={widget.config} />
+    case 'DEVICE_GROUP':      return <DeviceGroupWidget config={widget.config} />
     case 'MINI_LINE_CHART':         return <MiniLineChartWidget config={widget.config} />
     case 'MODBUS_REGISTER_VALUE':   return <ModbusRegisterValueWidget config={widget.config} />
     case 'MODBUS_REGISTER_CONTROL': return <ModbusRegisterControlWidget config={widget.config} />

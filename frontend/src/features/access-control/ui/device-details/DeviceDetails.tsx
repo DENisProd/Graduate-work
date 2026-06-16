@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { useTranslation } from '@/hooks';
 import { useToast } from '@/components/shared';
 import { ApiError, physicalDevicesApi, deviceDataApi } from '@/lib/api-client';
@@ -9,6 +10,9 @@ import type { PhysicalDeviceResponse, DeviceDataResponse, DeviceDataSeriesRespon
 import { connectivityFromLastOnline, connectivityLabel, type ConnectivityStatus } from '@/lib/device-connectivity';
 import { Chart, type AxisOptions } from 'react-charts';
 import { parseLocalServerDeviceId } from '@/features/access-control/lib/local-server-device';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { LocalServerDetails } from './LocalServerDetails';
 
 interface DeviceDetailsProps {
@@ -33,7 +37,7 @@ function formatScalar(v: unknown): string {
 function DeviceTypeIcon({ type }: { type?: string | null }) {
   if (type === 'Coordinator') {
     return (
-      <svg viewBox="0 0 24 24" fill="none" className="size-8" stroke="currentColor" strokeWidth={1.5}>
+      <svg viewBox="0 0 24 24" fill="none" className="size-6" stroke="currentColor" strokeWidth={1.5}>
         <path d="M12 2L2 7l10 5 10-5-10-5z" />
         <path d="M2 17l10 5 10-5" />
         <path d="M2 12l10 5 10-5" />
@@ -42,7 +46,7 @@ function DeviceTypeIcon({ type }: { type?: string | null }) {
   }
   if (type === 'Router') {
     return (
-      <svg viewBox="0 0 24 24" fill="none" className="size-8" stroke="currentColor" strokeWidth={1.5}>
+      <svg viewBox="0 0 24 24" fill="none" className="size-6" stroke="currentColor" strokeWidth={1.5}>
         <rect x="2" y="8" width="20" height="8" rx="2" />
         <path d="M6 12h.01M10 12h.01M14 12h.01" strokeLinecap="round" />
         <path d="M8 8V6a4 4 0 018 0v2" />
@@ -59,21 +63,15 @@ function DeviceTypeIcon({ type }: { type?: string | null }) {
 }
 
 function StatusDot({ status }: { status?: string }) {
-  if (status === 'ONLINE') {
-    return (
-      <span className="relative flex size-3">
-        <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-        <span className="relative inline-flex size-3 rounded-full bg-emerald-500" />
-      </span>
-    );
-  }
-  if (status === 'UNKNOWN') {
-    return <span className="inline-flex size-3 rounded-full bg-yellow-400" />;
-  }
-  if (status === 'ERROR') {
-    return <span className="inline-flex size-3 rounded-full bg-red-500" />;
-  }
-  return <span className="inline-flex size-3 rounded-full bg-muted-foreground/60" />;
+  const cls =
+    status === 'ONLINE'
+      ? 'bg-emerald-500'
+      : status === 'ERROR'
+        ? 'bg-destructive'
+        : status === 'UNKNOWN'
+          ? 'bg-yellow-500'
+          : 'bg-muted-foreground/50';
+  return <span className={cn('inline-flex size-2 shrink-0 rounded-full', cls)} aria-hidden />;
 }
 
 const FIELD_ICONS: Record<string, () => React.ReactElement> = {
@@ -161,14 +159,6 @@ const GROUP_LABEL_KEYS: Record<(typeof FIELD_GROUPS)[number]['key'], string> = {
   timestamps: 'admin.accessControl.connectedDevices.deviceDetails.groups.timestamps',
 };
 
-const GROUP_ACCENT: Record<string, string> = {
-  identity: 'bg-violet-500/10 text-violet-400 border-violet-500/20',
-  network: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-  hardware: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  location: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  timestamps: 'bg-muted/40 text-muted-foreground border-border',
-};
-
 function CollapsibleJson({
   title,
   json,
@@ -194,7 +184,7 @@ function CollapsibleJson({
   };
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card/70 backdrop-blur-sm">
+    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
       <button
         type="button"
         onClick={() => setOpen((p) => !p)}
@@ -265,36 +255,6 @@ function CollapsibleJson({
 type TimeRange = '1m' | '1h' | '6h' | '24h' | '7d' | 'all';
 
 const HISTORY_LIMIT = 25;
-
-const CAP_BADGE: Record<string, string> = {
-  climate:    'bg-cyan-500/15 text-cyan-400 border-cyan-500/25',
-  temperature:'bg-cyan-500/15 text-cyan-400 border-cyan-500/25',
-  light:      'bg-amber-500/15 text-amber-300 border-amber-500/25',
-  battery:    'bg-amber-500/15 text-amber-400 border-amber-500/25',
-  switch:     'bg-violet-500/15 text-violet-400 border-violet-500/25',
-  occupancy:  'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
-  illuminance:'bg-yellow-500/15 text-yellow-300 border-yellow-500/25',
-  zigbee:     'bg-blue-500/15 text-blue-400 border-blue-500/25',
-  power:      'bg-orange-500/15 text-orange-400 border-orange-500/25',
-  tamper:     'bg-red-500/15 text-red-400 border-red-500/25',
-  water_leak: 'bg-sky-500/15 text-sky-400 border-sky-500/25',
-  contact:    'bg-pink-500/15 text-pink-400 border-pink-500/25',
-};
-
-const CAP_BAR: Record<string, string> = {
-  climate:    'bg-cyan-500/50',
-  temperature:'bg-cyan-500/50',
-  light:      'bg-amber-500/50',
-  battery:    'bg-amber-500/50',
-  switch:     'bg-violet-500/50',
-  occupancy:  'bg-emerald-500/50',
-  illuminance:'bg-yellow-500/50',
-  zigbee:     'bg-blue-500/50',
-  power:      'bg-orange-500/50',
-  tamper:     'bg-red-500/50',
-  water_leak: 'bg-sky-500/50',
-  contact:    'bg-pink-500/50',
-};
 
 const TIME_RANGES: Array<{ value: TimeRange; label: string }> = [
   { value: '1m', label: '1m' },
@@ -370,11 +330,10 @@ function formatHistoryValue(value: unknown, unit?: string | null, type?: string)
   return `${String(value)}${u}`;
 }
 
-function capBadgeCls(cap: string) {
-  return CAP_BADGE[cap] ?? 'bg-muted/50 text-muted-foreground border-border';
-}
-function capBarCls(cap: string) {
-  return CAP_BAR[cap] ?? 'bg-muted-foreground/30';
+function filterChipClass(active: boolean) {
+  return active
+    ? 'border-border bg-muted text-foreground'
+    : 'border-transparent text-muted-foreground hover:bg-muted/40 hover:text-foreground';
 }
 
 type HistoryPoint = { ts: number; value: number };
@@ -712,36 +671,25 @@ function DeviceHistorySection({ deviceId }: { deviceId: string }) {
   const histKey = 'admin.accessControl.connectedDevices.deviceDetails.history';
 
   return (
-    <div
-      className="overflow-hidden rounded-xl border border-border bg-card"
-    >
+    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
       <div className="flex items-center gap-2.5 border-b border-border px-5 py-3">
-        <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5 shrink-0 text-muted-foreground">
-          <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 1.5a5.5 5.5 0 110 11 5.5 5.5 0 010-11zM7.5 4v4.25l3.25 1.95-.75 1.25L6 9V4h1.5z" />
-        </svg>
-        <span className="rounded-md border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-foreground/80">
-          {tx(`${histKey}.title`)}
-        </span>
+        <span className="text-sm font-medium text-foreground">{tx(`${histKey}.title`)}</span>
         {total > 0 && (
           <span className="font-mono text-[10px] text-muted-foreground">
             {tx(`${histKey}.total`, { count: total })}
           </span>
         )}
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="xs"
           onClick={() => void doFetch(1, true)}
           disabled={loading}
-          className="ml-auto flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground disabled:opacity-40"
+          className="ml-auto text-muted-foreground"
         >
-          <svg
-            viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth={1.5}
-            className={`size-3 ${loading ? 'animate-spin' : ''}`}
-          >
-            <path d="M12 7A5 5 0 112 7" strokeLinecap="round" />
-            <path d="M12 3v4h-4" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <RefreshCw className={cn('size-3', loading && 'animate-spin')} />
           {tx(`${histKey}.refresh`)}
-        </button>
+        </Button>
       </div>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-5 py-2.5">
@@ -770,11 +718,10 @@ function DeviceHistorySection({ deviceId }: { deviceId: string }) {
               <button
                 type="button"
                 onClick={() => setSelectedCaps(['all'])}
-                className={`rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors ${
-                  selectedCaps.includes('all')
-                    ? 'border-border bg-muted/60 text-foreground/80'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
-                }`}
+                className={cn(
+                  'rounded-md border px-2 py-0.5 text-[10px] font-medium transition-colors',
+                  filterChipClass(selectedCaps.includes('all')),
+                )}
               >
                 {tx(`${histKey}.allCapabilities`)}
               </button>
@@ -791,11 +738,10 @@ function DeviceHistorySection({ deviceId }: { deviceId: string }) {
                       return arr.length === 0 ? ['all'] : arr;
                     })
                   }
-                  className={`rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors ${
-                    !selectedCaps.includes('all') && selectedCaps.includes(seriesKey)
-                      ? capBadgeCls(seriesKeyCapabilityPart(seriesKey))
-                      : 'border-transparent text-muted-foreground hover:text-foreground'
-                  }`}
+                  className={cn(
+                    'rounded-md border px-2 py-0.5 text-[10px] font-medium transition-colors',
+                    filterChipClass(!selectedCaps.includes('all') && selectedCaps.includes(seriesKey)),
+                  )}
                 >
                   {seriesKeyLabel(seriesKey)}
                 </button>
@@ -837,26 +783,24 @@ function DeviceHistorySection({ deviceId }: { deviceId: string }) {
             {visibleItems.map((item) => (
               <div
                 key={item.id}
-                className="group flex items-center gap-3 py-2.5 pl-3 pr-5 transition-colors hover:bg-muted/30"
+                className="group flex items-center gap-3 px-5 py-2.5 transition-colors hover:bg-muted/30"
               >
-                <span className={`h-7 w-[3px] shrink-0 rounded-full ${capBarCls(item.capability)}`} />
-
-                <span className={`hidden shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide sm:inline-flex ${capBadgeCls(item.capability)}`}>
+                <Badge variant="outline" className="hidden shrink-0 text-[9px] uppercase sm:inline-flex">
                   {item.capability}
-                </span>
+                </Badge>
 
                 <span className="w-28 shrink-0 truncate text-xs text-muted-foreground">
                   {item.attribute ?? item.capability}
                 </span>
 
-                <span className="flex-1 font-mono text-sm font-semibold text-foreground/80">
+                <span className="flex-1 font-mono text-sm text-foreground">
                   {formatHistoryValue(item.value, item.unit, item.type)}
                 </span>
 
                 <time
                   dateTime={item.timestamp}
                   title={new Date(item.timestamp).toLocaleString()}
-                  className="shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground transition-colors group-hover:text-foreground/70"
+                  className="shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground"
                 >
                   {formatAgo(item.timestamp)}
                 </time>
@@ -1014,113 +958,103 @@ function PhysicalDeviceDetails({ houseId, deviceId, backHref, backLabel }: Devic
             ? connectivityLabel('UNKNOWN', 'ru')
             : null;
 
-  const statusColorClass =
+  const statusBadgeClass =
     status === 'ONLINE'
-      ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10'
+      ? 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400'
       : status === 'ERROR'
-        ? 'text-red-400 border-red-500/30 bg-red-500/10'
+        ? 'border-destructive/40 text-destructive'
         : status === 'UNKNOWN'
-          ? 'text-yellow-500 border-yellow-500/30 bg-yellow-500/10'
-        : 'text-muted-foreground border-border bg-muted/30';
+          ? 'border-yellow-500/40 text-yellow-600 dark:text-yellow-400'
+          : 'border-border text-muted-foreground';
+
+  const fieldGroupsWithEntries = FIELD_GROUPS.map((group) => ({
+    group,
+    entries: group.fields
+      .map((f) => ({
+        label: tx(f.labelKey),
+        value: device?.[f.key],
+        icon: f.icon,
+      }))
+      .filter((e) => e.value !== null && e.value !== undefined && e.value !== ''),
+  })).filter((g) => g.entries.length > 0);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-2">
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="sm"
           onClick={() => router.push(resolvedBackHref)}
-          className="group flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+          className="text-muted-foreground"
         >
-          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth={1.5} className="size-3.5 transition-transform group-hover:-translate-x-0.5">
-            <path d="M9 2L4 7l5 5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <ArrowLeft className="size-3.5" />
           {resolvedBackLabel}
-        </button>
+        </Button>
 
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="sm"
           onClick={() => void loadDevice()}
           disabled={deviceLoading}
-          className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground disabled:opacity-40"
+          className="text-muted-foreground"
         >
-          <svg
-            viewBox="0 0 14 14"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.5}
-            className={`size-3.5 ${deviceLoading ? 'animate-spin' : ''}`}
-          >
-            <path d="M12 7A5 5 0 112 7" strokeLinecap="round" />
-            <path d="M12 3v4h-4" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <RefreshCw className={cn('size-3.5', deviceLoading && 'animate-spin')} />
           {t('admin.retry')}
-        </button>
+        </Button>
       </div>
 
       {error === 'forbidden' ? (
-        <div className="flex items-center gap-3 rounded-xl border border-red-500/20 bg-red-500/5 px-5 py-4">
-          <svg viewBox="0 0 20 20" fill="currentColor" className="size-5 shrink-0 text-red-400">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
-          </svg>
-          <p className="text-sm text-red-400">{t('errors.unauthorized')}</p>
+        <div className="rounded-xl border border-border bg-card px-5 py-4 text-sm text-muted-foreground">
+          {t('errors.unauthorized')}
         </div>
       ) : error === 'error' && !device ? (
-        <div className="flex items-center gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 px-5 py-4">
-          <svg viewBox="0 0 20 20" fill="currentColor" className="size-5 shrink-0 text-amber-400">
-            <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-          </svg>
-          <p className="text-sm text-amber-400">{t('common.error')}</p>
+        <div className="rounded-xl border border-border bg-card px-5 py-4 text-sm text-muted-foreground">
+          {t('common.error')}
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-xl border border-border bg-card">
-        <div className="flex flex-wrap items-center gap-5 px-6 py-5 sm:flex-nowrap">
-          <div
-            className="flex size-16 shrink-0 items-center justify-center rounded-2xl border border-border bg-muted/40"
-          >
+      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+        <div className="flex flex-wrap items-start gap-4 px-6 py-5">
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/30">
             {deviceLoading && !device ? (
-              <div className="size-8 animate-pulse rounded-lg bg-muted" />
+              <div className="size-6 animate-pulse rounded-md bg-muted" />
             ) : (
-              <span className="text-foreground/80">
+              <span className="text-muted-foreground">
                 <DeviceTypeIcon type={device?.type} />
               </span>
             )}
           </div>
 
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex flex-wrap items-center gap-2">
               {status && <StatusDot status={status} />}
-              <h1 className="truncate text-xl font-semibold tracking-tight text-foreground">
+              <h1 className="truncate text-lg font-semibold text-foreground">
                 {deviceLoading && !device
-                  ? <span className="inline-block h-6 w-48 animate-pulse rounded-lg bg-muted" />
+                  ? <span className="inline-block h-6 w-48 animate-pulse rounded-md bg-muted" />
                   : displayName(device) || t('admin.accessControl.connectedDevices.deviceOverviewTitle')}
               </h1>
             </div>
-            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-              <span className="font-mono text-[11px] text-muted-foreground">{deviceId}</span>
+            <p className="mt-1 font-mono text-xs text-muted-foreground">{deviceId}</p>
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              {statusLabel ? (
+                <Badge variant="outline" className={cn('text-[10px]', statusBadgeClass)}>
+                  {statusLabel}
+                </Badge>
+              ) : null}
               {device?.protocolAddress ? (
-                <span className="rounded-full border border-cyan-500/25 bg-cyan-500/10 px-2 py-0.5 font-mono text-[10px] text-cyan-600 dark:text-cyan-300">
+                <Badge variant="secondary" className="text-[10px]">
                   {t('admin.accessControl.connectedDevices.protocolZigbee')}
-                </span>
+                </Badge>
               ) : null}
               {device?.type ? (
-                <span className="rounded-full border border-violet-500/25 bg-violet-500/10 px-2 py-0.5 text-[10px] text-violet-600 dark:text-violet-300">
+                <Badge variant="outline" className="text-[10px]">
                   {device.type}
-                </span>
+                </Badge>
               ) : null}
             </div>
           </div>
-
-          {statusLabel && (
-            <div
-              className={`shrink-0 rounded-xl border px-3.5 py-2 text-center ${statusColorClass}`}
-            >
-              <div className="text-[10px] uppercase tracking-widest opacity-60">
-                {tx('admin.accessControl.connectedDevices.deviceDetails.statusLabel')}
-              </div>
-              <div className="mt-0.5 text-sm font-semibold">{statusLabel}</div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -1135,70 +1069,56 @@ function PhysicalDeviceDetails({ houseId, deviceId, backHref, backLabel }: Devic
 
       {device && !deviceLoading ? (
         <div className="space-y-4">
-          {FIELD_GROUPS.map((group) => {
-            const entries = group.fields.map((f) => ({
-              label: tx(f.labelKey),
-              value: device[f.key],
-              icon: f.icon,
-            })).filter((e) => e.value !== null && e.value !== undefined && e.value !== '');
-
-            if (entries.length === 0) return null;
-
-            const accent = GROUP_ACCENT[group.key] ?? 'bg-muted/50 text-muted-foreground border-border';
-            const groupLabel = tx(GROUP_LABEL_KEYS[group.key] ?? group.key);
-
-            return (
-              <div
-                key={group.key}
-                className="overflow-hidden rounded-xl border border-border bg-card"
-              >
-                <div className="flex items-center gap-2.5 border-b border-border px-5 py-3">
-                  <span className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${accent}`}>
-                    {groupLabel}
-                  </span>
-                </div>
-                <div className="divide-y divide-border">
-                  {entries.map(({ label, value, icon }) => {
-                    const Icon = FIELD_ICONS[icon];
-                    const text = formatScalar(value);
-                    return (
-                      <div
-                        key={label}
-                        className="grid grid-cols-1 items-baseline gap-1 px-5 py-2.5 transition-colors hover:bg-muted/40 sm:grid-cols-[minmax(9rem,13rem)_1fr]"
-                      >
-                        <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          {Icon && <Icon />}
-                          {label}
-                        </dt>
-                        <dd className="break-all font-mono text-xs text-foreground/80">
-                          {text === '—' ? <span className="text-muted-foreground">—</span> : text}
-                        </dd>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
+          {fieldGroupsWithEntries.length > 0 ? (
+            <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+              {fieldGroupsWithEntries.map(({ group, entries }, index) => {
+                const groupLabel = tx(GROUP_LABEL_KEYS[group.key] ?? group.key);
+                return (
+                  <div key={group.key} className={index > 0 ? 'border-t border-border' : undefined}>
+                    <div className="px-5 py-3">
+                      <h2 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        {groupLabel}
+                      </h2>
+                    </div>
+                    <dl className="divide-y divide-border">
+                      {entries.map(({ label, value, icon }) => {
+                        const Icon = FIELD_ICONS[icon];
+                        const text = formatScalar(value);
+                        return (
+                          <div
+                            key={label}
+                            className="grid grid-cols-1 items-baseline gap-1 px-5 py-2.5 sm:grid-cols-[minmax(9rem,13rem)_1fr]"
+                          >
+                            <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              {Icon && <Icon />}
+                              {label}
+                            </dt>
+                            <dd className="break-all font-mono text-xs text-foreground">
+                              {text === '—' ? <span className="text-muted-foreground">—</span> : text}
+                            </dd>
+                          </div>
+                        );
+                      })}
+                    </dl>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
 
           {device.capabilities && device.capabilities.length > 0 ? (
-            <div
-              className="overflow-hidden rounded-xl border border-border bg-card"
-            >
-              <div className="flex items-center gap-2.5 border-b border-border px-5 py-3">
-                <span className="rounded-md border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-400">
+            <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+              <div className="flex items-center justify-between border-b border-border px-5 py-3">
+                <h2 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   {t('admin.accessControl.connectedDevices.capabilities')}
-                </span>
-                <span className="ml-auto font-mono text-xs text-muted-foreground">{device.capabilities.length}</span>
+                </h2>
+                <span className="font-mono text-xs text-muted-foreground">{device.capabilities.length}</span>
               </div>
-              <div className="flex flex-wrap gap-2 px-5 py-4">
+              <div className="flex flex-wrap gap-1.5 px-5 py-4">
                 {device.capabilities.map((c) => (
-                  <span
-                    key={c}
-                    className="rounded-lg border border-border bg-muted/30 px-3 py-1 text-xs text-foreground/80 transition-colors hover:bg-muted/50"
-                  >
+                  <Badge key={c} variant="secondary" className="text-xs font-normal">
                     {c}
-                  </span>
+                  </Badge>
                 ))}
               </div>
             </div>

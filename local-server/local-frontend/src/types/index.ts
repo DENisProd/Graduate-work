@@ -15,6 +15,7 @@ export interface PhysicalDevice {
   roomId?: string
   capabilities: string[]
   lastSeen?: string
+  definition?: Record<string, unknown>
 }
 
 export interface ZigbeeState {
@@ -30,6 +31,7 @@ export interface ZigbeeState {
   occupancy?: boolean
   linkquality?: number
   colorMode?: string
+  color_temp?: number
 }
 
 export interface PairingEvent {

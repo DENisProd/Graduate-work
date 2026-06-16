@@ -14,6 +14,9 @@ export default function HouseScenariosPage() {
       houseId={houseId}
       activeTab="scenarios"
       canManage={perms.isOwner || perms.canManageAutomations}
+      scenariosPathPrefix={
+        houseId ? `/dashboard/houses/${encodeURIComponent(houseId)}/scenarios` : null
+      }
     />
   );
 }

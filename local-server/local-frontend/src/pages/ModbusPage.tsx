@@ -493,7 +493,90 @@ export function RegistersPanel({
           <p className="mt-1 text-xs text-slate-400">{t('modbus.emptyRegistersHint')}</p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+        <>
+          {/* Mobile cards */}
+          <div className="space-y-2 md:hidden">
+            {registers.map((reg) => {
+              const state = stateMap.get(reg.id)
+              const displayValue = state
+                ? state.scaledValues.map((v) => v.toFixed(2)).join(', ')
+                : '—'
+              const canWrite =
+                (reg.registerType === 'holding' || reg.registerType === 'coil') && reg.writable
+              return (
+                <div
+                  key={reg.id}
+                  onClick={() => canWrite && setWritingReg(reg)}
+                  className={cn(
+                    'rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950',
+                    canWrite && 'cursor-pointer active:bg-slate-50 dark:active:bg-slate-900',
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 font-medium text-slate-900 dark:text-slate-100">
+                      {reg.name}
+                    </div>
+                    <RegisterTypeBadge type={reg.registerType} />
+                  </div>
+                  <div className="mt-2 space-y-1 text-xs">
+                    <div className="font-mono text-slate-600 dark:text-slate-400">
+                      {t('modbus.colAddress')}: {reg.address}
+                      {reg.count > 1 && <span className="text-slate-400"> ×{reg.count}</span>}
+                    </div>
+                    <div className="font-mono text-slate-700 dark:text-slate-300">
+                      {displayValue}
+                      {reg.unit && state && (
+                        <span className="ml-0.5 text-slate-400"> {reg.unit}</span>
+                      )}
+                    </div>
+                    <div className="text-slate-400">
+                      {formatTs(state?.timestamp, dateLocale)}
+                    </div>
+                  </div>
+                  <div
+                    className="mt-3 flex justify-end gap-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      onClick={() => readMutation.mutate(reg)}
+                      disabled={readingId === reg.id}
+                      title={t('modbus.read')}
+                      className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-blue-600 disabled:opacity-40 dark:hover:bg-slate-800 dark:hover:text-blue-400"
+                    >
+                      <RefreshCw className={cn('h-3.5 w-3.5', readingId === reg.id && 'animate-spin')} />
+                    </button>
+                    {(reg.registerType === 'holding' || reg.registerType === 'coil') && (
+                      <button
+                        onClick={() => setWritingReg(reg)}
+                        title={reg.writable ? t('modbus.write') : t('modbus.writeDisabledHint')}
+                        disabled={!reg.writable}
+                        className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-amber-600 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-slate-800 dark:hover:text-amber-400"
+                      >
+                        <PencilLine className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setEditingReg(reg)}
+                      title={t('modbus.editRegister')}
+                      className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-blue-600 dark:hover:bg-slate-800 dark:hover:text-blue-400"
+                    >
+                      <SquarePen className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setPendingDeleteReg(reg)}
+                      title={t('common.delete')}
+                      className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden overflow-x-auto rounded-xl border border-slate-200 md:block dark:border-slate-800">
           <table className="w-full text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900">
               <tr>
@@ -589,6 +672,7 @@ export function RegistersPanel({
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {showAddRegister && (
@@ -657,54 +741,88 @@ function ScanLogEntryRow({
         </span>
       </div>
       {entry.devices.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-slate-400">
-                <th className="pb-1 pr-4 text-left font-medium">{t('modbus.scanColName')}</th>
-                <th className="pb-1 pr-4 text-left font-medium">{t('modbus.scanColSlaveId')}</th>
-                <th className="pb-1 pr-4 text-left font-medium">{t('modbus.scanColBaud')}</th>
-                <th className="pb-1 pr-4 text-left font-medium">{t('modbus.scanColRegs')}</th>
-                <th className="pb-1 text-left font-medium">{t('modbus.scanColStatus')}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {entry.devices.map((dev) => {
-                const regParts = [
-                  dev.coils > 0 && `C:${dev.coils}`,
-                  dev.discreteInputs > 0 && `DI:${dev.discreteInputs}`,
-                  dev.holdingRegisters > 0 && `HR:${dev.holdingRegisters}`,
-                  dev.inputRegisters > 0 && `IR:${dev.inputRegisters}`,
-                ].filter(Boolean)
-                return (
-                  <tr key={`${dev.slaveId}-${dev.baudRate}`}>
-                    <td className="py-1 pr-4 font-medium text-slate-800 dark:text-slate-200">
-                      {dev.name}
-                    </td>
-                    <td className="py-1 pr-4 font-mono text-slate-600 dark:text-slate-400">
-                      {dev.slaveId}
-                    </td>
-                    <td className="py-1 pr-4 font-mono text-slate-600 dark:text-slate-400">
-                      {dev.baudRate}
-                    </td>
-                    <td className="py-1 pr-4 text-slate-500 dark:text-slate-400">
-                      {regParts.length > 0 ? regParts.join(' ') : '—'}
-                    </td>
-                    <td className="py-1">
-                      {dev.isNew ? (
-                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                          {t('modbus.scanNew')}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400">—</span>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <div className="space-y-2 md:hidden">
+            {entry.devices.map((dev) => {
+              const regParts = [
+                dev.coils > 0 && `C:${dev.coils}`,
+                dev.discreteInputs > 0 && `DI:${dev.discreteInputs}`,
+                dev.holdingRegisters > 0 && `HR:${dev.holdingRegisters}`,
+                dev.inputRegisters > 0 && `IR:${dev.inputRegisters}`,
+              ].filter(Boolean)
+              return (
+                <div
+                  key={`${dev.slaveId}-${dev.baudRate}`}
+                  className="rounded-lg border border-slate-200 bg-white p-2.5 dark:border-slate-700 dark:bg-slate-950"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-medium text-slate-800 dark:text-slate-200">{dev.name}</span>
+                    {dev.isNew ? (
+                      <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                        {t('modbus.scanNew')}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+                    <span>{t('modbus.scanColSlaveId')}: <span className="font-mono text-slate-600 dark:text-slate-300">{dev.slaveId}</span></span>
+                    <span>{t('modbus.scanColBaud')}: <span className="font-mono text-slate-600 dark:text-slate-300">{dev.baudRate}</span></span>
+                    <span className="col-span-2">
+                      {t('modbus.scanColRegs')}: {regParts.length > 0 ? regParts.join(' ') : '—'}
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-slate-400">
+                  <th className="pb-1 pr-4 text-left font-medium">{t('modbus.scanColName')}</th>
+                  <th className="pb-1 pr-4 text-left font-medium">{t('modbus.scanColSlaveId')}</th>
+                  <th className="pb-1 pr-4 text-left font-medium">{t('modbus.scanColBaud')}</th>
+                  <th className="pb-1 pr-4 text-left font-medium">{t('modbus.scanColRegs')}</th>
+                  <th className="pb-1 text-left font-medium">{t('modbus.scanColStatus')}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {entry.devices.map((dev) => {
+                  const regParts = [
+                    dev.coils > 0 && `C:${dev.coils}`,
+                    dev.discreteInputs > 0 && `DI:${dev.discreteInputs}`,
+                    dev.holdingRegisters > 0 && `HR:${dev.holdingRegisters}`,
+                    dev.inputRegisters > 0 && `IR:${dev.inputRegisters}`,
+                  ].filter(Boolean)
+                  return (
+                    <tr key={`${dev.slaveId}-${dev.baudRate}`}>
+                      <td className="py-1 pr-4 font-medium text-slate-800 dark:text-slate-200">
+                        {dev.name}
+                      </td>
+                      <td className="py-1 pr-4 font-mono text-slate-600 dark:text-slate-400">
+                        {dev.slaveId}
+                      </td>
+                      <td className="py-1 pr-4 font-mono text-slate-600 dark:text-slate-400">
+                        {dev.baudRate}
+                      </td>
+                      <td className="py-1 pr-4 text-slate-500 dark:text-slate-400">
+                        {regParts.length > 0 ? regParts.join(' ') : '—'}
+                      </td>
+                      <td className="py-1">
+                        {dev.isNew ? (
+                          <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                            {t('modbus.scanNew')}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   )

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueries } from '@tanstack/react-query'
+import { Radio, Cable } from 'lucide-react'
 import type { WidgetInstance } from '@/api/widget-dashboards'
 import type { PhysicalDevice, Scenario, ZigbeeState, ModbusDevice, ModbusRegister } from '@/types'
 import { getZigbeeStates } from '@/api/zigbee'
@@ -19,6 +20,15 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div className="flex flex-col gap-1">
       {label && <label className="text-xs font-medium text-slate-500 dark:text-slate-400">{label}</label>}
       {children}
+    </div>
+  )
+}
+
+function SectionHeader({ title, hint }: { title: string; hint?: string }) {
+  return (
+    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 first:border-t-0 first:pt-0">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{title}</p>
+      {hint && <p className="mt-0.5 text-[11px] text-slate-400">{hint}</p>}
     </div>
   )
 }
@@ -172,17 +182,25 @@ function StatsEditor({ value, onChange, state }: { value: StatEntry[]; onChange:
 
 function SourceSwitch({ value, onChange }: { value: WidgetCommandSource; onChange: (v: WidgetCommandSource) => void }) {
   return (
-    <div className="flex gap-1 rounded-lg border border-slate-200 dark:border-slate-700 p-1">
+    <div role="tablist" className="flex gap-1 rounded-lg border border-slate-200 dark:border-slate-700 p-1">
       {(['zigbee', 'modbus'] as const).map(opt => (
         <button
           key={opt}
           type="button"
+          role="tab"
+          aria-selected={value === opt}
           onClick={() => onChange(opt)}
-          className={`flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+          className={`flex flex-1 flex-col items-center gap-0.5 rounded-md px-2 py-2 transition-colors ${
             value === opt ? 'bg-blue-600 text-white' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
-          {opt === 'zigbee' ? 'Zigbee устройство' : 'Modbus регистр'}
+          <span className="flex items-center gap-1.5 text-xs font-medium">
+            {opt === 'zigbee' ? <Radio className="h-3.5 w-3.5" /> : <Cable className="h-3.5 w-3.5" />}
+            {opt === 'zigbee' ? 'Zigbee' : 'Modbus'}
+          </span>
+          <span className={`text-[10px] font-normal ${value === opt ? 'text-blue-100' : 'text-slate-400 dark:text-slate-500'}`}>
+            {opt === 'zigbee' ? 'беспроводное устройство' : 'реле / провод (RS-485)'}
+          </span>
         </button>
       ))}
     </div>
@@ -314,6 +332,7 @@ function widgetUsesModbus(type: string | undefined): boolean {
     type === 'CONTROL_BUTTON' ||
     type === 'CONTROL_TOGGLE' ||
     type === 'DEVICE_HERO' ||
+    type === 'DEVICE_GROUP' ||
     type === 'MODBUS_REGISTER_VALUE' ||
     type === 'MODBUS_REGISTER_CONTROL'
   )
@@ -323,6 +342,99 @@ function getActiveModbusDeviceId(type: string | undefined, config: Record<string
   if (!config) return ''
   if (type === 'DEVICE_HERO') return (config.toggleModbusDeviceId as string) ?? ''
   return (config.modbusDeviceId as string) ?? ''
+}
+
+type DeviceGroupItem = {
+  id: string
+  label: string
+  source: WidgetCommandSource
+  physicalDeviceId?: string
+  ieeeAddr?: string
+  statePayloadKey?: string
+  onValue?: string
+  offValue?: string
+  modbusDeviceId?: string
+  modbusRegisterId?: string
+}
+
+function nanoid() {
+  return Math.random().toString(36).slice(2, 10)
+}
+
+function GroupItemsEditor({
+  items,
+  onChange,
+  deviceOptions,
+  devices,
+  modbusDevices,
+  registersByDeviceId,
+}: {
+  items: DeviceGroupItem[]
+  onChange: (items: DeviceGroupItem[]) => void
+  deviceOptions: { value: string; label: string }[]
+  devices: PhysicalDevice[]
+  modbusDevices: ModbusDevice[]
+  registersByDeviceId: Record<string, ModbusRegister[]>
+}) {
+  function update(i: number, patch: Partial<DeviceGroupItem>) {
+    onChange(items.map((it, idx) => (idx === i ? { ...it, ...patch } : it)))
+  }
+  function remove(i: number) {
+    onChange(items.filter((_, idx) => idx !== i))
+  }
+  function add() {
+    onChange([...items, { id: nanoid(), label: '', source: 'zigbee' }])
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {items.map((item, i) => (
+        <div key={item.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-3 flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <Input value={item.label} onChange={v => update(i, { label: v })} placeholder={`Устройство ${i + 1}`} />
+            <button onClick={() => remove(i)} className="px-2 py-1.5 text-xs rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 shrink-0">
+              Удалить
+            </button>
+          </div>
+          <SourceSwitch value={item.source} onChange={v => update(i, { source: v })} />
+          {item.source === 'zigbee' ? (
+            <>
+              <Select
+                value={item.physicalDeviceId ?? ''}
+                onChange={v => {
+                  const dev = devices.find(d => d.id === v)
+                  update(i, { physicalDeviceId: v, ieeeAddr: dev?.protocolAddress ?? '' })
+                }}
+                options={deviceOptions}
+              />
+              <p className="text-[10px] text-slate-400">Ключ состояния / значение ВКЛ / значение ВЫКЛ</p>
+              <div className="grid grid-cols-3 gap-2">
+                <Input value={item.statePayloadKey ?? ''} onChange={v => update(i, { statePayloadKey: v })} placeholder="state" />
+                <Input value={item.onValue ?? ''} onChange={v => update(i, { onValue: v })} placeholder="ON" />
+                <Input value={item.offValue ?? ''} onChange={v => update(i, { offValue: v })} placeholder="OFF" />
+              </div>
+            </>
+          ) : (
+            <ModbusTargetEditor
+              modbusDeviceId={item.modbusDeviceId ?? ''}
+              modbusRegisterId={item.modbusRegisterId ?? ''}
+              allowedTypes={['coil']}
+              modbusDevices={modbusDevices}
+              registers={registersByDeviceId[item.modbusDeviceId ?? ''] ?? []}
+              onSelectDevice={v => update(i, { modbusDeviceId: v, modbusRegisterId: '' })}
+              onSelectRegister={v => update(i, { modbusRegisterId: v })}
+            />
+          )}
+        </div>
+      ))}
+      <button
+        onClick={add}
+        className="text-xs px-2 py-1 rounded-lg border border-dashed border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400"
+      >
+        + Добавить устройство
+      </button>
+    </div>
+  )
 }
 
 export function WidgetConfigDrawer({ widget, devices, scenarios, onClose, onSave }: Props) {
@@ -357,6 +469,22 @@ export function WidgetConfigDrawer({ widget, devices, scenarios, onClose, onSave
     queryFn: () => listModbusRegisters(selectedModbusDeviceId),
     enabled: !!selectedModbusDeviceId,
     staleTime: 30_000,
+  })
+
+  const groupItems = widget?.type === 'DEVICE_GROUP' ? ((config?.items as DeviceGroupItem[]) ?? []) : []
+  const groupModbusDeviceIds = Array.from(new Set(groupItems.filter(i => i.source === 'modbus' && i.modbusDeviceId).map(i => i.modbusDeviceId as string)))
+
+  const groupModbusRegistersQ = useQueries({
+    queries: groupModbusDeviceIds.map(id => ({
+      queryKey: ['modbus-registers', id],
+      queryFn: () => listModbusRegisters(id),
+      staleTime: 30_000,
+    })),
+  })
+
+  const groupRegistersByDeviceId: Record<string, ModbusRegister[]> = {}
+  groupModbusDeviceIds.forEach((id, idx) => {
+    groupRegistersByDeviceId[id] = groupModbusRegistersQ[idx]?.data ?? []
   })
 
   if (!widget || !config) return null
@@ -665,7 +793,11 @@ export function WidgetConfigDrawer({ widget, devices, scenarios, onClose, onSave
     if (type === 'DEVICE_HERO') {
       return (
         <>
-          <Field label="Устройство">
+          <SectionHeader
+            title="Отображение карточки"
+            hint="Необязательно. Это Zigbee-устройство задаёт иконку, заголовок и метрики ниже. Если карточка управляет только Modbus-реле, можно оставить пустым."
+          />
+          <Field label="Устройство (Zigbee)">
             <Select value={selectedPhysicalDeviceId} onChange={v => { const dev = devices.find(d => d.id === v); patch({ physicalDeviceId: v, ieeeAddr: dev?.protocolAddress ?? '' }) }} options={deviceOptions} />
           </Field>
           <Field label="Заголовок"><Input value={(config.title as string) ?? ''} onChange={v => patch({ title: v })} placeholder="Передняя камера" /></Field>
@@ -686,6 +818,10 @@ export function WidgetConfigDrawer({ widget, devices, scenarios, onClose, onSave
           </Field>
           {config.showToggle && (
             <>
+              <SectionHeader
+                title="Переключатель"
+                hint="Источник переключателя выбирается отдельно от устройства выше — например, карточка показывает Zigbee-датчик, а переключатель управляет Modbus-реле."
+              />
               <Field label="Источник переключателя">
                 <SourceSwitch value={(config.toggleSource as WidgetCommandSource) ?? 'zigbee'} onChange={v => patch({ toggleSource: v })} />
               </Field>
@@ -716,8 +852,48 @@ export function WidgetConfigDrawer({ widget, devices, scenarios, onClose, onSave
               )}
             </>
           )}
+          <SectionHeader title="Оформление" />
           <Field label="Теги (до 3)"><ChipsEditor value={(config.chips as string[]) ?? []} onChange={v => patch({ chips: v })} /></Field>
-          <Field label="Метрики (до 3)"><StatsEditor value={(config.stats as StatEntry[]) ?? []} onChange={v => patch({ stats: v })} state={zigbeeState} /></Field>
+          {selectedPhysicalDeviceId && (
+            <Field label="Метрики (до 3)">
+              <StatsEditor value={(config.stats as StatEntry[]) ?? []} onChange={v => patch({ stats: v })} state={zigbeeState} />
+              <p className="text-[10px] text-slate-400">Необязательно: до 3 маленьких чисел внизу карточки — например, яркость или заряд батареи устройства, выбранного в самом начале. Если они не нужны, просто не добавляйте ни одной.</p>
+            </Field>
+          )}
+          <Field label="Цвет">
+            <Select value={(config.accent as string) ?? 'green'} onChange={v => patch({ accent: v })} options={[...ACCENT_OPTIONS, { value: 'slate', label: 'Серый (нейтральный)' }]} />
+          </Field>
+        </>
+      )
+    }
+
+    if (type === 'DEVICE_GROUP') {
+      return (
+        <>
+          <Field label="Заголовок"><Input value={(config.title as string) ?? ''} onChange={v => patch({ title: v })} placeholder="Группа устройств" /></Field>
+          <Field label="Иконка">
+            <Select value={(config.icon as string) ?? 'lightbulb'} onChange={v => patch({ icon: v })} options={[
+              { value: 'camera', label: 'Камера' }, { value: 'lightbulb', label: 'Лампочка' },
+              { value: 'fan', label: 'Вентилятор' }, { value: 'lock', label: 'Замок' },
+              { value: 'speaker', label: 'Колонка' }, { value: 'sparkles', label: 'Уборка/освежитель' },
+              { value: 'thermometer', label: 'Термометр' }, { value: 'broom', label: 'Метла (пылесос)' },
+            ]} />
+          </Field>
+          <Field label="">
+            <label className="flex items-center gap-2 text-sm cursor-pointer text-slate-700 dark:text-slate-300">
+              <input type="checkbox" checked={config.showGroupToggle !== false} onChange={e => patch({ showGroupToggle: e.target.checked })} className="rounded" />
+              Показывать общий переключатель «всё сразу»
+            </label>
+          </Field>
+          <SectionHeader title="Устройства" hint="Каждое устройство переключается отдельно; общий переключатель выше управляет всеми сразу." />
+          <GroupItemsEditor
+            items={groupItems}
+            onChange={v => patch({ items: v })}
+            deviceOptions={deviceOptions}
+            devices={devices}
+            modbusDevices={modbusDevicesQ.data ?? []}
+            registersByDeviceId={groupRegistersByDeviceId}
+          />
           <Field label="Цвет">
             <Select value={(config.accent as string) ?? 'green'} onChange={v => patch({ accent: v })} options={[...ACCENT_OPTIONS, { value: 'slate', label: 'Серый (нейтральный)' }]} />
           </Field>

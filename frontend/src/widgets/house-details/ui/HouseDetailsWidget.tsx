@@ -133,7 +133,16 @@ export function HouseDetailsWidget({
         </TabsContent>
 
         <TabsContent value="scenarios">
-          <ScenariosTab houseId={houseId} activeTab={activeTab} canManage={perms.isOwner || perms.canManageAutomations} />
+          <ScenariosTab
+            houseId={houseId}
+            activeTab={activeTab}
+            canManage={perms.isOwner || perms.canManageAutomations}
+            scenariosPathPrefix={
+              houseId
+                ? `${isAdmin ? '/admin/access-control/houses' : '/dashboard/houses'}/${encodeURIComponent(houseId)}/scenarios`
+                : null
+            }
+          />
         </TabsContent>
       </Tabs>
     </div>

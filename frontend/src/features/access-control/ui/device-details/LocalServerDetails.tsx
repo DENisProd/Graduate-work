@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { AppButton } from '@/components/ui/app-button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/hooks';
 import type { ConnectedLocalServerItem } from '@/lib/api/access-service';
 import { useConnectedLocalServers } from '@/features/access-control/model/use-connected-local-servers';
@@ -17,10 +19,10 @@ interface LocalServerDetailsProps {
 }
 
 function statusClass(status: ConnectedLocalServerItem['status']): string {
-  if (status === 'authorized') return 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10';
-  if (status === 'pending') return 'text-yellow-500 border-yellow-500/30 bg-yellow-500/10';
-  if (status === 'denied') return 'text-red-400 border-red-500/30 bg-red-500/10';
-  return 'text-muted-foreground border-border bg-muted/30';
+  if (status === 'authorized') return 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400';
+  if (status === 'pending') return 'border-yellow-500/40 text-yellow-600 dark:text-yellow-400';
+  if (status === 'denied') return 'border-destructive/40 text-destructive';
+  return 'border-border text-muted-foreground';
 }
 
 function formatValue(value: string | null | undefined): string {
@@ -84,82 +86,61 @@ export function LocalServerDetails({
     : [];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-2">
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="sm"
           onClick={() => router.push(resolvedBackHref)}
-          className="group flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+          className="text-muted-foreground"
         >
-          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth={1.5} className="size-3.5 transition-transform group-hover:-translate-x-0.5">
-            <path d="M9 2L4 7l5 5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <ArrowLeft className="size-3.5" />
           {resolvedBackLabel}
-        </button>
+        </Button>
 
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="sm"
           onClick={() => void load()}
           disabled={loading}
-          className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground disabled:opacity-40"
+          className="text-muted-foreground"
         >
-          <svg
-            viewBox="0 0 14 14"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.5}
-            className={cn('size-3.5', loading && 'animate-spin')}
-          >
-            <path d="M12 7A5 5 0 112 7" strokeLinecap="round" />
-            <path d="M12 3v4h-4" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <RefreshCw className={cn('size-3.5', loading && 'animate-spin')} />
           {t('admin.retry')}
-        </button>
+        </Button>
       </div>
 
-      <div className="relative overflow-hidden rounded-2xl border border-border bg-card">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0"
-          style={{
-            backgroundImage:
-              'radial-gradient(ellipse 60% 50% at 80% 50%, rgba(59,130,246,0.10) 0%, transparent 70%)',
-          }}
-        />
-        <div className="relative flex flex-wrap items-center gap-5 px-6 py-5 sm:flex-nowrap">
-          <div className="flex size-16 shrink-0 items-center justify-center rounded-2xl border border-border bg-muted/40">
-            <svg viewBox="0 0 24 24" fill="none" className="size-8 text-foreground/80" stroke="currentColor" strokeWidth={1.5}>
+      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+        <div className="flex flex-wrap items-start gap-4 px-6 py-5">
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/30">
+            <svg viewBox="0 0 24 24" fill="none" className="size-6 text-muted-foreground" stroke="currentColor" strokeWidth={1.5}>
               <rect x="3" y="5" width="18" height="12" rx="2" />
               <path d="M7 19h10M9 9h6M9 13h3" strokeLinecap="round" />
             </svg>
           </div>
 
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="truncate text-xl font-semibold tracking-tight text-foreground">
-                {loading && !server ? (
-                  <span className="inline-block h-6 w-48 animate-pulse rounded-lg bg-muted" />
-                ) : (
-                  title
-                )}
-              </h1>
-            </div>
-            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-              <span className="font-mono text-[11px] text-muted-foreground">{serverId}</span>
-              <Badge variant="secondary" className="text-xs">
+            <h1 className="truncate text-lg font-semibold text-foreground">
+              {loading && !server ? (
+                <span className="inline-block h-6 w-48 animate-pulse rounded-md bg-muted" />
+              ) : (
+                title
+              )}
+            </h1>
+            <p className="mt-1 font-mono text-xs text-muted-foreground">{serverId}</p>
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              <Badge variant="secondary" className="text-[10px]">
                 {t('admin.accessControl.connectedDevices.localServer.deviceBadge')}
               </Badge>
+              {server ? (
+                <Badge variant="outline" className={cn('text-[10px]', statusClass(server.status))}>
+                  {server.status}
+                </Badge>
+              ) : null}
             </div>
           </div>
-
-          {server ? (
-            <div className={cn('shrink-0 rounded-xl border px-3.5 py-2 text-center', statusClass(server.status))}>
-              <div className="text-[10px] uppercase tracking-widest opacity-60">
-                {t('admin.accessControl.connectedDevices.deviceDetails.statusLabel')}
-              </div>
-              <div className="mt-0.5 text-sm font-semibold">{server.status}</div>
-            </div>
-          ) : null}
         </div>
       </div>
 
@@ -180,11 +161,11 @@ export function LocalServerDetails({
 
       {server ? (
         <div className="space-y-4">
-          <div className="overflow-hidden rounded-xl border border-border bg-card">
-            <div className="flex items-center gap-2.5 border-b border-border px-5 py-3">
-              <span className="rounded-md border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-blue-400">
+          <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+            <div className="border-b border-border px-5 py-3">
+              <h2 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 {t('admin.accessControl.connectedDevices.localServer.detailsTitle')}
-              </span>
+              </h2>
             </div>
             <div className="divide-y divide-border">
               {fields.map((field) => (

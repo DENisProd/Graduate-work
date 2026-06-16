@@ -78,6 +78,7 @@ export function ScenarioEditor(props: {
   mode: 'create' | 'edit';
   houseId: string;
   scenarioId?: string;
+  returnHref?: string;
   initialScenario?: {
     id: string;
     name: string;
@@ -88,6 +89,8 @@ export function ScenarioEditor(props: {
   };
 }) {
   const { mode, houseId, scenarioId, initialScenario } = props;
+  const returnHref =
+    props.returnHref ?? `/admin/access-control/houses/${encodeURIComponent(houseId)}`;
   const { t, locale } = useTranslation();
   const router = useRouter();
   const { showToast } = useToast();
@@ -261,8 +264,8 @@ export function ScenarioEditor(props: {
       const ok = window.confirm(t('admin.accessControl.scenarioEditor.confirm.leaveUnsaved'));
       if (!ok) return;
     }
-    router.push(`/admin/access-control/houses/${encodeURIComponent(houseId)}`);
-  }, [houseId, isDirty, router, t]);
+    router.push(returnHref);
+  }, [isDirty, returnHref, router, t]);
 
   const onValidate = useCallback(() => {
     const issues = validateDraft(draft);
@@ -297,7 +300,7 @@ export function ScenarioEditor(props: {
           });
           showToast(t('admin.messages.createSuccess'), 'success');
           baselineRef.current = JSON.stringify(draft);
-          router.push(`/admin/access-control/houses/${encodeURIComponent(houseId)}`);
+          router.push(returnHref);
           return;
         }
 
@@ -313,7 +316,7 @@ export function ScenarioEditor(props: {
         setSaving(false);
       }
     },
-    [currentUserId, draft, handleError, houseId, mode, router, showToast, t, validateDraft]
+    [currentUserId, draft, handleError, mode, returnHref, router, showToast, t, validateDraft]
   );
 
   const saveFromGraph = useCallback(
@@ -343,13 +346,13 @@ export function ScenarioEditor(props: {
     try {
       await scenariosApi.delete(draft.id);
       showToast(t('admin.messages.deleteSuccess'), 'success');
-      router.push(`/admin/access-control/houses/${encodeURIComponent(houseId)}`);
+      router.push(returnHref);
     } catch (e) {
       handleError(e);
     } finally {
       setDeleting(false);
     }
-  }, [draft.id, handleError, houseId, router, showToast, t]);
+  }, [draft.id, handleError, returnHref, router, showToast, t]);
 
   return (
     <div className="flex min-h-[calc(100vh-6rem)] flex-col gap-4">
