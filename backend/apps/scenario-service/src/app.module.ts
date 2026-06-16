@@ -15,6 +15,7 @@ import { WidgetDashboardModule } from './widget-dashboard/widget-dashboard.modul
 import { ScenarioEngineModule } from './scenario-engine/scenario-engine.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { HouseFloorPlanModule } from './house-floor-plan/house-floor-plan.module';
+import { ModbusModule } from './modbus/modbus.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { HouseFloorPlanModule } from './house-floor-plan/house-floor-plan.module
     ScenarioExecutionModule,
     DeviceDataModule,
     ZigbeeModule,
+    ModbusModule,
     WidgetDashboardModule,
     ScenarioEngineModule,
     DashboardModule,

@@ -634,6 +634,8 @@ export const ru = {
     writeCoil: 'Состояние coil',
     writeOn: 'ВКЛ',
     writeOff: 'ВЫКЛ',
+    coilOn: 'ВКЛ',
+    coilOff: 'ВЫКЛ',
     writeTitle: 'Запись в регистр',
     writeHint: 'Введите значение для записи в регистр.',
     writeScaled: 'Инженерное значение (с учётом масштаба/смещения)',

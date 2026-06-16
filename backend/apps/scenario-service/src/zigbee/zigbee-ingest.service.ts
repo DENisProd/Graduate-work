@@ -43,11 +43,11 @@ export class ZigbeeIngestService {
 
     try {
       if (relative === 'bridge/devices') {
-        await this.onBridgeDevices(payload);
+        await this.onBridgeDevices(houseId, payload);
         return;
       }
       if (relative === 'bridge/event') {
-        await this.onBridgeEvent(payload);
+        await this.onBridgeEvent(houseId, payload);
         return;
       }
       if (relative === 'bridge/state') {
@@ -69,7 +69,7 @@ export class ZigbeeIngestService {
         return;
       }
       if (relative.startsWith('bridge/response')) {
-        this.onBridgeResponse(relative, payload);
+        await this.onBridgeResponse(houseId, relative, payload);
         return;
       }
       if (relative.startsWith('bridge/')) {
@@ -79,7 +79,7 @@ export class ZigbeeIngestService {
 
       if (relative.includes('/')) return;
 
-      await this.onDeviceTelemetry(relative, payload);
+      await this.onDeviceTelemetry(houseId, relative, payload);
     } catch (e) {
       this.logger.error(
         `Ошибка обработки Zigbee MQTT ${topic}: ${e instanceof Error ? e.message : String(e)}`,
@@ -88,25 +88,25 @@ export class ZigbeeIngestService {
     }
   }
 
-  private async onBridgeDevices(payload: Buffer): Promise<void> {
+  private async onBridgeDevices(houseId: string, payload: Buffer): Promise<void> {
     const raw = parseJson(payload);
     if (raw === undefined && payload.toString().trim() !== '') {
       this.logger.warn('bridge/devices: невалидный JSON');
       return;
     }
-    await this.zigbee.syncDevicesFromZigbee2MqttBridge(raw);
+    await this.zigbee.syncDevicesFromZigbee2MqttBridge(houseId, raw);
     this.logger.debug(
       `bridge/devices: синхронизация (${Array.isArray(raw) ? raw.length : 0} устройств)`,
     );
   }
 
-  private async onBridgeEvent(payload: Buffer): Promise<void> {
+  private async onBridgeEvent(houseId: string, payload: Buffer): Promise<void> {
     const obj = parseJsonObject(payload);
     if (!obj) {
       this.logger.warn('bridge/event: пустой или невалидный JSON');
       return;
     }
-    await this.zigbee.applyBridgeEvent(obj);
+    await this.zigbee.applyBridgeEvent(houseId, obj);
   }
 
   private onBridgeState(payload: Buffer): void {
@@ -150,19 +150,39 @@ export class ZigbeeIngestService {
     );
   }
 
-  private onBridgeResponse(relative: string, payload: Buffer): void {
+  private async onBridgeResponse(
+    houseId: string,
+    relative: string,
+    payload: Buffer,
+  ): Promise<void> {
     const obj = parseJsonObject(payload);
+    if (relative === 'bridge/response/devices') {
+      const list =
+        obj && obj.status === 'ok' && Array.isArray(obj.data)
+          ? (obj.data as unknown[])
+          : Array.isArray(obj)
+            ? (obj as unknown[])
+            : null;
+      if (list) {
+        await this.zigbee.syncDevicesFromZigbee2MqttBridge(houseId, list);
+        this.logger.log(`bridge/response/devices: синхронизация (${list.length} устройств)`);
+        return;
+      }
+      this.logger.warn('bridge/response/devices: пустой или невалидный ответ');
+      return;
+    }
     this.logger.debug(
       `bridge/response ${relative}: ${obj ? JSON.stringify(obj).slice(0, 200) : '(не JSON)'}`,
     );
   }
 
   private async onDeviceTelemetry(
+    houseId: string,
     friendlyName: string,
     payload: Buffer,
   ): Promise<void> {
     const data = parseJsonObject(payload);
     if (!data) return;
-    await this.zigbee.ingestMqttDeviceState(friendlyName, data);
+    await this.zigbee.ingestMqttDeviceState(houseId, friendlyName, data);
   }
 }

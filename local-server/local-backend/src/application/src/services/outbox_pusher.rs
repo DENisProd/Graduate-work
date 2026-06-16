@@ -4,6 +4,7 @@ use std::time::Duration;
 use tokio::sync::Notify;
 
 use crate::ports::{CloudSyncClient, SyncEntry};
+use crate::services::CloudSyncUrlProvider;
 use local_server_core::DomainError;
 
 #[derive(Debug, Clone)]
@@ -26,7 +27,7 @@ pub async fn run_outbox_pusher(
     outbox: Arc<dyn SyncOutboxRepository>,
     cloud: Arc<dyn CloudSyncClient>,
     notify: Arc<Notify>,
-    cloud_api_url: String,
+    cloud_api_url: Arc<dyn CloudSyncUrlProvider>,
     cloud_api_key: String,
 ) {
     let mut backoff = Duration::from_secs(1);
@@ -62,7 +63,8 @@ pub async fn run_outbox_pusher(
             })
             .collect();
 
-        match cloud.ingest(&cloud_api_url, &cloud_api_key, entries).await {
+        let access_url = cloud_api_url.get().await;
+        match cloud.ingest(&access_url, &cloud_api_key, entries).await {
             Ok(()) => {
                 let ids: Vec<String> = batch.iter().map(|e| e.id.clone()).collect();
                 outbox.mark_sent(&ids).await.ok();

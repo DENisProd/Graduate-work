@@ -53,5 +53,6 @@ pub trait WidgetDashboardRepository: Send + Sync {
         cmd: UpsertFromCloudWidgetDashboardCmd,
     ) -> Result<WidgetDashboard, DomainError>;
     async fn list_without_cloud_id(&self) -> Result<Vec<WidgetDashboard>, DomainError>;
+    async fn list_with_cloud_id(&self) -> Result<Vec<WidgetDashboard>, DomainError>;
     async fn set_cloud_id(&self, id: &Uuid, cloud_id: &str) -> Result<(), DomainError>;
 }

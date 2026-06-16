@@ -66,6 +66,7 @@ services:
       CENTRAL_MQTT_PASSWORD: ${CENTRAL_MQTT_PASSWORD:-}
       EMQX_API_URL: ${EMQX_API_URL:-http://mqtt-gateway:18083}
       EMQX_DASHBOARD_PASSWORD: ${EMQX_DASHBOARD_PASSWORD:-changeme}
+      ACCESS_SERVICE_URL: ${ACCESS_SERVICE_URL:-http://access-service:8086}
       SCENARIO_CORS_ORIGINS: ${SCENARIO_CORS_ORIGINS:-http://localhost:3000,http://localhost:8082}
     networks:
       - default

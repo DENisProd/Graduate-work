@@ -20,6 +20,7 @@ export const protocolSchema = z.nativeEnum(Protocol);
 
 export const upsertZigbeeDeviceSchema = z.object({
   ieeeAddr: z.string().min(3).max(64),
+  houseId: z.string().min(1).max(255).optional(),
   networkAddress: z.coerce.number().int().min(0).optional(),
   type: zigbeeDeviceTypeSchema.optional(),
   manufacturerName: z.string().max(255).optional(),

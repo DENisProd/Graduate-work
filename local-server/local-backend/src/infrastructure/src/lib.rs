@@ -5,8 +5,8 @@ pub mod mqtt;
 pub mod persistence;
 
 pub use http::{
-    ReqwestCloudAuthClient, ReqwestCloudPhysicalDeviceClient, ReqwestCloudScenarioClient,
-    ReqwestCloudSyncClient, ReqwestCloudWidgetDashboardClient,
+    ReqwestCloudAuthClient, ReqwestCloudModbusClient, ReqwestCloudPhysicalDeviceClient,
+    ReqwestCloudScenarioClient, ReqwestCloudSyncClient, ReqwestCloudWidgetDashboardClient,
 };
 pub use mqtt::{run_ingestion, run_mqtt_bridge, ModbusGateway, RumqttcClient};
 pub use persistence::{

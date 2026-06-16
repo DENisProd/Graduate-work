@@ -6,7 +6,7 @@ use serde_json::Value;
 
 use local_server_application::ports::{
     CloudWidgetDashboardClient, CreateCloudWidgetDashboardCmd, RemoteWidgetDashboard,
-    RuntimeSettingsRepository,
+    RuntimeSettingsRepository, UpdateCloudWidgetDashboardCmd,
 };
 use local_server_core::DomainError;
 
@@ -95,6 +95,19 @@ struct CreateWidgetDashboardRequest {
     widgets: Vec<Value>,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct UpdateWidgetDashboardRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    is_default: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    layouts: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    widgets: Option<Vec<Value>>,
+}
+
 #[async_trait]
 impl CloudWidgetDashboardClient for ReqwestCloudWidgetDashboardClient {
     async fn list_by_house(
@@ -159,5 +172,39 @@ impl CloudWidgetDashboardClient for ReqwestCloudWidgetDashboardClient {
             .await
             .map(RemoteWidgetDashboard::from)
             .map_err(|e| DomainError::Internal(format!("parse created widget-dash: {e}")))
+    }
+
+    async fn update(
+        &self,
+        base_url: &str,
+        cloud_id: &str,
+        cmd: UpdateCloudWidgetDashboardCmd,
+    ) -> Result<RemoteWidgetDashboard, DomainError> {
+        let url = scenario_api_url(base_url, &format!("/widget-dashboards/{cloud_id}"));
+        let body = UpdateWidgetDashboardRequest {
+            name: cmd.name,
+            is_default: cmd.is_default,
+            layouts: cmd.layouts,
+            widgets: cmd.widgets,
+        };
+
+        let token = resolve_bearer_token(self.settings.as_ref(), &self.api_key).await;
+        let res = apply_bearer(self.http.put(&url).json(&body), token)
+            .send()
+            .await
+            .map_err(|e| DomainError::DependencyUnavailable(format!("widget-dash update: {e}")))?;
+
+        if !res.status().is_success() {
+            let status = res.status();
+            let body = res.text().await.unwrap_or_default();
+            return Err(DomainError::DependencyUnavailable(format!(
+                "scenario-service widget-dash update {status}: {body}"
+            )));
+        }
+
+        res.json::<WidgetDashboardDto>()
+            .await
+            .map(RemoteWidgetDashboard::from)
+            .map_err(|e| DomainError::Internal(format!("parse updated widget-dash: {e}")))
     }
 }

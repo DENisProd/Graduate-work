@@ -7,9 +7,9 @@ use local_server_application::{
     resolve_bridge_house_id, resolve_mqtt_runtime_config, resolve_scenario_service_url,
 };
 use local_server_application::services::{
-    run_delta_puller, run_outbox_pusher, run_physical_device_sync, run_scenario_sync,
-    run_widget_dashboard_sync, CloudSyncUrlProvider, ScenarioEngine, ScenarioServiceUrlProvider,
-    UserIdProvider,
+    run_delta_puller, run_modbus_sync, run_outbox_pusher, run_physical_device_sync,
+    run_scenario_sync, run_widget_dashboard_sync, CloudSyncUrlProvider, ScenarioEngine,
+    ScenarioServiceUrlProvider, UserIdProvider,
 };
 use local_server_infrastructure::persistence::{init_pool, SqlitePoolConfig};
 use local_server_interfaces::{http, websocket};
@@ -159,10 +159,13 @@ async fn main() -> anyhow::Result<()> {
         let outbox = state.sync_outbox_repo.clone() as Arc<dyn local_server_application::services::SyncOutboxRepository>;
         let cloud = state.cloud_sync_client.clone();
         let notify = state.outbox_notify.clone();
-        let url = cfg.cloud_sync_api_url.clone();
+        let url_provider = Arc::new(RuntimeSettingsCloudSyncUrlProvider {
+            settings: state.runtime_settings_repo.clone(),
+            fallback: cfg.cloud_sync_api_url.clone(),
+        }) as Arc<dyn CloudSyncUrlProvider>;
         let key = cfg.cloud_sync_api_key.clone();
         tokio::spawn(async move {
-            run_outbox_pusher(outbox, cloud, notify, url, key).await;
+            run_outbox_pusher(outbox, cloud, notify, url_provider, key).await;
         });
     }
 
@@ -209,8 +212,20 @@ async fn main() -> anyhow::Result<()> {
     }
 
     {
+        let repo = state.modbus_repo.clone();
+        let cloud = state.cloud_modbus_client.clone();
+        let url_provider = scenario_url_provider.clone();
+        let interval = cfg.sync_interval_secs;
+        tokio::spawn(async move {
+            run_modbus_sync(repo, cloud, interval, url_provider).await;
+        });
+    }
+
+    {
         let repo = state.widget_dashboard_repo.clone();
         let cloud = state.cloud_widget_dashboard_client.clone();
+        let modbus_repo = state.modbus_repo.clone();
+        let modbus_cloud = state.cloud_modbus_client.clone();
         let url_provider = scenario_url_provider.clone();
         let interval = cfg.sync_interval_secs;
         let access_sync = state.access_sync_repo.clone();
@@ -221,6 +236,8 @@ async fn main() -> anyhow::Result<()> {
             run_widget_dashboard_sync(
                 repo,
                 cloud,
+                modbus_repo,
+                modbus_cloud,
                 interval,
                 url_provider,
                 access_sync,

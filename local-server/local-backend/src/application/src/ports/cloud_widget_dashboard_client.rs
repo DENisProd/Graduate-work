@@ -26,6 +26,13 @@ pub struct CreateCloudWidgetDashboardCmd {
     pub widgets: Vec<Value>,
 }
 
+pub struct UpdateCloudWidgetDashboardCmd {
+    pub name: Option<String>,
+    pub is_default: Option<bool>,
+    pub layouts: Option<Value>,
+    pub widgets: Option<Vec<Value>>,
+}
+
 #[async_trait]
 pub trait CloudWidgetDashboardClient: Send + Sync {
     async fn list_by_house(
@@ -38,5 +45,12 @@ pub trait CloudWidgetDashboardClient: Send + Sync {
         &self,
         base_url: &str,
         cmd: CreateCloudWidgetDashboardCmd,
+    ) -> Result<RemoteWidgetDashboard, DomainError>;
+
+    async fn update(
+        &self,
+        base_url: &str,
+        cloud_id: &str,
+        cmd: UpdateCloudWidgetDashboardCmd,
     ) -> Result<RemoteWidgetDashboard, DomainError>;
 }

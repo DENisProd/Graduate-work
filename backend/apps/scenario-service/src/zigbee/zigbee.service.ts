@@ -236,7 +236,10 @@ export class ZigbeeService {
     this.pairingStatus$.next(status);
   }
 
-  async applyBridgeEvent(payload: Record<string, unknown>): Promise<void> {
+  async applyBridgeEvent(
+    houseId: string,
+    payload: Record<string, unknown>,
+  ): Promise<void> {
     const eventType = payload.type;
     if (typeof eventType !== 'string') return;
 
@@ -254,7 +257,7 @@ export class ZigbeeService {
 
     switch (eventType) {
       case 'device_announce': {
-        await this.upsertDevice({ ieeeAddr: ieeeRaw, friendlyName });
+        await this.upsertDevice({ ieeeAddr: ieeeRaw, friendlyName, houseId });
         const annDev = await this.devices.findByIeeeAddr(ieeeRaw);
         if (annDev?.type === ZigbeeDeviceType.Coordinator) break;
         const fullyKnown =
@@ -273,7 +276,7 @@ export class ZigbeeService {
       }
 
       case 'device_joined': {
-        await this.upsertDevice({ ieeeAddr: ieeeRaw, friendlyName });
+        await this.upsertDevice({ ieeeAddr: ieeeRaw, friendlyName, houseId });
         const dev = await this.devices.findByIeeeAddr(ieeeRaw);
         if (dev?.type === ZigbeeDeviceType.Coordinator) break;
         this.pairingEvents$.next({
@@ -287,7 +290,7 @@ export class ZigbeeService {
 
       case 'device_interview': {
         const status = d.status;
-        await this.upsertDevice({ ieeeAddr: ieeeRaw, friendlyName });
+        await this.upsertDevice({ ieeeAddr: ieeeRaw, friendlyName, houseId });
 
         if (status === 'started') {
           const dev = await this.devices.findByIeeeAddr(ieeeRaw);
@@ -316,6 +319,7 @@ export class ZigbeeService {
           await this.upsertDevice({
             ieeeAddr: ieeeRaw,
             friendlyName,
+            houseId,
             ...(definition ? { definition } : {}),
             ...(capabilities ? { capabilities } : {}),
             ...(manufacturer ? { manufacturerName: manufacturer } : {}),
@@ -349,7 +353,7 @@ export class ZigbeeService {
 
       case 'interview_successful': {
         // older Z2M format (pre-1.x)
-        await this.upsertDevice({ ieeeAddr: ieeeRaw, friendlyName });
+        await this.upsertDevice({ ieeeAddr: ieeeRaw, friendlyName, houseId });
         const dev = await this.devices.findByIeeeAddr(ieeeRaw);
         if (dev?.type === ZigbeeDeviceType.Coordinator) break;
         this.pairingEvents$.next({
@@ -367,7 +371,10 @@ export class ZigbeeService {
     }
   }
 
-  async syncDevicesFromZigbee2MqttBridge(list: unknown): Promise<void> {
+  async syncDevicesFromZigbee2MqttBridge(
+    houseId: string,
+    list: unknown,
+  ): Promise<void> {
     if (!Array.isArray(list)) return;
 
     for (const item of list) {
@@ -431,6 +438,7 @@ export class ZigbeeService {
       await this.upsertDevice({
         ieeeAddr: ieeeRaw,
         friendlyName,
+        houseId,
         type,
         networkAddress:
           networkAddress !== undefined && Number.isFinite(networkAddress)
@@ -490,6 +498,7 @@ export class ZigbeeService {
   }
 
   async ingestMqttDeviceState(
+    houseId: string,
     topicSegment: string,
     payload: Record<string, unknown>,
   ): Promise<void> {
@@ -519,6 +528,7 @@ export class ZigbeeService {
     if (!device) {
       await this.upsertDevice({
         ieeeAddr,
+        houseId,
         ...(ieeeAddrFromZ2mTopicName(topicSegment) === undefined &&
         topicSegment.trim().length > 0
           ? { friendlyName: topicSegment.trim() }

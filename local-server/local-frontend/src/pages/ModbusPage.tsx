@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow, parseISO } from 'date-fns'
 import type { Locale } from 'date-fns/locale'
@@ -22,11 +22,24 @@ import {
   readModbusRegister,
   writeModbusRegister,
   getDeviceState,
+  buildCoilStatePatch,
+  patchModbusDeviceStateCache,
+  coilValueFromState,
   getScanLog,
   triggerScan,
 } from '@/api/modbus'
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+function formatRegisterDisplayValue(
+  reg: ModbusRegister,
+  state: ModbusRegisterState | undefined,
+  t: (key: string) => string,
+): string {
+  if (!state) return '—'
+  if (reg.registerType === 'coil') {
+    return coilValueFromState(state) ? t('modbus.coilOn') : t('modbus.coilOff')
+  }
+  return state.scaledValues.map((v) => v.toFixed(2)).join(', ')
+}
 
 function formatTs(ts: string | undefined, locale: Locale) {
   if (!ts) return '—'
@@ -279,25 +292,32 @@ function RegisterFormModal({
 function WriteRegisterModal({
   deviceId,
   register,
+  initialCoil,
   onClose,
   t,
 }: {
   deviceId: string
   register: ModbusRegister
+  initialCoil?: boolean
   onClose: () => void
   t: (key: string, vars?: Record<string, string | number | undefined>) => string
 }) {
   const queryClient = useQueryClient()
   const [value, setValue] = useState('')
-  const [coil, setCoil] = useState(true)
+  const [coil, setCoil] = useState(initialCoil ?? false)
   const [useScaled, setUseScaled] = useState(
     register.scaleFactor !== 1 || register.offset !== 0,
   )
 
+  useEffect(() => {
+    setCoil(initialCoil ?? false)
+  }, [initialCoil, register.id])
+
   const mutation = useMutation({
     mutationFn: (nextCoil?: boolean) => {
       if (register.registerType === 'coil') {
-        return writeModbusRegister(deviceId, register.id, { coil: nextCoil ?? coil })
+        const target = nextCoil ?? coil
+        return writeModbusRegister(deviceId, register.id, { coil: target })
       }
       const trimmed = value.trim()
       if (trimmed.includes(',')) {
@@ -310,7 +330,16 @@ function WriteRegisterModal({
       }
       return writeModbusRegister(deviceId, register.id, { value: num })
     },
-    onSuccess: () => {
+    onSuccess: (_data, nextCoil) => {
+      if (register.registerType === 'coil') {
+        const target = nextCoil ?? coil
+        patchModbusDeviceStateCache(
+          queryClient,
+          deviceId,
+          register.id,
+          buildCoilStatePatch(register.id, target),
+        )
+      }
       toast.success(t('modbus.toastWriteOk'))
       queryClient.invalidateQueries({ queryKey: ['modbus-device-state', deviceId] })
       onClose()
@@ -498,9 +527,7 @@ export function RegistersPanel({
           <div className="space-y-2 md:hidden">
             {registers.map((reg) => {
               const state = stateMap.get(reg.id)
-              const displayValue = state
-                ? state.scaledValues.map((v) => v.toFixed(2)).join(', ')
-                : '—'
+              const displayValue = formatRegisterDisplayValue(reg, state, t)
               const canWrite =
                 (reg.registerType === 'holding' || reg.registerType === 'coil') && reg.writable
               return (
@@ -590,9 +617,7 @@ export function RegistersPanel({
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {registers.map((reg) => {
                 const state = stateMap.get(reg.id)
-                const displayValue = state
-                  ? state.scaledValues.map((v) => v.toFixed(2)).join(', ')
-                  : '—'
+                const displayValue = formatRegisterDisplayValue(reg, state, t)
                 const canWrite =
                   (reg.registerType === 'holding' || reg.registerType === 'coil') && reg.writable
                 return (
@@ -712,6 +737,11 @@ export function RegistersPanel({
         <WriteRegisterModal
           deviceId={device.id}
           register={writingReg}
+          initialCoil={
+            writingReg.registerType === 'coil'
+              ? coilValueFromState(stateMap.get(writingReg.id))
+              : undefined
+          }
           onClose={() => setWritingReg(null)}
           t={t}
         />

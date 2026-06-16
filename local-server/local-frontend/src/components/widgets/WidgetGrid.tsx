@@ -5,7 +5,8 @@ import {
   Wifi, WifiOff, Activity, Lightbulb, Fan, Lock,
   Camera, Loader2, AlertCircle, Thermometer, RefreshCw,
 } from 'lucide-react'
-import { readModbusRegister, writeModbusRegister } from '@/api/modbus'
+import { readModbusRegister, writeModbusRegister, getDeviceState, coilValueFromState } from '@/api/modbus'
+import { useModbusCoilState } from '@/hooks/useModbusCoilState'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { getPhysicalDevice } from '@/api/physical-devices'
@@ -300,16 +301,14 @@ function ControlToggleWidget({ config }: { config: Record<string, unknown> }) {
   const { device, state } = useDeviceState(physicalDeviceId || undefined)
   const ieeeAddr = configIeeeAddr || device?.protocolAddress
 
-  const modbusRegQ = useQuery({
-    queryKey: ['toggle-modbus-reg', modbusDeviceId, modbusRegisterId],
-    queryFn: () => readModbusRegister(modbusDeviceId!, modbusRegisterId!),
-    enabled: isModbus && !!modbusDeviceId && !!modbusRegisterId,
-    staleTime: 10_000,
-  })
+  const modbusCoil = useModbusCoilState(
+    isModbus ? modbusDeviceId : undefined,
+    isModbus ? modbusRegisterId : undefined,
+  )
 
   const rawState = isModbus ? null : readPayload(state, statePayloadKey)
   const actualIsOn = isModbus
-    ? (modbusRegQ.data?.rawValues?.[0] ?? 0) !== 0
+    ? modbusCoil.isOn
     : rawState === true || (typeof rawState === 'string' && rawState.toUpperCase() === onValue.toUpperCase())
   const isOn = optimistic !== null ? optimistic : actualIsOn
 
@@ -318,8 +317,7 @@ function ControlToggleWidget({ config }: { config: Record<string, unknown> }) {
   const mutation = useMutation({
     mutationFn: async (on: boolean) => {
       if (isModbus) {
-        await writeModbusRegister(modbusDeviceId!, modbusRegisterId!, { coil: on })
-        await modbusRegQ.refetch()
+        await modbusCoil.writeCoilAsync(on)
         return
       }
       await sendCommand(ieeeAddr!, { [statePayloadKey]: on ? onValue : offValue })
@@ -650,16 +648,14 @@ function DeviceHeroWidget({ config }: { config: Record<string, unknown> }) {
   const { device, state } = useDeviceState(physicalDeviceId || undefined)
   const ieeeAddr = configIeeeAddr || device?.protocolAddress
 
-  const toggleModbusRegQ = useQuery({
-    queryKey: ['hero-toggle-modbus-reg', toggleModbusDeviceId, toggleModbusRegisterId],
-    queryFn: () => readModbusRegister(toggleModbusDeviceId!, toggleModbusRegisterId!),
-    enabled: isModbusToggle && !!toggleModbusDeviceId && !!toggleModbusRegisterId,
-    staleTime: 10_000,
-  })
+  const modbusCoil = useModbusCoilState(
+    isModbusToggle ? toggleModbusDeviceId : undefined,
+    isModbusToggle ? toggleModbusRegisterId : undefined,
+  )
 
   const rawState = isModbusToggle ? null : readPayload(state, togglePayloadKey)
   const actualIsOn = isModbusToggle
-    ? (toggleModbusRegQ.data?.rawValues?.[0] ?? 0) !== 0
+    ? modbusCoil.isOn
     : rawState === true || (typeof rawState === 'string' && rawState.toUpperCase() === toggleOnValue.toUpperCase())
   const isOn = optimistic !== null ? optimistic : actualIsOn
 
@@ -670,8 +666,7 @@ function DeviceHeroWidget({ config }: { config: Record<string, unknown> }) {
   const toggleMutation = useMutation({
     mutationFn: async (on: boolean) => {
       if (isModbusToggle) {
-        await writeModbusRegister(toggleModbusDeviceId!, toggleModbusRegisterId!, { coil: on })
-        await toggleModbusRegQ.refetch()
+        await modbusCoil.writeCoilAsync(on)
         return
       }
       await sendCommand(ieeeAddr!, { [togglePayloadKey]: on ? toggleOnValue : toggleOffValue })
@@ -770,8 +765,10 @@ async function readGroupItemState(item: DeviceGroupItem): Promise<boolean | null
   try {
     if (item.source === 'modbus') {
       if (!item.modbusDeviceId || !item.modbusRegisterId) return null
-      const result = await readModbusRegister(item.modbusDeviceId, item.modbusRegisterId)
-      return (result.rawValues?.[0] ?? 0) !== 0
+      const states = await getDeviceState(item.modbusDeviceId)
+      const cached = states.find((s) => s.registerId === item.modbusRegisterId)
+      if (!cached) return null
+      return coilValueFromState(cached)
     }
     if (!item.ieeeAddr) return null
     const states = await getZigbeeStates(item.ieeeAddr, 1)
@@ -1024,19 +1021,24 @@ function ModbusRegisterControlWidget({ config }: { config: Record<string, unknow
 
   const [numericValue, setNumericValue] = useState<string>('')
 
+  const modbusCoil = useModbusCoilState(
+    controlType === 'coil' ? deviceId : undefined,
+    controlType === 'coil' ? registerId : undefined,
+  )
+
   const { data, refetch } = useQuery({
     queryKey: ['modbus-reg', deviceId, registerId],
     queryFn: () => readModbusRegister(deviceId!, registerId!),
-    enabled: !!deviceId && !!registerId,
+    enabled: controlType !== 'coil' && !!deviceId && !!registerId,
     staleTime: 10_000,
   })
 
-  const currentCoil = (data?.rawValues?.[0] ?? 0) !== 0
+  const currentCoil = modbusCoil.isOn
 
   const writeMutation = useMutation({
-    mutationFn: (body: { coil?: boolean; value?: number; scaledValue?: number }) =>
+    mutationFn: (body: { value?: number; scaledValue?: number }) =>
       writeModbusRegister(deviceId!, registerId!, body),
-    onSuccess: () => refetch(),
+    onSuccess: () => void refetch(),
     onError: () => toast.error('Write failed'),
   })
 
@@ -1054,8 +1056,8 @@ function ModbusRegisterControlWidget({ config }: { config: Record<string, unknow
               className={cn('h-8 w-8', currentCoil ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600')}
             />
             <button
-              onClick={() => { if (canWrite) writeMutation.mutate({ coil: !currentCoil }) }}
-              disabled={writeMutation.isPending || !canWrite}
+              onClick={() => { if (canWrite) modbusCoil.writeCoil(!currentCoil) }}
+              disabled={modbusCoil.isWriting || !canWrite}
               className={cn(
                 'relative h-7 w-12 rounded-full transition-colors disabled:opacity-50',
                 currentCoil ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600',

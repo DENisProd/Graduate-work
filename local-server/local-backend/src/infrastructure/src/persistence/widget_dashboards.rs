@@ -287,6 +287,18 @@ impl WidgetDashboardRepository for SqliteWidgetDashboardRepo {
         rows.iter().map(row_to_entity).collect()
     }
 
+    async fn list_with_cloud_id(&self) -> Result<Vec<WidgetDashboard>, DomainError> {
+        let rows = sqlx::query(&format!(
+            "SELECT {SELECT_COLS} FROM widget_dashboards \
+             WHERE cloud_id IS NOT NULL ORDER BY updated_at DESC",
+        ))
+        .fetch_all(&self.pool)
+        .await
+        .map_err(db_err)?;
+
+        rows.iter().map(row_to_entity).collect()
+    }
+
     async fn set_cloud_id(&self, id: &Uuid, cloud_id: &str) -> Result<(), DomainError> {
         sqlx::query("UPDATE widget_dashboards SET cloud_id = ? WHERE id = ?")
             .bind(cloud_id)

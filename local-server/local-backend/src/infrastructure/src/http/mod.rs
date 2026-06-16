@@ -1,11 +1,13 @@
 ﻿mod cloud_auth;
 mod cloud_auth_request;
+mod cloud_modbus;
 mod cloud_physical_device;
 mod cloud_scenario;
 mod cloud_sync;
 mod cloud_widget_dashboard;
 
 pub use cloud_auth::ReqwestCloudAuthClient;
+pub use cloud_modbus::ReqwestCloudModbusClient;
 pub use cloud_physical_device::ReqwestCloudPhysicalDeviceClient;
 pub use cloud_scenario::ReqwestCloudScenarioClient;
 pub use cloud_sync::ReqwestCloudSyncClient;

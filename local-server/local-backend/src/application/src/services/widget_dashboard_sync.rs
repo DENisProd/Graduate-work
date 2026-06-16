@@ -2,16 +2,21 @@
 use std::time::Duration;
 
 use chrono::DateTime;
+use serde_json::Value;
 
 use crate::ports::{
-    AccessSyncRepository, CloudWidgetDashboardClient, CreateCloudWidgetDashboardCmd,
+    remap_widget_modbus_ids, AccessSyncRepository, CloudModbusClient, CloudWidgetDashboardClient,
+    CreateCloudWidgetDashboardCmd, ModbusRepository, UpdateCloudWidgetDashboardCmd,
     UpsertFromCloudWidgetDashboardCmd, WidgetDashboardRepository,
 };
+use crate::services::modbus_sync::sync_once;
 use crate::services::{ScenarioServiceUrlProvider, UserIdProvider};
 
 pub async fn run_widget_dashboard_sync(
     repo: Arc<dyn WidgetDashboardRepository>,
     cloud: Arc<dyn CloudWidgetDashboardClient>,
+    modbus_repo: Arc<dyn ModbusRepository>,
+    modbus_cloud: Arc<dyn CloudModbusClient>,
     interval_secs: u64,
     scenario_service_url: Arc<dyn ScenarioServiceUrlProvider>,
     access_sync: Arc<dyn AccessSyncRepository>,
@@ -20,11 +25,15 @@ pub async fn run_widget_dashboard_sync(
     loop {
         let base_url = scenario_service_url.get().await;
         tracing::debug!(scenario_base = %base_url, "widget_dashboard_sync: cycle start");
+        let modbus_map = sync_once(&modbus_repo, &modbus_cloud, &base_url)
+            .await
+            .ok();
         let house_ids = resolve_house_ids(&access_sync, &user_id_provider).await;
         for house_id in &house_ids {
             pull_from_cloud(&repo, &cloud, &base_url, house_id).await;
         }
-        push_local_to_cloud(&repo, &cloud, &base_url).await;
+        push_local_to_cloud(&repo, &cloud, &base_url, modbus_map.as_ref()).await;
+        push_linked_to_cloud(&repo, &cloud, &base_url, modbus_map.as_ref()).await;
         tokio::time::sleep(Duration::from_secs(interval_secs)).await;
     }
 }
@@ -93,10 +102,24 @@ async fn pull_from_cloud(
     }
 }
 
+fn remap_widgets(
+    widgets: &[Value],
+    modbus_map: Option<&(Vec<(String, String)>, Vec<(String, String)>)>,
+) -> Vec<Value> {
+    let mut out = widgets.to_vec();
+    if let Some((devices, registers)) = modbus_map {
+        for widget in &mut out {
+            remap_widget_modbus_ids(widget, devices, registers);
+        }
+    }
+    out
+}
+
 async fn push_local_to_cloud(
     repo: &Arc<dyn WidgetDashboardRepository>,
     cloud: &Arc<dyn CloudWidgetDashboardClient>,
     base_url: &str,
+    modbus_map: Option<&(Vec<(String, String)>, Vec<(String, String)>)>,
 ) {
     let locals = match repo.list_without_cloud_id().await {
         Ok(v) => v,
@@ -107,13 +130,14 @@ async fn push_local_to_cloud(
     };
 
     for local in locals {
+        let widgets = remap_widgets(&local.widgets, modbus_map);
         let cmd = CreateCloudWidgetDashboardCmd {
             house_id: local.house_id.clone(),
             user_id: local.user_id.clone(),
             name: local.name.clone(),
             is_default: local.is_default,
             layouts: local.layouts.clone(),
-            widgets: local.widgets.clone(),
+            widgets,
         };
 
         match cloud.create(base_url, cmd).await {
@@ -144,6 +168,60 @@ async fn push_local_to_cloud(
                     error = %e,
                     local_id = %local.id,
                     "widget_dashboard_sync: push failed"
+                );
+            }
+        }
+    }
+}
+
+async fn push_linked_to_cloud(
+    repo: &Arc<dyn WidgetDashboardRepository>,
+    cloud: &Arc<dyn CloudWidgetDashboardClient>,
+    base_url: &str,
+    modbus_map: Option<&(Vec<(String, String)>, Vec<(String, String)>)>,
+) {
+    let linked = match repo.list_with_cloud_id().await {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::warn!(error = %e, "widget_dashboard_sync: list_with_cloud_id failed");
+            return;
+        }
+    };
+
+    for local in linked {
+        let Some(cloud_id) = local.cloud_id.clone() else {
+            continue;
+        };
+        let widgets = remap_widgets(&local.widgets, modbus_map);
+        let cmd = UpdateCloudWidgetDashboardCmd {
+            name: Some(local.name.clone()),
+            is_default: Some(local.is_default),
+            layouts: Some(local.layouts.clone()),
+            widgets: Some(widgets),
+        };
+
+        match cloud.update(base_url, &cloud_id, cmd).await {
+            Ok(_) => {
+                tracing::info!(
+                    local_id = %local.id,
+                    cloud_id = %cloud_id,
+                    widgets = local.widgets.len(),
+                    "widget_dashboard_sync: updated linked dashboard on cloud"
+                );
+            }
+            Err(local_server_core::DomainError::DependencyUnavailable(_)) => {
+                tracing::warn!(
+                    local_id = %local.id,
+                    "widget_dashboard_sync: cloud unavailable, deferring linked push"
+                );
+                return;
+            }
+            Err(e) => {
+                tracing::warn!(
+                    error = %e,
+                    local_id = %local.id,
+                    cloud_id = %cloud_id,
+                    "widget_dashboard_sync: linked push failed"
                 );
             }
         }

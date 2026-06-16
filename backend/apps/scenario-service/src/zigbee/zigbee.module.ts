@@ -63,6 +63,6 @@ import { DeviceCatalogModule } from '../device-catalog/device-catalog.module';
     EmqxProvisionService,
     EmqxBootstrapService,
   ],
-  exports: [ZigbeeService, ZigbeeIngestService],
+  exports: [ZigbeeService, ZigbeeIngestService, HouseMqttConfigRepository],
 })
 export class ZigbeeModule {}

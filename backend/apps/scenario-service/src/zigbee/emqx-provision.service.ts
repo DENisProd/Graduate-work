@@ -175,6 +175,8 @@ export class EmqxProvisionService {
       // Commands: prefer cmd/ (local-backend bridge); keep zigbee2mqtt/ for legacy clients.
       { permission: 'allow', action: 'publish', topic: 'houses/+/cmd/zigbee2mqtt/#' },
       { permission: 'allow', action: 'publish', topic: 'houses/+/zigbee2mqtt/#' },
+      { permission: 'allow', action: 'subscribe', topic: 'houses/+/modbus/#' },
+      { permission: 'allow', action: 'publish', topic: 'houses/+/modbus/#' },
       { permission: 'allow', action: 'subscribe', topic: 'modbus/response' },
       { permission: 'allow', action: 'publish', topic: 'modbus/command' },
     ];
@@ -191,6 +193,8 @@ export class EmqxProvisionService {
       { permission: 'allow', action: 'publish', topic: `${base}/zigbee2mqtt/#` },
       { permission: 'allow', action: 'subscribe', topic: `${base}/cmd/zigbee2mqtt/#` },
       { permission: 'allow', action: 'publish', topic: `${base}/cmd/zigbee2mqtt/#` },
+      { permission: 'allow', action: 'subscribe', topic: `${base}/modbus/#` },
+      { permission: 'allow', action: 'publish', topic: `${base}/modbus/#` },
       { permission: 'allow', action: 'subscribe', topic: `${base}/status` },
       { permission: 'allow', action: 'publish', topic: `${base}/status` },
     ];
@@ -211,12 +215,12 @@ export class EmqxProvisionService {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     };
-    const payload = JSON.stringify({ rules });
+    const payload = JSON.stringify({ username, rules });
     const put = await fetch(
       `${this.apiBase()}/api/v5/authorization/sources/built_in_database/rules/users/${encodeURIComponent(username)}`,
       { method: 'PUT', headers, body: payload },
     );
-    if (put.ok || put.status === 409) return;
+    if (put.ok) return;
 
     const post = await fetch(
       `${this.apiBase()}/api/v5/authorization/sources/built_in_database/rules/users`,
@@ -226,7 +230,14 @@ export class EmqxProvisionService {
         body: JSON.stringify([{ username, rules }]),
       },
     );
-    if (post.ok || post.status === 409) return;
+    if (post.ok) return;
+    if (post.status === 409) {
+      const retry = await fetch(
+        `${this.apiBase()}/api/v5/authorization/sources/built_in_database/rules/users/${encodeURIComponent(username)}`,
+        { method: 'PUT', headers, body: payload },
+      );
+      if (retry.ok) return;
+    }
 
     const body = await post.text();
     throw new ServiceUnavailableException(

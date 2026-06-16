@@ -19,7 +19,7 @@ import {
 } from './dto/modbus.dto';
 
 @ApiTags('Modbus')
-@Controller('v1/modbus')
+@Controller('modbus')
 export class ModbusController {
   constructor(private readonly service: ModbusService) {}
 

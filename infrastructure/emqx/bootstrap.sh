@@ -99,15 +99,21 @@ fi
 echo "Verified user ${MQTT_USER} exists in EMQX"
 
 echo "Applying ACL rules for ${MQTT_USER}..."
-acl_payload='{
+acl_payload=$(cat <<EOF
+{
+  "username": "${MQTT_USER}",
   "rules": [
     {"permission": "allow", "action": "subscribe", "topic": "houses/+/zigbee2mqtt/#"},
     {"permission": "allow", "action": "publish", "topic": "houses/+/cmd/zigbee2mqtt/#"},
     {"permission": "allow", "action": "publish", "topic": "houses/+/zigbee2mqtt/#"},
+    {"permission": "allow", "action": "subscribe", "topic": "houses/+/modbus/#"},
+    {"permission": "allow", "action": "publish", "topic": "houses/+/modbus/#"},
     {"permission": "allow", "action": "subscribe", "topic": "modbus/response"},
     {"permission": "allow", "action": "publish", "topic": "modbus/command"}
   ]
-}'
+}
+EOF
+)
 
 acl_code=$(curl -s -o /tmp/emqx-acl.json -w '%{http_code}' -X PUT \
   "${EMQX_API}/authorization/sources/built_in_database/rules/users/${MQTT_USER}" \
@@ -117,8 +123,6 @@ acl_code=$(curl -s -o /tmp/emqx-acl.json -w '%{http_code}' -X PUT \
 
 if [ "$acl_code" -ge 200 ] && [ "$acl_code" -lt 300 ]; then
   echo "ACL rules applied for ${MQTT_USER}"
-elif [ "$acl_code" = "409" ]; then
-  echo "ACL rules already exist for ${MQTT_USER}"
 else
   echo "WARN: ACL PUT returned HTTP ${acl_code}, trying POST..."
   post_payload=$(cat <<EOF
@@ -126,6 +130,8 @@ else
   {"permission":"allow","action":"subscribe","topic":"houses/+/zigbee2mqtt/#"},
   {"permission":"allow","action":"publish","topic":"houses/+/cmd/zigbee2mqtt/#"},
   {"permission":"allow","action":"publish","topic":"houses/+/zigbee2mqtt/#"},
+  {"permission":"allow","action":"subscribe","topic":"houses/+/modbus/#"},
+  {"permission":"allow","action":"publish","topic":"houses/+/modbus/#"},
   {"permission":"allow","action":"subscribe","topic":"modbus/response"},
   {"permission":"allow","action":"publish","topic":"modbus/command"}
 ]}]
@@ -139,7 +145,19 @@ EOF
   if [ "$acl_code" -ge 200 ] && [ "$acl_code" -lt 300 ]; then
     echo "ACL rules created for ${MQTT_USER}"
   elif [ "$acl_code" = "409" ]; then
-    echo "ACL rules already exist for ${MQTT_USER}"
+    echo "ACL rules already exist for ${MQTT_USER}, retrying PUT update..."
+    acl_code=$(curl -s -o /tmp/emqx-acl.json -w '%{http_code}' -X PUT \
+      "${EMQX_API}/authorization/sources/built_in_database/rules/users/${MQTT_USER}" \
+      -H "$auth_hdr" \
+      -H 'Content-Type: application/json' \
+      -d "$acl_payload")
+    if [ "$acl_code" -ge 200 ] && [ "$acl_code" -lt 300 ]; then
+      echo "ACL rules updated for ${MQTT_USER}"
+    else
+      echo "ERROR: ACL update failed after POST conflict (HTTP ${acl_code})" >&2
+      cat /tmp/emqx-acl.json >&2
+      exit 1
+    fi
   else
     echo "ERROR: ACL provisioning failed (HTTP ${acl_code})" >&2
     cat /tmp/emqx-acl.json >&2

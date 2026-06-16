@@ -619,6 +619,8 @@ export const en = {
     writeCoil: 'Coil state',
     writeOn: 'ON',
     writeOff: 'OFF',
+    coilOn: 'ON',
+    coilOff: 'OFF',
     writeTitle: 'Write Register',
     writeHint: 'Enter the value to write to this register.',
     writeScaled: 'Engineering value (apply scale/offset)',

@@ -40,8 +40,15 @@ export class PhysicalDeviceService {
     const existing = await this.findById(id);
 
     const assigningToHouse = data.houseId && data.houseId !== existing.houseId;
+    const houseId = data.houseId ?? existing.houseId;
     const needsCatalogSync =
-      assigningToHouse && !existing.deviceTypeId && !data.deviceTypeId;
+      Boolean(houseId) &&
+      !(data.deviceId ?? existing.deviceId) &&
+      Boolean(
+        existing.model?.trim() ||
+          existing.manufacturerName?.trim() ||
+          existing.protocolAddress?.trim(),
+      );
 
     this.logger.log(
       `[update] id=${id} assigningToHouse=${assigningToHouse} needsCatalogSync=${needsCatalogSync} existing.houseId=${existing.houseId ?? 'null'} → data.houseId=${data.houseId ?? 'null'}`,
@@ -76,7 +83,6 @@ export class PhysicalDeviceService {
 
     const updated = await this.repository.update(id, data);
 
-    const houseId = data.houseId ?? existing.houseId;
     if (needsCatalogSync && resolvedDeviceId && houseId && this.accessSync) {
       this.logger.log(
         `[update] running capability sync for physicalDevice id=${id} deviceId=${resolvedDeviceId} houseId=${houseId}`,

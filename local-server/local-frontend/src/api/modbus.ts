@@ -1,4 +1,5 @@
 import { api } from './client'
+import type { QueryClient } from '@tanstack/react-query'
 import type { ModbusDevice, ModbusRegister, ModbusRegisterState, ScanLogEntry } from '@/types'
 
 // ─── Devices ──────────────────────────────────────────────────────────────────
@@ -118,6 +119,48 @@ export async function getDeviceState(deviceId: string): Promise<ModbusRegisterSt
     `/api/v1/modbus/devices/${deviceId}/state`,
   )
   return data
+}
+
+/** Last known value from local DB (written or explicitly read) — no hardware poll. */
+export async function getModbusRegisterCachedState(
+  deviceId: string,
+  registerId: string,
+): Promise<ModbusRegisterState | null> {
+  const states = await getDeviceState(deviceId)
+  return states.find((s) => s.registerId === registerId) ?? null
+}
+
+export function coilValueFromState(state: ModbusRegisterState | null | undefined): boolean {
+  return (state?.rawValues?.[0] ?? 0) !== 0
+}
+
+export function buildCoilStatePatch(registerId: string, coil: boolean): ModbusRegisterState {
+  const raw = coil ? 1 : 0
+  return {
+    registerId,
+    rawValues: [raw],
+    scaledValues: [raw],
+    timestamp: new Date().toISOString(),
+  }
+}
+
+export function patchModbusDeviceStateCache(
+  queryClient: QueryClient,
+  deviceId: string,
+  registerId: string,
+  patch: ModbusRegisterState,
+): void {
+  queryClient.setQueryData<ModbusRegisterState[]>(
+    ['modbus-device-state', deviceId],
+    (old) => {
+      const list = old ?? []
+      const idx = list.findIndex((s) => s.registerId === registerId)
+      if (idx === -1) return [...list, patch]
+      const next = [...list]
+      next[idx] = patch
+      return next
+    },
+  )
 }
 
 // ─── Scan ──────────────────────────────────────────────────────────────────────

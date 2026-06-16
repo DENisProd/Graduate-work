@@ -8,11 +8,17 @@ import { ConfigService } from '@nestjs/config';
 import * as mqtt from 'mqtt';
 import type { MqttClient } from 'mqtt';
 import { randomUUID } from 'crypto';
+import { HouseMqttConfigRepository } from '../zigbee/house-mqtt-config.repository';
+import {
+  resolveHouseMqttUrl,
+  scenarioServiceMqttCredentials,
+} from '../zigbee/central-mqtt';
 
 interface PendingRequest {
   resolve: (data: unknown) => void;
   reject: (err: Error) => void;
   timer: ReturnType<typeof setTimeout>;
+  houseId: string;
 }
 
 interface ModbusCommand {
@@ -34,45 +40,73 @@ interface ModbusResponse {
   error?: string;
 }
 
-const COMMAND_TOPIC = 'modbus/command';
-const RESPONSE_TOPIC = 'modbus/response';
 const TIMEOUT_MS = 5000;
+
+function commandTopic(houseId: string): string {
+  return `houses/${houseId}/modbus/command`;
+}
+
+function responseTopic(houseId: string): string {
+  return `houses/${houseId}/modbus/response`;
+}
 
 @Injectable()
 export class ModbusGatewayService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(ModbusGatewayService.name);
   private client: MqttClient | null = null;
   private readonly pending = new Map<string, PendingRequest>();
+  private houseIds: string[] = [];
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly houseMqttConfig: HouseMqttConfigRepository,
+  ) {}
 
-  onModuleInit(): void {
-    const url =
-      this.config.get<string>('MODBUS_MQTT_URL') ??
-      this.config.get<string>('CENTRAL_MQTT_URL') ??
-      this.config.get<string>('ZIGBEE_MQTT_URL');
-    if (!url) {
-      this.logger.warn('MODBUS_MQTT_URL not configured — modbus gateway disabled');
+  async onModuleInit(): Promise<void> {
+    const configs = await this.houseMqttConfig.findAll();
+    this.houseIds = configs.filter((c) => c.enabled).map((c) => c.houseId);
+    const fallback = this.config.get<string>('MODBUS_HOUSE_ID')?.trim();
+    if (this.houseIds.length === 0 && fallback) {
+      this.houseIds = [fallback];
+    }
+    if (this.houseIds.length === 0) {
+      this.logger.warn(
+        'No enabled house MQTT configs — modbus gateway disabled (set MODBUS_HOUSE_ID to override)',
+      );
       return;
     }
 
-    const username = this.config.get<string>('CENTRAL_MQTT_USERNAME')?.trim();
-    const password = this.config.get<string>('CENTRAL_MQTT_PASSWORD')?.trim();
-    this.client = mqtt.connect(url, {
+    let mqttUrl: string;
+    try {
+      mqttUrl = resolveHouseMqttUrl(this.config, 'central');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`Modbus gateway: ${message}`);
+      return;
+    }
+
+    const creds = scenarioServiceMqttCredentials(this.config);
+    this.client = mqtt.connect(mqttUrl, {
       reconnectPeriod: 5000,
-      ...(username ? { username } : {}),
-      ...(password ? { password } : {}),
+      ...(creds.username ? { username: creds.username } : {}),
+      ...(creds.password ? { password: creds.password } : {}),
     });
 
     this.client.on('connect', () => {
-      this.logger.log(`Connected to MQTT broker for modbus: ${url}`);
-      this.client!.subscribe(RESPONSE_TOPIC, (err) => {
-        if (err) this.logger.error('Failed to subscribe to modbus/response', err);
-      });
+      this.logger.log(
+        `Connected to MQTT broker for modbus: ${mqttUrl} (houses: ${this.houseIds.join(', ')})`,
+      );
+      for (const houseId of this.houseIds) {
+        const topic = responseTopic(houseId);
+        this.client!.subscribe(topic, (err) => {
+          if (err) this.logger.error(`Failed to subscribe to ${topic}`, err);
+        });
+      }
     });
 
     this.client.on('message', (topic, payload) => {
-      if (topic !== RESPONSE_TOPIC) return;
+      const houseId = this.houseIdFromResponseTopic(topic);
+      if (!houseId) return;
       let response: ModbusResponse;
       try {
         response = JSON.parse(payload.toString()) as ModbusResponse;
@@ -80,7 +114,7 @@ export class ModbusGatewayService implements OnModuleInit, OnModuleDestroy {
         return;
       }
       const pending = this.pending.get(response.request_id);
-      if (!pending) return;
+      if (!pending || pending.houseId !== houseId) return;
       clearTimeout(pending.timer);
       this.pending.delete(response.request_id);
       if (response.success) {
@@ -106,16 +140,24 @@ export class ModbusGatewayService implements OnModuleInit, OnModuleDestroy {
   }
 
   get isAvailable(): boolean {
-    return this.client !== null && this.client.connected;
+    return this.client !== null && this.client.connected && this.houseIds.length > 0;
   }
 
-  async sendCommand(command: Omit<ModbusCommand, 'request_id'>): Promise<number[]> {
+  async sendCommand(
+    command: Omit<ModbusCommand, 'request_id'>,
+    houseId?: string,
+  ): Promise<number[]> {
     if (!this.client) {
       throw new Error('Modbus gateway not configured');
+    }
+    const targetHouse = houseId ?? this.houseIds[0];
+    if (!targetHouse) {
+      throw new Error('Modbus houseId not configured');
     }
 
     const requestId = randomUUID();
     const payload: ModbusCommand = { ...command, request_id: requestId };
+    const topic = commandTopic(targetHouse);
 
     return new Promise<number[]>((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -127,9 +169,10 @@ export class ModbusGatewayService implements OnModuleInit, OnModuleDestroy {
         resolve: (data) => resolve(data as number[]),
         reject,
         timer,
+        houseId: targetHouse,
       });
 
-      this.client!.publish(COMMAND_TOPIC, JSON.stringify(payload), (err) => {
+      this.client!.publish(topic, JSON.stringify(payload), (err) => {
         if (err) {
           clearTimeout(timer);
           this.pending.delete(requestId);
@@ -137,5 +180,13 @@ export class ModbusGatewayService implements OnModuleInit, OnModuleDestroy {
         }
       });
     });
+  }
+
+  private houseIdFromResponseTopic(topic: string): string | null {
+    const prefix = 'houses/';
+    const suffix = '/modbus/response';
+    if (!topic.startsWith(prefix) || !topic.endsWith(suffix)) return null;
+    const rest = topic.slice(prefix.length, topic.length - suffix.length);
+    return rest || null;
   }
 }

@@ -2,6 +2,7 @@
 pub mod access_repository;
 pub mod access_sync_repository;
 pub mod cloud_auth_client;
+pub mod cloud_modbus_client;
 pub mod cloud_physical_device_client;
 pub mod cloud_scenario_client;
 pub mod cloud_sync_client;
@@ -24,6 +25,10 @@ pub use access_sync_repository::{AccessSyncRepository, SyncStatus};
 pub use cloud_auth_client::{
     AuthPollResult, AuthSessionStartResult, CloudAuthClient, CompleteAuthArgs,
 };
+pub use cloud_modbus_client::{
+    remap_widget_modbus_ids, CloudModbusClient, CreateCloudModbusDeviceCmd,
+    CreateCloudModbusRegisterCmd, RemoteModbusDevice, RemoteModbusRegister,
+};
 pub use cloud_physical_device_client::{
     CloudPhysicalDeviceClient, CreateCloudPhysicalDeviceCmd, RemotePhysicalDevice,
 };
@@ -36,6 +41,7 @@ pub use cloud_sync_client::{
 };
 pub use cloud_widget_dashboard_client::{
     CloudWidgetDashboardClient, CreateCloudWidgetDashboardCmd, RemoteWidgetDashboard,
+    UpdateCloudWidgetDashboardCmd,
 };
 pub use device_repository::DeviceRepository;
 pub use health::{HealthChecker, HealthError};

@@ -413,10 +413,15 @@ impl CloudSyncClient for ReqwestCloudSyncClient {
             entries: Vec<SyncEntry>,
         }
         let url = Self::url(base_url, "/sync/ingest");
+        let token = if api_key.trim().is_empty() {
+            self.bearer_token().await
+        } else {
+            api_key.to_string()
+        };
         let res = self
             .http
             .post(&url)
-            .bearer_auth(api_key)
+            .bearer_auth(&token)
             .json(&IngestRequest { entries })
             .send()
             .await

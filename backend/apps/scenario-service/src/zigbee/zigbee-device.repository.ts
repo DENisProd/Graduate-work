@@ -109,6 +109,7 @@ export class ZigbeeDeviceRepository {
               ? { definition: input.definition ?? null }
               : {}),
             ...(input.capabilities ? { capabilities: input.capabilities } : {}),
+            ...(input.houseId ? { houseId: input.houseId } : {}),
             updatedAt: now,
           },
           $setOnInsert: { createdAt: now },

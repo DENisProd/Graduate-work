@@ -66,7 +66,8 @@ services:
       LOCAL_SERVER_SERIAL:  ${LOCAL_SERVER_SERIAL:-00:00:00:00:00:00}
       SYNC_INTERVAL_SECS:   ${SYNC_INTERVAL_SECS:-300}
       RUST_LOG:             ${RUST_LOG:-info}
-      # Cloud pull (access + scenarios via api-gateway). Override for dev PC on LAN.
+      # Fallback only when cloud URL is not saved in local UI (Settings → Cloud URL).
+      # Production: set https://api-home.darksecrets.ru or save via UI — runtime settings take priority.
       CLOUD_SYNC_API_URL:   ${CLOUD_SYNC_API_URL:-http://host.docker.internal:8082}
     expose:
       - "8080"

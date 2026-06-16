@@ -3,7 +3,8 @@
 use local_server_core::entities::scan_log::{new_scan_log, ScanLog};
 use local_server_application::{
     ports::{
-        AccessRepository, AccessSyncRepository, CloudAuthClient, CloudPhysicalDeviceClient,
+        AccessRepository, AccessSyncRepository, CloudAuthClient, CloudModbusClient,
+        CloudPhysicalDeviceClient,
         CloudScenarioClient, CloudSyncClient, CloudWidgetDashboardClient, DeviceRepository,
         HealthChecker, LocalAuthRepository, ModbusBridgePort, ModbusRepository,
         PhysicalDeviceRepository, RuntimeSettingsRepository, ScenarioExecutionRepository,
@@ -18,7 +19,8 @@ use local_server_infrastructure::persistence::{
     SqliteWidgetDashboardRepo, SqliteZigbeeRepo,
 };
 use local_server_infrastructure::{
-    ModbusGateway, ReqwestCloudAuthClient, ReqwestCloudPhysicalDeviceClient, ReqwestCloudScenarioClient,
+    ModbusGateway, ReqwestCloudAuthClient, ReqwestCloudModbusClient,
+    ReqwestCloudPhysicalDeviceClient, ReqwestCloudScenarioClient,
     ReqwestCloudSyncClient, ReqwestCloudWidgetDashboardClient, SqlitePool,
 };
 use local_server_interfaces::HttpAppState;
@@ -41,6 +43,7 @@ pub struct AppState {
     pub cloud_sync_client: Arc<dyn CloudSyncClient>,
     pub cloud_scenario_client: Arc<dyn CloudScenarioClient>,
     pub cloud_phys_dev_client: Arc<dyn CloudPhysicalDeviceClient>,
+    pub cloud_modbus_client: Arc<dyn CloudModbusClient>,
     pub cloud_widget_dashboard_client: Arc<dyn CloudWidgetDashboardClient>,
     pub widget_dashboard_repo: Arc<dyn WidgetDashboardRepository>,
     pub access_sync_repo: Arc<dyn AccessSyncRepository>,
@@ -99,6 +102,11 @@ impl AppState {
             runtime_settings_repo.clone(),
         )) as Arc<dyn CloudPhysicalDeviceClient>;
 
+        let cloud_modbus_client = Arc::new(ReqwestCloudModbusClient::with_settings(
+            cloud_sync_api_key.clone(),
+            runtime_settings_repo.clone(),
+        )) as Arc<dyn CloudModbusClient>;
+
         let cloud_widget_dashboard_client =
             Arc::new(ReqwestCloudWidgetDashboardClient::with_settings(
                 cloud_sync_api_key.clone(),
@@ -152,6 +160,7 @@ impl AppState {
             cloud_sync_client,
             cloud_scenario_client,
             cloud_phys_dev_client,
+            cloud_modbus_client,
             cloud_widget_dashboard_client,
             widget_dashboard_repo,
             access_sync_repo,

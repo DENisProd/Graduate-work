@@ -26,7 +26,7 @@ export class AccessServiceClient {
 
   constructor(config: ConfigService) {
     this.baseUrl = (
-      config.get<string>('ACCESS_SERVICE_URL') ?? 'http://localhost:8085'
+      config.get<string>('ACCESS_SERVICE_URL') ?? 'http://localhost:8086'
     ).replace(/\/$/, '');
   }
 

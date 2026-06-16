@@ -58,7 +58,9 @@ export class DeviceCatalogClient {
 
   constructor(config: ConfigService) {
     this.baseUrl = (
-      config.get<string>('DEVICE_SERVICE_URL') ?? 'http://localhost:3000'
+      config.get<string>('ACCESS_SERVICE_URL') ??
+      config.get<string>('DEVICE_SERVICE_URL') ??
+      'http://localhost:8086'
     ).replace(/\/$/, '');
   }
 
