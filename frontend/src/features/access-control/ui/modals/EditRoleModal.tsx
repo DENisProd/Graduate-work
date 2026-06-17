@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useTranslation } from '@/hooks';
+import { applyApiValidationErrors } from '@/lib/api-client';
 import type { HouseRoleCreateRequest, HouseRoleResponse } from '@/types/api';
 
 interface EditRoleModalProps {
@@ -32,18 +33,23 @@ export function EditRoleModal({
   const [loading, setLoading] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
   const [priorityError, setPriorityError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const clearErrors = () => {
+    setNameError(null);
+    setPriorityError(null);
+    setFormError(null);
+  };
 
   useEffect(() => {
     if (isOpen && role) {
       setName(role.name ?? role.code ?? '');
       setPriorityStr(role.priority !== undefined ? String(role.priority) : '');
-      setNameError(null);
-      setPriorityError(null);
+      clearErrors();
     } else if (!isOpen) {
       setName('');
       setPriorityStr('');
-      setNameError(null);
-      setPriorityError(null);
+      clearErrors();
     }
   }, [isOpen, role]);
 
@@ -60,6 +66,9 @@ export function EditRoleModal({
       if (Number.isNaN(n) || !Number.isInteger(n)) {
         setPriorityError(t('admin.accessControl.rolePriorityInvalid'));
         valid = false;
+      } else if (n < 1) {
+        setPriorityError(t('admin.accessControl.rolePriorityMin'));
+        valid = false;
       } else {
         setPriorityError(null);
       }
@@ -72,12 +81,19 @@ export function EditRoleModal({
   const handleSubmit = async () => {
     if (!role || !validate()) return;
     setLoading(true);
+    setFormError(null);
     try {
       const priority = priorityStr === '' ? undefined : Number(priorityStr);
       await onSubmit(role.id, { name: name.trim(), priority });
       onOpenChange(false);
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      applyApiValidationErrors(error, {
+        setFieldError: (field, message) => {
+          if (field === 'name') setNameError(message);
+          if (field === 'priority') setPriorityError(message);
+        },
+        setFormError,
+      }, t('common.error'));
     } finally {
       setLoading(false);
     }
@@ -85,8 +101,7 @@ export function EditRoleModal({
 
   const handleClose = (open: boolean) => {
     if (!open) {
-      setNameError(null);
-      setPriorityError(null);
+      clearErrors();
     }
     onOpenChange(open);
   };
@@ -100,6 +115,11 @@ export function EditRoleModal({
           <DialogTitle>{t('admin.accessControl.editRole')}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
+          {formError && (
+            <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
+              {formError}
+            </p>
+          )}
           <div className="space-y-1">
             <label
               htmlFor="edit-role-name"
@@ -114,6 +134,7 @@ export function EditRoleModal({
               onChange={(e) => {
                 setName(e.target.value);
                 if (nameError) setNameError(null);
+                if (formError) setFormError(null);
               }}
               aria-invalid={!!nameError}
             />
@@ -134,11 +155,12 @@ export function EditRoleModal({
               id="edit-role-priority"
               type="text"
               inputMode="numeric"
-              placeholder="0"
+              placeholder="1"
               value={priorityStr}
               onChange={(e) => {
                 setPriorityStr(e.target.value);
                 if (priorityError) setPriorityError(null);
+                if (formError) setFormError(null);
               }}
               aria-invalid={!!priorityError}
             />

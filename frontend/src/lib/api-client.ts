@@ -1,4 +1,5 @@
 export { ApiError, USE_MOCKS, API_BASE_URL, ACCESS_API_BASE_URL, PHYSICAL_DEVICES_API_BASE_URL } from './api/core';
+export { parseApiValidationError, applyApiValidationErrors } from './api/validation-errors';
 
 export {
   roomsApi,

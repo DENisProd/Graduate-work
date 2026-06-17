@@ -1,11 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Info, Plus } from 'lucide-react';
 import { AppButton } from '@/components/ui/app-button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Dialog,
@@ -38,6 +36,8 @@ import { EditRoleModal } from '../../modals/EditRoleModal';
 import { flattenResources, type TreeNodeWithMeta } from './roles/roles-helpers';
 import { RolesTable } from './roles/RolesTable';
 import { RoleDetailsPanel } from './roles/RoleDetailsPanel';
+import { ResourceTreeView } from './roles/ResourceTreeView';
+import { PolicyListPanel } from './roles/PolicyListPanel';
 
 interface RolesTabProps {
   houseId: string | null;
@@ -46,29 +46,44 @@ interface RolesTabProps {
   canEditRoles?: boolean;
 }
 
-const RESOURCE_TYPES: CreateResourceRequestDto['type'][] = [
+const RESOURCE_TYPES = [
   'ROOM',
   'DEVICE',
   'DEVICE_FUNCTION',
   'SCENE',
   'GROUP',
   'AUTOMATION',
-];
+] as const satisfies readonly CreateResourceRequestDto['type'][];
+type CreatableResourceType = (typeof RESOURCE_TYPES)[number];
 const POLICY_EFFECTS: CreatePolicyRequestDto['effect'][] = ['ALLOW', 'DENY', 'READ', 'WRITE'];
 const POLICY_SUBJECTS: CreatePolicyRequestDto['subjectType'][] = ['ANYONE', 'ROLE', 'MEMBER', 'USER'];
 
 const EFFECT_LABELS: Record<CreatePolicyRequestDto['effect'], string> = {
   ALLOW: 'Разрешить',
   DENY: 'Запретить',
-  READ: 'Только чтение',
-  WRITE: 'Только запись',
+  READ: 'Только просмотр',
+  WRITE: 'Только управление',
+};
+
+const EFFECT_HINTS: Record<CreatePolicyRequestDto['effect'], string> = {
+  ALLOW: 'Можно пользоваться объектом полностью',
+  DENY: 'Доступ к объекту полностью закрыт',
+  READ: 'Можно только смотреть, но не управлять',
+  WRITE: 'Можно управлять, но не менять настройки',
 };
 
 const SUBJECT_LABELS: Record<CreatePolicyRequestDto['subjectType'], string> = {
-  ANYONE: 'Для всех',
-  ROLE: 'Для роли',
-  MEMBER: 'Для участника дома',
-  USER: 'Для пользователя',
+  ANYONE: 'Все пользователи',
+  ROLE: 'Участники с ролью',
+  MEMBER: 'Конкретный участник',
+  USER: 'Конкретный пользователь',
+};
+
+const SUBJECT_HINTS: Record<CreatePolicyRequestDto['subjectType'], string> = {
+  ANYONE: 'Правило действует для всех, кто имеет доступ к дому',
+  ROLE: 'Например, только для гостей или детей',
+  MEMBER: 'Выберите одного человека из списка участников дома',
+  USER: 'Привязка к конкретному аккаунту пользователя',
 };
 
 const RESOURCE_TYPE_LABELS: Record<string, string> = {
@@ -79,6 +94,24 @@ const RESOURCE_TYPE_LABELS: Record<string, string> = {
   SCENE: 'Сцена',
   GROUP: 'Группа',
   AUTOMATION: 'Автоматизация',
+};
+
+const RESOURCE_TYPE_HINTS: Record<CreatableResourceType, string> = {
+  ROOM: 'Комната или зона — например, «Кухня» или «Спальня»',
+  DEVICE: 'Конкретное устройство — лампа, розетка, камера и т.д.',
+  DEVICE_FUNCTION: 'Отдельная возможность устройства — яркость, цвет, режим',
+  SCENE: 'Готовый режим — «Вечер», «Кино», «Уборка»',
+  GROUP: 'Несколько устройств, которыми можно управлять вместе',
+  AUTOMATION: 'Правило «если…, то…» — например, включить свет по датчику',
+};
+
+const PARENT_SELECTOR_HINTS: Record<CreatableResourceType, string> = {
+  ROOM: 'Комната добавляется в структуру дома',
+  DEVICE: 'Укажите комнату, где находится устройство',
+  DEVICE_FUNCTION: 'Выберите устройство, к которому относится функция',
+  SCENE: 'Сцену можно привязать ко всему дому или к комнате',
+  GROUP: 'Группу можно создать для дома или для одной комнаты',
+  AUTOMATION: 'Автоматизацию можно привязать к дому или к комнате',
 };
 
 const VALID_PARENT_TYPES: Record<CreateResourceRequestDto['type'], string[]> = {
@@ -109,10 +142,11 @@ export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabPr
   const [roleMembersLoading, setRoleMembersLoading] = useState(false);
   const [policies, setPolicies] = useState<HousePolicyResponse[]>([]);
   const [policiesLoading, setPoliciesLoading] = useState(false);
+  const [resourcesTree, setResourcesTree] = useState<TreeNodeWithMeta[]>([]);
   const [resourcesFlat, setResourcesFlat] = useState<Array<{ id: string; type: string; name?: string; path: string }>>([]);
   const [resourcesLoading, setResourcesLoading] = useState(false);
   const [resourceName, setResourceName] = useState('');
-  const [resourceType, setResourceType] = useState<CreateResourceRequestDto['type']>('ROOM');
+  const [resourceType, setResourceType] = useState<CreatableResourceType>('ROOM');
   const [resourceParentId, setResourceParentId] = useState('');
   const [resourceCreating, setResourceCreating] = useState(false);
   const [policyName, setPolicyName] = useState('');
@@ -250,13 +284,16 @@ export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabPr
         ]);
         if (signal?.aborted) return;
         const nodes = Array.isArray(resourcesResponse) ? resourcesResponse : [resourcesResponse];
-        const flattened = flattenResources(nodes as TreeNodeWithMeta[]);
+        const typedNodes = nodes as TreeNodeWithMeta[];
+        const flattened = flattenResources(typedNodes);
         setPolicies(Array.isArray(policiesResponse) ? policiesResponse : []);
+        setResourcesTree(typedNodes);
         setResourcesFlat(flattened);
         setResourceParentId((prev) => prev || flattened[0]?.id || '');
       } catch {
         if (signal?.aborted) return;
         setPolicies([]);
+        setResourcesTree([]);
         setResourcesFlat([]);
       } finally {
         if (!signal?.aborted) {
@@ -321,6 +358,17 @@ export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabPr
     const allowed = VALID_PARENT_TYPES[resourceType] ?? [];
     return resourcesFlat.filter((r) => allowed.includes(r.type));
   }, [resourcesFlat, resourceType]);
+
+  useEffect(() => {
+    if (validParentResources.length === 0) {
+      setResourceParentId('');
+      return;
+    }
+    const currentParentValid = validParentResources.some((resource) => resource.id === resourceParentId);
+    if (!currentParentValid) {
+      setResourceParentId(validParentResources[0].id);
+    }
+  }, [resourceType, validParentResources, resourceParentId]);
 
   if (activeTab !== 'roles') return null;
 
@@ -486,253 +534,345 @@ export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabPr
 
       {/* ── Политики ── */}
       <TabsContent value="policies" className="mt-4">
-        <div className="rounded-xl border border-border bg-card p-4">
-          <h4 className="text-sm font-semibold text-foreground">Политики доступа</h4>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Создайте правило: кому, на какой ресурс и с каким типом доступа.
-          </p>
-          <div className="mt-3 grid gap-2">
-            <Input
-              placeholder="Название политики (например: Доступ к камерам ночью)"
-              value={policyName}
-              onChange={(event) => setPolicyName(event.target.value)}
-            />
-            <div className="grid gap-2 sm:grid-cols-2">
-              <Select value={policyEffect} onValueChange={(value: CreatePolicyRequestDto['effect']) => setPolicyEffect(value)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Тип доступа" />
-                </SelectTrigger>
-                <SelectContent>
-                  {POLICY_EFFECTS.map((effect) => (
-                    <SelectItem key={effect} value={effect}>
-                      {EFFECT_LABELS[effect]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={policySubjectType}
-                onValueChange={(value: CreatePolicyRequestDto['subjectType']) => {
-                  setPolicySubjectType(value);
-                  setPolicySubjectId('');
-                }}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Для кого правило" />
-                </SelectTrigger>
-                <SelectContent>
-                  {POLICY_SUBJECTS.map((subjectType) => (
-                    <SelectItem key={subjectType} value={subjectType}>
-                      {SUBJECT_LABELS[subjectType]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {policySubjectType === 'ROLE' && (
-              <Select value={policySubjectId} onValueChange={setPolicySubjectId}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Выберите роль" />
-                </SelectTrigger>
-                <SelectContent>
-                  {roles.map((role) => (
-                    <SelectItem key={role.id} value={role.id}>
-                      {role.name ?? role.code ?? role.id}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            {(policySubjectType === 'MEMBER' || policySubjectType === 'USER') && (
-              <Select value={policySubjectId} onValueChange={setPolicySubjectId}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Выберите участника" />
-                </SelectTrigger>
-                <SelectContent>
-                  {houseMembers.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.name ?? member.id}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            <Select value={policyResourceId} onValueChange={setPolicyResourceId}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Выберите ресурс" />
-              </SelectTrigger>
-              <SelectContent>
-                {resourcesFlat.map((resource) => (
-                  <SelectItem key={resource.id} value={resource.id}>
-                    {resource.path} ({RESOURCE_TYPE_LABELS[resource.type] ?? resource.type})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <div>
-                <p className="mb-1 text-xs text-muted-foreground">Активно с (необязательно)</p>
-                <Input
-                  type="time"
-                  value={conditionTimeFrom}
-                  onChange={(event) => setConditionTimeFrom(event.target.value)}
-                />
-              </div>
-              <div>
-                <p className="mb-1 text-xs text-muted-foreground">Активно до (необязательно)</p>
-                <Input
-                  type="time"
-                  value={conditionTimeTo}
-                  onChange={(event) => setConditionTimeTo(event.target.value)}
-                />
-              </div>
-            </div>
-            <AppButton
-              size="sm"
-              onClick={handleCreatePolicy}
-              disabled={!houseId || policyCreating || !policyName.trim() || !policyResourceId}
-            >
-              Создать политику
-            </AppButton>
+        <div className="mb-4 flex gap-3 rounded-xl border border-border bg-muted/30 p-4">
+          <Info className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+          <div className="space-y-1 text-sm">
+            <p className="font-medium text-foreground">Правила доступа</p>
+            <p className="text-muted-foreground">
+              Здесь вы решаете, кто и что может делать в доме: пользоваться устройствами, смотреть
+              камеры или менять настройки. Сначала добавьте объекты на вкладке «Ресурсы», затем
+              создайте правило.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Пример: <span className="text-foreground">Гостям запрещён доступ к камерам с 22:00 до 08:00</span>
+            </p>
           </div>
-          <div className="mt-4 border-t border-border pt-3">
-            <p className="text-xs font-medium text-muted-foreground">Политики этого дома</p>
-            {policiesLoading ? (
-              <div className="mt-2 space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-5/6" />
+        </div>
+
+        <div className="grid min-h-[calc(100vh-16rem)] gap-4 lg:grid-cols-[minmax(300px,380px),1fr]">
+          <div className="h-fit rounded-xl border border-border bg-card p-4">
+            <h4 className="text-sm font-semibold text-foreground">Новое правило</h4>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Заполните поля по порядку — система подскажет, что означает каждый пункт.
+            </p>
+            <div className="mt-4 space-y-4">
+              <div className="space-y-1.5">
+                <label htmlFor="policy-name" className="text-sm font-medium text-foreground">
+                  Название правила
+                </label>
+                <Input
+                  id="policy-name"
+                  placeholder="Например: Доступ к камерам ночью"
+                  value={policyName}
+                  onChange={(event) => setPolicyName(event.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Короткое название, чтобы потом легко найти правило в списке
+                </p>
               </div>
-            ) : sortedPolicies.length === 0 ? (
-              <p className="mt-2 text-xs text-muted-foreground">{t('admin.noData')}</p>
-            ) : (
-              <div className="mt-2 space-y-2">
-                {sortedPolicies.map((policy) => {
-                  let subjectName: string | undefined;
-                  if (policy.subjectType === 'ROLE') {
-                    const role = roles.find((r) => r.id === policy.subjectId);
-                    subjectName = role ? (role.name ?? role.code) : policy.subjectId;
-                  } else if (policy.subjectType === 'MEMBER' || policy.subjectType === 'USER') {
-                    const member = houseMembers.find((m) => m.id === policy.subjectId);
-                    subjectName = member?.name ?? policy.subjectId;
-                  }
-                  const timeFrom = policy.condition?.timeFrom as string | undefined;
-                  const timeTo = policy.condition?.timeTo as string | undefined;
-                  return (
-                    <div key={policy.id} className="rounded-md border border-border p-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs font-medium text-foreground">{policy.name ?? '—'}</span>
-                        <Badge variant="outline">
-                          {policy.effect && policy.effect in EFFECT_LABELS
-                            ? EFFECT_LABELS[policy.effect as CreatePolicyRequestDto['effect']]
-                            : policy.effect ?? 'Не задано'}
-                        </Badge>
-                        <Badge variant="secondary">
-                          {policy.subjectType && policy.subjectType in SUBJECT_LABELS
-                            ? SUBJECT_LABELS[policy.subjectType as CreatePolicyRequestDto['subjectType']]
-                            : policy.subjectType ?? 'Не задано'}
-                        </Badge>
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Ресурс:{' '}
-                        {policy.resourceId
-                          ? (resourcesById.get(policy.resourceId)?.path ?? '—')
-                          : '—'}
-                      </p>
-                      {subjectName && (
-                        <p className="mt-0.5 text-xs text-muted-foreground">Кому: {subjectName}</p>
-                      )}
-                      {(timeFrom ?? timeTo) && (
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          Время: {timeFrom ?? '...'} — {timeTo ?? '...'}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
+
+              <div className="space-y-1.5">
+                <label htmlFor="policy-effect" className="text-sm font-medium text-foreground">
+                  Что делать?
+                </label>
+                <Select
+                  value={policyEffect}
+                  onValueChange={(value: CreatePolicyRequestDto['effect']) => setPolicyEffect(value)}
+                >
+                  <SelectTrigger id="policy-effect" className="w-full">
+                    <SelectValue placeholder="Выберите действие" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {POLICY_EFFECTS.map((effect) => (
+                      <SelectItem key={effect} value={effect}>
+                        {EFFECT_LABELS[effect]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">{EFFECT_HINTS[policyEffect]}</p>
               </div>
-            )}
+
+              <div className="space-y-1.5">
+                <label htmlFor="policy-subject-type" className="text-sm font-medium text-foreground">
+                  Для кого?
+                </label>
+                <Select
+                  value={policySubjectType}
+                  onValueChange={(value: CreatePolicyRequestDto['subjectType']) => {
+                    setPolicySubjectType(value);
+                    setPolicySubjectId('');
+                  }}
+                >
+                  <SelectTrigger id="policy-subject-type" className="w-full">
+                    <SelectValue placeholder="Выберите, для кого правило" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {POLICY_SUBJECTS.map((subjectType) => (
+                      <SelectItem key={subjectType} value={subjectType}>
+                        {SUBJECT_LABELS[subjectType]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">{SUBJECT_HINTS[policySubjectType]}</p>
+              </div>
+
+              {policySubjectType === 'ROLE' && (
+                <div className="space-y-1.5">
+                  <label htmlFor="policy-role" className="text-sm font-medium text-foreground">
+                    Какая роль?
+                  </label>
+                  <Select value={policySubjectId} onValueChange={setPolicySubjectId}>
+                    <SelectTrigger id="policy-role" className="w-full">
+                      <SelectValue placeholder="Выберите роль" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roles.map((role) => (
+                        <SelectItem key={role.id} value={role.id}>
+                          {role.name ?? role.code ?? role.id}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {(policySubjectType === 'MEMBER' || policySubjectType === 'USER') && (
+                <div className="space-y-1.5">
+                  <label htmlFor="policy-member" className="text-sm font-medium text-foreground">
+                    Кто именно?
+                  </label>
+                  <Select value={policySubjectId} onValueChange={setPolicySubjectId}>
+                    <SelectTrigger id="policy-member" className="w-full">
+                      <SelectValue placeholder="Выберите участника" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {houseMembers.map((member) => (
+                        <SelectItem key={member.id} value={member.id}>
+                          {member.name ?? member.id}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <label htmlFor="policy-resource" className="text-sm font-medium text-foreground">
+                  К какому объекту?
+                </label>
+                <Select value={policyResourceId} onValueChange={setPolicyResourceId}>
+                  <SelectTrigger id="policy-resource" className="w-full">
+                    <SelectValue placeholder="Выберите объект из структуры дома" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {resourcesFlat.map((resource) => (
+                      <SelectItem key={resource.id} value={resource.id}>
+                        {resource.path}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {resourcesFlat.length === 0
+                    ? 'Сначала добавьте объекты на вкладке «Ресурсы»'
+                    : 'Комната, устройство или другой элемент из структуры дома'}
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <p className="text-sm font-medium text-foreground">Когда действует? (необязательно)</p>
+                <p className="text-xs text-muted-foreground">
+                  Оставьте пустым, если правило должно работать всегда
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <label htmlFor="policy-time-from" className="text-xs text-muted-foreground">
+                      С
+                    </label>
+                    <Input
+                      id="policy-time-from"
+                      type="time"
+                      value={conditionTimeFrom}
+                      onChange={(event) => setConditionTimeFrom(event.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label htmlFor="policy-time-to" className="text-xs text-muted-foreground">
+                      До
+                    </label>
+                    <Input
+                      id="policy-time-to"
+                      type="time"
+                      value={conditionTimeTo}
+                      onChange={(event) => setConditionTimeTo(event.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <AppButton
+                className="w-full sm:w-auto"
+                size="sm"
+                onClick={handleCreatePolicy}
+                disabled={
+                  !houseId ||
+                  policyCreating ||
+                  !policyName.trim() ||
+                  !policyResourceId ||
+                  ((policySubjectType === 'ROLE' ||
+                    policySubjectType === 'MEMBER' ||
+                    policySubjectType === 'USER') &&
+                    !policySubjectId)
+                }
+              >
+                {policyCreating ? 'Сохраняем…' : 'Добавить правило'}
+              </AppButton>
+            </div>
+          </div>
+
+          <div className="flex min-h-[24rem] flex-col rounded-xl border border-border bg-card p-4 lg:min-h-0">
+            <div className="shrink-0">
+              <h4 className="text-sm font-semibold text-foreground">Правила этого дома</h4>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Все активные ограничения и разрешения. Каждая карточка — понятное описание того, что
+                разрешено или запрещено.
+              </p>
+            </div>
+            <div className="mt-3 min-h-0 flex-1 overflow-auto rounded-lg border border-border bg-muted/20 pr-1">
+              <PolicyListPanel
+                policies={sortedPolicies}
+                roles={roles}
+                houseMembers={houseMembers}
+                resourcesById={resourcesById}
+                loading={policiesLoading}
+                emptyMessage="Правил пока нет. Создайте первое правило с помощью формы слева."
+              />
+            </div>
           </div>
         </div>
       </TabsContent>
 
       {/* ── Ресурсы ── */}
       <TabsContent value="resources" className="mt-4">
-        <div className="rounded-xl border border-border bg-card p-4">
-          <h4 className="text-sm font-semibold text-foreground">Ресурсы дома</h4>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Добавьте ресурс в дерево дома, чтобы к нему можно было привязать политику.
-          </p>
-          <div className="mt-3 grid gap-2">
-            <Input
-              placeholder="Название ресурса (например: Камера у входа)"
-              value={resourceName}
-              onChange={(event) => setResourceName(event.target.value)}
-            />
-            <Select
-              value={resourceType}
-              onValueChange={(value: CreateResourceRequestDto['type']) => {
-                setResourceType(value);
-                setResourceParentId('');
-              }}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Тип ресурса" />
-              </SelectTrigger>
-              <SelectContent>
-                {RESOURCE_TYPES.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {RESOURCE_TYPE_LABELS[type] ?? type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={resourceParentId} onValueChange={setResourceParentId}>
-              <SelectTrigger className="w-full">
-                <SelectValue
-                  placeholder={
-                    validParentResources.length === 0
-                      ? 'Нет подходящих родительских ресурсов'
-                      : 'Выберите родительский ресурс'
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {validParentResources.map((resource) => (
-                  <SelectItem key={resource.id} value={resource.id}>
-                    {resource.path} ({RESOURCE_TYPE_LABELS[resource.type] ?? resource.type})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <AppButton
-              size="sm"
-              onClick={handleCreateResource}
-              disabled={!houseId || resourceCreating || !resourceParentId}
-            >
-              Создать ресурс
-            </AppButton>
+        <div className="mb-4 flex gap-3 rounded-xl border border-border bg-muted/30 p-4">
+          <Info className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+          <div className="space-y-1 text-sm">
+            <p className="font-medium text-foreground">Объекты для настройки доступа</p>
+            <p className="text-muted-foreground">
+              Здесь вы описываете, что есть в доме: комнаты, устройства и сценарии. Потом на вкладке
+              «Политики» можно указать, кто и к чему имеет доступ.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Пример структуры: <span className="text-foreground">Дом → Кухня → Лампа над столом</span>
+            </p>
           </div>
-          <div className="mt-4 border-t border-border pt-3">
-            <p className="text-xs font-medium text-muted-foreground">Текущее дерево ресурсов</p>
-            {resourcesLoading ? (
-              <div className="mt-2 space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-5/6" />
+        </div>
+
+        <div className="grid min-h-[calc(100vh-16rem)] gap-4 lg:grid-cols-[minmax(300px,380px),1fr]">
+          <div className="h-fit rounded-xl border border-border bg-card p-4">
+            <h4 className="text-sm font-semibold text-foreground">Добавить объект</h4>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Заполните поля по порядку — система подскажет, куда можно поместить новый элемент.
+            </p>
+            <div className="mt-4 space-y-4">
+              <div className="space-y-1.5">
+                <label htmlFor="resource-name" className="text-sm font-medium text-foreground">
+                  Название
+                </label>
+                <Input
+                  id="resource-name"
+                  placeholder="Например: Камера у входа"
+                  value={resourceName}
+                  onChange={(event) => setResourceName(event.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">Как объект будет отображаться в списке</p>
               </div>
-            ) : resourcesFlat.length === 0 ? (
-              <p className="mt-2 text-xs text-muted-foreground">{t('admin.noData')}</p>
-            ) : (
-              <div className="mt-2 max-h-64 space-y-2 overflow-auto pr-1">
-                {resourcesFlat.map((resource) => (
-                  <div key={resource.id} className="rounded-md border border-border p-2">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">{RESOURCE_TYPE_LABELS[resource.type] ?? resource.type}</Badge>
-                      <span className="text-xs text-foreground">{resource.path}</span>
-                    </div>
-                  </div>
-                ))}
+
+              <div className="space-y-1.5">
+                <label htmlFor="resource-type" className="text-sm font-medium text-foreground">
+                  Что добавляем?
+                </label>
+                <Select
+                  value={resourceType}
+                  onValueChange={(value: CreatableResourceType) => {
+                    setResourceType(value);
+                  }}
+                >
+                  <SelectTrigger id="resource-type" className="w-full">
+                    <SelectValue placeholder="Выберите тип" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RESOURCE_TYPES.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {RESOURCE_TYPE_LABELS[type] ?? type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">{RESOURCE_TYPE_HINTS[resourceType]}</p>
               </div>
-            )}
+
+              <div className="space-y-1.5">
+                <label htmlFor="resource-parent" className="text-sm font-medium text-foreground">
+                  Куда поместить?
+                </label>
+                <Select
+                  value={resourceParentId}
+                  onValueChange={setResourceParentId}
+                  disabled={validParentResources.length === 0}
+                >
+                  <SelectTrigger id="resource-parent" className="w-full">
+                    <SelectValue
+                      placeholder={
+                        validParentResources.length === 0
+                          ? 'Сначала нужен родительский объект'
+                          : 'Выберите расположение'
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {validParentResources.map((resource) => (
+                      <SelectItem key={resource.id} value={resource.id}>
+                        {resource.path}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {validParentResources.length === 0
+                    ? 'Для выбранного типа пока нет подходящего места. Начните с комнаты.'
+                    : PARENT_SELECTOR_HINTS[resourceType]}
+                </p>
+              </div>
+
+              <AppButton
+                className="w-full sm:w-auto"
+                size="sm"
+                onClick={handleCreateResource}
+                disabled={!houseId || resourceCreating || !resourceParentId}
+              >
+                {resourceCreating ? 'Добавляем…' : 'Добавить в структуру'}
+              </AppButton>
+            </div>
+          </div>
+
+          <div className="flex min-h-[24rem] flex-col rounded-xl border border-border bg-card p-4 lg:min-h-0">
+            <div className="shrink-0">
+              <h4 className="text-sm font-semibold text-foreground">Структура дома</h4>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Все объекты, к которым можно настроить права доступа. Вложенность показывает, где что
+                находится.
+              </p>
+            </div>
+            <div className="mt-3 min-h-0 flex-1 overflow-auto rounded-lg border border-border bg-muted/20 pr-1">
+              <ResourceTreeView
+                nodes={resourcesTree}
+                loading={resourcesLoading}
+                emptyMessage="Структура пока пуста. Добавьте первую комнату или устройство с помощью формы слева."
+              />
+            </div>
           </div>
         </div>
       </TabsContent>

@@ -710,6 +710,7 @@
       "createRole": "Создать роль",
       "roleNameRequired": "Введите название роли",
       "rolePriorityInvalid": "Приоритет должен быть числом",
+      "rolePriorityMin": "Приоритет не может быть меньше 1",
       "editRole": "Редактировать роль",
       "deleteRoleConfirmTitle": "Удалить роль?",
       "deleteRoleConfirmMessage": "Действие нельзя отменить. Роль будет удалена из дома.",

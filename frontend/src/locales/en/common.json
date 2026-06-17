@@ -710,6 +710,7 @@
       "createRole": "Create Role",
       "roleNameRequired": "Role name is required",
       "rolePriorityInvalid": "Priority must be a number",
+      "rolePriorityMin": "Priority must not be less than 1",
       "editRole": "Edit role",
       "deleteRoleConfirmTitle": "Delete role?",
       "deleteRoleConfirmMessage": "This action cannot be undone. The role will be removed from the house.",
