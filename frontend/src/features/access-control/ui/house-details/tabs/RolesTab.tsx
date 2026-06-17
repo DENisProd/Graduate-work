@@ -526,6 +526,9 @@ export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabPr
                 roleMembers={roleMembers}
                 relatedPolicies={relatedPolicies}
                 relatedResources={relatedResources}
+                resourcesById={resourcesById}
+                roles={sortedRoles}
+                houseMembers={houseMembers}
               />
             )}
           </div>
