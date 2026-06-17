@@ -13,6 +13,7 @@ import { sendCommand } from '@/api/zigbee'
 import type { PhysicalDevice } from '@/types'
 import {
   hasZigbeeColorCapability,
+  hasZigbeeColorState,
   hexToHs,
   hsToHex,
   readZigbeeColor,
@@ -191,9 +192,14 @@ export function DeviceControlDrawer({ device, open, onClose }: Props) {
   const saturationFeature = exposeFeatures.find(
     (f) => f.property === 'saturation' && isWritable(f),
   )
+  const colorModeValue = getStateValue(state, 'colorMode') ?? getStateValue(state, 'color_mode')
   const hasColorControl =
     hasZigbeeColorCapability(capabilities) ||
-    Boolean(hueFeature && saturationFeature)
+    Boolean(hueFeature && saturationFeature) ||
+    hasZigbeeColorState(
+      (state?.payload as Record<string, unknown> | undefined) ?? undefined,
+      typeof colorModeValue === 'string' ? colorModeValue : null,
+    )
 
   const mutation = useMutation({
     mutationFn: (payload: Record<string, unknown>) =>
@@ -260,7 +266,7 @@ export function DeviceControlDrawer({ device, open, onClose }: Props) {
   const temperature = getStateValue(state, 'temperature')
   const humidity = getStateValue(state, 'humidity')
   const occupancy = getStateValue(state, 'occupancy')
-  const colorMode = getStateValue(state, 'colorMode') ?? getStateValue(state, 'color_mode')
+  const colorMode = colorModeValue
   const battery = getStateValue(state, 'battery')
   const linkquality = getStateValue(state, 'linkquality')
 
@@ -494,11 +500,11 @@ export function DeviceControlDrawer({ device, open, onClose }: Props) {
                     value={pickerHex}
                     disabled={mutation.isPending}
                     className="h-10 w-full cursor-pointer rounded-lg border border-slate-300 bg-transparent p-1 dark:border-slate-700"
-                    onChange={(e) => setPickerHex(e.target.value)}
-                    onPointerUp={(e) => {
-                      const next = hexToHs((e.target as HTMLInputElement).value)
-                      const cmd = zigbeeColorCommand(next.hue, next.saturation)
-                      send(cmd)
+                    onChange={(e) => {
+                      const value = e.target.value
+                      setPickerHex(value)
+                      const next = hexToHs(value)
+                      send(zigbeeColorCommand(next.hue, next.saturation))
                     }}
                   />
                   <div className="grid grid-cols-2 gap-2">

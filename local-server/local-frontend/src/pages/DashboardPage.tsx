@@ -195,7 +195,8 @@ export function DashboardPage() {
     queryKey: ['widget-dashboards', house?.id],
     queryFn: () => listWidgetDashboards(house!.id),
     enabled: !!house,
-    staleTime: 30_000,
+    staleTime: 15_000,
+    refetchInterval: 30_000,
   })
   const dashboards = dashboardsQ.data ?? []
   const activeDash =

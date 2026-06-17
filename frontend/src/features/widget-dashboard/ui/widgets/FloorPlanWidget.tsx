@@ -145,7 +145,7 @@ export function FloorPlanWidget({ config, deviceMap, states }: Props) {
                 device={focusDevice}
                 physicalDevice={focusPhysicalDevice}
                 state={focusState}
-                showMetrics={config.showMetrics}
+                showMetrics={config.showMetrics ?? true}
               />
             </div>
           )}

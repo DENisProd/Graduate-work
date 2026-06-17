@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import type { ZigbeeDeviceListItem, ZigbeeStateWire } from '@/types/api';
 import {
   hasZigbeeColorCapability,
+  hasZigbeeColorState,
   hexToHs,
   hsToHex,
   readZigbeeColor,
@@ -33,14 +34,16 @@ export function ZigbeeLightControls({
 }: ZigbeeLightControlsProps) {
   const { t } = useTranslation();
   const caps = useMemo(() => deviceCapabilitySet(device), [device]);
+  const payload = live?.payload ?? {};
 
   const hasBrightness =
     caps.has('brightness') || typeof live?.metrics?.brightness === 'number';
   const hasColorTemp =
-    caps.has('color_temp') || caps.has('color_temp_percent') || live?.payload?.color_temp != null;
-  const hasColor = hasZigbeeColorCapability(caps);
+    caps.has('color_temp') || caps.has('color_temp_percent') || payload.color_temp != null;
+  const hasColor =
+    hasZigbeeColorCapability(caps) ||
+    hasZigbeeColorState(payload, live?.metrics?.colorMode);
 
-  const payload = live?.payload ?? {};
   const brightness =
     typeof live?.metrics?.brightness === 'number'
       ? live.metrics.brightness
@@ -61,6 +64,11 @@ export function ZigbeeLightControls({
   useEffect(() => {
     setColorHex(displayHex);
   }, [displayHex]);
+
+  const sendColor = (hex: string) => {
+    const next = hexToHs(hex);
+    void onCommand(zigbeeColorCommand(next.hue, next.saturation));
+  };
 
   if (!hasBrightness && !hasColorTemp && !hasColor) return null;
 
@@ -104,10 +112,10 @@ export function ZigbeeLightControls({
               'h-9 w-14 cursor-pointer rounded border border-border bg-transparent p-0.5',
               disabled && 'cursor-not-allowed opacity-40',
             )}
-            onChange={(e) => setColorHex(e.target.value)}
-            onPointerUp={(e) => {
-              const next = hexToHs((e.target as HTMLInputElement).value);
-              void onCommand(zigbeeColorCommand(next.hue, next.saturation));
+            onChange={(e) => {
+              const value = e.target.value;
+              setColorHex(value);
+              sendColor(value);
             }}
           />
         </label>

@@ -234,6 +234,19 @@ impl WidgetDashboardRepository for SqliteWidgetDashboardRepo {
             let id = Uuid::parse_str(&id_str)
                 .map_err(|e| DomainError::Internal(format!("invalid uuid: {e}")))?;
             if let Some(existing) = self.find_by_id(&id).await? {
+                let has_unpushed = existing
+                    .last_pushed_at
+                    .map(|pushed| existing.updated_at > pushed)
+                    .unwrap_or(true);
+                if has_unpushed && cmd.cloud_updated_at <= existing.updated_at {
+                    tracing::debug!(
+                        cloud_id,
+                        local_updated_at = %existing.updated_at.to_rfc3339(),
+                        cloud_updated_at = %cmd.cloud_updated_at.to_rfc3339(),
+                        "widget_dashboard: skip cloud pull — local has unpushed edits"
+                    );
+                    return Ok(existing);
+                }
                 if cmd.cloud_updated_at <= existing.updated_at {
                     tracing::debug!(
                         cloud_id,
@@ -268,6 +281,52 @@ impl WidgetDashboardRepository for SqliteWidgetDashboardRepo {
                 .await?
                 .ok_or_else(|| DomainError::not_found("widget_dashboard", id_str))
         } else {
+            let orphan_id: Option<String> = sqlx::query_scalar(
+                "SELECT id FROM widget_dashboards \
+                 WHERE house_id = ? AND cloud_id IS NULL \
+                 ORDER BY is_default DESC, updated_at DESC LIMIT 1",
+            )
+            .bind(&cmd.house_id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(db_err)?;
+
+            if let Some(id_str) = orphan_id {
+                tracing::info!(
+                    cloud_id,
+                    local_id = %id_str,
+                    house_id = %cmd.house_id,
+                    "widget_dashboard: linking orphan local dashboard to cloud record"
+                );
+
+                sqlx::query(
+                    "UPDATE widget_dashboards SET \
+                     cloud_id = ?, house_id = ?, user_id = ?, name = ?, is_default = ?, \
+                     layouts = ?, widgets = ?, updated_at = ?, last_pushed_at = ? \
+                     WHERE id = ?",
+                )
+                .bind(cloud_id)
+                .bind(&cmd.house_id)
+                .bind(&cmd.user_id)
+                .bind(&cmd.name)
+                .bind(is_default)
+                .bind(&layouts_json)
+                .bind(&widgets_json)
+                .bind(&cloud_ts)
+                .bind(&cloud_ts)
+                .bind(&id_str)
+                .execute(&self.pool)
+                .await
+                .map_err(db_err)?;
+
+                let id = Uuid::parse_str(&id_str)
+                    .map_err(|e| DomainError::Internal(format!("invalid uuid: {e}")))?;
+                return self
+                    .find_by_id(&id)
+                    .await?
+                    .ok_or_else(|| DomainError::not_found("widget_dashboard", id_str));
+            }
+
             let id = Uuid::new_v4();
             let id_str = id.to_string();
 
@@ -333,12 +392,16 @@ impl WidgetDashboardRepository for SqliteWidgetDashboardRepo {
     }
 
     async fn mark_pushed_at(&self, id: &Uuid, at: chrono::DateTime<Utc>) -> Result<(), DomainError> {
-        sqlx::query("UPDATE widget_dashboards SET last_pushed_at = ? WHERE id = ?")
-            .bind(at.to_rfc3339())
-            .bind(id.to_string())
-            .execute(&self.pool)
-            .await
-            .map_err(db_err)?;
+        let ts = at.to_rfc3339();
+        sqlx::query(
+            "UPDATE widget_dashboards SET last_pushed_at = ?, updated_at = ? WHERE id = ?",
+        )
+        .bind(&ts)
+        .bind(&ts)
+        .bind(id.to_string())
+        .execute(&self.pool)
+        .await
+        .map_err(db_err)?;
         Ok(())
     }
 }

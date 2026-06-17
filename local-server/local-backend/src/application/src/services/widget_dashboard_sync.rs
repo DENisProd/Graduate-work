@@ -7,8 +7,8 @@ use serde_json::Value;
 
 use crate::ports::{
     remap_widget_modbus_ids, AccessSyncRepository, CloudModbusClient, CloudWidgetDashboardClient,
-    CreateCloudWidgetDashboardCmd, ModbusRepository, UpdateCloudWidgetDashboardCmd,
-    UpsertFromCloudWidgetDashboardCmd, WidgetDashboardRepository,
+    CreateCloudWidgetDashboardCmd, ModbusRepository, RemoteWidgetDashboard,
+    UpdateCloudWidgetDashboardCmd, UpsertFromCloudWidgetDashboardCmd, WidgetDashboardRepository,
 };
 use crate::services::modbus_sync::sync_once;
 use crate::services::{ScenarioServiceUrlProvider, UserIdProvider};
@@ -35,6 +35,9 @@ pub async fn run_widget_dashboard_sync(
                 None
             }
         };
+        for house_id in &house_ids {
+            pull_from_cloud(&repo, &cloud, &base_url, house_id).await;
+        }
         push_local_to_cloud(
             &repo,
             &cloud,
@@ -51,9 +54,6 @@ pub async fn run_widget_dashboard_sync(
             &user_id_provider,
         )
         .await;
-        for house_id in &house_ids {
-            pull_from_cloud(&repo, &cloud, &base_url, house_id).await;
-        }
         tokio::time::sleep(Duration::from_secs(interval_secs)).await;
     }
 }
@@ -105,6 +105,17 @@ fn local_dashboard_needs_push(local: &WidgetDashboard) -> bool {
         None => true,
         Some(pushed) => local.updated_at > pushed,
     }
+}
+
+fn pick_cloud_dashboard_match<'a>(
+    remotes: &'a [RemoteWidgetDashboard],
+    local: &WidgetDashboard,
+) -> Option<&'a RemoteWidgetDashboard> {
+    remotes
+        .iter()
+        .find(|r| r.is_default == local.is_default)
+        .or_else(|| remotes.iter().find(|r| r.is_default))
+        .or_else(|| remotes.first())
 }
 
 async fn pull_from_cloud(
@@ -192,6 +203,64 @@ async fn push_local_to_cloud(
         };
 
         let widgets = remap_widgets(&local.widgets, modbus_map);
+
+        if let Ok(remotes) = cloud.list_by_house(base_url, &local.house_id).await {
+            if let Some(remote) = pick_cloud_dashboard_match(&remotes, &local) {
+                let cloud_id = remote.cloud_id.clone();
+                let cmd = UpdateCloudWidgetDashboardCmd {
+                    name: Some(local.name.clone()),
+                    is_default: Some(local.is_default),
+                    layouts: Some(local.layouts.clone()),
+                    widgets: Some(widgets.clone()),
+                };
+
+                match cloud.update(base_url, &cloud_id, cmd).await {
+                    Ok(updated) => {
+                        if let Err(e) = repo.set_cloud_id(&local.id, &cloud_id).await {
+                            tracing::warn!(
+                                error = %e,
+                                local_id = %local.id,
+                                "widget_dashboard_sync: set_cloud_id failed"
+                            );
+                            continue;
+                        }
+                        if let Err(e) = repo
+                            .mark_pushed_at(&local.id, parse_cloud_timestamp(&updated.updated_at))
+                            .await
+                        {
+                            tracing::warn!(
+                                error = %e,
+                                local_id = %local.id,
+                                "widget_dashboard_sync: mark_pushed_at failed"
+                            );
+                        } else {
+                            tracing::info!(
+                                local_id = %local.id,
+                                cloud_id = %cloud_id,
+                                "widget_dashboard_sync: linked local dashboard to existing cloud dashboard"
+                            );
+                        }
+                        continue;
+                    }
+                    Err(local_server_core::DomainError::DependencyUnavailable(_)) => {
+                        tracing::warn!(
+                            local_id = %local.id,
+                            "widget_dashboard_sync: cloud unavailable, deferring link push"
+                        );
+                        return;
+                    }
+                    Err(e) => {
+                        tracing::warn!(
+                            error = %e,
+                            local_id = %local.id,
+                            cloud_id = %cloud_id,
+                            "widget_dashboard_sync: link update failed, will try create"
+                        );
+                    }
+                }
+            }
+        }
+
         let cmd = CreateCloudWidgetDashboardCmd {
             house_id: local.house_id.clone(),
             user_id: cloud_user_id,
