@@ -29,11 +29,11 @@ export function WidgetContainer({ widget, editMode, onEdit, onDelete, onDuplicat
 
   return (
     <div className="relative flex flex-col h-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
-      <div className={`flex items-center justify-between px-3 py-1.5 border-b border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 ${editMode ? 'bg-slate-50 dark:bg-slate-900/50' : 'bg-transparent'}`}>
-        <span className="truncate font-medium">
-          {(widget.config.label as string | undefined) ?? meta?.label ?? widget.type}
-        </span>
-        {editMode && (
+      {editMode && (
+        <div className="flex items-center justify-between px-3 py-1.5 border-b border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50">
+          <span className="truncate font-medium">
+            {(widget.config.label as string | undefined) ?? meta?.label ?? widget.type}
+          </span>
           <div className="relative flex-shrink-0 ml-2" ref={menuRef}>
             <button
               className="drag-handle cursor-grab active:cursor-grabbing p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 mr-1"
@@ -72,8 +72,8 @@ export function WidgetContainer({ widget, editMode, onEdit, onDelete, onDuplicat
               </div>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
       <div className="flex-1 min-h-0 overflow-hidden">
         {children}
       </div>

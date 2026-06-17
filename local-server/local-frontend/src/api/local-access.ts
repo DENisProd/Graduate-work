@@ -10,6 +10,7 @@ export interface LocalHouse {
   id: string
   name: string
   avatarUrl?: string
+  planUrl?: string
   address?: string
   conflictStrategy: string
   ownerId: string

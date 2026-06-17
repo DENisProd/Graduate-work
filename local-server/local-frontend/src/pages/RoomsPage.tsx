@@ -25,6 +25,52 @@ function useLocalHouse() {
   })
 }
 
+function HousePlanCard({ houseId, planUrl }: { houseId: string; planUrl?: string }) {
+  const { t } = useI18n()
+
+  if (!planUrl) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
+        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t('rooms.housePlan')}</p>
+        <p className="mt-1 text-xs text-slate-400">{t('rooms.housePlanEmpty')}</p>
+        <p className="mt-2 text-[11px] text-slate-400">{t('rooms.housePlanHint', { id: houseId })}</p>
+      </div>
+    )
+  }
+
+  const isPdf = planUrl.toLowerCase().includes('.pdf')
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t('rooms.housePlan')}</p>
+        <a
+          href={planUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="text-xs font-medium text-blue-600 underline dark:text-blue-400"
+        >
+          {t('rooms.openPlan')}
+        </a>
+      </div>
+
+      {isPdf ? (
+        <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/30 dark:text-slate-300">
+          {t('rooms.planIsPdf')}
+        </div>
+      ) : (
+        <div className="mt-3 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
+          <img
+            src={planUrl}
+            alt={t('rooms.housePlan')}
+            className="h-64 w-full bg-white object-contain dark:bg-slate-950"
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Room card with inline rename ──────────────────────────────────────────────
 
 function RoomCard({
@@ -287,6 +333,8 @@ export function RoomsPage() {
           {t('rooms.addRoom')}
         </button>
       </div>
+
+      <HousePlanCard houseId={house.id} planUrl={house.planUrl} />
 
       {isError && (
         <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">

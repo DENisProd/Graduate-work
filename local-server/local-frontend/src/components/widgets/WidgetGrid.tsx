@@ -48,11 +48,20 @@ function readPayload(
 
 // ── Widget shell ──────────────────────────────────────────────────────────────
 
-function Shell({ children, className }: { children: React.ReactNode; className?: string }) {
+function Shell({
+  children,
+  className,
+  framed = true,
+}: {
+  children: React.ReactNode
+  className?: string
+  framed?: boolean
+}) {
   return (
     <div
       className={cn(
-        'h-full overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950',
+        'h-full overflow-hidden',
+        framed && 'rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950',
         className,
       )}
     >
@@ -63,7 +72,7 @@ function Shell({ children, className }: { children: React.ReactNode; className?:
 
 // ── TEXT_LABEL ────────────────────────────────────────────────────────────────
 
-function TextLabelWidget({ config }: { config: Record<string, unknown> }) {
+function TextLabelWidget({ config, framed }: { config: Record<string, unknown>; framed?: boolean }) {
   const text = String(config.text ?? '')
   const align = String(config.align ?? 'left')
   const fontSize = String(config.fontSize ?? 'md')
@@ -86,23 +95,27 @@ function TextLabelWidget({ config }: { config: Record<string, unknown> }) {
 
   if (style === 'divider') {
     return (
-      <div className="flex h-full items-center gap-3 px-3">
+      <Shell framed={framed}>
+        <div className="flex h-full items-center gap-3 px-3">
         <span className={cn('shrink-0', sizeClass, colorClass)}>{text}</span>
         <div className="flex-1 border-t border-slate-200 dark:border-slate-700" />
       </div>
+      </Shell>
     )
   }
 
   return (
-    <div className={cn('flex h-full items-center px-4', alignClass)}>
-      <span className={cn(sizeClass, weightClass, colorClass, 'leading-snug')}>{text}</span>
-    </div>
+    <Shell framed={framed}>
+      <div className={cn('flex h-full items-center px-4', alignClass)}>
+        <span className={cn(sizeClass, weightClass, colorClass, 'leading-snug')}>{text}</span>
+      </div>
+    </Shell>
   )
 }
 
 // ── TELEMETRY_VALUE ───────────────────────────────────────────────────────────
 
-function TelemetryValueWidget({ config }: { config: Record<string, unknown> }) {
+function TelemetryValueWidget({ config, framed }: { config: Record<string, unknown>; framed?: boolean }) {
   const physicalDeviceId = config.physicalDeviceId as string | undefined
   const payloadKey = String(config.payloadKey ?? 'value')
   const label = config.label as string | undefined
@@ -117,7 +130,7 @@ function TelemetryValueWidget({ config }: { config: Record<string, unknown> }) {
     typeof rawValue === 'string' && ['on', 'true', 'open', 'active'].includes(rawValue.toLowerCase())
 
   return (
-    <Shell>
+    <Shell framed={framed}>
       <div className="flex h-full flex-col items-center justify-center gap-1 px-3 py-3">
         {label && (
           <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</p>
@@ -157,7 +170,7 @@ function TelemetryValueWidget({ config }: { config: Record<string, unknown> }) {
 
 // ── DEVICE_STATUS ─────────────────────────────────────────────────────────────
 
-function DeviceStatusWidget({ config }: { config: Record<string, unknown> }) {
+function DeviceStatusWidget({ config, framed }: { config: Record<string, unknown>; framed?: boolean }) {
   const physicalDeviceId = config.physicalDeviceId as string | undefined
   const label = config.label as string | undefined
   const showLastSeen = config.showLastSeen !== false
@@ -168,7 +181,7 @@ function DeviceStatusWidget({ config }: { config: Record<string, unknown> }) {
     Date.now() - new Date(device.lastSeen).getTime() < 5 * 60 * 1000
 
   return (
-    <Shell>
+    <Shell framed={framed}>
       <div className="flex h-full flex-col items-center justify-center gap-2 px-4">
         {isOnline ? (
           <Wifi className="h-8 w-8 text-emerald-500" />
@@ -200,7 +213,7 @@ function DeviceStatusWidget({ config }: { config: Record<string, unknown> }) {
 
 // ── CONTROL_BUTTON ────────────────────────────────────────────────────────────
 
-function ControlButtonWidget({ config }: { config: Record<string, unknown> }) {
+function ControlButtonWidget({ config, framed }: { config: Record<string, unknown>; framed?: boolean }) {
   const source = String(config.source ?? 'zigbee')
   const physicalDeviceId = config.physicalDeviceId as string | undefined
   const configIeeeAddr = config.ieeeAddr as string | undefined
@@ -242,7 +255,7 @@ function ControlButtonWidget({ config }: { config: Record<string, unknown> }) {
         : 'bg-blue-600 hover:bg-blue-700 text-white'
 
   return (
-    <Shell>
+    <Shell framed={framed}>
       <div className="flex h-full flex-col items-center justify-center gap-3 px-4">
         <MousePointerClick className="h-6 w-6 text-slate-400" />
         {confirming ? (
@@ -284,7 +297,7 @@ function ControlButtonWidget({ config }: { config: Record<string, unknown> }) {
 
 // ── CONTROL_TOGGLE ────────────────────────────────────────────────────────────
 
-function ControlToggleWidget({ config }: { config: Record<string, unknown> }) {
+function ControlToggleWidget({ config, framed }: { config: Record<string, unknown>; framed?: boolean }) {
   const source = String(config.source ?? 'zigbee')
   const physicalDeviceId = config.physicalDeviceId as string | undefined
   const configIeeeAddr = config.ieeeAddr as string | undefined
@@ -331,7 +344,7 @@ function ControlToggleWidget({ config }: { config: Record<string, unknown> }) {
   })
 
   return (
-    <Shell>
+    <Shell framed={framed}>
       <div className="flex h-full flex-col items-center justify-center gap-3 px-4">
         <ToggleRight
           className={cn(
@@ -364,7 +377,7 @@ function ControlToggleWidget({ config }: { config: Record<string, unknown> }) {
 
 // ── SCENARIO_TRIGGER ──────────────────────────────────────────────────────────
 
-function ScenarioTriggerWidget({ config }: { config: Record<string, unknown> }) {
+function ScenarioTriggerWidget({ config, framed }: { config: Record<string, unknown>; framed?: boolean }) {
   const scenarioId = config.scenarioId as string | undefined
   const label = String(config.label ?? 'Run')
   const buttonStyle = String(config.buttonStyle ?? 'primary')
@@ -385,7 +398,7 @@ function ScenarioTriggerWidget({ config }: { config: Record<string, unknown> }) 
         : 'bg-blue-600 hover:bg-blue-700 text-white'
 
   return (
-    <Shell>
+    <Shell framed={framed}>
       <div className="flex h-full flex-col items-center justify-center gap-3 px-4">
         <Zap className="h-6 w-6 text-amber-400" />
         {confirming ? (
@@ -427,7 +440,7 @@ function ScenarioTriggerWidget({ config }: { config: Record<string, unknown> }) 
 
 // ── GAUGE_DIAL ────────────────────────────────────────────────────────────────
 
-function GaugeDialWidget({ config }: { config: Record<string, unknown> }) {
+function GaugeDialWidget({ config, framed }: { config: Record<string, unknown>; framed?: boolean }) {
   const physicalDeviceId = config.physicalDeviceId as string | undefined
   const payloadKey = String(config.payloadKey ?? 'value')
   const label = config.label as string | undefined
@@ -459,7 +472,7 @@ function GaugeDialWidget({ config }: { config: Record<string, unknown> }) {
     : ''
 
   return (
-    <Shell>
+    <Shell framed={framed}>
       <div className="flex h-full flex-col items-center justify-between px-3 pb-3 pt-3">
         {label && (
           <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</p>
@@ -496,7 +509,7 @@ function GaugeDialWidget({ config }: { config: Record<string, unknown> }) {
 
 // ── CIRCULAR_PROGRESS ─────────────────────────────────────────────────────────
 
-function CircularProgressWidget({ config }: { config: Record<string, unknown> }) {
+function CircularProgressWidget({ config, framed }: { config: Record<string, unknown>; framed?: boolean }) {
   const physicalDeviceId = config.physicalDeviceId as string | undefined
   const payloadKey = config.payloadKey as string | undefined
   const title = String(config.title ?? 'Progress')
@@ -520,7 +533,7 @@ function CircularProgressWidget({ config }: { config: Record<string, unknown> })
   const dashOffset = circumference * (1 - pct / 100)
 
   return (
-    <Shell>
+    <Shell framed={framed}>
       <div className="flex h-full flex-col items-center justify-center gap-2 px-4 py-4">
         <div className="relative flex items-center justify-center">
           <svg width="120" height="120" viewBox="0 0 120 120">
@@ -555,7 +568,7 @@ function CircularProgressWidget({ config }: { config: Record<string, unknown> })
 
 // ── SLIDER_CONTROL ────────────────────────────────────────────────────────────
 
-function SliderControlWidget({ config }: { config: Record<string, unknown> }) {
+function SliderControlWidget({ config, framed }: { config: Record<string, unknown>; framed?: boolean }) {
   const physicalDeviceId = config.physicalDeviceId as string | undefined
   const configIeeeAddr = config.ieeeAddr as string | undefined
   const label = String(config.label ?? 'Value')
@@ -585,7 +598,7 @@ function SliderControlWidget({ config }: { config: Record<string, unknown> }) {
     accent === 'blue' ? '#3b82f6' : accent === 'amber' ? '#f59e0b' : '#10b981'
 
   return (
-    <Shell>
+    <Shell framed={framed}>
       <div className="flex h-full flex-col justify-center gap-3 px-5 py-4">
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{label}</p>
@@ -625,7 +638,7 @@ const HERO_ICONS: Record<string, React.ReactNode> = {
   broom: <Activity className="h-7 w-7" />,
 }
 
-function DeviceHeroWidget({ config }: { config: Record<string, unknown> }) {
+function DeviceHeroWidget({ config, framed }: { config: Record<string, unknown>; framed?: boolean }) {
   const physicalDeviceId = config.physicalDeviceId as string | undefined
   const configIeeeAddr = config.ieeeAddr as string | undefined
   const title = String(config.title ?? 'Device')
@@ -689,7 +702,7 @@ function DeviceHeroWidget({ config }: { config: Record<string, unknown> }) {
           : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
 
   return (
-    <Shell>
+    <Shell framed={framed}>
       <div className="flex h-full flex-col gap-3 p-4">
         <div className="flex items-start justify-between">
           <div className={cn('flex h-12 w-12 shrink-0 items-center justify-center rounded-xl', accentBg)}>
@@ -797,7 +810,7 @@ function isGroupItemReady(item: DeviceGroupItem): boolean {
   return item.source === 'modbus' ? !!(item.modbusDeviceId && item.modbusRegisterId) : !!item.ieeeAddr
 }
 
-function DeviceGroupWidget({ config }: { config: Record<string, unknown> }) {
+function DeviceGroupWidget({ config, framed }: { config: Record<string, unknown>; framed?: boolean }) {
   const title = String(config.title ?? 'Группа устройств')
   const icon = String(config.icon ?? 'lightbulb')
   const accent = String(config.accent ?? 'green')
@@ -859,7 +872,7 @@ function DeviceGroupWidget({ config }: { config: Record<string, unknown> }) {
           : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
 
   return (
-    <Shell>
+    <Shell framed={framed}>
       <div className="flex h-full flex-col gap-2 p-4">
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
@@ -923,7 +936,7 @@ function DeviceGroupWidget({ config }: { config: Record<string, unknown> }) {
 
 // ── MINI_LINE_CHART ───────────────────────────────────────────────────────────
 
-function MiniLineChartWidget({ config }: { config: Record<string, unknown> }) {
+function MiniLineChartWidget({ config, framed }: { config: Record<string, unknown>; framed?: boolean }) {
   const physicalDeviceId = config.physicalDeviceId as string | undefined
   const payloadKey = String(config.payloadKey ?? 'value')
   const title = String(config.title ?? 'Chart')
@@ -937,7 +950,7 @@ function MiniLineChartWidget({ config }: { config: Record<string, unknown> }) {
     accent === 'blue' ? '#3b82f6' : accent === 'amber' ? '#f59e0b' : accent === 'red' ? '#ef4444' : '#10b981'
 
   return (
-    <Shell>
+    <Shell framed={framed}>
       <div className="flex h-full flex-col gap-2 p-4">
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{title}</p>
@@ -966,7 +979,7 @@ function MiniLineChartWidget({ config }: { config: Record<string, unknown> }) {
 
 // ── MODBUS_REGISTER_VALUE ─────────────────────────────────────────────────────
 
-function ModbusRegisterValueWidget({ config }: { config: Record<string, unknown> }) {
+function ModbusRegisterValueWidget({ config, framed }: { config: Record<string, unknown>; framed?: boolean }) {
   const deviceId = config.modbusDeviceId as string | undefined
   const registerId = config.modbusRegisterId as string | undefined
   const label = config.label as string | undefined
@@ -988,7 +1001,7 @@ function ModbusRegisterValueWidget({ config }: { config: Record<string, unknown>
   const formatted = value != null ? value.toFixed(2) : '—'
 
   return (
-    <Shell>
+    <Shell framed={framed}>
       <div className="flex h-full flex-col items-center justify-center gap-1 px-3 py-3">
         {label && (
           <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</p>
@@ -1013,7 +1026,7 @@ function ModbusRegisterValueWidget({ config }: { config: Record<string, unknown>
 
 // ── MODBUS_REGISTER_CONTROL ───────────────────────────────────────────────────
 
-function ModbusRegisterControlWidget({ config }: { config: Record<string, unknown> }) {
+function ModbusRegisterControlWidget({ config, framed }: { config: Record<string, unknown>; framed?: boolean }) {
   const deviceId = config.modbusDeviceId as string | undefined
   const registerId = config.modbusRegisterId as string | undefined
   const label = config.label as string | undefined
@@ -1045,7 +1058,7 @@ function ModbusRegisterControlWidget({ config }: { config: Record<string, unknow
   const canWrite = !!deviceId && !!registerId
 
   return (
-    <Shell>
+    <Shell framed={framed}>
       <div className="flex h-full flex-col items-center justify-center gap-3 px-4">
         {label && (
           <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</p>
@@ -1104,25 +1117,25 @@ function ModbusRegisterControlWidget({ config }: { config: Record<string, unknow
 
 // ── Widget dispatcher ─────────────────────────────────────────────────────────
 
-export function WidgetRenderer({ widget }: { widget: WidgetInstance }) {
+export function WidgetRenderer({ widget, framed = true }: { widget: WidgetInstance; framed?: boolean }) {
   switch (widget.type) {
-    case 'TEXT_LABEL':        return <TextLabelWidget config={widget.config} />
-    case 'TELEMETRY_VALUE':   return <TelemetryValueWidget config={widget.config} />
-    case 'DEVICE_STATUS':     return <DeviceStatusWidget config={widget.config} />
-    case 'CONTROL_BUTTON':    return <ControlButtonWidget config={widget.config} />
-    case 'CONTROL_TOGGLE':    return <ControlToggleWidget config={widget.config} />
-    case 'SCENARIO_TRIGGER':  return <ScenarioTriggerWidget config={widget.config} />
-    case 'GAUGE_DIAL':        return <GaugeDialWidget config={widget.config} />
-    case 'CIRCULAR_PROGRESS': return <CircularProgressWidget config={widget.config} />
-    case 'SLIDER_CONTROL':    return <SliderControlWidget config={widget.config} />
-    case 'DEVICE_HERO':       return <DeviceHeroWidget config={widget.config} />
-    case 'DEVICE_GROUP':      return <DeviceGroupWidget config={widget.config} />
-    case 'MINI_LINE_CHART':         return <MiniLineChartWidget config={widget.config} />
-    case 'MODBUS_REGISTER_VALUE':   return <ModbusRegisterValueWidget config={widget.config} />
-    case 'MODBUS_REGISTER_CONTROL': return <ModbusRegisterControlWidget config={widget.config} />
+    case 'TEXT_LABEL':        return <TextLabelWidget config={widget.config} framed={framed} />
+    case 'TELEMETRY_VALUE':   return <TelemetryValueWidget config={widget.config} framed={framed} />
+    case 'DEVICE_STATUS':     return <DeviceStatusWidget config={widget.config} framed={framed} />
+    case 'CONTROL_BUTTON':    return <ControlButtonWidget config={widget.config} framed={framed} />
+    case 'CONTROL_TOGGLE':    return <ControlToggleWidget config={widget.config} framed={framed} />
+    case 'SCENARIO_TRIGGER':  return <ScenarioTriggerWidget config={widget.config} framed={framed} />
+    case 'GAUGE_DIAL':        return <GaugeDialWidget config={widget.config} framed={framed} />
+    case 'CIRCULAR_PROGRESS': return <CircularProgressWidget config={widget.config} framed={framed} />
+    case 'SLIDER_CONTROL':    return <SliderControlWidget config={widget.config} framed={framed} />
+    case 'DEVICE_HERO':       return <DeviceHeroWidget config={widget.config} framed={framed} />
+    case 'DEVICE_GROUP':      return <DeviceGroupWidget config={widget.config} framed={framed} />
+    case 'MINI_LINE_CHART':         return <MiniLineChartWidget config={widget.config} framed={framed} />
+    case 'MODBUS_REGISTER_VALUE':   return <ModbusRegisterValueWidget config={widget.config} framed={framed} />
+    case 'MODBUS_REGISTER_CONTROL': return <ModbusRegisterControlWidget config={widget.config} framed={framed} />
     default:
       return (
-        <Shell>
+        <Shell framed={framed}>
           <div className="flex h-full flex-col items-center justify-center gap-1 px-4 text-center">
             <AlertCircle className="h-6 w-6 text-slate-300" />
             <p className="text-xs text-slate-400">{widget.type}</p>

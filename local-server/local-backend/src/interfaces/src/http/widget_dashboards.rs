@@ -127,6 +127,10 @@ async fn create_dashboard(
     State(s): State<WidgetDashboardsState>,
     Json(body): Json<CreateBody>,
 ) -> Result<(StatusCode, Json<WidgetDashboardResponse>), AppError> {
+    if let Some(existing) = s.repo.find_primary_for_house(&body.house_id).await? {
+        return Ok((StatusCode::OK, Json(existing.into())));
+    }
+
     if body.is_default {
         s.repo.clear_default(&body.house_id, &body.user_id).await?;
     }

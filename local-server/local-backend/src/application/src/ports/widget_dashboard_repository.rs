@@ -34,6 +34,10 @@ pub struct UpsertFromCloudWidgetDashboardCmd {
 #[async_trait]
 pub trait WidgetDashboardRepository: Send + Sync {
     async fn find_by_house(&self, house_id: &str) -> Result<Vec<WidgetDashboard>, DomainError>;
+    async fn find_primary_for_house(
+        &self,
+        house_id: &str,
+    ) -> Result<Option<WidgetDashboard>, DomainError>;
     async fn find_by_id(&self, id: &Uuid) -> Result<Option<WidgetDashboard>, DomainError>;
     async fn create(
         &self,

@@ -181,7 +181,6 @@ export function DashboardPage() {
   const { t, dateLocale } = useI18n()
   const userId = useSettingsStore((s) => s.userId)
   const queryClient = useQueryClient()
-  const [activeDashId, setActiveDashId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
 
   const housesQ = useQuery({
@@ -200,7 +199,6 @@ export function DashboardPage() {
   })
   const dashboards = dashboardsQ.data ?? []
   const activeDash =
-    dashboards.find((d) => d.id === activeDashId) ??
     dashboards.find((d) => d.isDefault) ??
     dashboards[0] ??
     null
@@ -215,10 +213,9 @@ export function DashboardPage() {
         layouts: {},
         widgets: [],
       }),
-    onSuccess: (created) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['widget-dashboards'] })
-      setActiveDashId(created.id)
-      toast.success('Дашборд создан')
+      toast.success('Дашборд готов')
     },
     onError: () => toast.error('Не удалось создать дашборд'),
     onSettled: () => setCreating(false),
@@ -308,36 +305,9 @@ export function DashboardPage() {
       {/* ── Widgets ── */}
       {house && (
         <section className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              {t('dashboard.widgetsTitle')}
-            </h2>
-            <div className="flex items-center gap-2">
-              {dashboards.length > 1 && dashboards.map((d) => (
-                <button
-                  key={d.id}
-                  onClick={() => setActiveDashId(d.id)}
-                  className={cn(
-                    'rounded-lg px-2.5 py-1 text-xs font-medium transition-colors',
-                    activeDash?.id === d.id
-                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                      : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800',
-                  )}
-                >
-                  {d.name}
-                </button>
-              ))}
-              <button
-                onClick={() => { setCreating(true); createMutation.mutate() }}
-                disabled={creating || createMutation.isPending}
-                className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 transition-colors"
-                title="Создать новый дашборд"
-              >
-                <Plus className="h-3 w-3" />
-                Дашборд
-              </button>
-            </div>
-          </div>
+          <h2 className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            {t('dashboard.widgetsTitle')}
+          </h2>
 
           {dashboardsQ.isPending && (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">

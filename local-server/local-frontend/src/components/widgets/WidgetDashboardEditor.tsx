@@ -215,7 +215,7 @@ export function WidgetDashboardEditor({ dashboard }: Props) {
                     onDelete={deleteWidget}
                     onDuplicate={duplicateWidget}
                   >
-                    <WidgetRenderer widget={widget} />
+                    <WidgetRenderer widget={widget} framed={false} />
                   </WidgetContainer>
                 </div>
               ))}

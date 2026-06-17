@@ -65,11 +65,12 @@ ON CONFLICT(id) DO NOTHING
 
             sqlx::query(
                 r#"
-INSERT INTO houses(id, name, avatar_url, address, conflict_strategy, owner_id, created_at, updated_at)
-VALUES (?, ?, ?, ?, 'DENY_OVERRIDES', ?, ?, ?)
+INSERT INTO houses(id, name, avatar_url, plan_url, address, conflict_strategy, owner_id, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, 'DENY_OVERRIDES', ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
   name             = excluded.name,
   avatar_url       = excluded.avatar_url,
+  plan_url         = excluded.plan_url,
   address          = excluded.address,
   owner_id         = excluded.owner_id,
   updated_at       = excluded.updated_at
@@ -78,6 +79,7 @@ ON CONFLICT(id) DO UPDATE SET
             .bind(&h.id)
             .bind(&h.name)
             .bind(&h.avatar_url)
+            .bind(&h.plan_url)
             .bind(&h.address)
             .bind(&h.owner_id)
             .bind(&h.created_at)
@@ -167,7 +169,7 @@ ON CONFLICT(entity_type) DO UPDATE SET last_pulled_at = excluded.last_pulled_at
     async fn list_houses(&self, owner_external_id: &str) -> Result<Vec<RemoteHouse>, DomainError> {
         let rows = sqlx::query(
             r#"
-SELECT h.id, h.name, h.avatar_url, h.address, h.owner_id, h.created_at, h.updated_at
+SELECT h.id, h.name, h.avatar_url, h.plan_url, h.address, h.owner_id, h.created_at, h.updated_at
 FROM   houses h
 JOIN   users  u ON u.id = h.owner_id
 WHERE  u.external_user_id = ?
@@ -186,6 +188,7 @@ ORDER  BY h.created_at ASC
                 id: r.get("id"),
                 name: r.get("name"),
                 avatar_url: r.get("avatar_url"),
+                plan_url: r.get("plan_url"),
                 address: r.get("address"),
                 owner_id: r.get("owner_id"),
                 created_at: r.get("created_at"),

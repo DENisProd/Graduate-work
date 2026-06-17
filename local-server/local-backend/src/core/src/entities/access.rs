@@ -115,6 +115,7 @@ pub struct House {
     pub id: String,
     pub name: String,
     pub avatar_url: Option<String>,
+    pub plan_url: Option<String>,
     pub address: Option<String>,
     pub conflict_strategy: ConflictStrategy,
     pub owner_id: String,

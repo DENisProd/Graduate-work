@@ -10,6 +10,7 @@ use local_server_core::{
 pub struct CreateHouseCmd {
     pub name: String,
     pub avatar_url: Option<String>,
+    pub plan_url: Option<String>,
     pub address: Option<String>,
     pub owner_external_user_id: String,
 }
@@ -17,6 +18,7 @@ pub struct CreateHouseCmd {
 pub struct UpdateHouseCmd {
     pub name: Option<String>,
     pub avatar_url: Option<String>,
+    pub plan_url: Option<String>,
     pub address: Option<String>,
     pub conflict_strategy: Option<String>,
 }

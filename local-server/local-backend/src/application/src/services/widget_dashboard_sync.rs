@@ -126,33 +126,46 @@ async fn pull_from_cloud(
 ) {
     match cloud.list_by_house(base_url, house_id).await {
         Ok(remotes) => {
-            let count = remotes.len();
-            for remote in remotes {
-                let cloud_updated_at = parse_cloud_timestamp(&remote.updated_at);
+            let remote = remotes
+                .iter()
+                .find(|r| r.is_default)
+                .or_else(|| remotes.first());
 
-                if let Err(e) = repo
-                    .upsert_from_cloud(
-                        &remote.cloud_id,
-                        UpsertFromCloudWidgetDashboardCmd {
-                            house_id: remote.house_id,
-                            user_id: remote.user_id,
-                            name: remote.name,
-                            is_default: remote.is_default,
-                            layouts: remote.layouts,
-                            widgets: remote.widgets,
-                            cloud_updated_at,
-                        },
-                    )
-                    .await
-                {
-                    tracing::warn!(
-                        error = %e,
-                        cloud_id = %remote.cloud_id,
-                        "widget_dashboard_sync: upsert failed"
-                    );
-                }
+            let Some(remote) = remote else {
+                tracing::debug!(house_id, "widget_dashboard_sync: no cloud dashboards for house");
+                return;
+            };
+
+            let cloud_updated_at = parse_cloud_timestamp(&remote.updated_at);
+
+            if let Err(e) = repo
+                .upsert_from_cloud(
+                    &remote.cloud_id,
+                    UpsertFromCloudWidgetDashboardCmd {
+                        house_id: remote.house_id.clone(),
+                        user_id: remote.user_id.clone(),
+                        name: remote.name.clone(),
+                        is_default: remote.is_default,
+                        layouts: remote.layouts.clone(),
+                        widgets: remote.widgets.clone(),
+                        cloud_updated_at,
+                    },
+                )
+                .await
+            {
+                tracing::warn!(
+                    error = %e,
+                    cloud_id = %remote.cloud_id,
+                    "widget_dashboard_sync: upsert failed"
+                );
+            } else {
+                tracing::info!(
+                    cloud_id = %remote.cloud_id,
+                    house_id,
+                    skipped = remotes.len().saturating_sub(1),
+                    "widget_dashboard_sync: pull complete (single dashboard per house)"
+                );
             }
-            tracing::info!(count, house_id, "widget_dashboard_sync: pull complete");
         }
         Err(e) => {
             tracing::warn!(

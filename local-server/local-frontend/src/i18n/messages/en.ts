@@ -350,6 +350,11 @@ export const en = {
   },
   rooms: {
     title: 'Rooms',
+    housePlan: 'House plan',
+    housePlanEmpty: 'No plan uploaded yet.',
+    housePlanHint: 'Set `planUrl` for house {{id}} (via /api/v1/houses/:id).',
+    openPlan: 'Open',
+    planIsPdf: 'The plan is a PDF — open it using the link above.',
     noHouseTitle: 'No house configured',
     noHouseHint: 'Sync the house from the cloud first (Settings → Cloud Sync → Sync Now).',
     loadError: 'Failed to load rooms.',

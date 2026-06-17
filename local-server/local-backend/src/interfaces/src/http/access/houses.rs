@@ -26,6 +26,7 @@ pub struct HouseResponse {
     pub id: String,
     pub name: String,
     pub avatar_url: Option<String>,
+    pub plan_url: Option<String>,
     pub address: Option<String>,
     pub conflict_strategy: String,
     pub owner_id: String,
@@ -39,6 +40,7 @@ impl From<House> for HouseResponse {
             id: h.id,
             name: h.name,
             avatar_url: h.avatar_url,
+            plan_url: h.plan_url,
             address: h.address,
             conflict_strategy: h.conflict_strategy.as_str().to_owned(),
             owner_id: h.owner_id,
@@ -59,6 +61,7 @@ pub struct ListHousesQuery {
 pub struct CreateHouseBody {
     pub name: String,
     pub avatar_url: Option<String>,
+    pub plan_url: Option<String>,
     pub address: Option<String>,
     pub owner_external_user_id: String,
 }
@@ -68,6 +71,7 @@ pub struct CreateHouseBody {
 pub struct UpdateHouseBody {
     pub name: Option<String>,
     pub avatar_url: Option<String>,
+    pub plan_url: Option<String>,
     pub address: Option<String>,
     pub conflict_strategy: Option<String>,
 }
@@ -113,6 +117,7 @@ async fn create_house(
         .create_house(CreateHouseCmd {
             name: body.name,
             avatar_url: body.avatar_url,
+            plan_url: body.plan_url,
             address: body.address,
             owner_external_user_id: body.owner_external_user_id,
         })
@@ -132,6 +137,7 @@ async fn update_house(
             UpdateHouseCmd {
                 name: body.name,
                 avatar_url: body.avatar_url,
+                plan_url: body.plan_url,
                 address: body.address,
                 conflict_strategy: body.conflict_strategy,
             },

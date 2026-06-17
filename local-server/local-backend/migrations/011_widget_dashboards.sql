@@ -16,6 +16,9 @@ CREATE TABLE IF NOT EXISTS widget_dashboards (
 CREATE INDEX IF NOT EXISTS idx_widget_dash_house
   ON widget_dashboards(house_id, user_id);
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_widget_dash_house_unique
+  ON widget_dashboards(house_id);
+
 CREATE UNIQUE INDEX IF NOT EXISTS idx_widget_dash_cloud_id
   ON widget_dashboards(cloud_id)
   WHERE cloud_id IS NOT NULL;

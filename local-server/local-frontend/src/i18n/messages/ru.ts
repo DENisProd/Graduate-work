@@ -365,6 +365,11 @@ export const ru = {
   },
   rooms: {
     title: 'Комнаты',
+    housePlan: 'План дома',
+    housePlanEmpty: 'План ещё не добавлен.',
+    housePlanHint: 'Укажите `planUrl` у дома {{id}} (через API /api/v1/houses/:id).',
+    openPlan: 'Открыть',
+    planIsPdf: 'План в формате PDF — откройте его по ссылке сверху.',
     noHouseTitle: 'Дом не настроен',
     noHouseHint: 'Сначала синхронизируйте дом (Настройки → Облачная синхронизация → Синхронизировать).',
     loadError: 'Не удалось загрузить комнаты.',

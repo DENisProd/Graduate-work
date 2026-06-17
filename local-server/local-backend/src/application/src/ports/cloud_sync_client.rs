@@ -9,6 +9,7 @@ pub struct RemoteHouse {
     pub id: String,
     pub name: String,
     pub avatar_url: Option<String>,
+    pub plan_url: Option<String>,
     pub address: Option<String>,
     pub owner_id: String,
     pub created_at: String,

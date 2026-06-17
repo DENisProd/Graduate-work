@@ -36,7 +36,7 @@ impl SqliteAccessRepo {
 impl AccessRepository for SqliteAccessRepo {
     async fn find_house(&self, id: &str) -> Result<Option<House>, DomainError> {
         let row = sqlx::query(
-            "SELECT id, name, avatar_url, address, conflict_strategy, owner_id, created_at, updated_at \
+            "SELECT id, name, avatar_url, plan_url, address, conflict_strategy, owner_id, created_at, updated_at \
              FROM houses WHERE id = ?",
         )
         .bind(id)
@@ -48,6 +48,7 @@ impl AccessRepository for SqliteAccessRepo {
             id: r.get("id"),
             name: r.get("name"),
             avatar_url: r.get("avatar_url"),
+            plan_url: r.get("plan_url"),
             address: r.get("address"),
             conflict_strategy: ConflictStrategy::from_str(
                 r.get::<String, _>("conflict_strategy").as_str(),
@@ -64,7 +65,7 @@ impl AccessRepository for SqliteAccessRepo {
         external_user_id: &str,
     ) -> Result<Vec<House>, DomainError> {
         let rows = sqlx::query(
-            "SELECT h.id, h.name, h.avatar_url, h.address, h.conflict_strategy, \
+            "SELECT h.id, h.name, h.avatar_url, h.plan_url, h.address, h.conflict_strategy, \
              h.owner_id, h.created_at, h.updated_at \
              FROM houses h \
              JOIN users u ON u.id = h.owner_id \
@@ -82,6 +83,7 @@ impl AccessRepository for SqliteAccessRepo {
                 id: r.get("id"),
                 name: r.get("name"),
                 avatar_url: r.get("avatar_url"),
+                plan_url: r.get("plan_url"),
                 address: r.get("address"),
                 conflict_strategy: ConflictStrategy::from_str(
                     r.get::<String, _>("conflict_strategy").as_str(),
@@ -110,12 +112,13 @@ impl AccessRepository for SqliteAccessRepo {
         .map_err(db_err)?;
 
         sqlx::query(
-            "INSERT INTO houses(id, name, avatar_url, address, conflict_strategy, owner_id, created_at, updated_at) \
-             VALUES(?,?,?,?,'DENY_OVERRIDES',?,?,?)",
+            "INSERT INTO houses(id, name, avatar_url, plan_url, address, conflict_strategy, owner_id, created_at, updated_at) \
+             VALUES(?,?,?,?,?,'DENY_OVERRIDES',?,?,?)",
         )
         .bind(&id)
         .bind(&cmd.name)
         .bind(&cmd.avatar_url)
+        .bind(&cmd.plan_url)
         .bind(&cmd.address)
         .bind(&cmd.owner_external_user_id)
         .bind(&now)
@@ -137,6 +140,7 @@ impl AccessRepository for SqliteAccessRepo {
 
         let name = cmd.name.unwrap_or(house.name);
         let avatar_url = cmd.avatar_url.or(house.avatar_url);
+        let plan_url = cmd.plan_url.or(house.plan_url);
         let address = cmd.address.or(house.address);
         let strategy = cmd
             .conflict_strategy
@@ -144,10 +148,11 @@ impl AccessRepository for SqliteAccessRepo {
         let now = Utc::now().to_rfc3339();
 
         sqlx::query(
-            "UPDATE houses SET name=?, avatar_url=?, address=?, conflict_strategy=?, updated_at=? WHERE id=?",
+            "UPDATE houses SET name=?, avatar_url=?, plan_url=?, address=?, conflict_strategy=?, updated_at=? WHERE id=?",
         )
         .bind(&name)
         .bind(&avatar_url)
+        .bind(&plan_url)
         .bind(&address)
         .bind(&strategy)
         .bind(&now)

@@ -86,16 +86,33 @@ const SELECT_COLS: &str =
 #[async_trait]
 impl WidgetDashboardRepository for SqliteWidgetDashboardRepo {
     async fn find_by_house(&self, house_id: &str) -> Result<Vec<WidgetDashboard>, DomainError> {
-        let rows = sqlx::query(&format!(
+        if let Some(primary) = self.find_primary_for_house(house_id).await? {
+            return Ok(vec![primary]);
+        }
+        Ok(Vec::new())
+    }
+
+    async fn find_primary_for_house(
+        &self,
+        house_id: &str,
+    ) -> Result<Option<WidgetDashboard>, DomainError> {
+        let row = sqlx::query(&format!(
             "SELECT {SELECT_COLS} FROM widget_dashboards \
-             WHERE house_id = ? ORDER BY created_at DESC",
+             WHERE house_id = ? \
+             ORDER BY is_default DESC, \
+                      COALESCE(json_array_length(widgets), 0) DESC, \
+                      updated_at DESC \
+             LIMIT 1",
         ))
         .bind(house_id)
-        .fetch_all(&self.pool)
+        .fetch_optional(&self.pool)
         .await
         .map_err(db_err)?;
 
-        rows.iter().map(row_to_entity).collect()
+        match row {
+            Some(r) => row_to_entity(&r).map(Some),
+            None => Ok(None),
+        }
     }
 
     async fn find_by_id(&self, id: &Uuid) -> Result<Option<WidgetDashboard>, DomainError> {
@@ -114,6 +131,10 @@ impl WidgetDashboardRepository for SqliteWidgetDashboardRepo {
     }
 
     async fn create(&self, cmd: CreateWidgetDashboardCmd) -> Result<WidgetDashboard, DomainError> {
+        if let Some(existing) = self.find_primary_for_house(&cmd.house_id).await? {
+            return Ok(existing);
+        }
+
         let id = Uuid::new_v4();
         let id_str = id.to_string();
         let now = Utc::now().to_rfc3339();
@@ -281,9 +302,9 @@ impl WidgetDashboardRepository for SqliteWidgetDashboardRepo {
                 .await?
                 .ok_or_else(|| DomainError::not_found("widget_dashboard", id_str))
         } else {
-            let orphan_id: Option<String> = sqlx::query_scalar(
+            let house_dashboard_id: Option<String> = sqlx::query_scalar(
                 "SELECT id FROM widget_dashboards \
-                 WHERE house_id = ? AND cloud_id IS NULL \
+                 WHERE house_id = ? \
                  ORDER BY is_default DESC, updated_at DESC LIMIT 1",
             )
             .bind(&cmd.house_id)
@@ -291,12 +312,12 @@ impl WidgetDashboardRepository for SqliteWidgetDashboardRepo {
             .await
             .map_err(db_err)?;
 
-            if let Some(id_str) = orphan_id {
+            if let Some(id_str) = house_dashboard_id {
                 tracing::info!(
                     cloud_id,
                     local_id = %id_str,
                     house_id = %cmd.house_id,
-                    "widget_dashboard: linking orphan local dashboard to cloud record"
+                    "widget_dashboard: updating existing house dashboard from cloud"
                 );
 
                 sqlx::query(
