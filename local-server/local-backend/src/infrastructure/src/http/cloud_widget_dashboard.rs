@@ -145,6 +145,7 @@ impl CloudWidgetDashboardClient for ReqwestCloudWidgetDashboardClient {
         cmd: CreateCloudWidgetDashboardCmd,
     ) -> Result<RemoteWidgetDashboard, DomainError> {
         let url = scenario_api_url(base_url, "/widget-dashboards");
+        let user_id = cmd.user_id.clone();
         let body = CreateWidgetDashboardRequest {
             house_id: cmd.house_id,
             user_id: cmd.user_id,
@@ -158,7 +159,7 @@ impl CloudWidgetDashboardClient for ReqwestCloudWidgetDashboardClient {
         let res = apply_cloud_auth(
             self.http.post(&url).json(&body),
             token,
-            Some(&cmd.user_id),
+            Some(&user_id),
         )
             .send()
             .await
