@@ -447,61 +447,108 @@ function GaugeDialWidget({ config, framed }: { config: Record<string, unknown>; 
   const unit = config.unit as string | undefined
   const min = Number(config.min ?? 0)
   const max = Number(config.max ?? 100)
+  const warnAt = config.warnAt != null ? Number(config.warnAt) : undefined
+  const criticalAt = config.criticalAt != null ? Number(config.criticalAt) : undefined
   const accent = String(config.accent ?? 'green')
   const chips = (config.chips as string[]) ?? []
 
   const { state } = useDeviceState(physicalDeviceId || undefined)
   const rawValue = readPayload(state, payloadKey)
-  const value = rawValue != null ? Number(rawValue) : (min + max) / 2
-  const pct = Math.max(0, Math.min(1, (value - min) / (max - min)))
+  const numeric = typeof rawValue === 'number' ? rawValue : rawValue != null ? Number(rawValue) : null
+  const value = numeric != null && !Number.isNaN(numeric) ? numeric : null
+
+  const range = Math.max(0.0001, max - min)
+  const clamped = value != null ? Math.max(min, Math.min(max, value)) : null
+  const progress = clamped != null ? (clamped - min) / range : 0
 
   const strokeColor =
-    accent === 'blue' ? '#3b82f6' : accent === 'amber' ? '#f59e0b' : accent === 'red' ? '#ef4444' : '#10b981'
+    value != null && criticalAt != null && value >= criticalAt
+      ? '#ef4444'
+      : value != null && warnAt != null && value >= warnAt
+        ? '#f59e0b'
+        : accent === 'blue'
+          ? '#3b82f6'
+          : accent === 'amber'
+            ? '#f59e0b'
+            : accent === 'red'
+              ? '#ef4444'
+              : '#10b981'
 
-  // Semicircle arc: from left (180°) to right (0°), counter-clockwise via top
-  const r = 40; const cx = 60; const cy = 56
-  const toXY = (a: number) => ({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) })
-  const start = toXY(Math.PI)
-  const end = toXY(0)
-  const valAngle = Math.PI - pct * Math.PI
-  const valPt = toXY(valAngle)
+  const textColor =
+    accent === 'blue'
+      ? 'text-sky-600 dark:text-sky-400'
+      : accent === 'amber'
+        ? 'text-amber-600 dark:text-amber-400'
+        : accent === 'red'
+          ? 'text-rose-600 dark:text-rose-400'
+          : 'text-emerald-600 dark:text-emerald-400'
 
-  const bgArc = `M ${start.x} ${start.y} A ${r} ${r} 0 0 1 ${end.x} ${end.y}`
-  const valArc = pct > 0
-    ? `M ${start.x} ${start.y} A ${r} ${r} 0 ${pct > 0.5 ? 1 : 0} 1 ${valPt.x} ${valPt.y}`
-    : ''
+  const radius = 80
+  const arcPath = 'M 20 100 A 80 80 0 0 1 180 100'
+  const circumference = Math.PI * radius
+  const strokeDashoffset = circumference * (1 - progress)
 
   return (
     <Shell framed={framed}>
-      <div className="flex h-full flex-col items-center justify-between px-3 pb-3 pt-3">
+      <div className="flex h-full flex-col gap-2 px-3 py-2">
         {label && (
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</p>
+          <p className="text-center text-xs font-medium uppercase tracking-wide text-slate-400">{label}</p>
         )}
-        <div className="flex w-full flex-1 items-center justify-center">
-          <svg viewBox="0 0 120 68" className="w-full max-w-[160px]">
-            <path d={bgArc} fill="none" stroke="#e2e8f0" strokeWidth="8" strokeLinecap="round" />
-            {valArc && (
-              <path d={valArc} fill="none" stroke={strokeColor} strokeWidth="8" strokeLinecap="round" />
-            )}
-            <text x={cx} y={cy + 4} textAnchor="middle" fontSize="14" fontWeight="bold" fill="currentColor">
-              {rawValue != null ? (typeof rawValue === 'number' ? rawValue.toFixed(1) : String(rawValue)) : '—'}
-            </text>
-            {unit && (
-              <text x={cx} y={cy + 16} textAnchor="middle" fontSize="7" fill="#94a3b8">{unit}</text>
-            )}
-            <text x={start.x + 4} y={start.y - 4} textAnchor="start" fontSize="7" fill="#94a3b8">{min}</text>
-            <text x={end.x - 4} y={end.y - 4} textAnchor="end" fontSize="7" fill="#94a3b8">{max}</text>
-          </svg>
-        </div>
         {chips.length > 0 && (
           <div className="flex flex-wrap justify-center gap-1">
             {chips.map((chip) => (
-              <span key={chip} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+              <span
+                key={chip}
+                className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+              >
                 {chip}
               </span>
             ))}
           </div>
         )}
+        <div className="relative flex min-h-0 flex-1 items-center justify-center">
+          <svg
+            viewBox="0 0 200 110"
+            className="h-full w-full max-h-[180px]"
+            preserveAspectRatio="xMidYMid meet"
+            aria-hidden
+          >
+            <path
+              d={arcPath}
+              fill="none"
+              stroke="#e2e8f0"
+              strokeWidth={12}
+              strokeLinecap="round"
+              className="dark:stroke-slate-700"
+            />
+            <path
+              d={arcPath}
+              fill="none"
+              stroke={strokeColor}
+              strokeWidth={12}
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              style={{ transition: 'stroke-dashoffset 400ms ease' }}
+            />
+            <text x="20" y="108" textAnchor="middle" fontSize="10" fill="#94a3b8">
+              {min}
+              {unit ?? ''}
+            </text>
+            <text x="180" y="108" textAnchor="middle" fontSize="10" fill="#94a3b8">
+              {max}
+              {unit ?? ''}
+            </text>
+          </svg>
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-end pb-1">
+            <div className="flex items-baseline gap-1">
+              <span className={cn('text-3xl font-bold tabular-nums', textColor)}>
+                {value == null ? '—' : value.toFixed(1)}
+              </span>
+              {unit && <span className="text-sm text-slate-400">{unit}</span>}
+            </div>
+          </div>
+        </div>
       </div>
     </Shell>
   )
