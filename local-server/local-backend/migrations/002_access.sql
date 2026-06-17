@@ -11,7 +11,6 @@ CREATE TABLE houses (
   id                TEXT PRIMARY KEY,
   name              TEXT NOT NULL,
   avatar_url        TEXT,
-  plan_url          TEXT,
   address           TEXT,
   conflict_strategy TEXT NOT NULL DEFAULT 'DENY_OVERRIDES',
   owner_id          TEXT NOT NULL REFERENCES users(id),
