@@ -7,7 +7,8 @@ import { useConnectedLocalServers } from '@/features/access-control/model/use-co
 import { useDevicesTab } from '@/features/access-control/model/use-devices-tab';
 import { houseMqttApi } from '@/lib/api-client';
 import { useToast } from '@/components/shared';
-import { useTranslation } from '@/hooks';
+import { useTranslation, useHouseFunctionAccess } from '@/hooks';
+import { useAccessControlStore } from '@/store/access-control-store';
 import { DevicesListContent } from './DevicesListContent';
 import { DevicesListHeader } from './DevicesListHeader';
 import { DevicesPagination } from './DevicesPagination';
@@ -33,6 +34,8 @@ export function DevicesTab({
   const addDeviceModalOpen = useAddDeviceModalStore((s) => s.isOpen);
   const prevAddDeviceModalOpenRef = useRef(addDeviceModalOpen);
   const [mqttReconnecting, setMqttReconnecting] = useState(false);
+  const house = useAccessControlStore((s) => s.house);
+  const { canControlPower } = useHouseFunctionAccess({ ownerId: house?.ownerId });
 
   const {
     servers,
@@ -122,7 +125,7 @@ export function DevicesTab({
             isSocketConnected={isSocketConnected}
             onReconnect={canManage ? () => void handleMqttReconnect() : undefined}
             reconnecting={mqttReconnecting}
-            onRefresh={() => void refetchMqttStatus()}
+            onRefresh={canManage ? () => void refetchMqttStatus() : undefined}
           />
         ) : null}
 
@@ -139,6 +142,7 @@ export function DevicesTab({
           detailsPathPrefix={resolvedDetailsPathPrefix}
           onRetry={() => void loadDevices()}
           onDeviceRemoved={canManage ? removeDevice : undefined}
+          canControlDevice={canControlPower}
         />
 
         {houseId && devicesPages > 1 ? (

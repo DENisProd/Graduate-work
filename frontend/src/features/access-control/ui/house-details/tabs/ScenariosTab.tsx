@@ -287,7 +287,9 @@ export function ScenariosTab({
               <CardContent className="space-y-1 text-sm text-muted-foreground">
                 <div className="flex flex-wrap gap-2 pt-2">
                   <Button size="sm" variant="secondary" onClick={() => openEdit(scenario)}>
-                    {locale === 'ru' ? 'Открыть' : 'Open'}
+                    {canManage
+                      ? (locale === 'ru' ? 'Открыть' : 'Open')
+                      : (locale === 'ru' ? 'Просмотр' : 'View')}
                   </Button>
                 </div>
               </CardContent>

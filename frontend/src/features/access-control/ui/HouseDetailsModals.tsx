@@ -1,6 +1,6 @@
 'use client';
 
-import { accessServiceRequest } from '@/lib/access-service-http';
+import { deleteRbacAccessRight } from '@/lib/rbac-access-rights';
 import { useTranslation } from '@/hooks';
 import { useToast } from '@/components/shared/toast';
 import { useAccessControlStore, selectEffectiveOwnerId } from '@/store/access-control-store';
@@ -67,10 +67,7 @@ export function HouseDetailsModals() {
         onCreateRight={createRight}
         onDeleteRight={async (rightId) => {
           try {
-            await accessServiceRequest<void>(
-              `/api/v1/access-rights/${encodeURIComponent(String(rightId))}`,
-              { method: 'DELETE' }
-            );
+            await deleteRbacAccessRight(rightId);
             await loadRights();
             setStatus(t('common.success'));
           } catch (error) {

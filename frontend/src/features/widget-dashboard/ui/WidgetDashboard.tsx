@@ -60,9 +60,23 @@ interface Props {
   devices: PhysicalDeviceResponse[];
   zigbeeDevices: ZigbeeDeviceListItem[];
   scenarios: ScenarioResponse[];
+  canEditDashboard?: boolean;
+  canTriggerScenarios?: boolean;
+  canControlDevice?: (
+    physicalDeviceId: string,
+    kind: 'power' | 'target_temp' | 'any',
+  ) => boolean;
 }
 
-export function WidgetDashboard({ dashboard, devices, zigbeeDevices, scenarios }: Props) {
+export function WidgetDashboard({
+  dashboard,
+  devices,
+  zigbeeDevices,
+  scenarios,
+  canEditDashboard = true,
+  canTriggerScenarios = true,
+  canControlDevice,
+}: Props) {
   const { showToast } = useToast();
   const [editMode, setEditMode] = useState(false);
   const [widgets, setWidgets] = useState<WidgetInstance[]>(dashboard.widgets ?? []);
@@ -223,6 +237,11 @@ export function WidgetDashboard({ dashboard, devices, zigbeeDevices, scenarios }
   }, []);
 
   function renderWidgetContent(widget: WidgetInstance) {
+    const powerReadOnly = (deviceId?: string) =>
+      !deviceId || (canControlDevice ? !canControlDevice(deviceId, 'power') : false);
+    const tempReadOnly = (deviceId?: string) =>
+      !deviceId || (canControlDevice ? !canControlDevice(deviceId, 'target_temp') : false);
+
     switch (widget.type) {
       case 'TELEMETRY_VALUE':
         return (
@@ -243,6 +262,7 @@ export function WidgetDashboard({ dashboard, devices, zigbeeDevices, scenarios }
         return (
           <ControlButtonWidget
             config={widget.config as ControlButtonConfig}
+            readOnly={powerReadOnly((widget.config as ControlButtonConfig).physicalDeviceId)}
             onCommand={sendCommand}
           />
         );
@@ -252,6 +272,7 @@ export function WidgetDashboard({ dashboard, devices, zigbeeDevices, scenarios }
           <ControlToggleWidget
             config={cfg}
             state={getDeviceState(cfg.physicalDeviceId)}
+            readOnly={powerReadOnly(cfg.physicalDeviceId)}
             onCommand={sendCommand}
           />
         );
@@ -261,6 +282,7 @@ export function WidgetDashboard({ dashboard, devices, zigbeeDevices, scenarios }
           <ScenarioTriggerWidget
             config={widget.config as ScenarioTriggerConfig}
             scenario={scenarioMap[(widget.config as ScenarioTriggerConfig).scenarioId]}
+            readOnly={!canTriggerScenarios}
           />
         );
       case 'TEXT_LABEL':
@@ -286,6 +308,7 @@ export function WidgetDashboard({ dashboard, devices, zigbeeDevices, scenarios }
           <SliderControlWidget
             config={cfg}
             state={getDeviceState(cfg.physicalDeviceId)}
+            readOnly={tempReadOnly(cfg.physicalDeviceId)}
             onCommand={sendCommand}
           />
         );
@@ -297,6 +320,7 @@ export function WidgetDashboard({ dashboard, devices, zigbeeDevices, scenarios }
             config={cfg}
             device={deviceMap[cfg.physicalDeviceId]}
             state={getDeviceState(cfg.physicalDeviceId)}
+            readOnly={powerReadOnly(cfg.physicalDeviceId)}
             onCommand={sendCommand}
           />
         );
@@ -333,10 +357,11 @@ export function WidgetDashboard({ dashboard, devices, zigbeeDevices, scenarios }
   return (
     <div className="flex flex-col h-full">
       <WidgetDashboardToolbar
-        editMode={editMode}
+        editMode={canEditDashboard ? editMode : false}
         connected={connected}
         dashboardName={dashboard.name}
         saving={saving}
+        canEdit={canEditDashboard}
         onToggleEdit={() => setEditMode((v) => !v)}
         onSave={handleSave}
         onAddWidget={() => setPickerOpen(true)}
@@ -345,12 +370,14 @@ export function WidgetDashboard({ dashboard, devices, zigbeeDevices, scenarios }
       {widgets.length === 0 && !editMode && (
         <div className="flex flex-col items-center justify-center flex-1 gap-3 text-center p-8">
           <p className="text-muted-foreground text-sm">Дашборд пуст.</p>
-          <button
-            onClick={() => setEditMode(true)}
-            className="rounded-lg border border-primary/70 bg-primary/8 px-4 py-2 text-sm text-primary hover:bg-primary/16 dark:border-primary dark:bg-primary/10 dark:hover:bg-primary/20"
-          >
-            Перейти в режим редактирования
-          </button>
+          {canEditDashboard ? (
+            <button
+              onClick={() => setEditMode(true)}
+              className="rounded-lg border border-primary/70 bg-primary/8 px-4 py-2 text-sm text-primary hover:bg-primary/16 dark:border-primary dark:bg-primary/10 dark:hover:bg-primary/20"
+            >
+              Перейти в режим редактирования
+            </button>
+          ) : null}
         </div>
       )}
 

@@ -93,10 +93,10 @@ export function MembersTab({
                       >
                         <Shield className="size-3 shrink-0" />
                         {role.name}
-                        {role.permissions.length > 0 && (
+                        {(role.permissions.length > 0 || (role.accessRightsCount ?? 0) > 0) && (
                           <span className="inline-flex items-center gap-0.5 px-1.5 py-px text-[10px] font-semibold leading-none">
                             <Lock className="size-2.5" />
-                            {role.permissions.length}
+                            {role.permissions.length + (role.accessRightsCount ?? 0)}
                           </span>
                         )}
                       </span>

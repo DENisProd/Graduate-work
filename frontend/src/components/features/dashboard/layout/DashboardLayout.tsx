@@ -1,11 +1,12 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { useMemo } from 'react';
 import { useDashboardLayout } from './model/useDashboardLayout';
 import { DashboardSidebar, buildDashboardRoutes } from './ui/DashboardSidebar';
 import { DashboardHeader } from './ui/DashboardHeader';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
-import { useHousePermissions } from '@/hooks';
+import { useCurrentUserId, useHousePermissions, useHousePageAccess } from '@/hooks';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -27,9 +28,32 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     isAdmin,
   } = useDashboardLayout();
 
+  const currentUserId = useCurrentUserId();
+  const selectedHouseOwnerId = useMemo(() => {
+    if (!selectedHouseId) return null;
+    const decodedHouseId = decodeURIComponent(selectedHouseId);
+    return (
+      userHouses.find(
+        (house) =>
+          String(house.id) === decodedHouseId || house.uuid === decodedHouseId,
+      )?.ownerId ?? null
+    );
+  }, [selectedHouseId, userHouses]);
+
   const perms = useHousePermissions();
+  const { canRead } = useHousePageAccess({
+    ownerId: selectedHouseOwnerId,
+    isPlatformAdmin: isAdmin,
+  });
+  const isOwnerOfSelectedHouse = Boolean(
+    selectedHouseOwnerId && currentUserId && selectedHouseOwnerId === currentUserId,
+  );
   const houseNavPerms = selectedHouseId
-    ? { canEditRoles: perms.canEditRoles, isOwner: perms.isOwner }
+    ? {
+        canEditRoles: perms.canEditRoles || isOwnerOfSelectedHouse || isAdmin,
+        isOwner: perms.isOwner || isOwnerOfSelectedHouse,
+        canReadPage: canRead,
+      }
     : undefined;
 
   const routes = buildDashboardRoutes(

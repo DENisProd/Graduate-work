@@ -235,14 +235,6 @@
             <aside class="kc-visual-panel" aria-hidden="true">
                 <div class="kc-visual-stage">
                     <div class="kc-visual-art"></div>
-                    <div class="kc-visual-card">
-                        <div class="kc-visual-card-logo">
-                            <img src="${url.resourcesPath}/img/logo.svg" alt="" />
-                        </div>
-                        <p class="kc-visual-card-kicker">${msg("domovoyVisualKicker")}</p>
-                        <h2 class="kc-visual-card-title">${msg("domovoyVisualTitle")}</h2>
-                        <p class="kc-visual-card-text">${msg("domovoyVisualText")}</p>
-                    </div>
                 </div>
             </aside>
         </div>

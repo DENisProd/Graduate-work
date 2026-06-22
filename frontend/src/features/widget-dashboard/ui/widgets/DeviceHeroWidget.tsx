@@ -11,6 +11,7 @@ interface Props {
   config: DeviceHeroConfig;
   device?: PhysicalDeviceResponse;
   state?: ZigbeeStateWire;
+  readOnly?: boolean;
   onCommand: (
     device: { deviceIeeeAddr?: string; physicalDeviceId?: string },
     payload: Record<string, unknown>,
@@ -162,7 +163,7 @@ function readNumeric(state: ZigbeeStateWire | undefined, key: string): number | 
   return null;
 }
 
-export function DeviceHeroWidget({ config, device, state, onCommand }: Props) {
+export function DeviceHeroWidget({ config, device, state, readOnly = false, onCommand }: Props) {
   const [optimistic, setOptimistic] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [modbusOn, setModbusOn] = useState<boolean | null>(null);
@@ -193,7 +194,7 @@ export function DeviceHeroWidget({ config, device, state, onCommand }: Props) {
     : !!config.togglePayloadKey;
 
   async function toggle() {
-    if (!config.showToggle || busy || !toggleReady) return;
+    if (readOnly || !config.showToggle || busy || !toggleReady) return;
     const next = !isOn;
     setOptimistic(next);
     setBusy(true);
@@ -246,7 +247,7 @@ export function DeviceHeroWidget({ config, device, state, onCommand }: Props) {
           </div>
         </div>
 
-        {config.showToggle && (
+        {config.showToggle && !readOnly && (
           <button
             onClick={toggle}
             disabled={busy || !toggleReady}

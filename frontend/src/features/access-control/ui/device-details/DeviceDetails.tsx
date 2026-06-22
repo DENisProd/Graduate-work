@@ -2,24 +2,27 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Pencil, RefreshCw } from 'lucide-react';
 import { useTranslation } from '@/hooks';
 import { useToast } from '@/components/shared';
-import { ApiError, physicalDevicesApi, deviceDataApi } from '@/lib/api-client';
+import { ApiError, physicalDevicesApi, deviceDataApi, deviceTypesApi, devicesApi } from '@/lib/api-client';
 import type { PhysicalDeviceResponse, DeviceDataResponse, DeviceDataSeriesResponse } from '@/types/api';
 import { connectivityFromLastOnline, connectivityLabel, type ConnectivityStatus } from '@/lib/device-connectivity';
 import { Chart, type AxisOptions } from 'react-charts';
 import { parseLocalServerDeviceId } from '@/features/access-control/lib/local-server-device';
+import { getDisplayName } from '@/features/access-control/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { cn, formatDateTime } from '@/lib/utils';
 import { LocalServerDetails } from './LocalServerDetails';
+import { DeviceEditModal } from './DeviceEditModal';
 
 interface DeviceDetailsProps {
   houseId: string;
   deviceId: string;
   backHref?: string;
   backLabel?: string;
+  canRefreshData?: boolean;
 }
 
 function displayName(device: PhysicalDeviceResponse | null): string {
@@ -110,7 +113,6 @@ const FIELD_GROUPS: Array<{
     fields: [
       { labelKey: 'admin.accessControl.connectedDevices.deviceDetails.fields.id', key: 'id', icon: 'id' },
       { labelKey: 'admin.accessControl.connectedDevices.deviceDetails.fields.friendlyName', key: 'friendlyName', icon: 'id' },
-      { labelKey: 'admin.accessControl.connectedDevices.deviceDetails.fields.name', key: 'name', icon: 'id' },
     ],
   },
   {
@@ -137,8 +139,8 @@ const FIELD_GROUPS: Array<{
     fields: [
       { labelKey: 'admin.accessControl.connectedDevices.deviceDetails.fields.houseId', key: 'houseId', icon: 'id' },
       { labelKey: 'admin.accessControl.connectedDevices.deviceDetails.fields.roomId', key: 'roomId', icon: 'id' },
-      { labelKey: 'admin.accessControl.connectedDevices.deviceDetails.fields.deviceTypeId', key: 'deviceTypeId', icon: 'id' },
-      { labelKey: 'admin.accessControl.connectedDevices.deviceDetails.fields.deviceId', key: 'deviceId', icon: 'id' },
+      { labelKey: 'admin.accessControl.connectedDevices.deviceDetails.fields.deviceType', key: 'deviceTypeId', icon: 'id' },
+      { labelKey: 'admin.accessControl.connectedDevices.deviceDetails.fields.deviceCatalog', key: 'deviceId', icon: 'id' },
     ],
   },
   {
@@ -288,18 +290,6 @@ function getFromDate(range: TimeRange): Date | undefined {
     '1m': 60_000, '1h': 3_600_000, '6h': 21_600_000, '24h': 86_400_000, '7d': 604_800_000,
   };
   return new Date(Date.now() - MS[range]);
-}
-
-function formatAgo(ts: string): string {
-  const diff = Date.now() - new Date(ts).getTime();
-  const s = Math.floor(diff / 1000);
-  if (s < 5) return 'just now';
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h`;
-  return `${Math.floor(h / 24)}d`;
 }
 
 function formatHistoryValue(value: unknown, unit?: string | null, type?: string): string {
@@ -522,8 +512,14 @@ function HistoryLineChart({
   );
 }
 
-function DeviceHistorySection({ deviceId }: { deviceId: string }) {
-  const { t } = useTranslation();
+function DeviceHistorySection({
+  deviceId,
+  canRefreshData = true,
+}: {
+  deviceId: string;
+  canRefreshData?: boolean;
+}) {
+  const { t, locale } = useTranslation();
   const tx = useCallback(
     (key: string, opts?: Record<string, unknown>) => t(key as never, opts as never),
     [t],
@@ -679,17 +675,19 @@ function DeviceHistorySection({ deviceId }: { deviceId: string }) {
             {tx(`${histKey}.total`, { count: total })}
           </span>
         )}
-        <Button
-          type="button"
-          variant="ghost"
-          size="xs"
-          onClick={() => void doFetch(1, true)}
-          disabled={loading}
-          className="ml-auto text-muted-foreground"
-        >
-          <RefreshCw className={cn('size-3', loading && 'animate-spin')} />
-          {tx(`${histKey}.refresh`)}
-        </Button>
+        {canRefreshData ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            onClick={() => void doFetch(1, true)}
+            disabled={loading}
+            className="ml-auto text-muted-foreground"
+          >
+            <RefreshCw className={cn('size-3', loading && 'animate-spin')} />
+            {tx(`${histKey}.refresh`)}
+          </Button>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-5 py-2.5">
@@ -799,10 +797,9 @@ function DeviceHistorySection({ deviceId }: { deviceId: string }) {
 
                 <time
                   dateTime={item.timestamp}
-                  title={new Date(item.timestamp).toLocaleString()}
-                  className="shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground"
+                  className="shrink-0 text-[10px] tabular-nums text-muted-foreground"
                 >
-                  {formatAgo(item.timestamp)}
+                  {formatDateTime(item.timestamp, locale)}
                 </time>
               </div>
             ))}
@@ -833,7 +830,13 @@ function DeviceHistorySection({ deviceId }: { deviceId: string }) {
 }
 
 
-export function DeviceDetails({ houseId, deviceId, backHref, backLabel }: DeviceDetailsProps) {
+export function DeviceDetails({
+  houseId,
+  deviceId,
+  backHref,
+  backLabel,
+  canRefreshData = true,
+}: DeviceDetailsProps) {
   const localServerId = parseLocalServerDeviceId(deviceId);
 
   if (localServerId) {
@@ -853,12 +856,19 @@ export function DeviceDetails({ houseId, deviceId, backHref, backLabel }: Device
       deviceId={deviceId}
       backHref={backHref}
       backLabel={backLabel}
+      canRefreshData={canRefreshData}
     />
   );
 }
 
-function PhysicalDeviceDetails({ houseId, deviceId, backHref, backLabel }: DeviceDetailsProps) {
-  const { t } = useTranslation();
+function PhysicalDeviceDetails({
+  houseId,
+  deviceId,
+  backHref,
+  backLabel,
+  canRefreshData = true,
+}: DeviceDetailsProps) {
+  const { t, locale } = useTranslation();
   const { showToast } = useToast();
   const router = useRouter();
 
@@ -870,6 +880,9 @@ function PhysicalDeviceDetails({ houseId, deviceId, backHref, backLabel }: Devic
   const [device, setDevice] = useState<PhysicalDeviceResponse | null>(null);
   const [deviceLoading, setDeviceLoading] = useState(false);
   const [error, setError] = useState<'none' | 'forbidden' | 'error'>('none');
+  const [editOpen, setEditOpen] = useState(false);
+  const [deviceTypeLabel, setDeviceTypeLabel] = useState<string | null>(null);
+  const [catalogDeviceLabel, setCatalogDeviceLabel] = useState<string | null>(null);
 
   const handleError = useCallback(
     (err: unknown) => {
@@ -918,6 +931,52 @@ function PhysicalDeviceDetails({ houseId, deviceId, backHref, backLabel }: Devic
     void loadDevice(controller.signal);
     return () => controller.abort();
   }, [loadDevice]);
+
+  useEffect(() => {
+    if (!device?.deviceTypeId) {
+      setDeviceTypeLabel(null);
+      return;
+    }
+    let cancelled = false;
+    void deviceTypesApi
+      .getById(device.deviceTypeId)
+      .then((dt) => {
+        if (cancelled) return;
+        setDeviceTypeLabel(getDisplayName(dt.translations, dt.name, dt.code, locale));
+      })
+      .catch(() => {
+        if (!cancelled) setDeviceTypeLabel(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [device?.deviceTypeId, locale]);
+
+  useEffect(() => {
+    const rawId = device?.deviceId;
+    if (rawId == null || rawId === '') {
+      setCatalogDeviceLabel(null);
+      return;
+    }
+    const catalogId = typeof rawId === 'number' ? rawId : Number(rawId);
+    if (!Number.isFinite(catalogId)) {
+      setCatalogDeviceLabel(null);
+      return;
+    }
+    let cancelled = false;
+    void devicesApi
+      .getById(catalogId)
+      .then((d) => {
+        if (cancelled) return;
+        setCatalogDeviceLabel(getDisplayName(d.translations, d.name, d.code, locale));
+      })
+      .catch(() => {
+        if (!cancelled) setCatalogDeviceLabel(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [device?.deviceId, locale]);
 
   const definitionJson = useMemo(() => {
     if (!device?.definition) return '';
@@ -970,12 +1029,17 @@ function PhysicalDeviceDetails({ houseId, deviceId, backHref, backLabel }: Devic
   const fieldGroupsWithEntries = FIELD_GROUPS.map((group) => ({
     group,
     entries: group.fields
+      .filter((f) => f.key !== 'name')
       .map((f) => ({
+        fieldKey: f.key,
         label: tx(f.labelKey),
         value: device?.[f.key],
         icon: f.icon,
       }))
-      .filter((e) => e.value !== null && e.value !== undefined && e.value !== ''),
+      .filter((e) => {
+        if (e.fieldKey === 'friendlyName') return true;
+        return e.value !== null && e.value !== undefined && e.value !== '';
+      }),
   })).filter((g) => g.entries.length > 0);
 
   return (
@@ -992,17 +1056,32 @@ function PhysicalDeviceDetails({ houseId, deviceId, backHref, backLabel }: Devic
           {resolvedBackLabel}
         </Button>
 
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => void loadDevice()}
-          disabled={deviceLoading}
-          className="text-muted-foreground"
-        >
-          <RefreshCw className={cn('size-3.5', deviceLoading && 'animate-spin')} />
-          {t('admin.retry')}
-        </Button>
+        {canRefreshData ? (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setEditOpen(true)}
+              disabled={!device || deviceLoading}
+              className="text-muted-foreground"
+            >
+              <Pencil className="size-3.5" />
+              {t('admin.edit')}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void loadDevice()}
+              disabled={deviceLoading}
+              className="text-muted-foreground"
+            >
+              <RefreshCw className={cn('size-3.5', deviceLoading && 'animate-spin')} />
+              {t('admin.retry')}
+            </Button>
+          </>
+        ) : null}
       </div>
 
       {error === 'forbidden' ? (
@@ -1081,9 +1160,44 @@ function PhysicalDeviceDetails({ houseId, deviceId, backHref, backLabel }: Devic
                       </h2>
                     </div>
                     <dl className="divide-y divide-border">
-                      {entries.map(({ label, value, icon }) => {
+                      {entries.map(({ fieldKey, label, value, icon }) => {
                         const Icon = FIELD_ICONS[icon];
-                        const text = formatScalar(value);
+
+                        if (fieldKey === 'friendlyName') {
+                          const display =
+                            device?.name?.trim() || device?.friendlyName?.trim() || null;
+                          return (
+                            <div
+                              key={label}
+                              className="grid grid-cols-1 items-start gap-1 px-5 py-2.5 sm:grid-cols-[minmax(9rem,13rem)_1fr]"
+                            >
+                              <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                {Icon && <Icon />}
+                                {label}
+                              </dt>
+                              <dd className="space-y-1">
+                                <span className="text-sm text-foreground">
+                                  {display ?? <span className="text-muted-foreground">—</span>}
+                                </span>
+                                {device?.friendlyName &&
+                                device.friendlyName.trim() !== (device.name?.trim() ?? '') ? (
+                                  <p className="text-[11px] text-muted-foreground">
+                                    Zigbee: {device.friendlyName}
+                                  </p>
+                                ) : null}
+                              </dd>
+                            </div>
+                          );
+                        }
+
+                        const text =
+                          fieldKey === 'deviceTypeId'
+                            ? deviceTypeLabel ?? formatScalar(value)
+                            : fieldKey === 'deviceId'
+                              ? catalogDeviceLabel ?? formatScalar(value)
+                              : group.key === 'timestamps' && typeof value === 'string'
+                                ? formatDateTime(value, locale)
+                                : formatScalar(value);
                         return (
                           <div
                             key={label}
@@ -1093,7 +1207,14 @@ function PhysicalDeviceDetails({ houseId, deviceId, backHref, backLabel }: Devic
                               {Icon && <Icon />}
                               {label}
                             </dt>
-                            <dd className="break-all font-mono text-xs text-foreground">
+                            <dd
+                              className={cn(
+                                'break-all text-xs text-foreground',
+                                fieldKey === 'deviceTypeId' || fieldKey === 'deviceId'
+                                  ? 'font-normal'
+                                  : 'font-mono',
+                              )}
+                            >
                               {text === '—' ? <span className="text-muted-foreground">—</span> : text}
                             </dd>
                           </div>
@@ -1151,8 +1272,18 @@ function PhysicalDeviceDetails({ houseId, deviceId, backHref, backLabel }: Devic
             ) : null}
           </div>
 
-          <DeviceHistorySection deviceId={deviceId} />
+          <DeviceHistorySection deviceId={deviceId} canRefreshData={canRefreshData} />
         </div>
+      ) : null}
+
+      {device && canRefreshData ? (
+        <DeviceEditModal
+          isOpen={editOpen}
+          onOpenChange={setEditOpen}
+          houseId={houseId}
+          device={device}
+          onSaved={setDevice}
+        />
       ) : null}
     </div>
   );

@@ -21,14 +21,26 @@ export type MemberWithUserAndHouse = HouseMember & {
   user: User;
   house: House;
   roles: (HouseMemberRole & {
-    role: HouseRole & { permissions: { permission: HousePermission }[] };
+    role: HouseRole & {
+      permissions: { permission: HousePermission }[];
+      _count: { accessRights: number };
+    };
   })[];
 };
 
 const MEMBER_WITH_ROLES_INCLUDE = {
   user: true,
   house: true,
-  roles: { include: { role: { include: { permissions: true } } } },
+  roles: {
+    include: {
+      role: {
+        include: {
+          permissions: true,
+          _count: { select: { accessRights: true } },
+        },
+      },
+    },
+  },
 } as const;
 
 export type MemberWithAccessDetails = {

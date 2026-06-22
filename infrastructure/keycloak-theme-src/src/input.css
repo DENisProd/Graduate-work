@@ -30,12 +30,6 @@
     --domovoy-visual-shape-primary-end: #3949ab;
     --domovoy-visual-shape-secondary: #7986cb;
     --domovoy-visual-shape-secondary-end: #515ab7;
-    --domovoy-visual-card-bg: rgb(255 255 255 / 0.42);
-    --domovoy-visual-card-border: rgb(26 35 126 / 0.12);
-    --domovoy-visual-card-kicker: rgb(26 35 126 / 0.55);
-    --domovoy-visual-card-title: #1a237e;
-    --domovoy-visual-card-text: rgb(26 35 126 / 0.72);
-    --domovoy-visual-card-logo-bg: rgb(255 255 255 / 0.65);
   }
 
   :root[data-kc-theme="dark"] {
@@ -63,12 +57,6 @@
     --domovoy-visual-shape-primary-end: #3d458f;
     --domovoy-visual-shape-secondary: #6b73c4;
     --domovoy-visual-shape-secondary-end: #434aa0;
-    --domovoy-visual-card-bg: rgb(36 38 58 / 0.55);
-    --domovoy-visual-card-border: rgb(81 90 183 / 0.22);
-    --domovoy-visual-card-kicker: rgb(169 176 224 / 0.72);
-    --domovoy-visual-card-title: #eef0ff;
-    --domovoy-visual-card-text: rgb(200 205 235 / 0.78);
-    --domovoy-visual-card-logo-bg: rgb(81 90 183 / 0.18);
   }
 
   * {
@@ -641,39 +629,6 @@
     );
     opacity: 0.66;
   }
-
-  .kc-visual-card {
-    @apply relative z-10 ml-auto max-w-[19rem] rounded-[1.75rem] border p-6;
-    margin-right: 8%;
-    background: var(--domovoy-visual-card-bg);
-    border-color: var(--domovoy-visual-card-border);
-    backdrop-filter: blur(18px);
-    box-shadow: var(--domovoy-shadow);
-  }
-
-  .kc-visual-card-logo {
-    @apply mb-4 inline-flex h-9 w-9 items-center justify-center rounded-xl p-1.5;
-    background: var(--domovoy-visual-card-logo-bg);
-  }
-
-  .kc-visual-card-logo img {
-    @apply h-full w-full object-contain;
-  }
-
-  .kc-visual-card-kicker {
-    @apply mb-2 text-[10px] font-semibold uppercase tracking-[0.22em];
-    color: var(--domovoy-visual-card-kicker);
-  }
-
-  .kc-visual-card-title {
-    @apply text-[1.75rem] font-semibold tracking-tight;
-    color: var(--domovoy-visual-card-title);
-  }
-
-  .kc-visual-card-text {
-    @apply mt-3 text-[13px] leading-6;
-    color: var(--domovoy-visual-card-text);
-  }
 }
 
 @media (max-width: 1023px) {
@@ -790,12 +745,6 @@
     --domovoy-visual-shape-primary-end: #3d458f;
     --domovoy-visual-shape-secondary: #6b73c4;
     --domovoy-visual-shape-secondary-end: #434aa0;
-    --domovoy-visual-card-bg: rgb(36 38 58 / 0.55);
-    --domovoy-visual-card-border: rgb(81 90 183 / 0.22);
-    --domovoy-visual-card-kicker: rgb(169 176 224 / 0.72);
-    --domovoy-visual-card-title: #eef0ff;
-    --domovoy-visual-card-text: rgb(200 205 235 / 0.78);
-    --domovoy-visual-card-logo-bg: rgb(81 90 183 / 0.18);
   }
 }
 

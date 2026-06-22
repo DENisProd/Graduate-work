@@ -329,153 +329,153 @@
       "titleBefore": "A smart home that ",
       "titleHighlight": "keeps working",
       "titleAfter": " — online or offline",
-      "description": "Domovoy combines cloud and an on-site server: manage Zigbee and Modbus, grant permissions down to a single device function, and run multiple sites from one account — without industrial SCADA budgets.",
+      "description": "A scalable hybrid information system: autonomous operation on a local server, attribute-based role access control, and support for Zigbee and Modbus RTU.",
       "ctaDashboard": "Open dashboard",
       "ctaAdmin": "Admin panel"
     },
     "problem": {
-      "title": "Why common platforms fall short",
-      "description": "Cloud ecosystems, DIY hubs, and SCADA each solve part of the puzzle — not the full stack small businesses and country homes need.",
-      "marketTitle": "What the market offers today",
+      "title": "Problems with existing solutions",
+      "description": "Analysis of Home Assistant, Yandex Smart Home, and MiHome revealed key limitations in the smart home market.",
+      "marketTitle": "Identified problems",
       "marketItems": {
-        "cloud": "Cloud services stop when the internet drops",
-        "diy": "Home Assistant fits one home — no granular rights or multi-site control",
-        "scada": "Industrial SCADA is overkill for a café, office, or cottage"
+        "cloud": "Dependence on cloud infrastructure and internet connectivity",
+        "diy": "No access rights at the level of individual device functions",
+        "scada": "No centralized multi-site management, limited industrial protocol support, and non-compliance with regulatory documents"
       },
-      "solutionTitle": "What Domovoy delivers",
+      "solutionTitle": "The Domovoy solution",
       "solutionItems": {
-        "hybrid": "Hybrid mode: the edge server keeps the site running; the cloud keeps the big picture",
-        "access": "RBAC + ABAC: permissions down to device functions, expiry dates, deny wins over allow",
-        "protocols": "Zigbee and Modbus RTU/TCP together — no vendor lock-in"
+        "hybrid": "Hybrid architecture: the local server ensures autonomy, the cloud provides centralized control",
+        "access": "RBAC + ABAC down to device functions: explicit deny takes precedence over allow",
+        "protocols": "Zigbee and Modbus RTU in one system — unified device representation"
       }
     },
     "features": {
-      "title": "Built for operations, not slide decks",
-      "description": "From the device catalog to scenarios and access control — one platform instead of a patchwork of apps.",
+      "title": "Key system capabilities",
+      "description": "To achieve the project goal, a hybrid architecture, access control subsystem, device catalog, and client application were implemented.",
       "items": {
         "hybrid": {
-          "title": "Works without the internet",
-          "description": "The on-site server keeps controlling devices; when connectivity returns, changes sync to the cloud."
+          "title": "Autonomous operation",
+          "description": "The on-site local server executes commands regardless of network state; changes sync to the cloud when connectivity returns."
         },
         "access": {
-          "title": "Permissions per device function",
-          "description": "Security sees cameras, staff control lighting in their zone, guests only what you allow. Explicit deny always wins."
+          "title": "Attribute-based role access control",
+          "description": "Rights matrix editor: assign permissions to specific device functions. DENY-first algorithm and effective-permission caching."
         },
         "protocols": {
-          "title": "Zigbee and Modbus together",
-          "description": "Sensors, sockets, HVAC, and industrial gear in one loop — without closed ecosystems."
+          "title": "Zigbee and Modbus RTU",
+          "description": "The client does not distinguish the connection protocol — all devices are represented uniformly, simplifying interface development."
         },
         "multisite": {
-          "title": "Many sites, one account",
-          "description": "Cottage, office, and retail location under one login — no account switching."
+          "title": "Centralized multi-site management",
+          "description": "Cottage, office, and retail location under unified control from one account without switching credentials."
         },
         "realtime": {
-          "title": "Live device status",
-          "description": "Telemetry via MQTT and Socket.IO: the floor plan shows what is on and where something failed."
+          "title": "Real-time mode",
+          "description": "Telemetry via MQTT and Socket.IO: the floor plan shows device state and potential failures instantly."
         },
-        "ai": {
-          "title": "AI scenarios on your network",
-          "description": "A local model suggests automations from your device mix — data never leaves your infrastructure."
+        "catalog": {
+          "title": "Five-level device catalog",
+          "description": "Multilingual names, soft-delete records, and automatic matching of connected hardware to catalog entries."
         }
       }
     },
     "audiences": {
-      "title": "Who Domovoy is for",
-      "description": "For teams that cannot afford SCADA but outgrow boxed clouds and DIY hubs.",
+      "title": "Target audience",
+      "description": "The system targets owners of country homes, small business offices, retail locations, and warehouse facilities.",
       "items": {
         "home": {
           "title": "Country homes and cottages",
-          "description": "Stay autonomous on unstable internet; family and staff get different permission sets."
+          "description": "Autonomy on unstable internet; differentiated rights for family members and staff."
         },
         "office": {
           "title": "Small business offices",
-          "description": "Coworkings and small teams: zones, staff roles, climate and lighting."
+          "description": "Zone management, staff roles, climate and lighting from a single system."
         },
         "retail": {
-          "title": "Retail and services",
-          "description": "Cafés, salons, shops: energy use, guest comfort, and security in one place."
+          "title": "Retail locations",
+          "description": "Cafés, salons, shops: guest comfort, security, and energy efficiency."
         },
         "warehouse": {
-          "title": "Warehouses and light industry",
-          "description": "Modbus for industrial equipment without deploying full SCADA."
+          "title": "Warehouses and production",
+          "description": "Modbus RTU for industrial equipment without deploying full SCADA."
         }
       }
     },
     "architecture": {
-      "title": "Three layers — one interface",
-      "description": "The same web client talks to cloud and local server: switching modes does not break familiar screens.",
+      "title": "Hybrid architecture",
+      "description": "Cloud platform, local server, and client application combined in one system — autonomy and scalability in a single solution.",
       "layers": {
         "cloud": {
-          "title": "Cloud",
-          "description": "Access and automation microservices, PostgreSQL, MongoDB, Keycloak — scale and central control."
+          "title": "Cloud platform",
+          "description": "NestJS, PostgreSQL, MongoDB, and Keycloak — centralized site management, remote access, and data storage."
         },
         "edge": {
           "title": "Local server",
-          "description": "Rust, SQLite, Zigbee2MQTT and Modbus on site — control regardless of link quality."
+          "description": "Rust, SQLite, MQTT, and Modbus RTU on site — hardware interaction and command execution regardless of network."
         },
         "client": {
-          "title": "Web app",
-          "description": "Next.js, Konva floor plans, scenarios and dashboards with real-time updates."
+          "title": "Client application",
+          "description": "Next.js and React: seamless cloud/local switching, floor plans, and real-time updates."
         }
       }
     },
     "useCases": {
-      "title": "How it works day to day",
-      "description": "Typical flows the architecture was designed around.",
+      "title": "Client web application",
+      "description": "Three key tasks identified during problem analysis, implemented in a unified web interface.",
       "items": {
         "onboard": {
-          "title": "Add a device — assign rights",
-          "description": "An admin places hardware in a room and grants staff access only to the functions they need."
+          "title": "Local server connection",
+          "description": "Secure node authorization when connecting to the cloud: authentication and access token issuance via Keycloak."
         },
         "floorplan": {
-          "title": "Floor plan, not just a list",
-          "description": "Live status on the layout — lighting and climate in a couple of clicks."
+          "title": "Unified device model",
+          "description": "Devices via Zigbee or Modbus RTU are represented uniformly — the interface does not depend on the connection protocol."
         },
         "offline": {
-          "title": "Internet down — site still runs",
-          "description": "The local server keeps processing commands; operations do not stall."
+          "title": "Cloud / local server switching",
+          "description": "The app automatically detects cloud availability and redirects requests to the local node without user action."
         },
         "sync": {
-          "title": "Back online — data catches up",
-          "description": "Queued changes sync to the cloud automatically; every site stays current."
+          "title": "Segment synchronization",
+          "description": "Bidirectional sync between cloud and local segments — queued changes are applied when connectivity returns."
         },
-        "ai": {
-          "title": "AI suggests a scenario",
-          "description": "From connected devices — ready automation like “lights off when the last person leaves.”"
+        "rights": {
+          "title": "Rights matrix editor",
+          "description": "Visual RBAC+ABAC management: assign permissions to specific device functions, not all-or-nothing access."
         },
         "multisite": {
-          "title": "All sites in one window",
-          "description": "Switch between homes and locations without new logins or lost context."
+          "title": "Device and scenario management",
+          "description": "Site monitoring dashboard, device control, floor plan editor, and automation scenario configuration."
         }
       }
     },
     "valueProps": {
-      "title": "Reliability and economics that matter",
-      "description": "Smart building management can cut electricity use by 20–30% — Domovoy helps you get there without an army of integrators.",
+      "title": "Project results",
+      "description": "The stated goal was achieved: a scalable hybrid smart home information management system was developed.",
       "items": {
         "scale": {
-          "title": "Many sites, no chaos",
-          "description": "Typical scale: up to 10 locations and hundreds of devices per account, with one access policy."
+          "title": "Hybrid architecture",
+          "description": "Cloud platform and local server provide autonomous operation and centralized multi-site management."
         },
         "integration": {
-          "title": "Catalog instead of manual wiring",
-          "description": "Type → category → device → function: new hardware is matched by model and manufacturer."
+          "title": "Access control subsystem",
+          "description": "Attribute-role model with device-function granularity, DENY-first algorithm, and permission caching."
         },
         "security": {
-          "title": "Security by default",
-          "description": "Keycloak, effective-permission cache, and ABAC policies — predictable rules, not “everyone is admin.”"
+          "title": "Local server and synchronization",
+          "description": "Bidirectional sync algorithm implemented and an autonomous local node deployed on an ARM platform."
         }
       }
     },
     "stats": {
       "statusLabel": "Operating mode",
       "statusValue": "Cloud + edge node",
-      "activeDevicesLabel": "Energy savings potential",
-      "activeDevicesValue": "up to 30%",
+      "activeDevicesLabel": "Device catalog levels",
+      "activeDevicesValue": "5",
       "responseTimeLabel": "Sync after offline",
       "responseTimeValue": "~90 sec",
-      "automationLabel": "AI scenarios",
-      "automationValue": "on-prem, no external LLM",
+      "automationLabel": "Automation scenarios",
+      "automationValue": "local and cloud",
       "cta": "Start with the dashboard"
     },
     "nav": {
@@ -721,6 +721,7 @@
       "memberInfo": "Member info",
       "joinedAt": "Joined at",
       "noRights": "No access rights",
+      "noAccess": "You do not have access to this page",
       "expired": "Expired",
       "invitations": "Invitations",
       "addMember": "Add member",
@@ -913,6 +914,8 @@
             "description": "Description",
             "houseId": "House ID",
             "roomId": "Room ID",
+            "deviceType": "Device type",
+            "deviceCatalog": "Device",
             "deviceTypeId": "Device type ID",
             "deviceId": "Device ID",
             "lastSeen": "Last seen",
@@ -925,6 +928,11 @@
             "copy": "Copy",
             "copied": "Copied"
           },
+          "nameRequired": "Enter a device name",
+          "editTitle": "Edit device",
+          "selectDeviceType": "Select device type",
+          "selectDeviceCatalog": "Select device",
+          "selectDeviceTypeFirst": "Select a device type first",
           "history": {
             "title": "Telemetry History",
             "loading": "Loading history…",

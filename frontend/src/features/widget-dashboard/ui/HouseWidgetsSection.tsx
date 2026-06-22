@@ -1,7 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useCurrentUserId, useTranslation } from '@/hooks';
+import {
+  useCurrentUserId,
+  useHouseFunctionAccess,
+  useHousePermissions,
+  useTranslation,
+} from '@/hooks';
+import { useAccessControlStore } from '@/store/access-control-store';
 import type { PhysicalDeviceResponse, ScenarioResponse, ZigbeeDeviceListItem } from '@/types/api';
 import type { WidgetDashboard as WidgetDashboardType } from '@/features/widget-dashboard/types/widget.types';
 import {
@@ -25,6 +31,14 @@ export function HouseWidgetsSection({
 }) {
   const { t } = useTranslation();
   const currentUserId = useCurrentUserId();
+  const house = useAccessControlStore((s) => s.house);
+  const perms = useHousePermissions();
+  const { canControlPower, canControlTargetTemp } = useHouseFunctionAccess({
+    ownerId: house?.ownerId,
+  });
+
+  const canEditDashboard = perms.isOwner || perms.canManageDevices;
+  const canTriggerScenarios = perms.isOwner || perms.canManageAutomations;
 
   const autoLoaded = useRef(false);
   const [dashboard, setDashboard] = useState<WidgetDashboardType | null>(null);
@@ -33,6 +47,17 @@ export function HouseWidgetsSection({
   const [scenarios, setScenarios] = useState<ScenarioResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const canControlDevice = useCallback(
+    (physicalDeviceId: string, kind: 'power' | 'target_temp' | 'any') => {
+      const device = devices.find((d) => d.id === physicalDeviceId);
+      if (!device) return false;
+      if (kind === 'target_temp') return canControlTargetTemp(device);
+      if (kind === 'power') return canControlPower(device);
+      return canControlPower(device) || canControlTargetTemp(device);
+    },
+    [devices, canControlPower, canControlTargetTemp],
+  );
 
   const loadWidgets = useCallback(async () => {
     if (!houseId || !currentUserId) return;
@@ -109,6 +134,9 @@ export function HouseWidgetsSection({
             devices={devices}
             zigbeeDevices={zigbeeDevices}
             scenarios={scenarios}
+            canEditDashboard={canEditDashboard}
+            canTriggerScenarios={canTriggerScenarios}
+            canControlDevice={canControlDevice}
           />
         </div>
       ) : (

@@ -20,6 +20,12 @@ type Breadcrumb = {
 };
 
 const HOUSE_SECTION_KEYS = ['rooms', 'members', 'roles', 'devices', 'scenarios'] as const;
+const MOBILE_BREADCRUMB_MAX_LENGTH = 24;
+
+function truncateBreadcrumbLabel(label: string, maxLength: number): string {
+  if (label.length <= maxLength) return label;
+  return `${label.slice(0, maxLength - 1)}…`;
+}
 
 function sectionLabel(
   t: DashboardHeaderProps['t'],
@@ -42,7 +48,7 @@ export function DashboardHeader({
 }: DashboardHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { toggleSidebar } = useSidebar();
+  const { toggleSidebar, isMobile } = useSidebar();
 
   const getBreadcrumbs = (): Breadcrumb[] => {
     const breadcrumbs: Breadcrumb[] = [
@@ -117,12 +123,15 @@ export function DashboardHeader({
   };
 
   const breadcrumbs = getBreadcrumbs();
-  const visibleBreadcrumbs =
-    breadcrumbs.length > 2 ? breadcrumbs.slice(-2) : breadcrumbs;
+  const visibleBreadcrumbs = isMobile
+    ? breadcrumbs.slice(-1)
+    : breadcrumbs.length > 2
+      ? breadcrumbs.slice(-2)
+      : breadcrumbs;
 
   return (
-    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between border-b border-border bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:px-6">
-      <div className="flex items-center gap-4">
+    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:gap-4 md:px-6">
+      <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-4 md:flex-none">
         <Button
           isIconOnly
           size="sm"
@@ -147,9 +156,9 @@ export function DashboardHeader({
           </Button>
         )}
 
-        <nav aria-label="Breadcrumbs">
-          <ol className="flex items-center text-sm">
-            {breadcrumbs.length > 2 && (
+        <nav aria-label="Breadcrumbs" className="min-w-0">
+          <ol className="flex min-w-0 items-center text-sm">
+            {breadcrumbs.length > 2 && !isMobile && (
               <li className="flex items-center">
                 <span className="text-muted-foreground">...</span>
                 <span className="mx-2 text-muted-foreground/60">/</span>
@@ -157,23 +166,31 @@ export function DashboardHeader({
             )}
             {visibleBreadcrumbs.map((crumb, index, array) => {
               const isLast = index === array.length - 1;
+              const displayLabel = isMobile
+                ? truncateBreadcrumbLabel(
+                    crumb.label,
+                    MOBILE_BREADCRUMB_MAX_LENGTH,
+                  )
+                : crumb.label;
               const content =
                 crumb.href && !isLast ? (
                   <Link
                     href={crumb.href}
-                    className="text-muted-foreground transition-colors hover:text-foreground"
+                    className="truncate text-muted-foreground transition-colors hover:text-foreground"
+                    title={crumb.label}
                   >
-                    {crumb.label}
+                    {displayLabel}
                   </Link>
                 ) : (
                   <span
                     className={
                       isLast
-                        ? 'font-semibold text-foreground'
-                        : 'text-muted-foreground'
+                        ? 'block truncate font-semibold text-foreground'
+                        : 'truncate text-muted-foreground'
                     }
+                    title={crumb.label}
                   >
-                    {crumb.label}
+                    {displayLabel}
                   </span>
                 );
 
@@ -192,9 +209,11 @@ export function DashboardHeader({
           </ol>
         </nav>
       </div>
-      <div className="flex items-center gap-2">
-        <LanguageSwitcher />
-        <ThemeSwitcher />
+      <div className="flex shrink-0 items-center gap-2">
+        <div className="hidden items-center gap-2 md:flex">
+          <LanguageSwitcher />
+          <ThemeSwitcher />
+        </div>
         <AccountBlock />
       </div>
     </header>

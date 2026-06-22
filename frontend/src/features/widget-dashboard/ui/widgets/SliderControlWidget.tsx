@@ -9,6 +9,7 @@ import { readPayloadValue } from '../../lib/useWidgetTelemetry';
 interface Props {
   config: SliderControlConfig;
   state?: ZigbeeStateWire;
+  readOnly?: boolean;
   onCommand: (
     device: { deviceIeeeAddr?: string; physicalDeviceId?: string },
     payload: Record<string, unknown>,
@@ -33,7 +34,7 @@ const ACCENT_THUMB: Record<SliderControlConfig['accent'], string> = {
   amber: '[--accent:#f59e0b]',
 };
 
-export function SliderControlWidget({ config, state, onCommand }: Props) {
+export function SliderControlWidget({ config, state, readOnly = false, onCommand }: Props) {
   const liveRaw = state ? readPayloadValue(state, config.payloadKey) : null;
   const liveNum =
     typeof liveRaw === 'number'
@@ -70,7 +71,7 @@ export function SliderControlWidget({ config, state, onCommand }: Props) {
   }
 
   async function send(v: number) {
-    if (!config.physicalDeviceId && !config.ieeeAddr) return;
+    if (readOnly || (!config.physicalDeviceId && !config.ieeeAddr)) return;
     setBusy(true);
     try {
       const key = config.commandKey ?? config.payloadKey;
@@ -121,7 +122,7 @@ export function SliderControlWidget({ config, state, onCommand }: Props) {
           step={config.step ?? 1}
           value={value}
           onChange={handleChange}
-          disabled={!config.physicalDeviceId && !config.ieeeAddr}
+          disabled={readOnly || (!config.physicalDeviceId && !config.ieeeAddr)}
           aria-label={config.label}
           className={`absolute inset-0 w-full h-2 appearance-none bg-transparent cursor-pointer ${ACCENT_THUMB[config.accent]}
             [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4

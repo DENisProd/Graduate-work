@@ -3,7 +3,8 @@
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslation } from '@/hooks';
-import type { HousePolicyResponse, HouseRoleResponse } from '@/types/api';
+import type { AccessRightResponse, HousePolicyResponse, HouseRoleResponse } from '@/types/api';
+import { formatAccessRightLabel } from '../../../../lib/access-right-labels';
 
 import { RoleMembersTable } from './RoleMembersTable';
 
@@ -17,6 +18,8 @@ interface Props {
   roleMembers: import('@/types/api').RoleMemberResponse[];
   relatedPolicies: HousePolicyResponse[];
   relatedResources: RelatedResource[];
+  roleAccessRights: AccessRightResponse[];
+  roleAccessRightsLoading: boolean;
 }
 
 export function RoleDetailsPanel({
@@ -27,6 +30,8 @@ export function RoleDetailsPanel({
   roleMembers,
   relatedPolicies,
   relatedResources,
+  roleAccessRights,
+  roleAccessRightsLoading,
 }: Props) {
   const { t } = useTranslation();
 
@@ -57,9 +62,23 @@ export function RoleDetailsPanel({
               </Badge>
             ))}
           </div>
-        ) : (
+        ) : null}
+        {roleAccessRightsLoading ? (
+          <div className="mt-2 space-y-2">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-4/5" />
+          </div>
+        ) : roleAccessRights.length > 0 ? (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {roleAccessRights.map((right) => (
+              <Badge key={right.id} variant="outline">
+                {formatAccessRightLabel(right)}
+              </Badge>
+            ))}
+          </div>
+        ) : !selectedRole.permissions?.length ? (
           <p className="mt-2 text-xs text-muted-foreground">{t('admin.noData')}</p>
-        )}
+        ) : null}
       </div>
 
       <div className="mt-4 border-t border-border pt-3">

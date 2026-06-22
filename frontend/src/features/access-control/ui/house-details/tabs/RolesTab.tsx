@@ -24,6 +24,7 @@ import { useTranslation } from '@/hooks';
 import { useToast } from '@/components/shared';
 import { ApiError, houseMembersApi, houseRolesApi, housesApi } from '@/lib/api-client';
 import type {
+  AccessRightResponse,
   CreatePolicyRequestDto,
   CreateResourceRequestDto,
   HousePolicyResponse,
@@ -31,6 +32,7 @@ import type {
   HouseRoleResponse,
   RoleMemberResponse,
 } from '@/types/api';
+import { fetchRbacAccessRightsByRole } from '@/lib/rbac-access-rights';
 import { CreateRoleModal } from '../../modals/CreateRoleModal';
 import { EditRoleModal } from '../../modals/EditRoleModal';
 import { flattenResources, type TreeNodeWithMeta } from './roles/roles-helpers';
@@ -50,6 +52,7 @@ const RESOURCE_TYPES = [
   'ROOM',
   'DEVICE',
   'DEVICE_FUNCTION',
+  'PAGE',
   'SCENE',
   'GROUP',
   'AUTOMATION',
@@ -91,6 +94,7 @@ const RESOURCE_TYPE_LABELS: Record<string, string> = {
   ROOM: 'Комната',
   DEVICE: 'Устройство',
   DEVICE_FUNCTION: 'Функция устройства',
+  PAGE: 'Страница',
   SCENE: 'Сцена',
   GROUP: 'Группа',
   AUTOMATION: 'Автоматизация',
@@ -100,6 +104,7 @@ const RESOURCE_TYPE_HINTS: Record<CreatableResourceType, string> = {
   ROOM: 'Комната или зона — например, «Кухня» или «Спальня»',
   DEVICE: 'Конкретное устройство — лампа, розетка, камера и т.д.',
   DEVICE_FUNCTION: 'Отдельная возможность устройства — яркость, цвет, режим',
+  PAGE: 'Раздел интерфейса дома — устройства, сценарии, настройки',
   SCENE: 'Готовый режим — «Вечер», «Кино», «Уборка»',
   GROUP: 'Несколько устройств, которыми можно управлять вместе',
   AUTOMATION: 'Правило «если…, то…» — например, включить свет по датчику',
@@ -109,6 +114,7 @@ const PARENT_SELECTOR_HINTS: Record<CreatableResourceType, string> = {
   ROOM: 'Комната добавляется в структуру дома',
   DEVICE: 'Укажите комнату, где находится устройство',
   DEVICE_FUNCTION: 'Выберите устройство, к которому относится функция',
+  PAGE: 'Страница привязывается к корню дома',
   SCENE: 'Сцену можно привязать ко всему дому или к комнате',
   GROUP: 'Группу можно создать для дома или для одной комнаты',
   AUTOMATION: 'Автоматизацию можно привязать к дому или к комнате',
@@ -119,6 +125,7 @@ const VALID_PARENT_TYPES: Record<CreateResourceRequestDto['type'], string[]> = {
   ROOM: ['HOUSE'],
   DEVICE: ['ROOM'],
   DEVICE_FUNCTION: ['DEVICE'],
+  PAGE: ['HOUSE'],
   SCENE: ['HOUSE', 'ROOM'],
   GROUP: ['HOUSE', 'ROOM'],
   AUTOMATION: ['HOUSE', 'ROOM'],
@@ -140,6 +147,8 @@ export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabPr
   const [selectedRole, setSelectedRole] = useState<HouseRoleResponse | null>(null);
   const [roleMembers, setRoleMembers] = useState<RoleMemberResponse[]>([]);
   const [roleMembersLoading, setRoleMembersLoading] = useState(false);
+  const [roleAccessRights, setRoleAccessRights] = useState<AccessRightResponse[]>([]);
+  const [roleAccessRightsLoading, setRoleAccessRightsLoading] = useState(false);
   const [policies, setPolicies] = useState<HousePolicyResponse[]>([]);
   const [policiesLoading, setPoliciesLoading] = useState(false);
   const [resourcesTree, setResourcesTree] = useState<TreeNodeWithMeta[]>([]);
@@ -272,6 +281,29 @@ export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabPr
     void loadRoleMembers(roleId, controller.signal);
     return () => controller.abort();
   }, [selectedRole, loadRoleMembers]);
+
+  useEffect(() => {
+    const roleId = selectedRole?.id;
+    if (!roleId) {
+      setRoleAccessRights([]);
+      return;
+    }
+    const controller = new AbortController();
+    setRoleAccessRightsLoading(true);
+    void fetchRbacAccessRightsByRole(roleId)
+      .then((data) => {
+        if (!controller.signal.aborted) {
+          setRoleAccessRights(Array.isArray(data) ? data : []);
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setRoleAccessRights([]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setRoleAccessRightsLoading(false);
+      });
+    return () => controller.abort();
+  }, [selectedRole?.id]);
 
   const loadHouseAbacContext = useCallback(
     async (targetHouseId: string, signal?: AbortSignal) => {
@@ -526,6 +558,8 @@ export function RolesTab({ houseId, activeTab, canEditRoles = true }: RolesTabPr
                 roleMembers={roleMembers}
                 relatedPolicies={relatedPolicies}
                 relatedResources={relatedResources}
+                roleAccessRights={roleAccessRights}
+                roleAccessRightsLoading={roleAccessRightsLoading}
               />
             )}
           </div>

@@ -79,6 +79,7 @@ export function ScenarioEditor(props: {
   houseId: string;
   scenarioId?: string;
   returnHref?: string;
+  readOnly?: boolean;
   initialScenario?: {
     id: string;
     name: string;
@@ -88,7 +89,7 @@ export function ScenarioEditor(props: {
     definition?: ScenarioDefinitionV1;
   };
 }) {
-  const { mode, houseId, scenarioId, initialScenario } = props;
+  const { mode, houseId, scenarioId, initialScenario, readOnly = false } = props;
   const returnHref =
     props.returnHref ?? `/admin/access-control/houses/${encodeURIComponent(houseId)}`;
   const { t, locale } = useTranslation();
@@ -362,7 +363,9 @@ export function ScenarioEditor(props: {
             <Pencil className="size-4 text-muted-foreground" />
             {mode === 'create'
               ? t('admin.accessControl.scenarioEditor.titleCreate')
-              : t('admin.accessControl.scenarioEditor.titleEdit')}
+              : readOnly
+                ? (locale === 'ru' ? 'Просмотр сценария' : 'View scenario')
+                : t('admin.accessControl.scenarioEditor.titleEdit')}
           </h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -386,7 +389,7 @@ export function ScenarioEditor(props: {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="form">
+        <TabsContent value="form" className={readOnly ? 'pointer-events-none opacity-90' : undefined}>
       {validationIssues.length > 0 && (
         <Card>
           <CardHeader>
@@ -608,24 +611,28 @@ export function ScenarioEditor(props: {
                 : t('admin.accessControl.scenarioEditor.allSaved')}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {mode === 'edit' && (
+            {!readOnly && mode === 'edit' && (
               <Button variant="destructive" disabled={deleting || saving || loading} onClick={remove}>
                 <Trash2 className="mr-2 size-4" />
                 {deleting ? t('admin.accessControl.scenarioEditor.deleting') : t('admin.accessControl.scenarioEditor.delete')}
               </Button>
             )}
             <Button variant="secondary" disabled={saving || deleting || loading} onClick={onBack}>
-              {t('common.cancel')}
+              {readOnly ? t('admin.accessControl.scenarioEditor.back') : t('common.cancel')}
             </Button>
-            <Button disabled={saving || deleting || loading} onClick={() => save()}>
-              <Save className="mr-2 size-4" />
-              {saving ? t('admin.accessControl.scenarioEditor.saving') : t('common.save')}
-            </Button>
-            {mode === 'create' && (
-              <Button disabled={saving || deleting || loading} onClick={() => save({ enableAfterSave: true })}>
-                <Play className="mr-2 size-4" />
-                {t('admin.accessControl.scenarioEditor.saveAndEnable')}
-              </Button>
+            {!readOnly && (
+              <>
+                <Button disabled={saving || deleting || loading} onClick={() => save()}>
+                  <Save className="mr-2 size-4" />
+                  {saving ? t('admin.accessControl.scenarioEditor.saving') : t('common.save')}
+                </Button>
+                {mode === 'create' && (
+                  <Button disabled={saving || deleting || loading} onClick={() => save({ enableAfterSave: true })}>
+                    <Play className="mr-2 size-4" />
+                    {t('admin.accessControl.scenarioEditor.saveAndEnable')}
+                  </Button>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -633,19 +640,21 @@ export function ScenarioEditor(props: {
         </TabsContent>
 
         <TabsContent value="graph">
-          <div className="flex items-center justify-end gap-2 pb-2">
-            <Button variant="secondary" disabled={saving || deleting || loading} onClick={() => saveFromGraph()}>
-              <Save className="mr-2 size-4" />
-              {t('common.save')}
-            </Button>
-            {mode === 'create' && (
-              <Button disabled={saving || deleting || loading} onClick={() => saveFromGraph({ enableAfterSave: true })}>
-                <Play className="mr-2 size-4" />
-                {t('admin.accessControl.scenarioEditor.saveAndEnable')}
+          {!readOnly && (
+            <div className="flex items-center justify-end gap-2 pb-2">
+              <Button variant="secondary" disabled={saving || deleting || loading} onClick={() => saveFromGraph()}>
+                <Save className="mr-2 size-4" />
+                {t('common.save')}
               </Button>
-            )}
-          </div>
-          <div className="h-[calc(100vh-16rem)]">
+              {mode === 'create' && (
+                <Button disabled={saving || deleting || loading} onClick={() => saveFromGraph({ enableAfterSave: true })}>
+                  <Play className="mr-2 size-4" />
+                  {t('admin.accessControl.scenarioEditor.saveAndEnable')}
+                </Button>
+              )}
+            </div>
+          )}
+          <div className={readOnly ? 'pointer-events-none opacity-90 h-[calc(100vh-16rem)]' : 'h-[calc(100vh-16rem)]'}>
             <ScenarioPlannerWidget houseId={houseId} />
           </div>
         </TabsContent>

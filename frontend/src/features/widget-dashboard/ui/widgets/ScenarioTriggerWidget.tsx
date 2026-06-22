@@ -8,6 +8,7 @@ import { scenariosApi } from '@/lib/api/scenario-service';
 interface Props {
   config: ScenarioTriggerConfig;
   scenario?: ScenarioResponse;
+  readOnly?: boolean;
 }
 
 const STYLE_MAP = {
@@ -16,7 +17,7 @@ const STYLE_MAP = {
   danger: 'bg-red-600 hover:bg-red-700 text-white',
 };
 
-export function ScenarioTriggerWidget({ config, scenario }: Props) {
+export function ScenarioTriggerWidget({ config, scenario, readOnly = false }: Props) {
   const [loading, setLoading] = useState(false);
   const [lastResult, setLastResult] = useState<'ok' | 'error' | null>(null);
 
@@ -36,6 +37,15 @@ export function ScenarioTriggerWidget({ config, scenario }: Props) {
       setLoading(false);
       setTimeout(() => setLastResult(null), 3000);
     }
+  }
+
+  if (readOnly) {
+    return (
+      <div className="flex flex-col h-full items-center justify-center gap-2 px-3 text-center">
+        <p className="text-sm font-medium text-foreground truncate w-full">{scenarioName}</p>
+        <p className="text-xs text-muted-foreground">Только просмотр</p>
+      </div>
+    );
   }
 
   return (

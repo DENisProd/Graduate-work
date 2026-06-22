@@ -14,10 +14,11 @@ import type {
   HouseRoleResponse,
 } from '@/types/api';
 import { useTranslation } from '@/hooks';
-import { accessServiceRequest } from '@/lib/access-service-http';
-import { houseRolesApi } from '@/lib/api-client';
+import { houseRolesApi, houseMembersApi } from '@/lib/api-client';
+import { fetchRbacAccessRightsByUser } from '@/lib/rbac-access-rights';
 import { useAccessControlStore } from '@/store/access-control-store';
 import { toArray, getAccessTypeLabel, formatDate } from '../../lib/utils';
+import { formatAccessRightLabel } from '../../lib/access-right-labels';
 import { AccessRightFormModal } from './AccessRightFormModal';
 
 interface MemberDetailModalProps {
@@ -98,9 +99,7 @@ export function MemberDetailModal({
   const loadRights = useCallback(() => {
     if (!member?.userId) return;
     setLoading(true);
-    void accessServiceRequest<AccessRightResponse[]>(
-      `/api/v1/access-rights/user/${encodeURIComponent(member.userId)}`
-    )
+    void fetchRbacAccessRightsByUser(member.userId)
       .then((data) => setRights(toArray<AccessRightResponse>(data)))
       .catch(() => setRights([]))
       .finally(() => setLoading(false));
@@ -148,9 +147,7 @@ export function MemberDetailModal({
     const effectiveHouseId = member?.houseId ?? (currentHouseId != null ? String(currentHouseId) : undefined);
     if (!effectiveHouseId || !member?.id) return;
     try {
-      const data = await accessServiceRequest<HouseMemberResponse[]>(
-        `/api/v1/house-members/house/${encodeURIComponent(effectiveHouseId)}?page=0&size=200`
-      );
+      const data = await houseMembersApi.getByHouseId(effectiveHouseId, { page: 0, size: 200 });
       const members = toArray<HouseMemberResponse>(data);
       const updated = members.find((m) => m.id === member.id);
       if (updated) {
@@ -212,6 +209,13 @@ export function MemberDetailModal({
       return;
     }
   };
+
+  const roleCapabilityLabels = Array.from(
+    new Set([
+      ...memberRoles.flatMap((role) => role.permissions.map(getPermissionLabel)),
+      ...rights.map(formatAccessRightLabel),
+    ]),
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -281,13 +285,13 @@ export function MemberDetailModal({
                     </div>
                   )}
                 </div>
-                {memberRoles.some((role) => role.permissions.length > 0) && (
+                {roleCapabilityLabels.length > 0 && (
                   <div className="space-y-2">
                     <div className="text-sm font-medium text-foreground">Что можно делать</div>
                     <div className="flex flex-wrap gap-2">
-                      {Array.from(new Set(memberRoles.flatMap((role) => role.permissions))).map((permission) => (
-                        <Badge key={permission} variant="outline" className="text-xs">
-                          {getPermissionLabel(permission)}
+                      {roleCapabilityLabels.map((label) => (
+                        <Badge key={label} variant="outline" className="text-xs">
+                          {label}
                         </Badge>
                       ))}
                     </div>
@@ -303,16 +307,17 @@ export function MemberDetailModal({
               <div className="max-h-96 space-y-2 overflow-y-auto rounded-lg border border-border bg-muted/50 p-4">
                 {rights.length === 0 && !loading && (
                   <p className="text-sm text-muted-foreground">
-                    Для этого участника нет отдельных правил. Доступ определяется ролями.
+                    Для этого участника нет правил доступа.
                   </p>
                 )}
                 {rights.map((right) => (
                   <div key={right.id} className="rounded-md bg-background p-3">
                     <div className="text-sm font-medium text-foreground">
-                      {getAccessTypeLabel(t, right.accessRightType)} · {getResourceLabel(right)}
+                      {formatAccessRightLabel(right)}
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground">
-                      ID ресурса: {right.resourceId}
+                      {getGrantedByLabel(right)}
+                      {right.roleId ? '' : ` · ${getAccessTypeLabel(t, right.accessRightType)}`}
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground">
                       {t('admin.accessControl.validFrom')}: {formatDate(right.createdAt)}

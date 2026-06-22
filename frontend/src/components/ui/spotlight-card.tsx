@@ -39,7 +39,7 @@ const GlowCard: React.FC<GlowCardProps> = ({
   useEffect(() => {
     const syncPointer = (e: PointerEvent) => {
       const { clientX: x, clientY: y } = e;
-      
+
       if (cardRef.current) {
         cardRef.current.style.setProperty('--x', x.toFixed(2));
         cardRef.current.style.setProperty('--xp', (x / window.innerWidth).toFixed(2));
@@ -47,6 +47,11 @@ const GlowCard: React.FC<GlowCardProps> = ({
         cardRef.current.style.setProperty('--yp', (y / window.innerHeight).toFixed(2));
       }
     };
+
+    const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
+    if (!finePointer.matches) {
+      return;
+    }
 
     document.addEventListener('pointermove', syncPointer);
     return () => document.removeEventListener('pointermove', syncPointer);
@@ -86,11 +91,9 @@ const GlowCard: React.FC<GlowCardProps> = ({
       backgroundColor: 'var(--backdrop, transparent)',
       backgroundSize: 'calc(100% + (2 * var(--border-size))) calc(100% + (2 * var(--border-size)))',
       backgroundPosition: '50% 50%',
-      backgroundAttachment: 'fixed',
       border: 'var(--border-size) solid var(--backup-border)',
       borderRadius: 'calc(var(--radius) * 1px)',
       position: 'relative' as const,
-      touchAction: 'none' as const,
     };
 
     if (width !== undefined) {
@@ -112,13 +115,20 @@ const GlowCard: React.FC<GlowCardProps> = ({
       inset: calc(var(--border-size) * -1);
       border: var(--border-size) solid transparent;
       border-radius: calc(var(--radius) * 1px);
-      background-attachment: fixed;
       background-size: calc(100% + (2 * var(--border-size))) calc(100% + (2 * var(--border-size)));
       background-repeat: no-repeat;
       background-position: 50% 50%;
       mask: linear-gradient(transparent, transparent), linear-gradient(white, white);
       mask-clip: padding-box, border-box;
       mask-composite: intersect;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      [data-glow],
+      [data-glow]::before,
+      [data-glow]::after {
+        background-attachment: fixed;
+      }
     }
     
     [data-glow]::before {

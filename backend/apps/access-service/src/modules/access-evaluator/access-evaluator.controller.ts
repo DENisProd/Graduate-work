@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { UserId } from '../common/decorators/user-id.decorator';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AccessEvaluatorService } from './access-evaluator.service';
@@ -32,6 +32,25 @@ export class AccessEvaluatorController {
   @ApiOkResponse({ type: DeviceAccessCheckResponseDto })
   async checkByDevice(@Body() dto: AccessCheckByDeviceDto, @UserId() userId: string): Promise<DeviceAccessCheckResponseDto> {
     return this.accessEvaluatorService.checkByDeviceFunction({ ...dto, userId });
+  }
+
+  @Get('houses/:houseId/page-access')
+  @ApiOperation({
+    summary: 'Доступ текущего пользователя к страницам дома',
+    description: 'Для каждой PAGE-ресурса (slug) возвращает флаги read/write по цепочке RBAC/ABAC.',
+  })
+  async getPageAccess(@Param('houseId') houseId: string, @UserId() userId: string) {
+    return this.accessEvaluatorService.getPageAccess(houseId, userId);
+  }
+
+  @Get('houses/:houseId/function-access')
+  @ApiOperation({
+    summary: 'Доступ текущего пользователя к функциям устройств дома',
+    description:
+      'Ключ — externalId функции (например fn:demo-corridor-light:power). Значение — флаги read/write.',
+  })
+  async getFunctionAccess(@Param('houseId') houseId: string, @UserId() userId: string) {
+    return this.accessEvaluatorService.getFunctionAccess(houseId, userId);
   }
 }
 

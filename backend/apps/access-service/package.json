@@ -12,7 +12,11 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:push": "prisma db push",
     "prisma:studio": "prisma studio",
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "ts-node prisma/seed.ts",
+    "seed:demo": "ts-node prisma/seed-demo-access.ts",
+    "seed:house": "ts-node prisma/seed-house-access.ts",
+    "backfill:pages": "ts-node prisma/backfill-house-pages.ts",
+    "sync:all": "bash ../../scripts/sync-access-demo.sh"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

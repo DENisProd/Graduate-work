@@ -202,6 +202,12 @@ export interface AccessRightResponse {
   parameters?: Record<string, unknown>;
   expiresAt?: string;
   createdAt: string;
+  resource?: {
+    type?: string;
+    depth?: number;
+    name?: string;
+    externalId?: string;
+  };
 }
 
 export interface AccessStructureResponse {
@@ -287,6 +293,7 @@ export interface HouseMemberRoleBriefDto {
   priority: number;
   isSystem: boolean;
   permissions: string[];
+  accessRightsCount?: number;
   assignedAt: string;
 }
 
@@ -337,7 +344,7 @@ export interface HousePolicyResponse {
 }
 
 export interface CreateResourceRequestDto {
-  type: 'HOUSE' | 'ROOM' | 'DEVICE' | 'DEVICE_FUNCTION' | 'SCENE' | 'GROUP' | 'AUTOMATION';
+  type: 'HOUSE' | 'ROOM' | 'DEVICE' | 'DEVICE_FUNCTION' | 'PAGE' | 'SCENE' | 'GROUP' | 'AUTOMATION';
   parentId: string;
   name?: string;
   externalId?: string;

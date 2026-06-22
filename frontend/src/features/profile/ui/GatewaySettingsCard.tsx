@@ -32,19 +32,6 @@ export function GatewaySettingsCard() {
             {env.GATEWAY_URL}
           </p>
         </div>
-        <ul className="space-y-1 text-sm text-muted-foreground">
-          {GATEWAY_ROUTES.map(({ path, labelKey }) => (
-            <li key={path}>
-              <span className="font-mono text-xs text-foreground">
-                {env.GATEWAY_URL}
-                {path}
-              </span>
-              {' — '}
-              {t(labelKey)}
-            </li>
-          ))}
-        </ul>
-        <p className="text-xs text-muted-foreground">{t('settings.gateway.localBackendHint')}</p>
       </CardContent>
     </Card>
   );

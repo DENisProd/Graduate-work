@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { DeviceDetails } from '@/features/access-control/ui/device-details/DeviceDetails';
-import { useTranslation } from '@/hooks';
+import { useHousePermissions, useTranslation } from '@/hooks';
 
 function paramToString(value: string | string[] | undefined): string | null {
   if (value == null) return null;
@@ -15,6 +15,8 @@ export default function DashboardDeviceDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { t } = useTranslation();
+  const perms = useHousePermissions();
+  const canRefreshData = perms.isOwner || perms.canManageDevices;
 
   const houseId = useMemo(() => paramToString(params?.houseId), [params]);
   const deviceId = useMemo(() => paramToString(params?.deviceId), [params]);
@@ -31,6 +33,7 @@ export default function DashboardDeviceDetailsPage() {
         deviceId={deviceId}
         backHref={`/dashboard/houses/${encodeURIComponent(houseId)}/devices`}
         backLabel={t('common.back')}
+        canRefreshData={canRefreshData}
       />
     </div>
   );

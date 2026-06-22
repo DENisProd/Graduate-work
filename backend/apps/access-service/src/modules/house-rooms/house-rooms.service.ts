@@ -81,8 +81,29 @@ export class HouseRoomsService {
   }
 
   async delete(id: string): Promise<void> {
-    await this.findById(id);
-    await this.prisma.resource.delete({ where: { id } });
+    const room = await this.findById(id);
+
+    const descendants = await this.prisma.resource.findMany({
+      where: {
+        houseId: room.houseId,
+        path: { startsWith: `${room.path}/` },
+      },
+      orderBy: { depth: 'desc' },
+      select: { id: true },
+    });
+
+    const resourceIds = [...descendants.map((d) => d.id), id];
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const resourceId of resourceIds) {
+        await tx.accessRight.deleteMany({ where: { resourceId } });
+        await tx.effectivePermission.deleteMany({ where: { resourceId } });
+        await tx.accessPolicy.deleteMany({ where: { resourceId } });
+      }
+      for (const resourceId of resourceIds) {
+        await tx.resource.delete({ where: { id: resourceId } });
+      }
+    });
   }
 
   async existsInHouse(roomId: string, houseId: string): Promise<boolean> {

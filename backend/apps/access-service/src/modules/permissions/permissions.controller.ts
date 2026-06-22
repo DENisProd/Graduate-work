@@ -39,6 +39,8 @@ const toResponse = (r: {
   resource?: {
     type: ResourceType;
     depth: number;
+    name?: string | null;
+    externalId?: string | null;
   };
 }): AccessRightResponseDto => ({
   id: r.id,
@@ -49,7 +51,14 @@ const toResponse = (r: {
   parameters: (r.parameters as Record<string, unknown> | null) ?? undefined,
   expiresAt: r.expiresAt ? r.expiresAt.toISOString() : undefined,
   createdAt: r.createdAt.toISOString(),
-  resource: r.resource ? { type: r.resource.type, depth: r.resource.depth } : undefined,
+  resource: r.resource
+    ? {
+        type: r.resource.type,
+        depth: r.resource.depth,
+        name: r.resource.name ?? undefined,
+        externalId: r.resource.externalId ?? undefined,
+      }
+    : undefined,
 });
 
 @ApiTags('Access Rights')
@@ -89,10 +98,19 @@ export class PermissionsController {
     summary: 'Права доступа пользователя',
     description: 'Включая права, выданные через роли участника.',
   })
-  @ApiParam({ name: 'id', format: 'uuid', description: 'Внутренний ID пользователя в сервисе' })
+  @ApiParam({ name: 'id', format: 'uuid', description: 'External user ID (Keycloak UUID)' })
   @ApiOkResponse({ type: AccessRightResponseDto, isArray: true })
   async getByUser(@Param('id') id: string): Promise<AccessRightResponseDto[]> {
     const rights = await this.permissionsService.findByUserId(id);
+    return rights.map(toResponse);
+  }
+
+  @Get('access-rights/role/:roleId')
+  @ApiOperation({ summary: 'Права доступа, назначенные роли' })
+  @ApiParam({ name: 'roleId', format: 'uuid' })
+  @ApiOkResponse({ type: AccessRightResponseDto, isArray: true })
+  async getByRole(@Param('roleId') roleId: string): Promise<AccessRightResponseDto[]> {
+    const rights = await this.permissionsService.findByRoleId(roleId);
     return rights.map(toResponse);
   }
 

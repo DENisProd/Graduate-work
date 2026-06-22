@@ -10,13 +10,14 @@ import { modbusApi } from '@/lib/api-client';
 interface Props {
   config: ControlToggleConfig;
   state?: ZigbeeStateWire;
+  readOnly?: boolean;
   onCommand: (
     device: { deviceIeeeAddr?: string; physicalDeviceId?: string },
     payload: Record<string, unknown>,
   ) => Promise<ZigbeeCommandAck>;
 }
 
-export function ControlToggleWidget({ config, state, onCommand }: Props) {
+export function ControlToggleWidget({ config, state, readOnly = false, onCommand }: Props) {
   const isModbus = config.source === 'modbus';
   const [optimistic, setOptimistic] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
@@ -46,7 +47,7 @@ export function ControlToggleWidget({ config, state, onCommand }: Props) {
   const isOn = optimistic !== null ? optimistic : actualIsOn;
 
   async function handleToggle() {
-    if (loading) return;
+    if (readOnly || loading) return;
     const next = !isOn;
     setOptimistic(next);
     setLoading(true);
@@ -82,11 +83,11 @@ export function ControlToggleWidget({ config, state, onCommand }: Props) {
       )}
       <button
         onClick={handleToggle}
-        disabled={loading}
+        disabled={readOnly || loading}
         aria-label={isOn ? 'Выключить' : 'Включить'}
         className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 ${
-          isOn ? 'bg-blue-600' : 'bg-slate-200'
-        }`}
+          readOnly ? 'cursor-default' : ''
+        } ${isOn ? 'bg-blue-600' : 'bg-slate-200'}`}
       >
         <span
           className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform ${

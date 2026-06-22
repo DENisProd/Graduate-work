@@ -15,6 +15,8 @@ type AccessRightWithResource = AccessRight & {
   resource: {
     type: ResourceType;
     depth: number;
+    name: string | null;
+    externalId: string | null;
   };
 };
 
@@ -25,6 +27,8 @@ export class PermissionsService {
       select: {
         type: true,
         depth: true,
+        name: true,
+        externalId: true,
       },
     },
   } as const;
@@ -148,6 +152,19 @@ export class PermissionsService {
       where: {
         resourceId,
         OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+      },
+      include: this.accessRightWithResourceInclude,
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async findByRoleId(roleId: string): Promise<AccessRightWithResource[]> {
+    await this.rolesService.findById(roleId);
+    const now = new Date();
+    return this.prisma.accessRight.findMany({
+      where: {
+        roleId,
+        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
       },
       include: this.accessRightWithResourceInclude,
       orderBy: { createdAt: 'desc' },

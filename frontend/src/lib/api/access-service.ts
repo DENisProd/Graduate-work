@@ -61,6 +61,16 @@ export const housesApi = {
   getResourcesTree: (id: number | string): Promise<HouseResourceTreeNode | HouseResourceTreeNode[]> =>
     accessApiCall(`/v1/houses/${id}/resources/tree`),
 
+  getPageAccess: (
+    id: number | string,
+  ): Promise<Record<string, { read: boolean; write: boolean }>> =>
+    accessApiCall(`/v1/houses/${id}/page-access`),
+
+  getFunctionAccess: (
+    id: number | string,
+  ): Promise<Record<string, { read: boolean; write: boolean }>> =>
+    accessApiCall(`/v1/houses/${id}/function-access`),
+
   getByOwner: (ownerId: string, params?: PageRequest): Promise<HouseResponse[] | PageResponse<HouseResponse>> =>
     accessApiCall(`/v1/houses/user/${ownerId}${buildPageQuery(params)}`),
 

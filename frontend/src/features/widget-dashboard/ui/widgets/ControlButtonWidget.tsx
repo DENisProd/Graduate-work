@@ -8,6 +8,7 @@ import { modbusApi } from '@/lib/api-client';
 
 interface Props {
   config: ControlButtonConfig;
+  readOnly?: boolean;
   onCommand: (
     device: { deviceIeeeAddr?: string; physicalDeviceId?: string },
     payload: Record<string, unknown>,
@@ -20,12 +21,12 @@ const STYLE_MAP = {
   ghost: 'bg-transparent border border-border hover:bg-accent text-foreground',
 };
 
-export function ControlButtonWidget({ config, onCommand }: Props) {
+export function ControlButtonWidget({ config, readOnly = false, onCommand }: Props) {
   const [loading, setLoading] = useState(false);
   const [lastResult, setLastResult] = useState<'ok' | 'error' | null>(null);
 
   async function handleClick() {
-    if (loading) return;
+    if (readOnly || loading) return;
     if (config.confirmRequired && !confirm(`Выполнить: ${config.label}?`)) return;
     setLoading(true);
     setLastResult(null);
@@ -57,7 +58,7 @@ export function ControlButtonWidget({ config, onCommand }: Props) {
     <div className="flex flex-col h-full items-center justify-center gap-2 px-2">
       <button
         onClick={handleClick}
-        disabled={loading}
+        disabled={readOnly || loading}
         className={`w-full py-2 px-4 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 ${STYLE_MAP[config.buttonStyle]}`}
       >
         {loading ? '...' : config.label}

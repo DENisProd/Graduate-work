@@ -9,6 +9,7 @@ import {
   ResourceType,
 } from '@prisma/client';
 import { SYSTEM_ROLE_NAMES, SYSTEM_ROLE_PRIORITIES, SYSTEM_ROLE_PERMISSIONS } from './constants';
+import { DEFAULT_READ_PAGE_SLUGS, HOUSE_PAGE_DEFINITIONS } from './house-pages.constants';
 
 function housesServiceRef() {
   const { HousesService } =
@@ -108,39 +109,35 @@ export class HouseRolesService {
     ] as const;
 
     for (const res of functionalResources) {
-      const existing = await this.prisma.resource.findFirst({
-        where: { houseId, type: res.type, parentId: root.id },
+      await this.ensureChildResource(root, {
+        houseId,
+        type: res.type,
+        name: res.name,
       });
-      if (!existing) {
-        const created = await this.prisma.resource.create({
-          data: { houseId, type: res.type, name: res.name, parentId: root.id, path: root.path, depth: 1 },
-        });
-        await this.prisma.resource.update({
-          where: { id: created.id },
-          data: { path: `${root.path}/${created.id}` },
-        });
+    }
+
+    for (const page of HOUSE_PAGE_DEFINITIONS) {
+      const pageResource = await this.ensureChildResource(root, {
+        houseId,
+        type: ResourceType.PAGE,
+        name: page.name,
+        externalId: page.slug,
+      });
+
+      for (const roleId of [ownerRoleId, adminRoleId]) {
+        await this.ensureRoleAccessRight(pageResource.id, roleId, AccessRightType.ALLOW);
+      }
+
+      if ((DEFAULT_READ_PAGE_SLUGS as readonly string[]).includes(page.slug)) {
+        await this.ensureRoleAccessRight(pageResource.id, defaultRoleId, AccessRightType.READ);
       }
     }
 
     for (const roleId of [ownerRoleId, adminRoleId]) {
-      const exists = await this.prisma.accessRight.findFirst({
-        where: { resourceId: root.id, roleId, accessRightType: AccessRightType.ALLOW },
-      });
-      if (!exists) {
-        await this.prisma.accessRight.create({
-          data: { resourceId: root.id, roleId, accessRightType: AccessRightType.ALLOW },
-        });
-      }
+      await this.ensureRoleAccessRight(root.id, roleId, AccessRightType.ALLOW);
     }
 
-    const defaultExists = await this.prisma.accessRight.findFirst({
-      where: { resourceId: root.id, roleId: defaultRoleId, accessRightType: AccessRightType.READ },
-    });
-    if (!defaultExists) {
-      await this.prisma.accessRight.create({
-        data: { resourceId: root.id, roleId: defaultRoleId, accessRightType: AccessRightType.READ },
-      });
-    }
+    await this.ensureRoleAccessRight(root.id, defaultRoleId, AccessRightType.READ);
 
     const ownerRight = await this.prisma.accessRight.findFirst({
       where: { resourceId: root.id, roleId: ownerRoleId, accessRightType: AccessRightType.ALLOW },
@@ -165,6 +162,58 @@ export class HouseRolesService {
           sourceType: PermissionSourceType.ROLE,
           sourceId: ownerRight.id,
         },
+      });
+    }
+  }
+
+  private async ensureChildResource(
+    parent: { id: string; path: string; depth: number },
+    data: {
+      houseId: string;
+      type: ResourceType;
+      name: string;
+      externalId?: string;
+    },
+  ) {
+    const existing = await this.prisma.resource.findFirst({
+      where: {
+        houseId: data.houseId,
+        type: data.type,
+        ...(data.externalId != null
+          ? { externalId: data.externalId }
+          : { parentId: parent.id, name: data.name }),
+      },
+    });
+    if (existing) return existing;
+
+    const created = await this.prisma.resource.create({
+      data: {
+        houseId: data.houseId,
+        type: data.type,
+        name: data.name,
+        externalId: data.externalId,
+        parentId: parent.id,
+        path: parent.path,
+        depth: parent.depth + 1,
+      },
+    });
+    return this.prisma.resource.update({
+      where: { id: created.id },
+      data: { path: `${parent.path}/${created.id}` },
+    });
+  }
+
+  private async ensureRoleAccessRight(
+    resourceId: string,
+    roleId: string,
+    accessRightType: AccessRightType,
+  ): Promise<void> {
+    const exists = await this.prisma.accessRight.findFirst({
+      where: { resourceId, roleId, accessRightType },
+    });
+    if (!exists) {
+      await this.prisma.accessRight.create({
+        data: { resourceId, roleId, accessRightType },
       });
     }
   }

@@ -7,6 +7,12 @@ export class AccessRightResourceDto {
 
   @ApiProperty()
   depth!: number;
+
+  @ApiPropertyOptional()
+  name?: string;
+
+  @ApiPropertyOptional()
+  externalId?: string;
 }
 
 export class AccessRightResponseDto {

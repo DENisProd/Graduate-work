@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { AccessRightType, EffectivePermission, AccessRight, AccessPolicy } from '@prisma/client';
+import { AccessRightType, EffectivePermission, AccessRight, AccessPolicy, ResourceType } from '@prisma/client';
 import { ResourcesService } from '../resources/resources.service';
 import { UsersService } from '../users/users.service';
 import { AccessCheckDto } from './dto/access-check.dto';
 import { AccessCheckByDeviceDto } from './dto/access-check-by-device.dto';
 import { HouseMembersService } from 'src/modules/house-members/house-members.service';
+import { HOUSE_PAGE_DEFINITIONS } from '../house-roles/house-pages.constants';
 
 type Decision = {
   allowed: boolean;
@@ -169,6 +170,79 @@ export class AccessEvaluatorService {
       action: dto.action,
     });
     return { allow: decision.allowed, deny: !decision.allowed };
+  }
+
+  async getPageAccess(
+    houseId: string,
+    userId: string,
+  ): Promise<Record<string, { read: boolean; write: boolean }>> {
+    const house = await this.prisma.house.findUnique({
+      where: { id: houseId },
+      include: { owner: { select: { externalUserId: true } } },
+    });
+    if (house?.owner?.externalUserId === userId) {
+      return Object.fromEntries(
+        HOUSE_PAGE_DEFINITIONS.map(({ slug }) => [slug, { read: true, write: true }]),
+      );
+    }
+
+    const pages = await this.prisma.resource.findMany({
+      where: { houseId, type: ResourceType.PAGE },
+    });
+    const bySlug = new Map(pages.map((p) => [p.externalId ?? '', p]));
+    const result: Record<string, { read: boolean; write: boolean }> = {};
+
+    for (const { slug } of HOUSE_PAGE_DEFINITIONS) {
+      const resource = bySlug.get(slug);
+      if (!resource) {
+        result[slug] = { read: false, write: false };
+        continue;
+      }
+      const [readDecision, writeDecision] = await Promise.all([
+        this.check({ userId, resourceId: resource.id, action: 'READ' }),
+        this.check({ userId, resourceId: resource.id, action: 'WRITE' }),
+      ]);
+      result[slug] = { read: readDecision.allowed, write: writeDecision.allowed };
+    }
+
+    return result;
+  }
+
+  async getFunctionAccess(
+    houseId: string,
+    userId: string,
+  ): Promise<Record<string, { read: boolean; write: boolean }>> {
+    const house = await this.prisma.house.findUnique({
+      where: { id: houseId },
+      include: { owner: { select: { externalUserId: true } } },
+    });
+    if (house?.owner?.externalUserId === userId) {
+      const all = await this.prisma.resource.findMany({
+        where: { houseId, type: ResourceType.DEVICE_FUNCTION },
+        select: { externalId: true },
+      });
+      return Object.fromEntries(
+        all
+          .filter((r) => r.externalId)
+          .map((r) => [r.externalId!, { read: true, write: true }]),
+      );
+    }
+
+    const functions = await this.prisma.resource.findMany({
+      where: { houseId, type: ResourceType.DEVICE_FUNCTION },
+    });
+    const result: Record<string, { read: boolean; write: boolean }> = {};
+
+    for (const resource of functions) {
+      const key = resource.externalId ?? resource.id;
+      const [readDecision, writeDecision] = await Promise.all([
+        this.check({ userId, resourceId: resource.id, action: 'READ' }),
+        this.check({ userId, resourceId: resource.id, action: 'WRITE' }),
+      ]);
+      result[key] = { read: readDecision.allowed, write: writeDecision.allowed };
+    }
+
+    return result;
   }
 }
 

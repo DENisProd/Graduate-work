@@ -4,7 +4,6 @@ import { useRef, type ComponentProps, type CSSProperties } from 'react';
 import Link from 'next/link';
 import {
   ArrowRight,
-  Bot,
   Briefcase,
   Building2,
   Cloud,
@@ -19,7 +18,6 @@ import {
   RefreshCw,
   Server,
   Shield,
-  Sparkles,
   Store,
   Thermometer,
   UserPlus,
@@ -45,13 +43,13 @@ type FeatureKey =
   | 'protocols'
   | 'multisite'
   | 'realtime'
-  | 'ai';
+  | 'catalog';
 
 type AudienceKey = 'home' | 'office' | 'retail' | 'warehouse';
 
 type ArchitectureKey = 'cloud' | 'edge' | 'client';
 
-type UseCaseKey = 'onboard' | 'floorplan' | 'offline' | 'sync' | 'ai' | 'multisite';
+type UseCaseKey = 'onboard' | 'floorplan' | 'offline' | 'sync' | 'rights' | 'multisite';
 
 type ValuePropKey = 'scale' | 'integration' | 'security';
 
@@ -90,7 +88,7 @@ const featureConfig: {
   { key: 'protocols', icon: Radio, glow: 'green', accent: 'teal' },
   { key: 'multisite', icon: Building2, glow: 'blue', accent: 'indigo' },
   { key: 'realtime', icon: Zap, glow: 'orange', accent: 'hearth' },
-  { key: 'ai', icon: Bot, glow: 'green', accent: 'teal' },
+  { key: 'catalog', icon: Layers, glow: 'green', accent: 'teal' },
 ];
 
 const audienceConfig: { key: AudienceKey; icon: LucideIcon }[] = [
@@ -115,8 +113,8 @@ const useCaseConfig: { key: UseCaseKey; icon: LucideIcon }[] = [
   { key: 'floorplan', icon: Map },
   { key: 'offline', icon: WifiOff },
   { key: 'sync', icon: RefreshCw },
-  { key: 'ai', icon: Sparkles },
-  { key: 'multisite', icon: Layers },
+  { key: 'rights', icon: Shield },
+  { key: 'multisite', icon: Building2 },
 ];
 
 const valuePropKeys: ValuePropKey[] = ['scale', 'integration', 'security'];

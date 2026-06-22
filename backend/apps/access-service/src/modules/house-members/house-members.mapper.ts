@@ -23,7 +23,10 @@ type MemberWithUserAndHouseMapper = {
   house: { id: string; name: string };
   roles: (HouseMemberRole & {
     assignedAt: Date;
-    role: HouseRole & { permissions: { permission: HousePermission }[] };
+    role: HouseRole & {
+      permissions: { permission: HousePermission }[];
+      _count: { accessRights: number };
+    };
   })[];
 };
 
@@ -31,7 +34,10 @@ const formatDate = (d: Date): string => new Date(d).toISOString().replace('T', '
 
 function toHouseMemberRoleBrief(
   mr: HouseMemberRole & {
-    role: HouseRole & { permissions: { permission: HousePermission }[] };
+    role: HouseRole & {
+      permissions: { permission: HousePermission }[];
+      _count: { accessRights: number };
+    };
   },
 ): HouseMemberRoleBriefDto {
   return {
@@ -41,6 +47,7 @@ function toHouseMemberRoleBrief(
     priority: mr.role.priority,
     isSystem: mr.role.isSystem,
     permissions: mr.role.permissions.map((p) => p.permission),
+    accessRightsCount: mr.role._count.accessRights,
     assignedAt: formatDate(mr.assignedAt),
   };
 }

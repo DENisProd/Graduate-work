@@ -38,6 +38,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { ThemeSwitcher, LanguageSwitcher } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { useUserStore } from '@/store/user-store';
 import DashboardNavigation, { type Route } from '@/components/sidebar-02/nav-main';
@@ -296,6 +297,21 @@ export function DashboardSidebar({
         />
       </SidebarContent>
 
+      {isMobile ? (
+        <>
+          <SidebarSeparator />
+          <div className="flex items-center justify-between px-3 py-3">
+            <span className="text-xs text-muted-foreground">
+              {t('settings.appearance')}
+            </span>
+            <div className="flex items-center gap-1">
+              <LanguageSwitcher />
+              <ThemeSwitcher />
+            </div>
+          </div>
+        </>
+      ) : null}
+
       <SidebarSeparator />
 
       <SidebarFooter className="px-2 py-3">
@@ -308,6 +324,7 @@ export function DashboardSidebar({
 interface HouseNavPermissions {
   canEditRoles: boolean;
   isOwner: boolean;
+  canReadPage?: (slug: import('@/lib/house-pages').HousePageSlug) => boolean;
 }
 
 export function buildDashboardRoutes(
@@ -381,43 +398,49 @@ export function buildDashboardRoutes(
     const hid = encodeURIComponent(selectedHouseId);
     const base = `/dashboard/houses/${hid}`;
     const sh = () => sameHousePath(pathname, selectedHouseId);
+    const pageVisible = (
+      slug: import('@/lib/house-pages').HousePageSlug,
+      extraAllow = false,
+    ) => {
+      if (extraAllow) return true;
+      if (permissions?.canReadPage) return permissions.canReadPage(slug);
+      return true;
+    };
 
-    routes.push(
-      {
+    if (pageVisible('overview')) {
+      routes.push({
         id: 'house-overview',
         title: t('dashboard.sections.overview'),
         link: base,
         icon: <LayoutGrid className="size-4" />,
         section: propertiesSection,
         isActive: sh() && /^\/dashboard\/houses\/[^/]+$/.test(pathname),
-      },
-      {
+      });
+    }
+
+    if (pageVisible('rooms')) {
+      routes.push({
         id: 'house-rooms',
         title: t('admin.accessControl.houseRooms'),
         link: `${base}/rooms`,
         icon: <DoorOpen className="size-4" />,
         section: propertiesSection,
         isActive: sh() && /\/rooms(?:\/|$)/.test(pathname),
-      },
-      // {
-      //   id: 'house-room-planner',
-      //   title: t('navigation.room_planner'),
-      //   link: `${base}/room-planner`,
-      //   icon: <Map className="size-4" />,
-      //   section: propertiesSection,
-      //   isActive: pathname.startsWith(`${base}/room-planner`),
-      // },
-      {
+      });
+    }
+
+    if (pageVisible('members')) {
+      routes.push({
         id: 'house-members',
         title: t('admin.accessControl.members'),
         link: `${base}/members`,
         icon: <Users className="size-4" />,
         section: propertiesSection,
         isActive: sh() && /\/members(?:\/|$)/.test(pathname),
-      },
-    );
+      });
+    }
 
-    if (!permissions || permissions.canEditRoles) {
+    if (pageVisible('roles', !permissions || permissions.canEditRoles)) {
       routes.push({
         id: 'house-roles',
         title: t('admin.accessControl.roles'),
@@ -428,26 +451,29 @@ export function buildDashboardRoutes(
       });
     }
 
-    routes.push(
-      {
+    if (pageVisible('devices')) {
+      routes.push({
         id: 'house-devices',
         title: t('admin.tabs.devices'),
         link: `${base}/devices`,
         icon: <Cpu className="size-4" />,
         section: propertiesSection,
         isActive: sh() && pathname.includes(`${base}/devices`),
-      },
-      {
+      });
+    }
+
+    if (pageVisible('scenarios')) {
+      routes.push({
         id: 'house-scenarios',
         title: t('admin.accessControl.scenarios'),
         link: `${base}/scenarios`,
         icon: <Workflow className="size-4" />,
         section: propertiesSection,
         isActive: sh() && /\/scenarios(?:\/|$)/.test(pathname),
-      },
-    );
+      });
+    }
 
-    if (!permissions || permissions.isOwner) {
+    if (pageVisible('settings', !permissions || permissions.isOwner)) {
       routes.push({
         id: 'house-settings',
         title: t('common.settings'),

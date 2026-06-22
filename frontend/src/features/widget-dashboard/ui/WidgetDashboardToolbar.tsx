@@ -5,6 +5,7 @@ interface Props {
   connected: boolean;
   dashboardName: string;
   saving: boolean;
+  canEdit?: boolean;
   onToggleEdit: () => void;
   onSave: () => void;
   onAddWidget: () => void;
@@ -15,10 +16,15 @@ export function WidgetDashboardToolbar({
   connected,
   dashboardName,
   saving,
+  canEdit = true,
   onToggleEdit,
   onSave,
   onAddWidget,
 }: Props) {
+  if (!canEdit) {
+    return null;
+  }
+
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 backdrop-blur-sm">
       <div className="flex items-center gap-3 min-w-0">

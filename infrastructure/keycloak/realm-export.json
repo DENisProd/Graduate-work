@@ -100,6 +100,38 @@
           "temporary": false
         }
       ]
+    },
+    {
+      "id": "a1111111-1111-4111-a111-111111111111",
+      "username": "guest",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Guest",
+      "lastName": "User",
+      "email": "guest@example.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "guest",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "b2222222-2222-4222-b222-222222222222",
+      "username": "user",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "User",
+      "lastName": "Demo",
+      "email": "user@example.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "user",
+          "temporary": false
+        }
+      ]
     }
   ]
 }

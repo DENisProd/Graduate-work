@@ -9,6 +9,12 @@ export async function fetchRbacAccessRightsByUser(userId: string): Promise<Acces
   );
 }
 
+export async function fetchRbacAccessRightsByRole(roleId: string): Promise<AccessRightResponse[]> {
+  return accessServiceRequest<AccessRightResponse[]>(
+    `/v1/access-rights/role/${encodeURIComponent(roleId)}`
+  );
+}
+
 export async function deleteRbacAccessRight(id: number | string): Promise<void> {
   return accessServiceRequest<void>(`/v1/access-rights/${encodeURIComponent(String(id))}`, {
     method: 'DELETE',

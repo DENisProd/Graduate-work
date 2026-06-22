@@ -14,6 +14,8 @@ export class HouseMemberRoleBriefDto {
     enum: ['INVITE_MEMBERS', 'EDIT_ROLES', 'MANAGE_DEVICES', 'MANAGE_AUTOMATIONS'],
   })
   permissions!: string[];
+  @ApiPropertyOptional({ example: 3, description: 'Число прав на ресурсы, назначенных роли' })
+  accessRightsCount?: number;
   @ApiProperty({ example: '2024-01-01 12:00:00' }) assignedAt!: string;
 }
 

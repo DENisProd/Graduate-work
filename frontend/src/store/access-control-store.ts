@@ -109,6 +109,7 @@ interface AccessControlActions {
   loadRights: () => Promise<void>;
 
   saveRoom: (data: HouseRoomRequest) => Promise<void>;
+  deleteRoom: (roomId: string) => Promise<void>;
   addMember: (userId: string) => Promise<void>;
   removeMember: (userId: string) => Promise<void>;
   createInvitation: (data: HouseInvitationRequest, inviterId: string) => Promise<HouseInvitationResponse>;
@@ -280,6 +281,19 @@ export const useAccessControlStore = create<AccessControlState & AccessControlAc
     await houseRoomsApi.create({ ...data, houseId: effectiveId });
     set({ status: 'success' });
     await loadRooms();
+  },
+
+  deleteRoom: async (roomId) => {
+    const { loadRooms } = get();
+    try {
+      await houseRoomsApi.delete(roomId);
+      set({ status: 'success' });
+      await loadRooms();
+    } catch (error) {
+      console.error(error);
+      set({ status: 'error' });
+      throw error;
+    }
   },
 
   addMember: async (userId) => {

@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useParams, useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { HouseDetailsModals } from '@/features/access-control';
+import { HousePageGuard } from '@/features/access-control/ui/HousePageGuard';
 import { HouseDetailsHeader } from '@/features/access-control/ui/house-details';
 import { useAccessControlStore, normalizeHouseDetailsTab } from '@/store/access-control-store';
 import { useCurrentUserId, useTranslation } from '@/hooks';
@@ -102,10 +103,9 @@ export function HouseDashboardLayout({ children }: { children: React.ReactNode }
             ownerId={house?.ownerId}
           />
         )}
-        {children}
+        <HousePageGuard>{children}</HousePageGuard>
       </div>
       <HouseDetailsModals />
     </>
   );
 }
-

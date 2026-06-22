@@ -22,6 +22,7 @@ interface DevicesListContentProps {
   detailsPathPrefix: string | null;
   onRetry: () => void;
   onDeviceRemoved?: (id: string) => void;
+  canControlDevice?: (device: ZigbeeDeviceListItem) => boolean;
 }
 
 export function DevicesListContent({
@@ -37,6 +38,7 @@ export function DevicesListContent({
   detailsPathPrefix,
   onRetry,
   onDeviceRemoved,
+  canControlDevice,
 }: DevicesListContentProps) {
   const { t } = useTranslation();
   const hasDevices = devices.length > 0;
@@ -122,6 +124,7 @@ export function DevicesListContent({
             live={getLiveState(device)}
             isSocketConnected={isSocketConnected}
             onRemoved={onDeviceRemoved}
+            canControl={canControlDevice ? canControlDevice(device) : true}
           />
         ))}
       </div>

@@ -39,12 +39,14 @@ export function DeviceListCard({
   live,
   isSocketConnected,
   onRemoved,
+  canControl = true,
 }: {
   device: ZigbeeDeviceListItem;
   detailsPathPrefix: string;
   live: ZigbeeStateWire | undefined;
   isSocketConnected: boolean;
   onRemoved?: (id: string) => void;
+  canControl?: boolean;
 }) {
   const router = useRouter();
   const { t, locale } = useTranslation();
@@ -258,7 +260,7 @@ export function DeviceListCard({
           isOffline && 'opacity-50'
         )}
       >
-        {hasToggle ? (
+        {hasToggle && canControl ? (
           <div
             className="flex items-center gap-2.5"
             onClick={(e) => e.stopPropagation()}
@@ -297,7 +299,7 @@ export function DeviceListCard({
         {showTelemetry ? (
           <DeviceTelemetryBlock live={live} socketConnected={isSocketConnected} />
         ) : null}
-        {isZigbeeDevice(device) ? (
+        {isZigbeeDevice(device) && canControl ? (
           <ZigbeeLightControls
             device={device}
             live={live}
