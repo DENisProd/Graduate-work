@@ -57,8 +57,23 @@ function buildPolicySummary(
   roles: HouseRoleResponse[],
   houseMembers: Array<{ id: string; name?: string }>,
   resourcePath?: string,
+  compactSubject = false,
 ): string {
   const target = resourcePath ? `«${resourcePath}»` : 'выбранному объекту';
+
+  if (compactSubject) {
+    switch (policy.effect) {
+      case 'DENY':
+        return `Запрещён доступ к ${target}`;
+      case 'READ':
+        return `Только просмотр ${target}`;
+      case 'WRITE':
+        return `Можно управлять ${target}, но не менять настройки`;
+      default:
+        return `Разрешён доступ к ${target}`;
+    }
+  }
+
   const subjectName = resolveSubjectName(policy, roles, houseMembers);
 
   let who: string;
@@ -93,6 +108,8 @@ interface PolicyListPanelProps {
   resourcesById: Map<string, { id: string; type: string; name?: string; path: string }>;
   loading?: boolean;
   emptyMessage?: string;
+  embedded?: boolean;
+  compactSubject?: boolean;
 }
 
 export function PolicyListPanel({
@@ -102,21 +119,28 @@ export function PolicyListPanel({
   resourcesById,
   loading,
   emptyMessage,
+  embedded = false,
+  compactSubject = false,
 }: PolicyListPanelProps) {
   if (loading) {
     return (
-      <div className="space-y-2 p-2">
-        <Skeleton className="h-16 w-full" />
-        <Skeleton className="h-16 w-full" />
-        <Skeleton className="h-16 w-5/6" />
+      <div className={embedded ? 'space-y-2' : 'space-y-2 p-2'}>
+        <Skeleton className={embedded ? 'h-12 w-full' : 'h-16 w-full'} />
+        <Skeleton className={embedded ? 'h-12 w-full' : 'h-16 w-full'} />
       </div>
     );
   }
 
   if (policies.length === 0) {
     return (
-      <div className="flex h-full min-h-[12rem] items-center justify-center p-4 text-center">
-        <p className="max-w-sm text-sm text-muted-foreground">
+      <div
+        className={
+          embedded
+            ? 'py-2'
+            : 'flex h-full min-h-[12rem] items-center justify-center p-4 text-center'
+        }
+      >
+        <p className={embedded ? 'text-xs text-muted-foreground' : 'max-w-sm text-sm text-muted-foreground'}>
           {emptyMessage ?? 'Правил пока нет. Создайте первое правило с помощью формы слева.'}
         </p>
       </div>
@@ -124,7 +148,7 @@ export function PolicyListPanel({
   }
 
   return (
-    <div className="space-y-2 py-1">
+    <div className={embedded ? 'space-y-2' : 'space-y-2 py-1'}>
       {policies.map((policy) => {
         const effect = (policy.effect ?? 'ALLOW') as CreatePolicyRequestDto['effect'];
         const EffectIcon = getEffectIcon(effect);
@@ -155,7 +179,7 @@ export function PolicyListPanel({
                   </Badge>
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {buildPolicySummary(policy, roles, houseMembers, resourcePath)}
+                  {buildPolicySummary(policy, roles, houseMembers, resourcePath, compactSubject)}
                 </p>
                 {(timeFrom ?? timeTo) && (
                   <p className="mt-1 text-xs text-muted-foreground">

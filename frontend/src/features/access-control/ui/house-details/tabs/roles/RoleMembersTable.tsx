@@ -9,14 +9,15 @@ import type { RoleMemberResponse } from '@/types/api';
 interface Props {
   loading: boolean;
   members: RoleMemberResponse[];
+  embedded?: boolean;
 }
 
-export function RoleMembersTable({ loading, members }: Props) {
+export function RoleMembersTable({ loading, members, embedded = false }: Props) {
   const { t } = useTranslation();
 
   if (loading) {
     return (
-      <div className="mt-2 flex items-center gap-2">
+      <div className={embedded ? 'space-y-2' : 'mt-2 flex items-center gap-2'}>
         <Skeleton className="h-8 w-8 rounded-full" />
         <Skeleton className="h-4 flex-1" />
       </div>
@@ -24,7 +25,34 @@ export function RoleMembersTable({ loading, members }: Props) {
   }
 
   if (members.length === 0) {
-    return <p className="mt-2 text-xs text-muted-foreground">{t('admin.noData')}</p>;
+    return (
+      <p className={embedded ? 'text-xs text-muted-foreground' : 'mt-2 text-xs text-muted-foreground'}>
+        {t('admin.noData')}
+      </p>
+    );
+  }
+
+  if (embedded) {
+    return (
+      <ul className="space-y-2">
+        {members.map((member) => (
+          <li
+            key={member.id}
+            className="flex items-center gap-2 rounded-md border border-border bg-background px-2.5 py-2"
+          >
+            <MemberAvatar
+              size="sm"
+              src={member.avatarUrl}
+              name={member.name ?? undefined}
+              alt={String(member.name ?? member.userId ?? member.id)}
+            />
+            <span className="min-w-0 truncate text-sm text-foreground">
+              {member.name ?? member.userId ?? member.id}
+            </span>
+          </li>
+        ))}
+      </ul>
+    );
   }
 
   return (
